@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const { procesarMensaje } = require('../bot/flow')
 const { enviarMensaje } = require('../services/whatsapp')
 
 router.get('/', (req, res) => {
@@ -27,11 +28,30 @@ router.post('/', async (req, res) => {
         }
 
         const numero = mensaje.from
+        const tipo = mensaje.type
+
+        if (tipo === 'location') {
+            const { latitude, longitude } = mensaje.location
+            const ubicacion = `https://maps.google.com/?q=${latitude},${longitude}`
+            await procesarMensaje(numero, ubicacion, 'location')
+            return res.status(200).send('OK')
+        }
+
+        if (tipo !== 'text') {
+            await enviarMensaje(numero,
+                'Por el momento solo puedo entender mensajes de texto. ' +
+                '¿Podés escribirme el nombre del producto que estás buscando?'
+            )
+            return res.status(200).send('OK')
+        }
+
         const texto = mensaje.text?.body
 
-        console.log(`Mensaje de ${numero}: ${texto}`)
+        if (!texto) {
+            return res.status(200).send('OK')
+        }
 
-        await enviarMensaje(numero, `Buenas, soy Socrates. El asistente virtual de la tienda. ¿Como puedo ayudarte?`)
+        await procesarMensaje(numero, texto)
 
         res.status(200).send('OK')
 
