@@ -1,10 +1,12 @@
 require('dotenv').config()
 const express = require('express')
 const db = require('./src/db/index')
+const webhookRoutes = require('./src/routes/webhook')
 
 const app = express()
 
 app.use(express.json())
+app.use('/webhook', webhookRoutes)
 
 app.get('/', (req, res) => {
     res.json({ mensaje: 'Servidor funcionando' })
