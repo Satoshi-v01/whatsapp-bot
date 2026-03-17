@@ -7,6 +7,7 @@ const ventasRoutes = require('./src/routes/ventas')
 const productosRoutes = require('./src/routes/productos')
 const authRoutes = require('./src/routes/auth')
 const { autenticar } = require('./src/middleware/auth')
+const estadisticasRoutes = require('./src/routes/estadisticas')
 
 const app = express()
 
@@ -16,6 +17,7 @@ app.use('/auth', authRoutes)
 app.use('/sesiones', autenticar, sesionesRoutes)
 app.use('/ventas', autenticar, ventasRoutes)
 app.use('/productos', autenticar, productosRoutes)
+app.use('/estadisticas', autenticar, estadisticasRoutes)
 
 app.get('/', (req, res) => {
     res.json({ mensaje: 'Servidor funcionando' })
