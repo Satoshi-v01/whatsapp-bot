@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react'
 import { getVentas, actualizarEstadoVenta } from '../services/ventas'
+import { useSearchParams } from 'react-router-dom'
 
 function Ventas() {
     const [ventas, setVentas] = useState([])
     const [cargando, setCargando] = useState(true)
+    const [searchParams] = useSearchParams()
+    const [filtroEstado, setFiltroEstado] = useState('todos')
+
+    const ventasFiltradas = filtroEstado === 'todos'
+        ? ventas
+        : ventas.filter(v => v.estado === filtroEstado)
 
     useEffect(() => {
+        const estadoFiltro = searchParams.get('estado')
+        if (estadoFiltro) {
+            setFiltroEstado(estadoFiltro)
+        }
         cargarVentas()
     }, [])
 
@@ -50,19 +61,56 @@ function Ventas() {
         return colores[estado] || '#888'
     }
 
+    const filtros = [
+        { valor: 'todos', label: 'Todos' },
+        { valor: 'pendiente_pago', label: 'Pendiente pago' },
+        { valor: 'pagado', label: 'Pagado' },
+        { valor: 'entregado', label: 'Entregado' },
+        { valor: 'cancelado', label: 'Cancelado' },
+    ]
+
     if (cargando) return <div style={{ padding: '24px' }}><p>Cargando ventas...</p></div>
 
     return (
         <div style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '22px' }}>Ventas</h2>
                 <button onClick={cargarVentas} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>
                     Actualizar
                 </button>
             </div>
 
-            {ventas.length === 0 ? (
-                <p>No hay ventas registradas.</p>
+            {/* Filtros */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                {filtros.map(f => (
+                    <button
+                        key={f.valor}
+                        onClick={() => setFiltroEstado(f.valor)}
+                        style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: '1px solid',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: filtroEstado === f.valor ? '600' : '400',
+                            background: filtroEstado === f.valor ? '#1a1a2e' : 'white',
+                            color: filtroEstado === f.valor ? 'white' : '#555',
+                            borderColor: filtroEstado === f.valor ? '#1a1a2e' : '#ddd',
+                            transition: 'all 0.15s'
+                        }}
+                    >
+                        {f.label}
+                        {f.valor !== 'todos' && (
+                            <span style={{ marginLeft: '6px', opacity: 0.7 }}>
+                                ({ventas.filter(v => v.estado === f.valor).length})
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {ventasFiltradas.length === 0 ? (
+                <p style={{ color: '#888', fontSize: '13px' }}>No hay ventas con ese estado.</p>
             ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                     <thead>
@@ -78,7 +126,7 @@ function Ventas() {
                         </tr>
                     </thead>
                     <tbody>
-                        {ventas.map(venta => (
+                        {ventasFiltradas.map(venta => (
                             <tr key={venta.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.id}</td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.cliente_numero}</td>
