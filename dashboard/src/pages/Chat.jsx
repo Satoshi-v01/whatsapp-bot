@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { getSesiones, tomarSesion, responderSesion, devolverBot } from '../services/sesiones'
 
 function Chat() {
@@ -18,13 +18,11 @@ function Chat() {
         return () => clearInterval(intervalo)
     }, [])
 
-   useEffect(() => {
-    if (sesionActiva) {
-        const actualizada = sesiones.find(s => s.cliente_numero === sesionActiva.cliente_numero)
-        if (actualizada) {
-            setSesionActiva(actualizada)
+    useEffect(() => {
+        if (sesionActiva) {
+            const actualizada = sesiones.find(s => s.cliente_numero === sesionActiva.cliente_numero)
+            if (actualizada) setSesionActiva(actualizada)
         }
-    }
     }, [sesiones])
 
     useEffect(() => {
@@ -48,7 +46,7 @@ function Chat() {
 
     async function cargarMensajes(numero) {
         try {
-            const res = await axios.get(`/api/sesiones/${numero}/mensajes`)
+            const res = await api.get(`/sesiones/${numero}/mensajes`)
             setMensajes(res.data)
             setTimeout(() => {
                 mensajesRef.current?.scrollTo({ top: mensajesRef.current.scrollHeight, behavior: 'smooth' })
@@ -132,7 +130,6 @@ function Chat() {
     return (
         <div style={{ display: 'flex', height: 'calc(100vh - 48px)', gap: '0' }}>
 
-            {/* Lista de conversaciones */}
             <div style={{ width: '320px', borderRight: '1px solid #e5e7eb', overflowY: 'auto', background: 'white' }}>
                 <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Conversaciones</h3>
@@ -168,7 +165,6 @@ function Chat() {
                 )}
             </div>
 
-            {/* Panel derecho */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
                 {!sesionActiva ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
@@ -176,7 +172,6 @@ function Chat() {
                     </div>
                 ) : (
                     <>
-                        {/* Header */}
                         <div style={{ padding: '16px 20px', background: 'white', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <p style={{ fontWeight: '600', fontSize: '15px' }}>{sesionActiva.cliente_numero}</p>
@@ -201,7 +196,6 @@ function Chat() {
                             </div>
                         </div>
 
-                        {/* Historial de mensajes */}
                         <div
                             ref={mensajesRef}
                             style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}
@@ -236,14 +230,12 @@ function Chat() {
                             )}
                         </div>
 
-                        {/* Contexto colapsable */}
                         <div style={{ padding: '8px 20px', background: '#fffbeb', borderTop: '1px solid #fde68a' }}>
                             <p style={{ fontSize: '11px', color: '#92400e' }}>
                                 Paso: {sesionActiva.paso} · {JSON.stringify(sesionActiva.datos)}
                             </p>
                         </div>
 
-                        {/* Área de respuesta */}
                         <div style={{ padding: '16px 20px', background: 'white', borderTop: '1px solid #e5e7eb' }}>
                             {sesionActiva.modo === 'humano' ? (
                                 <div style={{ display: 'flex', gap: '8px' }}>
