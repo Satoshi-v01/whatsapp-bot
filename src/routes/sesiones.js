@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { enviarMensaje } = require('../services/whatsapp')
+const { guardarMensaje } = require('../services/mensajes')
 
 // 1. Ver todas las conversaciones activas
 router.get('/', async (req, res) => {
@@ -35,6 +36,17 @@ router.get('/:numero', async (req, res) => {
     }
 })
 
+router.get('/:numero/mensajes', async (req, res) => {
+    try {
+        const { numero } = req.params
+        const { obtenerMensajes } = require('../services/mensajes')
+        const mensajes = await obtenerMensajes(numero)
+        res.json(mensajes)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 // 3. Tomar el control de una conversación
 router.patch('/:numero/tomar', async (req, res) => {
     try {
@@ -48,9 +60,13 @@ router.patch('/:numero/tomar', async (req, res) => {
             [agente_id, numero]
         )
 
-        await enviarMensaje(numero,
-            `Hola, te comunico con un asesor que te ayudará en breve.`
-        )
+        try {
+            await enviarMensaje(numero,
+                `Hola, te comunico con un asesor que te ayudará en breve.`
+            )
+        } catch (msgError) {
+            console.error('Error enviando mensaje de handoff:', msgError.message)
+        }
 
         res.json({ ok: true, mensaje: 'Control tomado por el agente' })
     } catch (error) {
@@ -69,6 +85,7 @@ router.post('/:numero/responder', async (req, res) => {
         }
 
         await enviarMensaje(numero, texto)
+        await guardarMensaje(numero, texto, 'agente')
 
         await db.query(
             `UPDATE sesiones SET ultimo_mensaje = NOW() WHERE cliente_numero = $1`,
