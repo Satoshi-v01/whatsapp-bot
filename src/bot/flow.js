@@ -1,6 +1,12 @@
 const { obtenerSesion, actualizarSesion } = require('./estados')
 const { enviarMensaje } = require('../services/whatsapp')
+const { guardarMensaje } = require('../services/mensajes')
 const db = require('../db/index')
+
+async function enviarYGuardar(numero, texto) {
+    await enviarMensaje(numero, texto)
+    await guardarMensaje(numero, texto, 'bot')
+}
 
 async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
     const sesion = await obtenerSesion(numero)
@@ -10,7 +16,7 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
     }
 
     if (sesion.modo === 'esperando_agente') {
-        await enviarMensaje(numero, 'Un agente te atenderá en breve, estamos contigo.')
+        await enviarYGuardar(numero, 'Un agente te atenderá en breve, estamos contigo.')
         return
     }
 
@@ -48,7 +54,7 @@ async function manejarInicio(numero, texto, sesion) {
     const esSaludo = PALABRAS_SALUDO.some(saludo => textoBajo === saludo || textoBajo.startsWith(saludo + ' '))
 
     if (esSaludo) {
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `¡Hola! Bienvenido a Sosa Bulls 🐾\n\n` +
             `¿Qué producto estás buscando? Podés escribir el nombre del producto o la categoría.\n\n` +
             `Ejemplos:\n` +
@@ -65,7 +71,7 @@ async function manejarInicio(numero, texto, sesion) {
         .filter(p => !PALABRAS_IGNORAR.includes(p))
 
     if (palabras.length === 0) {
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `¿Qué producto estás buscando? Escribí el nombre del producto.`
         )
         return
@@ -85,7 +91,7 @@ async function manejarInicio(numero, texto, sesion) {
     )
 
     if (resultado.rows.length === 0) {
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `No encontré productos con "${texto}".\n\n` +
             `¿Podés escribir el nombre del producto? Por ejemplo "cibau" o "royal canin".`
         )
@@ -113,7 +119,7 @@ async function manejarInicio(numero, texto, sesion) {
         datos: { productos: resultado.rows }
     })
 
-    await enviarMensaje(numero,
+    await enviarYGuardar(numero,
         `Encontré estos productos:\n\n${lista}\n\n` +
         `¿Cuál te interesa? Respondé con el número.`
     )
@@ -124,7 +130,7 @@ async function manejarEleccionProducto(numero, texto, sesion) {
     const productos = sesion.datos.productos
 
     if (isNaN(indice) || indice < 0 || indice >= productos.length) {
-        await enviarMensaje(numero, `Por favor respondé con un número entre 1 y ${productos.length}.`)
+        await enviarYGuardar(numero, `Por favor respondé con un número entre 1 y ${productos.length}.`)
         return
     }
 
@@ -150,7 +156,7 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
     )
 
     if (resultado.rows.length === 0) {
-        await enviarMensaje(numero, `Lo sentimos, ${productoNombre} no tiene stock disponible en este momento.`)
+        await enviarYGuardar(numero, `Lo sentimos, ${productoNombre} no tiene stock disponible en este momento.`)
         return
     }
 
@@ -158,7 +164,7 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
         .map((p, i) => `${i + 1}. ${p.nombre} — Gs. ${p.precio.toLocaleString()}`)
         .join('\n')
 
-    await enviarMensaje(numero,
+    await enviarYGuardar(numero,
         `*${productoNombre}*\n\n${lista}\n\n` +
         `¿Cuál presentación te interesa? Respondé con el número.`
     )
@@ -177,7 +183,7 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
     const indice = parseInt(texto) - 1
 
     if (isNaN(indice) || indice < 0 || indice >= resultado.rows.length) {
-        await enviarMensaje(numero, `Por favor respondé con un número entre 1 y ${resultado.rows.length}.`)
+        await enviarYGuardar(numero, `Por favor respondé con un número entre 1 y ${resultado.rows.length}.`)
         return
     }
 
@@ -195,7 +201,7 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
         }
     })
 
-    await enviarMensaje(numero,
+    await enviarYGuardar(numero,
         `*${sesion.datos.producto_nombre} — ${presentacion.nombre}*\n` +
         `Precio: Gs. ${presentacion.precio.toLocaleString()}\n\n` +
         `¿Confirmás la compra? Respondé *si* o *no*.`
@@ -212,7 +218,7 @@ async function manejarConfirmacion(numero, texto, sesion) {
             datos: sesion.datos
         })
 
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `¿Cómo preferís recibir tu pedido?\n\n` +
             `1. Retiro en tienda\n` +
             `2. Delivery\n\n` +
@@ -226,10 +232,10 @@ async function manejarConfirmacion(numero, texto, sesion) {
             datos: {}
         })
 
-        await enviarMensaje(numero, `Entendido, cancelado. ¿Puedo ayudarte con algo más?`)
+        await enviarYGuardar(numero, `Entendido, cancelado. ¿Puedo ayudarte con algo más?`)
 
     } else {
-        await enviarMensaje(numero, `Por favor respondé *si* o *no*.`)
+        await enviarYGuardar(numero, `Por favor respondé *si* o *no*.`)
     }
 }
 
@@ -245,7 +251,7 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
             datos: {}
         })
 
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `✅ ¡Pedido registrado!\n` +
             `*${sesion.datos.producto_nombre} — ${sesion.datos.presentacion_nombre}*\n` +
             `Total: Gs. ${sesion.datos.precio.toLocaleString()}\n` +
@@ -260,14 +266,14 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
             datos: { ...sesion.datos, paso_delivery: 'ubicacion' }
         })
 
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `Perfecto, delivery. Necesito algunos datos.\n\n` +
             `*Paso 1 de 5*\n` +
             `¿Cuál es tu ubicación o barrio? Podés escribirla o compartir tu ubicación de WhatsApp.`
         )
 
     } else {
-        await enviarMensaje(numero, `Por favor respondé *1* para retiro o *2* para delivery.`)
+        await enviarYGuardar(numero, `Por favor respondé *1* para retiro o *2* para delivery.`)
     }
 }
 
@@ -284,7 +290,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
             modo: 'bot',
             datos: { ...sesion.datos, ubicacion: ubicacionFinal, paso_delivery: 'referencia' }
         })
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `*Paso 2 de 5*\n` +
             `¿Número de casa o alguna referencia para encontrarte?`
         )
@@ -295,7 +301,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
             modo: 'bot',
             datos: { ...sesion.datos, referencia: texto, paso_delivery: 'horario' }
         })
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `*Paso 3 de 5*\n` +
             `¿En qué horario podés recibir la entrega?`
         )
@@ -306,7 +312,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
             modo: 'bot',
             datos: { ...sesion.datos, horario: texto, paso_delivery: 'contacto' }
         })
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `*Paso 4 de 5*\n` +
             `¿Nombre y número de la persona que va a recibir el pedido?`
         )
@@ -317,7 +323,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
             modo: 'bot',
             datos: { ...sesion.datos, contacto_entrega: texto, paso_delivery: 'pago' }
         })
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `*Paso 5 de 5*\n` +
             `¿Cuál es tu método de pago?\n\n` +
             `1. Efectivo\n` +
@@ -331,7 +337,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
         const metodoPago = metodos[texto.trim()]
 
         if (!metodoPago) {
-            await enviarMensaje(numero, `Por favor respondé 1, 2 o 3.`)
+            await enviarYGuardar(numero, `Por favor respondé 1, 2 o 3.`)
             return
         }
 
@@ -345,7 +351,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
             datos: {}
         })
 
-        await enviarMensaje(numero,
+        await enviarYGuardar(numero,
             `✅ ¡Pedido registrado!\n\n` +
             `*${datosCompletos.producto_nombre} — ${datosCompletos.presentacion_nombre}*\n` +
             `Total: Gs. ${datosCompletos.precio.toLocaleString()}\n` +

@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { procesarMensaje } = require('../bot/flow')
 const { enviarMensaje } = require('../services/whatsapp')
+const { guardarMensaje } = require('../services/mensajes')
 
 router.get('/', (req, res) => {
     const mode = req.query['hub.mode']
@@ -33,6 +34,7 @@ router.post('/', async (req, res) => {
         if (tipo === 'location') {
             const { latitude, longitude } = mensaje.location
             const ubicacion = `https://maps.google.com/?q=${latitude},${longitude}`
+            await guardarMensaje(numero, ubicacion, 'cliente')
             await procesarMensaje(numero, ubicacion, 'location')
             return res.status(200).send('OK')
         }
@@ -50,6 +52,8 @@ router.post('/', async (req, res) => {
         if (!texto) {
             return res.status(200).send('OK')
         }
+
+        await guardarMensaje(numero, texto, 'cliente')
 
         await procesarMensaje(numero, texto)
 
