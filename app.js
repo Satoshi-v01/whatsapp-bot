@@ -5,6 +5,7 @@ const webhookRoutes = require('./src/routes/webhook')
 const sesionesRoutes = require('./src/routes/sesiones')
 const ventasRoutes = require('./src/routes/ventas')
 const productosRoutes = require('./src/routes/productos')
+const authRoutes = require('./src/routes/auth')
 
 
 const app = express()
@@ -14,6 +15,7 @@ app.use('/webhook', webhookRoutes)
 app.use('/sesiones', sesionesRoutes)
 app.use('/ventas', ventasRoutes)
 app.use('/productos', productosRoutes)
+app.use('/auth', authRoutes)
 
 
 app.get('/', (req, res) => {
