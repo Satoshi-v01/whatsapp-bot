@@ -1,13 +1,16 @@
-import axios from 'axios'
-
-const API = '/api'
+import api from './api'
 
 export async function getVentas() {
-    const res = await axios.get(`${API}/ventas`)
+    const res = await api.get('/ventas')
+    return res.data
+}
+
+export async function getVentasPorEstado(estado) {
+    const res = await api.get(`/ventas/estado/${estado}`)
     return res.data
 }
 
 export async function actualizarEstadoVenta(id, estado) {
-    const res = await axios.patch(`${API}/ventas/${id}/estado`, { estado })
+    const res = await api.patch(`/ventas/${id}/estado`, { estado })
     return res.data
 }

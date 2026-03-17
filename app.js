@@ -6,17 +6,16 @@ const sesionesRoutes = require('./src/routes/sesiones')
 const ventasRoutes = require('./src/routes/ventas')
 const productosRoutes = require('./src/routes/productos')
 const authRoutes = require('./src/routes/auth')
-
+const { autenticar } = require('./src/middleware/auth')
 
 const app = express()
 
 app.use(express.json())
 app.use('/webhook', webhookRoutes)
-app.use('/sesiones', sesionesRoutes)
-app.use('/ventas', ventasRoutes)
-app.use('/productos', productosRoutes)
 app.use('/auth', authRoutes)
-
+app.use('/sesiones', autenticar, sesionesRoutes)
+app.use('/ventas', autenticar, ventasRoutes)
+app.use('/productos', autenticar, productosRoutes)
 
 app.get('/', (req, res) => {
     res.json({ mensaje: 'Servidor funcionando' })
