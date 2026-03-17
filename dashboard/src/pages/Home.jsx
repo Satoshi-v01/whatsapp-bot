@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { getResumen, getVentasSemana, getTopProductos } from '../services/estadisticas'
+import { useNavigate } from 'react-router-dom'
 
 function Home() {
     const [resumen, setResumen] = useState(null)
     const [ventasSemana, setVentasSemana] = useState([])
     const [topProductos, setTopProductos] = useState([])
     const [cargando, setCargando] = useState(true)
+    const navigate = useNavigate()
 
     useEffect(() => {
         cargarDatos()
@@ -50,7 +52,6 @@ function Home() {
     return (
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* Título */}
             <div>
                 <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Resumen del día</h2>
                 <p style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>
@@ -58,28 +59,48 @@ function Home() {
                 </p>
             </div>
 
-            {/* Tarjetas de resumen */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {/* Tarjetas — grid de 4 columnas */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
 
-                <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #10b981' }}>
+                <div
+                    onClick={() => navigate('/ventas')}
+                    style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #10b981', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
+                >
                     <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Total vendido hoy</p>
                     <p style={{ fontSize: '22px', fontWeight: '700', color: '#10b981' }}>{formatearGuaranies(resumen?.ventas_hoy?.total || 0)}</p>
                     <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>{resumen?.ventas_hoy?.cantidad || 0} ventas</p>
                 </div>
 
-                <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #f59e0b' }}>
+                <div
+                    onClick={() => navigate('/ventas?estado=pendiente_pago')}
+                    style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #f59e0b', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
+                >
                     <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Pendientes de pago</p>
                     <p style={{ fontSize: '22px', fontWeight: '700', color: '#f59e0b' }}>{resumen?.pendientes || 0}</p>
                     <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>requieren confirmación</p>
                 </div>
 
-                <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6' }}>
+                <div
+                    onClick={() => navigate('/delivery')}
+                    style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
+                >
                     <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Deliveries activos</p>
                     <p style={{ fontSize: '22px', fontWeight: '700', color: '#3b82f6' }}>{resumen?.deliveries || 0}</p>
                     <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>en proceso</p>
                 </div>
 
-                <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #ef4444' }}>
+                <div
+                    onClick={() => navigate('/chat')}
+                    style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #ef4444', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
+                >
                     <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Chats esperando agente</p>
                     <p style={{ fontSize: '22px', fontWeight: '700', color: '#ef4444' }}>{resumen?.esperando_agente || 0}</p>
                     <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>requieren atención</p>
@@ -90,7 +111,6 @@ function Home() {
             {/* Gráfico y top productos */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-                {/* Gráfico ventas semana */}
                 <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '20px' }}>Ventas últimos 7 días</h3>
                     {ventasSemana.length === 0 ? (
@@ -115,7 +135,6 @@ function Home() {
                     )}
                 </div>
 
-                {/* Top productos */}
                 <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px' }}>Productos más vendidos del mes</h3>
                     {topProductos.length === 0 ? (
@@ -147,7 +166,6 @@ function Home() {
 
             </div>
 
-            {/* Alertas de stock bajo */}
             {resumen?.stock_bajo?.length > 0 && (
                 <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#ef4444' }}>⚠️ Stock bajo</h3>
