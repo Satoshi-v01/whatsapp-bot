@@ -209,16 +209,28 @@ function Delivery() {
                                 </div>
                             </div>
 
-                            {detalle.ubicacion?.includes('maps.google.com') && (<a
-                                
-                                    href={detalle.ubicacion}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{ display: 'inline-block', marginTop: '12px', padding: '8px 14px', borderRadius: '8px', background: '#1a1a2e', color: 'white', fontSize: '12px', textDecoration: 'none' }}
-                                >
-                                    Ver en Google Maps
-                                </a>
+                            {detalle.cliente_nombre && (
+                                <div>
+                                    <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Cliente</p>
+                                    <p style={{ fontSize: '13px' }}>{detalle.cliente_nombre}</p>
+                                </div>
                             )}
+                            {detalle.cliente_ruc && (
+                                <div>
+                                    <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>RUC</p>
+                                    <p style={{ fontSize: '13px' }}>{detalle.cliente_ruc}</p>
+                                </div>
+                            )}
+
+                            {detalle.ubicacion?.includes('maps.google.com') && (<a    
+                                href={detalle.ubicacion.replace(/^.*?(https:\/\/)/, 'https://')}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-block', marginTop: '12px', padding: '8px 14px', borderRadius: '8px', background: '#1a1a2e', color: 'white', fontSize: '12px', textDecoration: 'none' }}
+                            >
+                                Ver en Google Maps
+                            </a>
+                        )}
                         </div>
 
                         {/* Notas */}

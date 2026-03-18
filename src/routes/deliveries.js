@@ -10,11 +10,14 @@ router.get('/', async (req, res) => {
                     v.precio,
                     v.estado as estado_venta,
                     pr.nombre as presentacion_nombre,
-                    p.nombre as producto_nombre
+                    p.nombre as producto_nombre,
+                    c.nombre as cliente_nombre,
+                    c.ruc as cliente_ruc
              FROM deliveries d
              JOIN ventas v ON d.venta_id = v.id
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
              ORDER BY d.created_at DESC`
         )
         res.json(resultado.rows)
@@ -31,11 +34,14 @@ router.get('/estado/:estado', async (req, res) => {
             `SELECT d.*,
                     v.precio,
                     pr.nombre as presentacion_nombre,
-                    p.nombre as producto_nombre
+                    p.nombre as producto_nombre,
+                    c.nombre as cliente_nombre,
+                    c.ruc as cliente_ruc
              FROM deliveries d
              JOIN ventas v ON d.venta_id = v.id
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
              WHERE d.estado = $1
              ORDER BY d.created_at DESC`,
             [estado]

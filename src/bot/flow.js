@@ -383,11 +383,40 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
 }
 
 async function registrarVenta(numero, sesion, modalidad) {
+    let clienteId = null
+    const clienteExistente = await db.query(
+        `SELECT id FROM clientes WHERE telefono = $1`,
+        [numero]
+    )
+
+    if (clienteExistente.rows.length > 0) {
+        clienteId = clienteExistente.rows[0].id
+        // Si es delivery, actualizar la dirección
+        if (modalidad === 'delivery' && sesion.datos.ubicacion) {
+            await db.query(
+                `UPDATE clientes SET direccion = $1, updated_at = NOW() WHERE id = $2`,
+                [sesion.datos.ubicacion, clienteId]
+            )
+        }
+    } else {
+        const nuevoCliente = await db.query(
+            `INSERT INTO clientes (nombre, telefono, origen, direccion)
+             VALUES ($1, $2, 'bot', $3)
+             RETURNING id`,
+            [
+                `Cliente ${numero}`,
+                numero,
+                modalidad === 'delivery' ? sesion.datos.ubicacion : null
+            ]
+        )
+        clienteId = nuevoCliente.rows[0].id
+    }
+
     const venta = await db.query(
-        `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado)
-         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago')
+        `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado, cliente_id)
+         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago', $4)
          RETURNING id`,
-        [numero, sesion.datos.presentacion_id, sesion.datos.precio]
+        [numero, sesion.datos.presentacion_id, sesion.datos.precio, clienteId]
     )
 
     await db.query(
