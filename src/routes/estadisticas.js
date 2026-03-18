@@ -11,10 +11,12 @@ router.get('/resumen', async (req, res) => {
         const ventasHoy = await db.query(
             `SELECT 
                 COUNT(*) as cantidad,
-                COALESCE(SUM(precio), 0) as total
-             FROM ventas 
-             WHERE created_at >= $1
-             AND estado != 'cancelado'`,
+                COALESCE(SUM(v.precio), 0) as total,
+                COALESCE(SUM(v.precio - pr.precio_compra), 0) as ganancia
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             WHERE v.created_at >= $1
+             AND v.estado != 'cancelado'`,
             [hoy]
         )
 
@@ -45,7 +47,8 @@ router.get('/resumen', async (req, res) => {
         res.json({
             ventas_hoy: {
                 cantidad: parseInt(ventasHoy.rows[0].cantidad),
-                total: parseInt(ventasHoy.rows[0].total)
+                total: parseInt(ventasHoy.rows[0].total),
+                ganancia: parseInt(ventasHoy.rows[0].ganancia)
             },
             pendientes: parseInt(pendientes.rows[0].cantidad),
             deliveries: parseInt(deliveries.rows[0].cantidad),
@@ -63,13 +66,15 @@ router.get('/ventas-semana', async (req, res) => {
     try {
         const resultado = await db.query(
             `SELECT 
-                DATE(created_at) as fecha,
+                DATE(v.created_at) as fecha,
                 COUNT(*) as cantidad,
-                COALESCE(SUM(precio), 0) as total
-             FROM ventas
-             WHERE created_at >= NOW() - INTERVAL '7 days'
-             AND estado != 'cancelado'
-             GROUP BY DATE(created_at)
+                COALESCE(SUM(v.precio), 0) as total,
+                COALESCE(SUM(v.precio - pr.precio_compra), 0) as ganancia
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             WHERE v.created_at >= NOW() - INTERVAL '7 days'
+             AND v.estado != 'cancelado'
+             GROUP BY DATE(v.created_at)
              ORDER BY fecha ASC`
         )
         res.json(resultado.rows)
@@ -86,7 +91,8 @@ router.get('/top-productos', async (req, res) => {
                 p.nombre as producto,
                 pr.nombre as presentacion,
                 COUNT(*) as cantidad_vendida,
-                SUM(v.precio) as total_generado
+                SUM(v.precio) as total_generado,
+                SUM(v.precio - pr.precio_compra) as ganancia_generada
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
@@ -112,7 +118,7 @@ router.get('/notificaciones', async (req, res) => {
         )
 
         const stockBajo = await db.query(
-            `SELECT p.nombre, pr.nombre as presentacion, pr.stock
+            `SELECT p.nombre as producto, pr.nombre as presentacion, pr.stock
              FROM presentaciones pr
              JOIN productos p ON pr.producto_id = p.id
              WHERE pr.stock <= 3 AND pr.disponible = true
@@ -122,7 +128,7 @@ router.get('/notificaciones', async (req, res) => {
         const notificaciones = [
             ...chats.rows.map(c => ({
                 tipo: 'chat',
-                mensaje: `Chat ${c.cliente_numero} requiere un agente`,
+                mensaje: `${c.cliente_numero} requiere un agente`,
                 tiempo: c.ultimo_mensaje,
                 urgente: true
             })),

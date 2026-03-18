@@ -1,6 +1,7 @@
 const { obtenerSesion, actualizarSesion } = require('./estados')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
+const { calcularPrecioEfectivo } = require('../services/precios')
 const db = require('../db/index')
 
 async function enviarYGuardar(numero, texto) {
@@ -147,7 +148,8 @@ async function manejarEleccionProducto(numero, texto, sesion) {
 
 async function mostrarPresentaciones(numero, productoId, productoNombre) {
     const resultado = await db.query(
-        `SELECT id, nombre, precio, stock
+        `SELECT id, nombre, precio_venta, precio_descuento, descuento_activo,
+                descuento_desde, descuento_hasta, descuento_stock, stock
          FROM presentaciones
          WHERE producto_id = $1
          AND disponible = true
@@ -161,7 +163,13 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
     }
 
     const lista = resultado.rows
-        .map((p, i) => `${i + 1}. ${p.nombre} — Gs. ${p.precio.toLocaleString()}`)
+        .map((p, i) => {
+            const { precio, con_descuento } = calcularPrecioEfectivo(p)
+            const precioTexto = con_descuento
+                ? `~~Gs. ${p.precio_venta.toLocaleString()}~~ *Gs. ${precio.toLocaleString()}* 🏷️`
+                : `Gs. ${precio.toLocaleString()}`
+            return `${i + 1}. ${p.nombre} — ${precioTexto}`
+        })
         .join('\n')
 
     await enviarYGuardar(numero,
@@ -172,7 +180,8 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
 
 async function manejarEleccionPresentacion(numero, texto, sesion) {
     const resultado = await db.query(
-        `SELECT id, nombre, precio, stock
+        `SELECT id, nombre, precio_venta, precio_descuento, descuento_activo,
+                descuento_desde, descuento_hasta, descuento_stock, stock
          FROM presentaciones
          WHERE producto_id = $1
          AND disponible = true
@@ -188,6 +197,7 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
     }
 
     const presentacion = resultado.rows[indice]
+    const { precio, con_descuento } = calcularPrecioEfectivo(presentacion)
 
     await actualizarSesion(numero, {
         paso: 'confirmando',
@@ -197,13 +207,19 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
             producto_nombre: sesion.datos.producto_nombre,
             presentacion_id: presentacion.id,
             presentacion_nombre: presentacion.nombre,
-            precio: presentacion.precio
+            precio: precio,
+            precio_original: presentacion.precio_venta,
+            con_descuento
         }
     })
 
+    const precioTexto = con_descuento
+        ? `~~Gs. ${presentacion.precio_venta.toLocaleString()}~~ *Gs. ${precio.toLocaleString()}* 🏷️`
+        : `Gs. ${precio.toLocaleString()}`
+
     await enviarYGuardar(numero,
         `*${sesion.datos.producto_nombre} — ${presentacion.nombre}*\n` +
-        `Precio: Gs. ${presentacion.precio.toLocaleString()}\n\n` +
+        `Precio: ${precioTexto}\n\n` +
         `¿Confirmás la compra? Respondé *si* o *no*.`
     )
 }
