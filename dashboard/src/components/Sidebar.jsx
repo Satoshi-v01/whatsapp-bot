@@ -110,6 +110,19 @@ function Sidebar({ usuario, onLogout }) {
                     </div>
                 </Link>
 
+                <Link to="/delivery" style={{ textDecoration: 'none' }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 12px', borderRadius: '8px',
+                        background: esActivo('/delivery') ? '#2a2a4e' : 'transparent',
+                        color: esActivo('/delivery') ? 'white' : '#a0a0c0',
+                        transition: 'background 0.2s', cursor: 'pointer', whiteSpace: 'nowrap'
+                    }}>
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🚚</span>
+                        {expandido && <span style={{ fontSize: '14px' }}>Delivery</span>}
+                    </div>
+                </Link>
+
                 <Link to="/inventario" style={{ textDecoration: 'none' }}>
                     <div style={{
                         display: 'flex',
