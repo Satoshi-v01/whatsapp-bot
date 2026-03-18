@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
+import Delivery from './pages/Delivery'
 import Chat from './pages/Chat'
 import Ventas from './pages/Ventas'
 import Inventario from './pages/Inventario'
@@ -50,6 +51,7 @@ function App() {
                         <Route path="/chat" element={<Chat />} />
                         <Route path="/ventas" element={<Ventas />} />
                         <Route path="/inventario" element={<Inventario />} />
+                        <Route path="/delivery" element={<Delivery />} />
                     </Routes>
                 </main>
             </div>

@@ -367,9 +367,10 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
 }
 
 async function registrarVenta(numero, sesion, modalidad) {
-    await db.query(
+    const venta = await db.query(
         `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado)
-         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago')`,
+         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago')
+         RETURNING id`,
         [numero, sesion.datos.presentacion_id, sesion.datos.precio]
     )
 
@@ -377,6 +378,22 @@ async function registrarVenta(numero, sesion, modalidad) {
         `UPDATE presentaciones SET stock = stock - 1 WHERE id = $1`,
         [sesion.datos.presentacion_id]
     )
+
+    if (modalidad === 'delivery') {
+        await db.query(
+            `INSERT INTO deliveries (venta_id, cliente_numero, ubicacion, referencia, horario, contacto_entrega, metodo_pago)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+                venta.rows[0].id,
+                numero,
+                sesion.datos.ubicacion,
+                sesion.datos.referencia,
+                sesion.datos.horario,
+                sesion.datos.contacto_entrega,
+                sesion.datos.metodo_pago
+            ]
+        )
+    }
 }
 
 module.exports = { procesarMensaje }
