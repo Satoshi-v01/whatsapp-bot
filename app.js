@@ -6,6 +6,7 @@ const sesionesRoutes = require('./src/routes/sesiones')
 const ventasRoutes = require('./src/routes/ventas')
 const productosRoutes = require('./src/routes/productos')
 const authRoutes = require('./src/routes/auth')
+const clientesRoutes = require('./src/routes/clientes')
 const { autenticar } = require('./src/middleware/auth')
 const deliveriesRoutes = require('./src/routes/deliveries')
 const estadisticasRoutes = require('./src/routes/estadisticas')
@@ -21,6 +22,7 @@ app.use('/ventas', autenticar, ventasRoutes)
 app.use('/productos', autenticar, productosRoutes)
 app.use('/deliveries', autenticar, deliveriesRoutes)
 app.use('/estadisticas', autenticar, estadisticasRoutes)
+app.use('/clientes', autenticar, clientesRoutes)
 
 
 app.get('/', (req, res) => {

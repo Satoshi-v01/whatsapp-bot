@@ -8,6 +8,7 @@ import Ventas from './pages/Ventas'
 import Inventario from './pages/Inventario'
 import Login from './pages/Login'
 import Home from './pages/Home'
+import Clientes from './pages/Clientes'
 import './App.css'
 
 
@@ -51,6 +52,7 @@ function App() {
                         <Route path="/chat" element={<Chat />} />
                         <Route path="/ventas" element={<Ventas />} />
                         <Route path="/inventario" element={<Inventario />} />
+                        <Route path="/clientes" element={<Clientes />} />                        
                         <Route path="/delivery" element={<Delivery />} />
                     </Routes>
                 </main>
