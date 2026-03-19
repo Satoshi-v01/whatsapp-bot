@@ -19,3 +19,9 @@ export async function registrarVentaPresencial(datos) {
     const res = await api.post('/ventas/presencial', datos)
     return res.data
 }
+
+export async function getHistorial(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/ventas/historial${query ? `?${query}` : ''}`)
+    return res.data
+}
