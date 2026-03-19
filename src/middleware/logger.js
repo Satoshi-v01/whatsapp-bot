@@ -8,6 +8,23 @@ const logger = winston.createLogger({
         winston.format.errors({ stack: true }),
         winston.format.json()
     ),
+    
+    format: winston.format.combine(
+        winston.format.timestamp({ 
+            format: () => new Date().toLocaleString('es-PY', { 
+                timeZone: 'America/Asuncion',
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+        }),
+        winston.format.errors({ stack: true }),
+        winston.format.json()
+    ),
+
     transports: [
         new winston.transports.File({
             filename: path.join(__dirname, '../../logs/error.log'),
@@ -28,5 +45,6 @@ const logger = winston.createLogger({
         })
     ]
 })
+
 
 module.exports = logger
