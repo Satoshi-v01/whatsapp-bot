@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ModalConfirmar from '../components/ModalConfirmar'
 import {
     getProductos, getCategorias, getMarcas, crearMarca,
     verificarEliminarMarca, confirmarEliminarMarca,
@@ -23,6 +24,9 @@ function Inventario() {
     const [modalPresentacion, setModalPresentacion] = useState(null)
     const [modalPrecio, setModalPrecio] = useState(null)
     const [modalEditarProducto, setModalEditarProducto] = useState(null)
+    const [modalStock, setModalStock] = useState(null)
+    const [nuevoStockValor, setNuevoStockValor] = useState('')
+    const [modalConfirmar, setModalConfirmar] = useState(null)
     const [nuevaMarca, setNuevaMarca] = useState('')
     const [errorMarca, setErrorMarca] = useState('')
     const [confirmEliminarMarca, setConfirmEliminarMarca] = useState(null)
@@ -124,7 +128,13 @@ function Inventario() {
             const resultado = await verificarEliminarCategoria(cat.id)
             setConfirmEliminarCategoria({ ...cat, cantidad: resultado.productos_asociados })
         } catch (err) {
-            console.error('Error verificando categoría:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo verificar la categoría.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -159,11 +169,16 @@ function Inventario() {
         }
     }
 
-    async function handleActualizarStock(presentacionId, stockActual) {
-        const nuevoStock = prompt('Nuevo stock:', stockActual)
-        if (nuevoStock === null) return
+   async function handleActualizarStock(presentacionId, stockActual, nombrePresentacion) {
+        setNuevoStockValor(String(stockActual))
+        setModalStock({ id: presentacionId, nombre: nombrePresentacion, stockActual })
+    }
+
+    async function handleConfirmarStock() {
         try {
-            await actualizarStock(presentacionId, parseInt(nuevoStock))
+            await actualizarStock(modalStock.id, parseInt(nuevoStockValor))
+            setModalStock(null)
+            setNuevoStockValor('')
             await cargarDatos()
         } catch (err) {
             console.error('Error actualizando stock:', err)
@@ -717,6 +732,17 @@ function Inventario() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {modalConfirmar && (
+                <ModalConfirmar
+                    titulo={modalConfirmar.titulo}
+                    mensaje={modalConfirmar.mensaje}
+                    textoBoton={modalConfirmar.textoBoton}
+                    colorBoton={modalConfirmar.colorBoton}
+                    onConfirmar={modalConfirmar.onConfirmar}
+                    onCancelar={() => setModalConfirmar(null)}
+                />
             )}
         </div>
     )

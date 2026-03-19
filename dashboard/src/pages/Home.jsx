@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getResumen, getVentasSemana, getTopProductos } from '../services/estadisticas'
 import { useNavigate } from 'react-router-dom'
+import ModalConfirmar from '../components/ModalConfirmar'
 
 function Home() {
     const [resumen, setResumen] = useState(null)
     const [ventasSemana, setVentasSemana] = useState([])
     const [topProductos, setTopProductos] = useState([])
     const [cargando, setCargando] = useState(true)
+    const [modalConfirmar, setModalConfirmar] = useState(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -26,7 +28,13 @@ function Home() {
             setVentasSemana(semana)
             setTopProductos(top)
         } catch (err) {
-            console.error('Error cargando datos:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudieron cargar los datos del resumen.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         } finally {
             setCargando(false)
         }
@@ -59,7 +67,7 @@ function Home() {
                 </p>
             </div>
 
-            {/* Tarjetas — grid de 4 columnas */}
+            {/* Tarjetas */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
 
                 <div
@@ -71,6 +79,11 @@ function Home() {
                     <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Total vendido hoy</p>
                     <p style={{ fontSize: '22px', fontWeight: '700', color: '#10b981' }}>{formatearGuaranies(resumen?.ventas_hoy?.total || 0)}</p>
                     <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>{resumen?.ventas_hoy?.cantidad || 0} ventas</p>
+                    {resumen?.ventas_hoy?.ganancia > 0 && (
+                        <p style={{ fontSize: '11px', color: '#10b981', marginTop: '2px' }}>
+                            Ganancia: {formatearGuaranies(resumen.ventas_hoy.ganancia)}
+                        </p>
+                    )}
                 </div>
 
                 <div
@@ -156,7 +169,10 @@ function Home() {
                                         <p style={{ fontSize: '13px', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {prod.producto} — {prod.presentacion}
                                         </p>
-                                        <p style={{ fontSize: '11px', color: '#888' }}>{prod.cantidad_vendida} vendidos · {formatearGuaranies(prod.total_generado)}</p>
+                                        <p style={{ fontSize: '11px', color: '#888' }}>
+                                            {prod.cantidad_vendida} vendidos · {formatearGuaranies(prod.total_generado)}
+                                            {prod.ganancia_generada > 0 && ` · Gan: ${formatearGuaranies(prod.ganancia_generada)}`}
+                                        </p>
                                     </div>
                                 </div>
                             ))}
@@ -166,17 +182,23 @@ function Home() {
 
             </div>
 
+            {/* Alertas de stock bajo */}
             {resumen?.stock_bajo?.length > 0 && (
                 <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#ef4444' }}>⚠️ Stock bajo</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
                         {resumen.stock_bajo.map((item, i) => (
-                            <div key={i} style={{
-                                padding: '12px',
-                                borderRadius: '8px',
-                                background: item.stock === 0 ? '#fee2e2' : '#fffbeb',
-                                border: `1px solid ${item.stock === 0 ? '#fca5a5' : '#fde68a'}`
-                            }}>
+                            <div
+                                key={i}
+                                onClick={() => navigate('/inventario')}
+                                style={{
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    background: item.stock === 0 ? '#fee2e2' : '#fffbeb',
+                                    border: `1px solid ${item.stock === 0 ? '#fca5a5' : '#fde68a'}`,
+                                    cursor: 'pointer'
+                                }}
+                            >
                                 <p style={{ fontSize: '13px', fontWeight: '500' }}>{item.nombre}</p>
                                 <p style={{ fontSize: '12px', color: '#888' }}>{item.presentacion}</p>
                                 <p style={{ fontSize: '13px', fontWeight: '700', color: item.stock === 0 ? '#ef4444' : '#f59e0b', marginTop: '4px' }}>
@@ -188,6 +210,16 @@ function Home() {
                 </div>
             )}
 
+            {modalConfirmar && (
+                <ModalConfirmar
+                    titulo={modalConfirmar.titulo}
+                    mensaje={modalConfirmar.mensaje}
+                    textoBoton={modalConfirmar.textoBoton}
+                    colorBoton={modalConfirmar.colorBoton}
+                    onConfirmar={modalConfirmar.onConfirmar}
+                    onCancelar={() => setModalConfirmar(null)}
+                />
+            )}
         </div>
     )
 }
