@@ -34,6 +34,12 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
         case 'confirmando':
             await manejarConfirmacion(numero, texto, sesion)
             break
+        case 'factura':
+            await manejarFactura(numero, texto, sesion)
+            break
+        case 'ruc_factura':
+            await manejarRucFactura(numero, texto, sesion)
+            break
         case 'eligiendo_envio':
             await manejarEleccionEnvio(numero, texto, sesion)
             break
@@ -72,9 +78,7 @@ async function manejarInicio(numero, texto, sesion) {
         .filter(p => !PALABRAS_IGNORAR.includes(p))
 
     if (palabras.length === 0) {
-        await enviarYGuardar(numero,
-            `¿Qué producto estás buscando? Escribí el nombre del producto.`
-        )
+        await enviarYGuardar(numero, `¿Qué producto estás buscando? Escribí el nombre del producto.`)
         return
     }
 
@@ -229,15 +233,15 @@ async function manejarConfirmacion(numero, texto, sesion) {
 
     if (respuesta === 'si' || respuesta === 'sí') {
         await actualizarSesion(numero, {
-            paso: 'eligiendo_envio',
+            paso: 'factura',
             modo: 'bot',
             datos: sesion.datos
         })
 
         await enviarYGuardar(numero,
-            `¿Cómo preferís recibir tu pedido?\n\n` +
-            `1. Retiro en tienda\n` +
-            `2. Delivery\n\n` +
+            `¿Necesitás factura?\n\n` +
+            `1. Sí, con factura\n` +
+            `2. No, sin factura\n\n` +
             `Respondé con 1 o 2.`
         )
 
@@ -253,6 +257,53 @@ async function manejarConfirmacion(numero, texto, sesion) {
     } else {
         await enviarYGuardar(numero, `Por favor respondé *si* o *no*.`)
     }
+}
+
+async function manejarFactura(numero, texto, sesion) {
+    const respuesta = texto.trim()
+
+    if (respuesta === '1') {
+        await actualizarSesion(numero, {
+            paso: 'ruc_factura',
+            modo: 'bot',
+            datos: { ...sesion.datos, quiere_factura: true }
+        })
+        await enviarYGuardar(numero,
+            `Por favor ingresá tu RUC o cédula para la factura.\n` +
+            `Ejemplo: *4154264-9*`
+        )
+
+    } else if (respuesta === '2') {
+        await actualizarSesion(numero, {
+            paso: 'eligiendo_envio',
+            modo: 'bot',
+            datos: { ...sesion.datos, quiere_factura: false }
+        })
+        await enviarYGuardar(numero,
+            `¿Cómo preferís recibir tu pedido?\n\n` +
+            `1. Retiro en tienda\n` +
+            `2. Delivery\n\n` +
+            `Respondé con 1 o 2.`
+        )
+    } else {
+        await enviarYGuardar(numero, `Por favor respondé *1* para con factura o *2* para sin factura.`)
+    }
+}
+
+async function manejarRucFactura(numero, texto, sesion) {
+    await actualizarSesion(numero, {
+        paso: 'eligiendo_envio',
+        modo: 'bot',
+        datos: { ...sesion.datos, ruc_factura: texto, razon_social: `Cliente ${numero}` }
+    })
+
+    await enviarYGuardar(numero,
+        `✅ RUC registrado: *${texto}*\n\n` +
+        `¿Cómo preferís recibir tu pedido?\n\n` +
+        `1. Retiro en tienda\n` +
+        `2. Delivery\n\n` +
+        `Respondé con 1 o 2.`
+    )
 }
 
 async function manejarEleccionEnvio(numero, texto, sesion) {
@@ -391,7 +442,6 @@ async function registrarVenta(numero, sesion, modalidad) {
 
     if (clienteExistente.rows.length > 0) {
         clienteId = clienteExistente.rows[0].id
-        // Si es delivery, actualizar la dirección
         if (modalidad === 'delivery' && sesion.datos.ubicacion) {
             await db.query(
                 `UPDATE clientes SET direccion = $1, updated_at = NOW() WHERE id = $2`,
@@ -413,10 +463,18 @@ async function registrarVenta(numero, sesion, modalidad) {
     }
 
     const venta = await db.query(
-        `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado, cliente_id)
-         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago', $4)
+        `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado, cliente_id, quiere_factura, ruc_factura, razon_social)
+         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago', $4, $5, $6, $7)
          RETURNING id`,
-        [numero, sesion.datos.presentacion_id, sesion.datos.precio, clienteId]
+        [
+            numero,
+            sesion.datos.presentacion_id,
+            sesion.datos.precio,
+            clienteId,
+            sesion.datos.quiere_factura || false,
+            sesion.datos.ruc_factura || null,
+            sesion.datos.razon_social || null
+        ]
     )
 
     await db.query(

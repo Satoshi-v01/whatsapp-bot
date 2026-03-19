@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { getDeliveries, actualizarEstadoDelivery } from '../services/deliveries'
+import ModalConfirmar from '../components/ModalConfirmar'
 
 function Delivery() {
     const [deliveries, setDeliveries] = useState([])
     const [cargando, setCargando] = useState(true)
     const [filtroEstado, setFiltroEstado] = useState('todos')
     const [detalle, setDetalle] = useState(null)
+    const [modalConfirmar, setModalConfirmar] = useState(null)
 
     useEffect(() => {
         cargarDeliveries()
@@ -17,21 +19,33 @@ function Delivery() {
             const datos = await getDeliveries()
             setDeliveries(datos)
         } catch (err) {
-            console.error('Error cargando deliveries:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudieron cargar los deliveries.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         } finally {
             setCargando(false)
         }
     }
 
-    async function cambiarEstado(id, nuevoEstado, notas = '') {
+    async function cambiarEstado(id, nuevoEstado) {
         try {
-            await actualizarEstadoDelivery(id, nuevoEstado, notas)
+            await actualizarEstadoDelivery(id, nuevoEstado)
             await cargarDeliveries()
             if (detalle?.id === id) {
                 setDetalle(prev => ({ ...prev, estado: nuevoEstado }))
             }
         } catch (err) {
-            console.error('Error actualizando estado:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo actualizar el estado.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -82,9 +96,7 @@ function Delivery() {
     return (
         <div style={{ display: 'flex', height: 'calc(100vh - 56px)' }}>
 
-            {/* Lista */}
             <div style={{ width: '420px', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: 'white' }}>
-
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <h2 style={{ fontSize: '16px', fontWeight: '600' }}>Deliveries</h2>
@@ -132,7 +144,9 @@ function Delivery() {
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: '600' }}>{d.cliente_numero}</span>
+                                    <span style={{ fontSize: '13px', fontWeight: '600' }}>
+                                        {d.cliente_nombre || d.cliente_numero}
+                                    </span>
                                     <span style={{
                                         padding: '2px 8px', borderRadius: '20px', fontSize: '10px',
                                         fontWeight: '500', color: 'white',
@@ -153,7 +167,6 @@ function Delivery() {
                 </div>
             </div>
 
-            {/* Detalle */}
             <div style={{ flex: 1, background: '#f9fafb', overflowY: 'auto' }}>
                 {!detalle ? (
                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
@@ -162,10 +175,11 @@ function Delivery() {
                 ) : (
                     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                        {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: '600' }}>{detalle.cliente_numero}</h3>
+                                <h3 style={{ fontSize: '16px', fontWeight: '600' }}>
+                                    {detalle.cliente_nombre || detalle.cliente_numero}
+                                </h3>
                                 <p style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>
                                     {detalle.producto_nombre} — {detalle.presentacion_nombre} · Gs. {parseInt(detalle.precio).toLocaleString()}
                                 </p>
@@ -179,10 +193,21 @@ function Delivery() {
                             </span>
                         </div>
 
-                        {/* Datos del delivery */}
                         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                             <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '14px', color: '#888' }}>DATOS DE ENTREGA</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                {detalle.cliente_nombre && (
+                                    <div>
+                                        <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Cliente</p>
+                                        <p style={{ fontSize: '13px' }}>{detalle.cliente_nombre}</p>
+                                    </div>
+                                )}
+                                {detalle.cliente_ruc && (
+                                    <div>
+                                        <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>RUC</p>
+                                        <p style={{ fontSize: '13px' }}>{detalle.cliente_ruc}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Ubicación</p>
                                     <p style={{ fontSize: '13px' }}>{detalle.ubicacion || '—'}</p>
@@ -209,31 +234,18 @@ function Delivery() {
                                 </div>
                             </div>
 
-                            {detalle.cliente_nombre && (
-                                <div>
-                                    <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Cliente</p>
-                                    <p style={{ fontSize: '13px' }}>{detalle.cliente_nombre}</p>
-                                </div>
+                            {detalle.ubicacion?.includes('maps.google.com') && (<a
+                                
+                                    href={detalle.ubicacion.replace(/^.*?(https:\/\/)/, 'https://')}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ display: 'inline-block', marginTop: '12px', padding: '8px 14px', borderRadius: '8px', background: '#1a1a2e', color: 'white', fontSize: '12px', textDecoration: 'none' }}
+                                >
+                                    Ver en Google Maps
+                                </a>
                             )}
-                            {detalle.cliente_ruc && (
-                                <div>
-                                    <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>RUC</p>
-                                    <p style={{ fontSize: '13px' }}>{detalle.cliente_ruc}</p>
-                                </div>
-                            )}
-
-                            {detalle.ubicacion?.includes('maps.google.com') && (<a    
-                                href={detalle.ubicacion.replace(/^.*?(https:\/\/)/, 'https://')}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ display: 'inline-block', marginTop: '12px', padding: '8px 14px', borderRadius: '8px', background: '#1a1a2e', color: 'white', fontSize: '12px', textDecoration: 'none' }}
-                            >
-                                Ver en Google Maps
-                            </a>
-                        )}
                         </div>
 
-                        {/* Notas */}
                         {detalle.notas && (
                             <div style={{ background: '#fffbeb', borderRadius: '12px', padding: '16px', border: '1px solid #fde68a' }}>
                                 <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Notas</p>
@@ -241,7 +253,6 @@ function Delivery() {
                             </div>
                         )}
 
-                        {/* Cambiar estado */}
                         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                             <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '14px', color: '#888' }}>CAMBIAR ESTADO</h4>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -268,6 +279,17 @@ function Delivery() {
                     </div>
                 )}
             </div>
+
+            {modalConfirmar && (
+                <ModalConfirmar
+                    titulo={modalConfirmar.titulo}
+                    mensaje={modalConfirmar.mensaje}
+                    textoBoton={modalConfirmar.textoBoton}
+                    colorBoton={modalConfirmar.colorBoton}
+                    onConfirmar={modalConfirmar.onConfirmar}
+                    onCancelar={() => setModalConfirmar(null)}
+                />
+            )}
         </div>
     )
 }

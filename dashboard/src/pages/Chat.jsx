@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../services/api'
-import { getSesiones, tomarSesion, responderSesion, devolverBot } from '../services/sesiones'
+import { getSesiones, tomarSesion, responderSesion, devolverBot, cerrarConversacion } from '../services/sesiones'
+import ModalConfirmar from '../components/ModalConfirmar'
 
 function Chat() {
     const [sesiones, setSesiones] = useState([])
@@ -9,6 +10,7 @@ function Chat() {
     const [cargando, setCargando] = useState(true)
     const [enviando, setEnviando] = useState(false)
     const [mensajes, setMensajes] = useState([])
+    const [modalConfirmar, setModalConfirmar] = useState(null)
     const inputRef = useRef(null)
     const mensajesRef = useRef(null)
 
@@ -40,7 +42,13 @@ function Chat() {
             setSesiones(datos)
             setCargando(false)
         } catch (err) {
-            console.error('Error cargando sesiones:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudieron cargar las conversaciones.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -52,7 +60,7 @@ function Chat() {
                 mensajesRef.current?.scrollTo({ top: mensajesRef.current.scrollHeight, behavior: 'smooth' })
             }, 100)
         } catch (err) {
-            console.error('Error cargando mensajes:', err)
+            // silencioso — no interrumpir el polling
         }
     }
 
@@ -63,7 +71,13 @@ function Chat() {
             await cargarMensajes(numero)
             inputRef.current?.focus()
         } catch (err) {
-            console.error('Error tomando control:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo tomar el control de la conversación.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -72,8 +86,39 @@ function Chat() {
             await devolverBot(numero)
             await cargarSesiones()
         } catch (err) {
-            console.error('Error devolviendo al bot:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo devolver el control al bot.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
+    }
+
+    async function handleCerrarConversacion(numero) {
+        setModalConfirmar({
+            titulo: 'Cerrar conversación',
+            mensaje: `¿Cerrar la conversación con ${numero}? El cliente podrá volver a escribir desde cero.`,
+            textoBoton: 'Cerrar conversación',
+            colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await cerrarConversacion(numero)
+                    setModalConfirmar(null)
+                    setSesionActiva(null)
+                    await cargarSesiones()
+                } catch (err) {
+                    setModalConfirmar({
+                        titulo: 'Error',
+                        mensaje: 'No se pudo cerrar la conversación.',
+                        textoBoton: 'Cerrar',
+                        colorBoton: '#888',
+                        onConfirmar: () => setModalConfirmar(null)
+                    })
+                }
+            }
+        })
     }
 
     async function handleEnviar() {
@@ -85,7 +130,13 @@ function Chat() {
             await cargarMensajes(sesionActiva.cliente_numero)
             inputRef.current?.focus()
         } catch (err) {
-            console.error('Error enviando mensaje:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo enviar el mensaje.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         } finally {
             setEnviando(false)
         }
@@ -128,8 +179,9 @@ function Chat() {
     if (cargando) return <div style={{ padding: '24px' }}><p>Cargando conversaciones...</p></div>
 
     return (
-        <div style={{ display: 'flex', height: 'calc(100vh - 48px)', gap: '0' }}>
+        <div style={{ display: 'flex', height: 'calc(100vh - 56px)' }}>
 
+            {/* Lista de conversaciones */}
             <div style={{ width: '320px', borderRight: '1px solid #e5e7eb', overflowY: 'auto', background: 'white' }}>
                 <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Conversaciones</h3>
@@ -165,6 +217,7 @@ function Chat() {
                 )}
             </div>
 
+            {/* Panel derecho */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
                 {!sesionActiva ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
@@ -172,6 +225,7 @@ function Chat() {
                     </div>
                 ) : (
                     <>
+                        {/* Header */}
                         <div style={{ padding: '16px 20px', background: 'white', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <p style={{ fontWeight: '600', fontSize: '15px' }}>{sesionActiva.cliente_numero}</p>
@@ -193,9 +247,16 @@ function Chat() {
                                         Devolver al bot
                                     </button>
                                 )}
+                                <button
+                                    onClick={() => handleCerrarConversacion(sesionActiva.cliente_numero)}
+                                    style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}
+                                >
+                                    Cerrar conversación
+                                </button>
                             </div>
                         </div>
 
+                        {/* Historial de mensajes */}
                         <div
                             ref={mensajesRef}
                             style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}
@@ -230,12 +291,14 @@ function Chat() {
                             )}
                         </div>
 
+                        {/* Contexto */}
                         <div style={{ padding: '8px 20px', background: '#fffbeb', borderTop: '1px solid #fde68a' }}>
                             <p style={{ fontSize: '11px', color: '#92400e' }}>
                                 Paso: {sesionActiva.paso} · {JSON.stringify(sesionActiva.datos)}
                             </p>
                         </div>
 
+                        {/* Área de respuesta */}
                         <div style={{ padding: '16px 20px', background: 'white', borderTop: '1px solid #e5e7eb' }}>
                             {sesionActiva.modo === 'humano' ? (
                                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -265,6 +328,17 @@ function Chat() {
                     </>
                 )}
             </div>
+
+            {modalConfirmar && (
+                <ModalConfirmar
+                    titulo={modalConfirmar.titulo}
+                    mensaje={modalConfirmar.mensaje}
+                    textoBoton={modalConfirmar.textoBoton}
+                    colorBoton={modalConfirmar.colorBoton}
+                    onConfirmar={modalConfirmar.onConfirmar}
+                    onCancelar={() => setModalConfirmar(null)}
+                />
+            )}
         </div>
     )
 }

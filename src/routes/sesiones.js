@@ -74,6 +74,24 @@ router.patch('/:numero/tomar', async (req, res) => {
     }
 })
 
+router.patch('/:numero/cerrar', async (req, res) => {
+    try {
+        const { numero } = req.params
+
+        await db.query(
+            `UPDATE sesiones 
+             SET modo = 'bot', agente_id = NULL, paso = 'inicio',
+             datos = '{}', ultimo_mensaje = NOW()
+             WHERE cliente_numero = $1`,
+            [numero]
+        )
+
+        res.json({ ok: true, mensaje: 'Conversación cerrada' })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 // 4. El agente responde al cliente
 router.post('/:numero/responder', async (req, res) => {
     try {

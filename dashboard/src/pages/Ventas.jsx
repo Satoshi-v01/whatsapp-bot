@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getVentas, actualizarEstadoVenta } from '../services/ventas'
 import { useSearchParams } from 'react-router-dom'
+import ModalConfirmar from '../components/ModalConfirmar'
 
 function Ventas() {
     const [ventas, setVentas] = useState([])
     const [cargando, setCargando] = useState(true)
     const [searchParams] = useSearchParams()
     const [filtroEstado, setFiltroEstado] = useState('todos')
+    const [modalConfirmar, setModalConfirmar] = useState(null)
 
     const ventasFiltradas = filtroEstado === 'todos'
         ? ventas
@@ -26,7 +28,13 @@ function Ventas() {
             const datos = await getVentas()
             setVentas(datos)
         } catch (err) {
-            console.error('Error cargando ventas:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudieron cargar las ventas.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         } finally {
             setCargando(false)
         }
@@ -37,7 +45,13 @@ function Ventas() {
             await actualizarEstadoVenta(id, nuevoEstado)
             await cargarVentas()
         } catch (err) {
-            console.error('Error actualizando estado:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo actualizar el estado de la venta.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -80,7 +94,6 @@ function Ventas() {
                 </button>
             </div>
 
-            {/* Filtros */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 {filtros.map(f => (
                     <button
@@ -120,6 +133,9 @@ function Ventas() {
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Producto</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Presentación</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Precio</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Ganancia</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Canal</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Factura</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Estado</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Fecha</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px' }}>Acción</th>
@@ -132,7 +148,20 @@ function Ventas() {
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.cliente_numero}</td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.producto_nombre}</td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.presentacion_nombre}</td>
-                                <td style={{ padding: '12px 16px', fontSize: '13px' }}>Gs. {venta.precio.toLocaleString()}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '13px' }}>Gs. {parseInt(venta.precio).toLocaleString()}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '13px', color: '#10b981' }}>
+                                    {venta.ganancia ? `Gs. ${parseInt(venta.ganancia).toLocaleString()}` : '—'}
+                                </td>
+                                <td style={{ padding: '12px 16px', fontSize: '13px', color: '#888' }}>{venta.canal}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '13px' }}>
+                                    {venta.quiere_factura ? (
+                                        <span style={{ fontSize: '11px', color: '#3730a3' }}>
+                                            ✓ {venta.ruc_factura || '—'}
+                                        </span>
+                                    ) : (
+                                        <span style={{ fontSize: '11px', color: '#888' }}>No</span>
+                                    )}
+                                </td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>
                                     <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '500', color: 'white', backgroundColor: colorEstado(venta.estado) }}>
                                         {venta.estado}
@@ -155,6 +184,17 @@ function Ventas() {
                         ))}
                     </tbody>
                 </table>
+            )}
+
+            {modalConfirmar && (
+                <ModalConfirmar
+                    titulo={modalConfirmar.titulo}
+                    mensaje={modalConfirmar.mensaje}
+                    textoBoton={modalConfirmar.textoBoton}
+                    colorBoton={modalConfirmar.colorBoton}
+                    onConfirmar={modalConfirmar.onConfirmar}
+                    onCancelar={() => setModalConfirmar(null)}
+                />
             )}
         </div>
     )

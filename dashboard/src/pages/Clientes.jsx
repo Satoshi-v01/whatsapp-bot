@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getClientes, getCliente, crearCliente, editarCliente, buscarClientes } from '../services/clientes'
+import { getClientes, getCliente, crearCliente, editarCliente } from '../services/clientes'
+import ModalConfirmar from '../components/ModalConfirmar'
 
 function Clientes() {
     const [clientes, setClientes] = useState([])
@@ -9,6 +10,7 @@ function Clientes() {
     const [buscar, setBuscar] = useState('')
     const [modalNuevo, setModalNuevo] = useState(false)
     const [modalEditar, setModalEditar] = useState(false)
+    const [modalConfirmar, setModalConfirmar] = useState(null)
     const [form, setForm] = useState({ tipo: 'persona', nombre: '', ruc: '', telefono: '', email: '', direccion: '', ciudad: '', notas: '' })
 
     useEffect(() => {
@@ -30,7 +32,13 @@ function Clientes() {
             const datos = await getClientes(params)
             setClientes(datos)
         } catch (err) {
-            console.error('Error cargando clientes:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudieron cargar los clientes.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         } finally {
             setCargando(false)
         }
@@ -42,7 +50,13 @@ function Clientes() {
             const datos = await getCliente(id)
             setClienteSeleccionado(datos)
         } catch (err) {
-            console.error('Error cargando perfil:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: 'No se pudo cargar el perfil del cliente.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         } finally {
             setCargandoPerfil(false)
         }
@@ -56,7 +70,13 @@ function Clientes() {
             setForm({ tipo: 'persona', nombre: '', ruc: '', telefono: '', email: '', direccion: '', ciudad: '', notas: '' })
             await cargarClientes()
         } catch (err) {
-            console.error('Error creando cliente:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: err.response?.data?.error || 'No se pudo crear el cliente.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -67,7 +87,13 @@ function Clientes() {
             await verPerfil(clienteSeleccionado.id)
             await cargarClientes()
         } catch (err) {
-            console.error('Error editando cliente:', err)
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: err.response?.data?.error || 'No se pudo editar el cliente.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
         }
     }
 
@@ -190,7 +216,6 @@ function Clientes() {
                 ) : (
                     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                        {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -207,7 +232,6 @@ function Clientes() {
                             <button onClick={abrirModalEditar} style={btnSecundario}>✏️ Editar</button>
                         </div>
 
-                        {/* Datos fiscales y contacto */}
                         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                             <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#888', marginBottom: '14px' }}>DATOS FISCALES Y CONTACTO</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -234,7 +258,6 @@ function Clientes() {
                             </div>
                         </div>
 
-                        {/* Estadísticas */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                             <div style={{ background: 'white', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '3px solid #10b981' }}>
                                 <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Total compras</p>
@@ -254,7 +277,6 @@ function Clientes() {
                             </div>
                         </div>
 
-                        {/* Producto favorito */}
                         {clienteSeleccionado.producto_favorito && (
                             <div style={{ background: 'white', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ fontSize: '24px' }}>⭐</span>
@@ -269,7 +291,6 @@ function Clientes() {
                             </div>
                         )}
 
-                        {/* Notas */}
                         {clienteSeleccionado.notas && (
                             <div style={{ background: '#fffbeb', borderRadius: '12px', padding: '16px', border: '1px solid #fde68a' }}>
                                 <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Notas internas</p>
@@ -277,7 +298,6 @@ function Clientes() {
                             </div>
                         )}
 
-                        {/* Historial de compras */}
                         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                             <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#888', marginBottom: '14px' }}>HISTORIAL DE COMPRAS</h4>
                             {clienteSeleccionado.ventas?.length === 0 ? (
@@ -325,30 +345,19 @@ function Clientes() {
                             <h3>Nuevo cliente</h3>
                             <button onClick={() => setModalNuevo(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#888' }}>✕</button>
                         </div>
-
                         <label style={labelStyle}>Tipo</label>
                         <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={inputStyle}>
                             <option value="persona">Persona física</option>
                             <option value="empresa">Empresa</option>
                         </select>
-
                         <label style={labelStyle}>Nombre / Razón social *</label>
                         <input placeholder="Nombre completo o razón social" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
-
                         <label style={labelStyle}>RUC</label>
-                        <input
-                            placeholder="4.154.264-9"
-                            value={form.ruc}
-                            onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })}
-                            style={inputStyle}
-                        />
-
+                        <input placeholder="4.154.264-9" value={form.ruc} onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })} style={inputStyle} />
                         <label style={labelStyle}>Teléfono / WhatsApp</label>
                         <input placeholder="595981234567" value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
-
                         <label style={labelStyle}>Email</label>
                         <input placeholder="opcional" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                             <div>
                                 <label style={labelStyle}>Ciudad</label>
@@ -359,10 +368,8 @@ function Clientes() {
                                 <input placeholder="Opcional" value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={inputStyle} />
                             </div>
                         </div>
-
                         <label style={labelStyle}>Notas internas</label>
                         <textarea placeholder="Notas visibles solo para el equipo" value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
-
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
                             <button onClick={() => setModalNuevo(false)} style={btnSecundario}>Cancelar</button>
                             <button onClick={handleCrearCliente} style={btnPrimario}>Crear cliente</button>
@@ -379,29 +386,19 @@ function Clientes() {
                             <h3>Editar cliente</h3>
                             <button onClick={() => setModalEditar(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#888' }}>✕</button>
                         </div>
-
                         <label style={labelStyle}>Tipo</label>
                         <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={inputStyle}>
                             <option value="persona">Persona física</option>
                             <option value="empresa">Empresa</option>
                         </select>
-
                         <label style={labelStyle}>Nombre / Razón social *</label>
                         <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
-
                         <label style={labelStyle}>RUC</label>
-                        <input
-                            value={form.ruc}
-                            onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })}
-                            style={inputStyle}
-                        />
-
+                        <input value={form.ruc} onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })} style={inputStyle} />
                         <label style={labelStyle}>Teléfono / WhatsApp</label>
                         <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
-
                         <label style={labelStyle}>Email</label>
                         <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                             <div>
                                 <label style={labelStyle}>Ciudad</label>
@@ -412,16 +409,25 @@ function Clientes() {
                                 <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={inputStyle} />
                             </div>
                         </div>
-
                         <label style={labelStyle}>Notas internas</label>
                         <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
-
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
                             <button onClick={() => setModalEditar(false)} style={btnSecundario}>Cancelar</button>
                             <button onClick={handleEditarCliente} style={btnPrimario}>Guardar cambios</button>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {modalConfirmar && (
+                <ModalConfirmar
+                    titulo={modalConfirmar.titulo}
+                    mensaje={modalConfirmar.mensaje}
+                    textoBoton={modalConfirmar.textoBoton}
+                    colorBoton={modalConfirmar.colorBoton}
+                    onConfirmar={modalConfirmar.onConfirmar}
+                    onCancelar={() => setModalConfirmar(null)}
+                />
             )}
         </div>
     )

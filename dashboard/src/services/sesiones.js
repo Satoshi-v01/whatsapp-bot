@@ -19,3 +19,8 @@ export async function devolverBot(numero) {
     const res = await api.patch(`/sesiones/${numero}/devolver`)
     return res.data
 }
+
+export async function cerrarConversacion(numero) {
+    const res = await api.patch(`/sesiones/${numero}/cerrar`)
+    return res.data
+}
