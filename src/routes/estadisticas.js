@@ -146,4 +146,204 @@ router.get('/notificaciones', async (req, res) => {
     }
 })
 
+// Ventas por día para gráfico
+router.get('/ventas-por-dia', async (req, res) => {
+    try {
+        const { periodo = 'semana', canal } = req.query
+
+        let intervalo = `7 days`
+        let groupBy = `DATE(v.created_at)`
+        if (periodo === 'mes') intervalo = `30 days`
+        if (periodo === 'anual') intervalo = `365 days`
+
+        let condiciones = [`v.created_at >= NOW() - INTERVAL '${intervalo}'`, `v.estado != 'cancelado'`]
+        let valores = []
+
+        if (canal) {
+            condiciones.push(`v.canal = $1`)
+            valores.push(canal)
+        }
+
+        const resultado = await db.query(
+            `SELECT
+                ${groupBy} as fecha,
+                COUNT(*) as cantidad,
+                COALESCE(SUM(v.precio), 0) as total,
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             WHERE ${condiciones.join(' AND ')}
+             GROUP BY ${groupBy}
+             ORDER BY fecha ASC`,
+            valores
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Ventas por canal para gráfico torta
+router.get('/ventas-por-canal', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+
+        let intervalo = '30 days'
+        if (periodo === 'semana') intervalo = '7 days'
+        if (periodo === 'anual') intervalo = '365 days'
+
+        const resultado = await db.query(
+            `SELECT
+                v.canal,
+                COUNT(*) as cantidad,
+                COALESCE(SUM(v.precio), 0) as total
+             FROM ventas v
+             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             AND v.estado != 'cancelado'
+             GROUP BY v.canal
+             ORDER BY total DESC`
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Top y bottom productos
+router.get('/ranking-productos', async (req, res) => {
+    try {
+        const { periodo = 'mes', limite = 10 } = req.query
+
+        let intervalo = '30 days'
+        if (periodo === 'semana') intervalo = '7 days'
+        if (periodo === 'anual') intervalo = '365 days'
+
+        const top = await db.query(
+            `SELECT
+                p.nombre as producto,
+                pr.nombre as presentacion,
+                m.nombre as marca,
+                COUNT(*) as cantidad_vendida,
+                COALESCE(SUM(v.precio), 0) as total_generado
+             FROM ventas v
+             JOIN presentaciones pr ON v.presentacion_id = pr.id
+             JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             AND v.estado != 'cancelado'
+             GROUP BY p.nombre, pr.nombre, m.nombre
+             ORDER BY cantidad_vendida DESC
+             LIMIT $1`,
+            [parseInt(limite)]
+        )
+
+        const bottom = await db.query(
+            `SELECT
+                p.nombre as producto,
+                pr.nombre as presentacion,
+                m.nombre as marca,
+                COUNT(*) as cantidad_vendida,
+                COALESCE(SUM(v.precio), 0) as total_generado
+             FROM ventas v
+             JOIN presentaciones pr ON v.presentacion_id = pr.id
+             JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             AND v.estado != 'cancelado'
+             GROUP BY p.nombre, pr.nombre, m.nombre
+             ORDER BY cantidad_vendida ASC
+             LIMIT $1`,
+            [parseInt(limite)]
+        )
+
+        res.json({ top: top.rows, bottom: bottom.rows })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Top clientes
+router.get('/top-clientes', async (req, res) => {
+    try {
+        const { periodo = 'mes', limite = 10 } = req.query
+
+        let intervalo = '30 days'
+        if (periodo === 'semana') intervalo = '7 days'
+        if (periodo === 'anual') intervalo = '365 days'
+
+        const resultado = await db.query(
+            `SELECT
+                COALESCE(c.nombre, v.razon_social, 'Consumidor final') as cliente,
+                c.ruc,
+                COUNT(*) as cantidad_compras,
+                COALESCE(SUM(v.precio), 0) as total_comprado
+             FROM ventas v
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             AND v.estado != 'cancelado'
+             GROUP BY c.nombre, v.razon_social, c.ruc
+             ORDER BY total_comprado DESC
+             LIMIT $1`,
+            [parseInt(limite)]
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Métricas generales del período
+router.get('/metricas', async (req, res) => {
+    try {
+        const { periodo = 'mes', canal, marca_id, categoria_id } = req.query
+
+        let intervalo = '30 days'
+        if (periodo === 'semana') intervalo = '7 days'
+        if (periodo === 'anual') intervalo = '365 days'
+        if (periodo === 'hoy') intervalo = '1 day'
+
+        let condiciones = [
+            `v.created_at >= NOW() - INTERVAL '${intervalo}'`,
+            `v.estado != 'cancelado'`
+        ]
+        let valores = []
+        let i = 1
+
+        if (canal) {
+            condiciones.push(`v.canal = $${i}`)
+            valores.push(canal)
+            i++
+        }
+
+        if (marca_id) {
+            condiciones.push(`p.marca_id = $${i}`)
+            valores.push(parseInt(marca_id))
+            i++
+        }
+
+        if (categoria_id) {
+            condiciones.push(`p.categoria_id = $${i}`)
+            valores.push(parseInt(categoria_id))
+            i++
+        }
+
+        const resultado = await db.query(
+            `SELECT
+                COUNT(*) as cantidad,
+                COALESCE(SUM(v.precio), 0) as total,
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia,
+                COALESCE(AVG(v.precio), 0) as ticket_promedio,
+                FLOOR(COALESCE(SUM(v.precio), 0) / 11) as iva_total
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             WHERE ${condiciones.join(' AND ')}`,
+            valores
+        )
+        res.json(resultado.rows[0])
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 module.exports = router

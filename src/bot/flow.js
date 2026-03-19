@@ -434,68 +434,81 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
 }
 
 async function registrarVenta(numero, sesion, modalidad) {
-    let clienteId = null
-    const clienteExistente = await db.query(
-        `SELECT id FROM clientes WHERE telefono = $1`,
-        [numero]
-    )
+    const client = await db.pool.connect()
+    try {
+        await client.query('BEGIN')
 
-    if (clienteExistente.rows.length > 0) {
-        clienteId = clienteExistente.rows[0].id
-        if (modalidad === 'delivery' && sesion.datos.ubicacion) {
-            await db.query(
-                `UPDATE clientes SET direccion = $1, updated_at = NOW() WHERE id = $2`,
-                [sesion.datos.ubicacion, clienteId]
+        let clienteId = null
+        const clienteExistente = await client.query(
+            `SELECT id FROM clientes WHERE telefono = $1`,
+            [numero]
+        )
+
+        if (clienteExistente.rows.length > 0) {
+            clienteId = clienteExistente.rows[0].id
+            if (modalidad === 'delivery' && sesion.datos.ubicacion) {
+                await client.query(
+                    `UPDATE clientes SET direccion = $1, updated_at = NOW() WHERE id = $2`,
+                    [sesion.datos.ubicacion, clienteId]
+                )
+            }
+        } else {
+            const nuevoCliente = await client.query(
+                `INSERT INTO clientes (nombre, telefono, origen, direccion)
+                 VALUES ($1, $2, 'bot', $3)
+                 RETURNING id`,
+                [
+                    `Cliente ${numero}`,
+                    numero,
+                    modalidad === 'delivery' ? sesion.datos.ubicacion : null
+                ]
             )
+            clienteId = nuevoCliente.rows[0].id
         }
-    } else {
-        const nuevoCliente = await db.query(
-            `INSERT INTO clientes (nombre, telefono, origen, direccion)
-             VALUES ($1, $2, 'bot', $3)
+
+        const venta = await client.query(
+            `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado, cliente_id, quiere_factura, ruc_factura, razon_social)
+             VALUES ($1, $2, 1, $3, 'whatsapp_bot', 'pendiente_pago', $4, $5, $6, $7)
              RETURNING id`,
             [
-                `Cliente ${numero}`,
                 numero,
-                modalidad === 'delivery' ? sesion.datos.ubicacion : null
+                sesion.datos.presentacion_id,
+                sesion.datos.precio,
+                clienteId,
+                sesion.datos.quiere_factura || false,
+                sesion.datos.ruc_factura || null,
+                sesion.datos.razon_social || null
             ]
         )
-        clienteId = nuevoCliente.rows[0].id
-    }
 
-    const venta = await db.query(
-        `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado, cliente_id, quiere_factura, ruc_factura, razon_social)
-        VALUES ($1, $2, 1, $3, 'whatsapp_bot', 'pendiente_pago', $4, $5, $6, $7)
-        RETURNING id`,
-        [
-            numero,
-            sesion.datos.presentacion_id,
-            sesion.datos.precio,
-            clienteId,
-            sesion.datos.quiere_factura || false,
-            sesion.datos.ruc_factura || null,
-            sesion.datos.razon_social || null
-        ]
-    )
-
-    await db.query(
-        `UPDATE presentaciones SET stock = stock - 1 WHERE id = $1`,
-        [sesion.datos.presentacion_id]
-    )
-
-    if (modalidad === 'delivery') {
-        await db.query(
-            `INSERT INTO deliveries (venta_id, cliente_numero, ubicacion, referencia, horario, contacto_entrega, metodo_pago)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [
-                venta.rows[0].id,
-                numero,
-                sesion.datos.ubicacion,
-                sesion.datos.referencia,
-                sesion.datos.horario,
-                sesion.datos.contacto_entrega,
-                sesion.datos.metodo_pago
-            ]
+        await client.query(
+            `UPDATE presentaciones SET stock = stock - 1 WHERE id = $1`,
+            [sesion.datos.presentacion_id]
         )
+
+        if (modalidad === 'delivery') {
+            await client.query(
+                `INSERT INTO deliveries (venta_id, cliente_numero, ubicacion, referencia, horario, contacto_entrega, metodo_pago)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [
+                    venta.rows[0].id,
+                    numero,
+                    sesion.datos.ubicacion,
+                    sesion.datos.referencia,
+                    sesion.datos.horario,
+                    sesion.datos.contacto_entrega,
+                    sesion.datos.metodo_pago
+                ]
+            )
+        }
+
+        await client.query('COMMIT')
+
+    } catch (error) {
+        await client.query('ROLLBACK')
+        throw error
+    } finally {
+        client.release()
     }
 }
 
