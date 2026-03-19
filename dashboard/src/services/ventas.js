@@ -25,3 +25,9 @@ export async function getHistorial(params = {}) {
     const res = await api.get(`/ventas/historial${query ? `?${query}` : ''}`)
     return res.data
 }
+
+export async function getReporte(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/ventas/reporte/exportar${query ? `?${query}` : ''}`)
+    return res.data
+}

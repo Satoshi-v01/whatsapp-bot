@@ -167,6 +167,19 @@ function Sidebar({ usuario, onLogout }) {
                     </div>
                 </Link>
 
+                <Link to="/reportes" style={{ textDecoration: 'none' }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 12px', borderRadius: '8px',
+                        background: esActivo('/reportes') ? '#2a2a4e' : 'transparent',
+                        color: esActivo('/reportes') ? 'white' : '#a0a0c0',
+                        transition: 'background 0.2s', cursor: 'pointer', whiteSpace: 'nowrap'
+                    }}>
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>📊</span>
+                        {expandido && <span style={{ fontSize: '14px' }}>Reportes</span>}
+                    </div>
+                </Link>
+
             </div>
 
         </nav>
