@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
                     p.nombre as producto_nombre,
                     u.nombre as agente_nombre,
                     c.nombre as cliente_nombre,
-                    (v.precio - pr.precio_compra) as ganancia
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              LEFT JOIN productos p ON pr.producto_id = p.id
@@ -36,7 +36,7 @@ router.get('/estado/:estado', async (req, res) => {
                     pr.precio_compra,
                     p.nombre as producto_nombre,
                     c.nombre as cliente_nombre,
-                    (v.precio - pr.precio_compra) as ganancia
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              LEFT JOIN productos p ON pr.producto_id = p.id
@@ -51,7 +51,136 @@ router.get('/estado/:estado', async (req, res) => {
     }
 })
 
-// 3. Ver una venta específica
+// 3. Historial con filtros y paginación — ANTES de /:id
+router.get('/historial', async (req, res) => {
+    try {
+        const {
+            periodo = 'recientes',
+            buscar,
+            metodo_pago,
+            canal,
+            fecha_desde,
+            fecha_hasta,
+            pagina = 1,
+            por_pagina = 20
+        } = req.query
+
+        const offset = (parseInt(pagina) - 1) * parseInt(por_pagina)
+
+        let condiciones = ['1=1']
+        let valores = []
+        let i = 1
+
+        if (periodo === 'recientes') {
+            condiciones.push(`v.created_at >= NOW() - INTERVAL '24 hours'`)
+        } else if (periodo === 'semanal') {
+            condiciones.push(`v.created_at >= DATE_TRUNC('week', NOW())`)
+        } else if (periodo === 'mensual') {
+            condiciones.push(`v.created_at >= DATE_TRUNC('month', NOW())`)
+        } else if (periodo === 'anual') {
+            condiciones.push(`v.created_at >= DATE_TRUNC('year', NOW())`)
+        } else if (periodo === 'personalizado' && fecha_desde && fecha_hasta) {
+            condiciones.push(`v.created_at >= $${i} AND v.created_at <= $${i + 1}`)
+            valores.push(fecha_desde, fecha_hasta)
+            i += 2
+        }
+
+        if (buscar) {
+            condiciones.push(`(
+                CAST(v.id AS TEXT) ILIKE $${i} OR
+                LOWER(COALESCE(c.nombre, '')) ILIKE $${i} OR
+                COALESCE(v.cliente_numero, '') ILIKE $${i}
+            )`)
+            valores.push(`%${buscar.toLowerCase()}%`)
+            i++
+        }
+
+        if (metodo_pago) {
+            condiciones.push(`v.metodo_pago = $${i}`)
+            valores.push(metodo_pago)
+            i++
+        }
+
+        if (canal) {
+            condiciones.push(`v.canal = $${i}`)
+            valores.push(canal)
+            i++
+        }
+
+        const where = condiciones.join(' AND ')
+
+        const total = await db.query(
+            `SELECT COUNT(*) as total
+             FROM ventas v
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE ${where}`,
+            valores
+        )
+
+        const ventas = await db.query(
+            `SELECT v.*,
+                    pr.nombre as presentacion_nombre,
+                    pr.precio_compra,
+                    p.nombre as producto_nombre,
+                    m.nombre as marca_nombre,
+                    c.nombre as cliente_nombre,
+                    c.ruc as cliente_ruc,
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE ${where}
+             ORDER BY v.created_at DESC
+             LIMIT $${i} OFFSET $${i + 1}`,
+            [...valores, parseInt(por_pagina), offset]
+        )
+
+        const resumenDia = await db.query(
+            `SELECT COUNT(*) as cantidad,
+                    COALESCE(SUM(v.precio), 0) as total,
+                    COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             WHERE v.created_at >= CURRENT_DATE AND v.estado != 'cancelado'`
+        )
+
+        const resumenSemana = await db.query(
+            `SELECT COUNT(*) as cantidad,
+                    COALESCE(SUM(v.precio), 0) as total
+             FROM ventas v
+             WHERE v.created_at >= DATE_TRUNC('week', NOW()) AND v.estado != 'cancelado'`
+        )
+
+        const resumenMes = await db.query(
+            `SELECT COUNT(*) as cantidad,
+                    COALESCE(SUM(v.precio), 0) as total
+             FROM ventas v
+             WHERE v.created_at >= DATE_TRUNC('month', NOW()) AND v.estado != 'cancelado'`
+        )
+
+        res.json({
+            ventas: ventas.rows,
+            paginacion: {
+                total: parseInt(total.rows[0].total),
+                pagina: parseInt(pagina),
+                por_pagina: parseInt(por_pagina),
+                total_paginas: Math.ceil(parseInt(total.rows[0].total) / parseInt(por_pagina))
+            },
+            resumen: {
+                dia: resumenDia.rows[0],
+                semana: resumenSemana.rows[0],
+                mes: resumenMes.rows[0]
+            }
+        })
+
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// 4. Ver una venta específica
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params
@@ -61,7 +190,7 @@ router.get('/:id', async (req, res) => {
                     pr.precio_compra,
                     p.nombre as producto_nombre,
                     c.nombre as cliente_nombre,
-                    (v.precio - pr.precio_compra) as ganancia
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              LEFT JOIN productos p ON pr.producto_id = p.id
@@ -78,7 +207,7 @@ router.get('/:id', async (req, res) => {
     }
 })
 
-// 4. Actualizar estado de una venta
+// 5. Actualizar estado de una venta
 router.patch('/:id/estado', async (req, res) => {
     try {
         const { id } = req.params
@@ -109,7 +238,7 @@ router.patch('/:id/estado', async (req, res) => {
     }
 })
 
-// 5. Registrar venta presencial
+// 6. Registrar venta presencial
 router.post('/presencial', async (req, res) => {
     try {
         const {
@@ -122,6 +251,7 @@ router.post('/presencial', async (req, res) => {
             ruc_factura,
             razon_social,
             agente_id,
+            canal,
             es_de_whatsapp,
             sesion_numero
         } = req.body
@@ -130,7 +260,6 @@ router.post('/presencial', async (req, res) => {
             return res.status(400).json({ error: 'Presentación, cantidad y precio son requeridos' })
         }
 
-        // Verificar stock
         const stock = await db.query(
             `SELECT stock, nombre FROM presentaciones WHERE id = $1`,
             [presentacion_id]
@@ -144,22 +273,22 @@ router.post('/presencial', async (req, res) => {
             return res.status(400).json({ error: `Stock insuficiente. Disponible: ${stock.rows[0].stock}` })
         }
 
-        // Registrar venta
+        const canalFinal = canal || 'en_tienda'
+
         const venta = await db.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, quiere_factura, ruc_factura, razon_social, agente_id)
-             VALUES ($1, $2, $3, $4, 'presencial', 'pagado', $5, $6, $7, $8)
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, quiere_factura, ruc_factura, razon_social, agente_id)
+             VALUES ($1, $2, $3, $4, $5, 'pagado', $6, $7, $8, $9, $10)
              RETURNING *`,
-            [cliente_id || null, presentacion_id, cantidad, precio,
-             quiere_factura || false, ruc_factura || null, razon_social || null, agente_id || null]
+            [cliente_id || null, presentacion_id, cantidad, precio, canalFinal,
+             metodo_pago, quiere_factura || false, ruc_factura || null,
+             razon_social || null, agente_id || null]
         )
 
-        // Descontar stock
         await db.query(
             `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
             [cantidad, presentacion_id]
         )
 
-        // Si viene de una conversación de WhatsApp, marcar delivery como en_camino
         if (es_de_whatsapp && sesion_numero) {
             await db.query(
                 `UPDATE deliveries SET estado = 'en_camino', updated_at = NOW()
