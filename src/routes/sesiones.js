@@ -3,6 +3,7 @@ const router = express.Router()
 const db = require('../db/index')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
+const { manejarError } = require('../middleware/validar')
 
 // 1. Ver todas las conversaciones activas
 router.get('/', async (req, res) => {
@@ -15,7 +16,7 @@ router.get('/', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -32,7 +33,7 @@ router.get('/:numero', async (req, res) => {
         }
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -43,7 +44,7 @@ router.get('/:numero/mensajes', async (req, res) => {
         const mensajes = await obtenerMensajes(numero)
         res.json(mensajes)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -70,7 +71,7 @@ router.patch('/:numero/tomar', async (req, res) => {
 
         res.json({ ok: true, mensaje: 'Control tomado por el agente' })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -88,7 +89,7 @@ router.patch('/:numero/cerrar', async (req, res) => {
 
         res.json({ ok: true, mensaje: 'Conversación cerrada' })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -112,7 +113,7 @@ router.post('/:numero/responder', async (req, res) => {
 
         res.json({ ok: true, mensaje: 'Mensaje enviado' })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -135,7 +136,7 @@ router.patch('/:numero/devolver', async (req, res) => {
 
         res.json({ ok: true, mensaje: 'Control devuelto al bot' })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 

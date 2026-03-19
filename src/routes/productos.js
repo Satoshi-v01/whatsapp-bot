@@ -1,6 +1,8 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
+const { manejarError } = require('../middleware/validar')
+
 
 // 1. Ver todos los productos con sus presentaciones
 router.get('/', async (req, res) => {
@@ -29,7 +31,7 @@ router.get('/', async (req, res) => {
 
         res.json(resultado)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -41,7 +43,7 @@ router.get('/categorias', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -59,7 +61,7 @@ router.post('/categorias', async (req, res) => {
         )
         res.status(201).json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -85,7 +87,7 @@ router.patch('/categorias/:id', async (req, res) => {
 
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -97,7 +99,7 @@ router.delete('/categorias/:id/confirmar', async (req, res) => {
         await db.query(`DELETE FROM categorias WHERE id = $1`, [id])
         res.json({ ok: true })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -112,7 +114,7 @@ router.delete('/categorias/:id', async (req, res) => {
         const cantidad = parseInt(productosAsociados.rows[0].cantidad)
         res.json({ ok: true, productos_asociados: cantidad })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -124,7 +126,7 @@ router.get('/marcas', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -144,7 +146,7 @@ router.delete('/marcas/:id', async (req, res) => {
 
         // Solo eliminar si el frontend confirma con force=true
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -157,7 +159,7 @@ router.delete('/marcas/:id/confirmar', async (req, res) => {
 
         res.json({ ok: true })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -191,7 +193,7 @@ router.get('/:id', async (req, res) => {
             presentaciones: presentaciones.rows
         })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -213,7 +215,7 @@ router.post('/', async (req, res) => {
 
         res.status(201).json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -242,7 +244,7 @@ router.patch('/:id', async (req, res) => {
 
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -258,7 +260,7 @@ router.post('/marcas', async (req, res) => {
         )
         res.status(201).json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -281,7 +283,7 @@ router.post('/:id/presentaciones', async (req, res) => {
 
         res.status(201).json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -322,7 +324,7 @@ router.patch('/presentaciones/:id/precio', async (req, res) => {
 
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -347,7 +349,7 @@ router.patch('/presentaciones/:id/stock', async (req, res) => {
 
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -368,7 +370,7 @@ router.patch('/presentaciones/:id/disponible', async (req, res) => {
 
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 

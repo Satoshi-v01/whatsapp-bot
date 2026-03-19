@@ -3,6 +3,7 @@ const router = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const db = require('../db/index')
+const { manejarError } = require('../middleware/validar')
 
 router.post('/login', async (req, res) => {
     try {
@@ -46,7 +47,7 @@ router.post('/login', async (req, res) => {
         })
 
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 

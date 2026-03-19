@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
+const { manejarError } = require('../middleware/validar')
 
 // 1. Buscar/listar clientes
 router.get('/', async (req, res) => {
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
 
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -61,7 +62,7 @@ router.get('/telefono/:telefono', async (req, res) => {
         }
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -125,7 +126,7 @@ router.get('/:id', async (req, res) => {
             producto_favorito: productoFavorito.rows[0] || null
         })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -147,7 +148,7 @@ router.post('/', async (req, res) => {
 
         res.status(201).json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -180,7 +181,7 @@ router.patch('/:id', async (req, res) => {
 
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -202,7 +203,7 @@ router.get('/buscar/autocomplete', async (req, res) => {
 
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 

@@ -23,8 +23,8 @@ router.get('/', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
+    manejarError(res, error)
+}
 })
 
 // 2. Ver ventas por estado
@@ -48,8 +48,8 @@ router.get('/estado/:estado', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
+    manejarError(res, error)
+}
 })
 
 // 3. Historial con filtros y paginación
@@ -177,8 +177,8 @@ router.get('/historial', async (req, res) => {
         })
 
     } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
+    manejarError(res, error)
+}
 })
 
 // 4. Reporte para exportar — ANTES de /:id
@@ -233,8 +233,8 @@ router.get('/reporte/exportar', async (req, res) => {
 
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
+    manejarError(res, error)
+}
 })
 
 // 5. Ver una venta específica
@@ -260,8 +260,8 @@ router.get('/:id', validarId, async (req, res) => {
         }
         res.json(resultado.rows[0])
     } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
+    manejarError(res, error)
+}
 })
 
 // 6. Actualizar estado de una venta
@@ -284,8 +284,8 @@ router.patch('/:id/estado', validarId, validarEstado, async (req, res) => {
 
         res.json({ ok: true, venta: resultado.rows[0] })
     } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
+    manejarError(res, error)
+}
 })
 
 // 7. Registrar venta presencial
@@ -356,7 +356,7 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
 
     } catch (error) {
         await client.query('ROLLBACK')
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     } finally {
         client.release()
     }
