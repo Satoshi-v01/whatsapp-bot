@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
+const { manejarError } = require('../middleware/validar')
 
 // Ver todos los deliveries
 router.get('/', async (req, res) => {
@@ -22,7 +23,7 @@ router.get('/', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -48,7 +49,7 @@ router.get('/estado/:estado', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -77,7 +78,7 @@ router.patch('/:id/estado', async (req, res) => {
 
         res.json({ ok: true, delivery: resultado.rows[0] })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 

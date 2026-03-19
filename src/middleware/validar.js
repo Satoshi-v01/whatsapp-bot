@@ -38,4 +38,14 @@ function validarId(req, res, next) {
     next()
 }
 
+function manejarError(res, error) {
+    if (process.env.NODE_ENV === 'production') {
+        res.status(500).json({ error: 'Error interno del servidor' })
+    } else {
+        res.status(500).json({ error: error.message })
+    }
+}
+
+module.exports = { validarVentaPresencial, validarEstado, validarId, manejarError }
+
 module.exports = { validarVentaPresencial, validarEstado, validarId }
