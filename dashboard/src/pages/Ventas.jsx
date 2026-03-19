@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getVentas, actualizarEstadoVenta } from '../services/ventas'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import ModalConfirmar from '../components/ModalConfirmar'
 
 function Ventas() {
@@ -9,6 +9,9 @@ function Ventas() {
     const [searchParams] = useSearchParams()
     const [filtroEstado, setFiltroEstado] = useState('todos')
     const [modalConfirmar, setModalConfirmar] = useState(null)
+    const navigate = useNavigate()
+
+    const btnPrimario = { padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px' }
 
     const ventasFiltradas = filtroEstado === 'todos'
         ? ventas
@@ -89,9 +92,14 @@ function Ventas() {
         <div style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '22px' }}>Ventas</h2>
-                <button onClick={cargarVentas} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>
-                    Actualizar
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={cargarVentas} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>
+                        Actualizar
+                    </button>
+                    <button onClick={() => navigate('/caja')} style={btnPrimario}>
+                        + Nueva venta
+                    </button>
+                </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -145,7 +153,7 @@ function Ventas() {
                         {ventasFiltradas.map(venta => (
                             <tr key={venta.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.id}</td>
-                                <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.cliente_numero}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.cliente_nombre || venta.cliente_numero || '—'}</td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.producto_nombre}</td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>{venta.presentacion_nombre}</td>
                                 <td style={{ padding: '12px 16px', fontSize: '13px' }}>Gs. {parseInt(venta.precio).toLocaleString()}</td>

@@ -14,3 +14,8 @@ export async function actualizarEstadoVenta(id, estado) {
     const res = await api.patch(`/ventas/${id}/estado`, { estado })
     return res.data
 }
+
+export async function registrarVentaPresencial(datos) {
+    const res = await api.post('/ventas/presencial', datos)
+    return res.data
+}

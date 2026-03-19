@@ -109,4 +109,72 @@ router.patch('/:id/estado', async (req, res) => {
     }
 })
 
+// 5. Registrar venta presencial
+router.post('/presencial', async (req, res) => {
+    try {
+        const {
+            cliente_id,
+            presentacion_id,
+            cantidad,
+            precio,
+            metodo_pago,
+            quiere_factura,
+            ruc_factura,
+            razon_social,
+            agente_id,
+            es_de_whatsapp,
+            sesion_numero
+        } = req.body
+
+        if (!presentacion_id || !cantidad || !precio) {
+            return res.status(400).json({ error: 'Presentación, cantidad y precio son requeridos' })
+        }
+
+        // Verificar stock
+        const stock = await db.query(
+            `SELECT stock, nombre FROM presentaciones WHERE id = $1`,
+            [presentacion_id]
+        )
+
+        if (stock.rows.length === 0) {
+            return res.status(404).json({ error: 'Presentación no encontrada' })
+        }
+
+        if (stock.rows[0].stock < cantidad) {
+            return res.status(400).json({ error: `Stock insuficiente. Disponible: ${stock.rows[0].stock}` })
+        }
+
+        // Registrar venta
+        const venta = await db.query(
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, quiere_factura, ruc_factura, razon_social, agente_id)
+             VALUES ($1, $2, $3, $4, 'presencial', 'pagado', $5, $6, $7, $8)
+             RETURNING *`,
+            [cliente_id || null, presentacion_id, cantidad, precio,
+             quiere_factura || false, ruc_factura || null, razon_social || null, agente_id || null]
+        )
+
+        // Descontar stock
+        await db.query(
+            `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
+            [cantidad, presentacion_id]
+        )
+
+        // Si viene de una conversación de WhatsApp, marcar delivery como en_camino
+        if (es_de_whatsapp && sesion_numero) {
+            await db.query(
+                `UPDATE deliveries SET estado = 'en_camino', updated_at = NOW()
+                 WHERE cliente_numero = $1
+                 AND estado IN ('pendiente', 'confirmado')
+                 ORDER BY created_at DESC
+                 LIMIT 1`,
+                [sesion_numero]
+            )
+        }
+
+        res.status(201).json({ ok: true, venta: venta.rows[0] })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 module.exports = router

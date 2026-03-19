@@ -9,6 +9,7 @@ import Inventario from './pages/Inventario'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Clientes from './pages/Clientes'
+import Caja from './pages/Caja'
 import './App.css'
 
 
@@ -52,7 +53,8 @@ function App() {
                         <Route path="/chat" element={<Chat />} />
                         <Route path="/ventas" element={<Ventas />} />
                         <Route path="/inventario" element={<Inventario />} />
-                        <Route path="/clientes" element={<Clientes />} />                        
+                        <Route path="/clientes" element={<Clientes />} />         
+                        <Route path="/caja" element={<Caja />} />            
                         <Route path="/delivery" element={<Delivery />} />
                     </Routes>
                 </main>
