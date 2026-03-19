@@ -11,6 +11,8 @@ const clientesRoutes = require('./src/routes/clientes')
 const { autenticar } = require('./src/middleware/auth')
 const deliveriesRoutes = require('./src/routes/deliveries')
 const estadisticasRoutes = require('./src/routes/estadisticas')
+const usuariosRoutes = require('./src/routes/usuarios')
+const configuracionRoutes = require('./src/routes/configuracion')
 const helmet = require('helmet')
 const cors = require('cors')
 const logger = require('./src/middleware/logger')
@@ -79,12 +81,16 @@ app.use((req, res, next) => {
 // Rutas
 app.use('/webhook', webhookRoutes)
 app.use('/auth', limiterAuth, authRoutes)
+app.use('/usuarios', limiterGeneral, autenticar, usuariosRoutes)
+// app.use('/usuarios', usuariosRoutes)
+app.use('/configuracion', limiterGeneral, autenticar, configuracionRoutes)
 app.use('/sesiones', limiterGeneral, autenticar, sesionesRoutes)
 app.use('/ventas', limiterGeneral, autenticar, ventasRoutes)
 app.use('/productos', limiterGeneral, autenticar, productosRoutes)
 app.use('/deliveries', limiterGeneral, autenticar, deliveriesRoutes)
 app.use('/estadisticas', limiterGeneral, autenticar, estadisticasRoutes)
 app.use('/clientes', limiterGeneral, autenticar, clientesRoutes)
+
 
 app.get('/', (req, res) => {
     res.json({ mensaje: 'Servidor funcionando' })
