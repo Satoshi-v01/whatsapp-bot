@@ -207,6 +207,63 @@ router.get('/:id', async (req, res) => {
     }
 })
 
+
+// Reporte para exportar
+router.get('/reporte/exportar', async (req, res) => {
+    try {
+        const { fecha_desde, fecha_hasta, canal } = req.query
+
+        if (!fecha_desde || !fecha_hasta) {
+            return res.status(400).json({ error: 'Fecha desde y hasta son requeridas' })
+        }
+
+        let condiciones = [
+            `v.created_at >= $1`,
+            `v.created_at < $2`,
+            `v.estado != 'cancelado'`
+        ]
+        let valores = [fecha_desde, fecha_hasta]
+        let i = 3
+
+        if (canal) {
+            condiciones.push(`v.canal = $${i}`)
+            valores.push(canal)
+            i++
+        }
+
+        const where = condiciones.join(' AND ')
+
+        const resultado = await db.query(
+            `SELECT
+                DATE(v.created_at) as fecha,
+                COALESCE(c.nombre, v.razon_social, 'Consumidor final') as cliente,
+                COALESCE(c.ruc, v.ruc_factura, '') as ruc,
+                COALESCE(c.telefono, v.cliente_numero, '') as telefono,
+                m.nombre as marca,
+                p.nombre as producto,
+                pr.nombre as presentacion,
+                v.cantidad,
+                v.precio as monto,
+                FLOOR(v.precio::numeric / 11) as iva,
+                v.canal,
+                v.metodo_pago,
+                v.estado
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE ${where}
+             ORDER BY v.created_at ASC`,
+            valores
+        )
+
+        res.json(resultado.rows)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 // 5. Actualizar estado de una venta
 router.patch('/:id/estado', async (req, res) => {
     try {
@@ -240,6 +297,7 @@ router.patch('/:id/estado', async (req, res) => {
 
 // 6. Registrar venta presencial
 router.post('/presencial', async (req, res) => {
+    const client = await db.pool.connect()
     try {
         const {
             cliente_id,
@@ -260,22 +318,26 @@ router.post('/presencial', async (req, res) => {
             return res.status(400).json({ error: 'Presentación, cantidad y precio son requeridos' })
         }
 
-        const stock = await db.query(
-            `SELECT stock, nombre FROM presentaciones WHERE id = $1`,
+        await client.query('BEGIN')
+
+        const stock = await client.query(
+            `SELECT stock, nombre FROM presentaciones WHERE id = $1 FOR UPDATE`,
             [presentacion_id]
         )
 
         if (stock.rows.length === 0) {
+            await client.query('ROLLBACK')
             return res.status(404).json({ error: 'Presentación no encontrada' })
         }
 
         if (stock.rows[0].stock < cantidad) {
+            await client.query('ROLLBACK')
             return res.status(400).json({ error: `Stock insuficiente. Disponible: ${stock.rows[0].stock}` })
         }
 
         const canalFinal = canal || 'en_tienda'
 
-        const venta = await db.query(
+        const venta = await client.query(
             `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, quiere_factura, ruc_factura, razon_social, agente_id)
              VALUES ($1, $2, $3, $4, $5, 'pagado', $6, $7, $8, $9, $10)
              RETURNING *`,
@@ -284,13 +346,13 @@ router.post('/presencial', async (req, res) => {
              razon_social || null, agente_id || null]
         )
 
-        await db.query(
+        await client.query(
             `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
             [cantidad, presentacion_id]
         )
 
         if (es_de_whatsapp && sesion_numero) {
-            await db.query(
+            await client.query(
                 `UPDATE deliveries SET estado = 'en_camino', updated_at = NOW()
                  WHERE cliente_numero = $1
                  AND estado IN ('pendiente', 'confirmado')
@@ -300,9 +362,15 @@ router.post('/presencial', async (req, res) => {
             )
         }
 
+        await client.query('COMMIT')
+
         res.status(201).json({ ok: true, venta: venta.rows[0] })
+
     } catch (error) {
+        await client.query('ROLLBACK')
         res.status(500).json({ error: error.message })
+    } finally {
+        client.release()
     }
 })
 
