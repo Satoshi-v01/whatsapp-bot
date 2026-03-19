@@ -11,6 +11,8 @@ const clientesRoutes = require('./src/routes/clientes')
 const { autenticar } = require('./src/middleware/auth')
 const deliveriesRoutes = require('./src/routes/deliveries')
 const estadisticasRoutes = require('./src/routes/estadisticas')
+const helmet = require('helmet')
+const cors = require('cors')
 const logger = require('./src/middleware/logger')
 
 const app = express()
@@ -35,11 +37,25 @@ const limiterAuth = rateLimit({
 
 app.use(express.json())
 
+// Seguridad HTTP headers
+app.use(helmet())
+
+// CORS — solo permitir el dashboard
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL
+        : ['http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}))
+
 // Middleware de logs para todas las rutas
 app.use((req, res, next) => {
     const start = Date.now()
     res.on('finish', () => {
         const duration = Date.now() - start
+        // Solo loguear errores 400+ y requests lentos (+2000ms)
         if (res.statusCode >= 400) {
             logger.error({
                 method: req.method,
@@ -47,12 +63,13 @@ app.use((req, res, next) => {
                 status: res.statusCode,
                 duration: `${duration}ms`
             })
-        } else {
-            logger.info({
+        } else if (duration > 2000) {
+            logger.warn({
                 method: req.method,
                 url: req.url,
                 status: res.statusCode,
-                duration: `${duration}ms`
+                duration: `${duration}ms`,
+                message: 'Request lento'
             })
         }
     })

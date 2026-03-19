@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
+const { validarVentaPresencial, validarEstado, validarId } = require('../middleware/validar')
 
 // 1. Ver todas las ventas
 router.get('/', async (req, res) => {
@@ -51,7 +52,7 @@ router.get('/estado/:estado', async (req, res) => {
     }
 })
 
-// 3. Historial con filtros y paginación — ANTES de /:id
+// 3. Historial con filtros y paginación
 router.get('/historial', async (req, res) => {
     try {
         const {
@@ -180,35 +181,7 @@ router.get('/historial', async (req, res) => {
     }
 })
 
-// 4. Ver una venta específica
-router.get('/:id', async (req, res) => {
-    try {
-        const { id } = req.params
-        const resultado = await db.query(
-            `SELECT v.*,
-                    pr.nombre as presentacion_nombre,
-                    pr.precio_compra,
-                    p.nombre as producto_nombre,
-                    c.nombre as cliente_nombre,
-                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
-             FROM ventas v
-             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
-             LEFT JOIN productos p ON pr.producto_id = p.id
-             LEFT JOIN clientes c ON v.cliente_id = c.id
-             WHERE v.id = $1`,
-            [id]
-        )
-        if (resultado.rows.length === 0) {
-            return res.status(404).json({ error: 'Venta no encontrada' })
-        }
-        res.json(resultado.rows[0])
-    } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
-})
-
-
-// Reporte para exportar
+// 4. Reporte para exportar — ANTES de /:id
 router.get('/reporte/exportar', async (req, res) => {
     try {
         const { fecha_desde, fecha_hasta, canal } = req.query
@@ -264,25 +237,45 @@ router.get('/reporte/exportar', async (req, res) => {
     }
 })
 
-// 5. Actualizar estado de una venta
-router.patch('/:id/estado', async (req, res) => {
+// 5. Ver una venta específica
+router.get('/:id', validarId, async (req, res) => {
+    try {
+        const { id } = req.params
+        const resultado = await db.query(
+            `SELECT v.*,
+                    pr.nombre as presentacion_nombre,
+                    pr.precio_compra,
+                    p.nombre as producto_nombre,
+                    c.nombre as cliente_nombre,
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE v.id = $1`,
+            [parseInt(id)]
+        )
+        if (resultado.rows.length === 0) {
+            return res.status(404).json({ error: 'Venta no encontrada' })
+        }
+        res.json(resultado.rows[0])
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// 6. Actualizar estado de una venta
+router.patch('/:id/estado', validarId, validarEstado, async (req, res) => {
     try {
         const { id } = req.params
         const { estado, agente_id } = req.body
-
-        const estadosValidos = ['pendiente_pago', 'pagado', 'entregado', 'cancelado']
-        if (!estadosValidos.includes(estado)) {
-            return res.status(400).json({
-                error: `Estado inválido. Debe ser uno de: ${estadosValidos.join(', ')}`
-            })
-        }
 
         const resultado = await db.query(
             `UPDATE ventas 
              SET estado = $1, agente_id = $2
              WHERE id = $3
              RETURNING *`,
-            [estado, agente_id, id]
+            [estado, agente_id, parseInt(id)]
         )
 
         if (resultado.rows.length === 0) {
@@ -295,8 +288,8 @@ router.patch('/:id/estado', async (req, res) => {
     }
 })
 
-// 6. Registrar venta presencial
-router.post('/presencial', async (req, res) => {
+// 7. Registrar venta presencial
+router.post('/presencial', validarVentaPresencial, async (req, res) => {
     const client = await db.pool.connect()
     try {
         const {
@@ -313,10 +306,6 @@ router.post('/presencial', async (req, res) => {
             es_de_whatsapp,
             sesion_numero
         } = req.body
-
-        if (!presentacion_id || !cantidad || !precio) {
-            return res.status(400).json({ error: 'Presentación, cantidad y precio son requeridos' })
-        }
 
         await client.query('BEGIN')
 
@@ -363,7 +352,6 @@ router.post('/presencial', async (req, res) => {
         }
 
         await client.query('COMMIT')
-
         res.status(201).json({ ok: true, venta: venta.rows[0] })
 
     } catch (error) {
