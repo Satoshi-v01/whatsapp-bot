@@ -464,8 +464,8 @@ async function registrarVenta(numero, sesion, modalidad) {
 
     const venta = await db.query(
         `INSERT INTO ventas (cliente_numero, presentacion_id, cantidad, precio, canal, estado, cliente_id, quiere_factura, ruc_factura, razon_social)
-         VALUES ($1, $2, 1, $3, 'whatsapp', 'pendiente_pago', $4, $5, $6, $7)
-         RETURNING id`,
+        VALUES ($1, $2, 1, $3, 'whatsapp_bot', 'pendiente_pago', $4, $5, $6, $7)
+        RETURNING id`,
         [
             numero,
             sesion.datos.presentacion_id,
