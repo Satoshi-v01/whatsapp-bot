@@ -2,6 +2,8 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { enviarMensaje } = require('../services/whatsapp')
+const { guardarMensaje } = require('../services/mensajes')
 
 // Ver todos los deliveries
 router.get('/', async (req, res) => {
@@ -177,10 +179,9 @@ router.patch('/:id/estado', async (req, res) => {
 
         const estadosValidos = ['pendiente', 'confirmado', 'en_camino', 'entregado', 'cancelado']
         if (!estadosValidos.includes(estado)) {
-            return res.status(400).json({ error: 'Estado inválido' })
+            return res.status(400).json({ error: 'Estado invalido' })
         }
 
-        // Columna de timestamp según estado
         const timestampCol = {
             confirmado: 'confirmado_at',
             en_camino: 'en_camino_at',
@@ -190,7 +191,6 @@ router.patch('/:id/estado', async (req, res) => {
 
         const tsClause = timestampCol ? `, ${timestampCol} = NOW()` : ''
 
-        // Si viene nota, agregarla al historial
         let notaClause = ''
         let valores = [estado, id]
 
@@ -212,9 +212,31 @@ router.patch('/:id/estado', async (req, res) => {
             return res.status(404).json({ error: 'Delivery no encontrado' })
         }
 
-        res.json({ ok: true, delivery: resultado.rows[0] })
+        const delivery = resultado.rows[0]
+
+        // Enviar mensaje al cliente según el estado
+        if (delivery.cliente_numero) {
+            const mensajes = {
+                confirmado: `Tu pedido ha sido confirmado por el agente. Pronto estara en camino! 🐾`,
+                en_camino: `Tu pedido ya esta en camino. Pronto llegara a tu domicilio! 🐾`,
+                entregado: `Tu pedido ha sido entregado exitosamente. Muchas gracias por elegir Sosa Bulls! 😊🐾`,
+                cancelado: `Tu pedido ha sido cancelado. Si tenes alguna consulta escribinos y te ayudamos 🐾`
+            }
+
+            if (mensajes[estado]) {
+                try {
+                    await enviarMensaje(delivery.cliente_numero, mensajes[estado])
+                    await guardarMensaje(delivery.cliente_numero, mensajes[estado], 'bot')
+                } catch (err) {
+                    // Silencioso — no rompe el flujo si falla el envio
+                    console.error('Error enviando mensaje de estado:', err.message)
+                }
+            }
+        }
+
+        res.json({ ok: true, delivery })
     } catch (error) {
-        manejarError(res, error)
+        res.status(500).json({ error: error.message })
     }
 })
 

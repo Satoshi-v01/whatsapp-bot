@@ -13,6 +13,9 @@ const deliveriesRoutes = require('./src/routes/deliveries')
 const estadisticasRoutes = require('./src/routes/estadisticas')
 const usuariosRoutes = require('./src/routes/usuarios')
 const configuracionRoutes = require('./src/routes/configuracion')
+const zonasRoutes = require('./src/routes/zonas')
+const carritoRoutes = require('./src/routes/carrito')
+const { procesarTimeouts } = require('./src/bot/recordatorios')
 const helmet = require('helmet')
 const cors = require('cors')
 const logger = require('./src/middleware/logger')
@@ -82,7 +85,6 @@ app.use((req, res, next) => {
 app.use('/webhook', webhookRoutes)
 app.use('/auth', limiterAuth, authRoutes)
 app.use('/usuarios', limiterGeneral, autenticar, usuariosRoutes)
-// app.use('/usuarios', usuariosRoutes)
 app.use('/configuracion', limiterGeneral, autenticar, configuracionRoutes)
 app.use('/sesiones', limiterGeneral, autenticar, sesionesRoutes)
 app.use('/ventas', limiterGeneral, autenticar, ventasRoutes)
@@ -90,6 +92,9 @@ app.use('/productos', limiterGeneral, autenticar, productosRoutes)
 app.use('/deliveries', limiterGeneral, autenticar, deliveriesRoutes)
 app.use('/estadisticas', limiterGeneral, autenticar, estadisticasRoutes)
 app.use('/clientes', limiterGeneral, autenticar, clientesRoutes)
+app.use('/zonas/publico', limiterGeneral, zonasRoutes)
+app.use('/zonas', limiterGeneral, autenticar, zonasRoutes)
+app.use('/carrito', limiterGeneral, autenticar, carritoRoutes)
 
 
 app.get('/', (req, res) => {
@@ -131,6 +136,21 @@ process.on('uncaughtException', (error) => {
 })
 
 const PORT = process.env.PORT || 3000
+
+
+let corriendo = false
+
+setInterval(async () => {
+    if (corriendo) return  // evita superposición si tarda más de 5 min
+    corriendo = true
+    try {
+        await procesarTimeouts()
+    } catch (err) {
+        console.error('Error en timeout job:', err.message)
+    } finally {
+        corriendo = false
+    }
+}, 5 * 60 * 1000)
 
 app.listen(PORT, () => {
     logger.info(`Servidor corriendo en puerto ${PORT}`)
