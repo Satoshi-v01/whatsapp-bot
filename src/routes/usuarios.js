@@ -8,11 +8,11 @@ const { manejarError } = require('../middleware/validar')
 router.get('/', async (req, res) => {
     try {
         const resultado = await db.query(
-            `SELECT u.id, u.nombre, u.email, u.rol, u.disponible, u.created_at,
+           `SELECT u.id, u.nombre, u.email, u.rol, u.disponible,
                     r.nombre as rol_nombre, r.permisos
-             FROM usuarios u
-             LEFT JOIN roles r ON u.rol_id = r.id
-             ORDER BY u.created_at DESC`
+            FROM usuarios u
+            LEFT JOIN roles r ON u.rol_id = r.id
+            ORDER BY u.id DESC`
         )
         res.json(resultado.rows)
     } catch (error) {

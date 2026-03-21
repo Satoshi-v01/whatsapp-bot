@@ -2,6 +2,8 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { validarVentaPresencial, validarEstado, validarId } = require('../middleware/validar')
+const { recalcularStats } = require('./clientes')
+const { manejarError } = require('../middleware/validar')
 
 // 1. Ver todas las ventas
 router.get('/', async (req, res) => {
@@ -352,7 +354,13 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
         }
 
         await client.query('COMMIT')
-        res.status(201).json({ ok: true, venta: venta.rows[0] })
+
+            // Recalcular stats del cliente en background (no bloquea la respuesta)
+            if (cliente_id) {
+                recalcularStats(cliente_id).catch(() => {})
+            }
+
+            res.status(201).json({ ok: true, venta: venta.rows[0] })
 
     } catch (error) {
         await client.query('ROLLBACK')

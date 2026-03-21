@@ -21,8 +21,8 @@ const app = express()
 
 // Rate limiting general
 const limiterGeneral = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 200,
+    windowMs: 15 * 60 * 1000,
+    max: 1000,  // era 200, subimos a 1000
     message: { error: 'Demasiadas solicitudes, intentá de nuevo en 15 minutos.' },
     standardHeaders: true,
     legacyHeaders: false

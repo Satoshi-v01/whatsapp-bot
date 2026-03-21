@@ -14,7 +14,10 @@ router.post('/login', async (req, res) => {
         }
 
         const resultado = await db.query(
-            `SELECT * FROM usuarios WHERE email = $1 AND disponible = true`,
+            `SELECT u.*, r.permisos as rol_permisos, r.nombre as rol_nombre
+             FROM usuarios u
+             LEFT JOIN roles r ON u.rol_id = r.id
+             WHERE u.email = $1 AND u.disponible = true`,
             [email]
         )
 
@@ -25,7 +28,6 @@ router.post('/login', async (req, res) => {
         const usuario = resultado.rows[0]
 
         const passwordValida = await bcrypt.compare(password, usuario.password_hash)
-
         if (!passwordValida) {
             return res.status(401).json({ error: 'Credenciales incorrectas' })
         }
@@ -42,7 +44,9 @@ router.post('/login', async (req, res) => {
                 id: usuario.id,
                 nombre: usuario.nombre,
                 email: usuario.email,
-                rol: usuario.rol
+                rol: usuario.rol,
+                rol_nombre: usuario.rol_nombre,
+                permisos: usuario.rol_permisos || {}
             }
         })
 
