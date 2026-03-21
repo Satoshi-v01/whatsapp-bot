@@ -71,7 +71,16 @@ function Chat() {
         try {
             const res = await api.get(`/sesiones/${numero}/mensajes`)
             setMensajes(res.data)
-            setTimeout(() => mensajesRef.current?.scrollTo({ top: mensajesRef.current.scrollHeight, behavior: 'smooth' }), 100)
+
+                if (mensajesRef.current) {
+                const el = mensajesRef.current
+                const estaAlFondo = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+                if (estaAlFondo) {
+                    setTimeout(() => {
+                        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+                    }, 100)
+                }
+            }
         } catch (err) {}
     }
 

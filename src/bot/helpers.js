@@ -49,7 +49,7 @@ function mensajeMenuPrincipal(nombre = null) {
     return (
         `${saludo}\n\n` +
         `Que queres hacer?\n\n` +
-        `Escribi directamente el producto que buscas (ej: "cibau", "royal canin")\n\n` +
+        `Escribi directamente el producto que buscas (ej: "cibau", "premier")\n\n` +
         `O elegi una opcion:\n` +
         `1. Ver zonas y costos de delivery\n` +
         `2. Hablar con un agente\n` +

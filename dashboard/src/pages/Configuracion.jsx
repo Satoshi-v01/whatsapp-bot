@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getUsuarios, getRoles, crearRol, actualizarRol, eliminarRol, crearUsuario, eliminarUsuario } from '../services/usuarios'
 import { getConfiguracion, guardarConfiguracionBulk } from '../services/configuracion'
+import { getZonas, crearZona, editarZona, eliminarZona } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
 
 const MODULOS = [
@@ -14,26 +15,13 @@ const MODULOS = [
 ]
 
 const ACCIONES = ['ver', 'crear', 'editar', 'eliminar']
-
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 function Toggle({ checked, onChange }) {
     return (
-        <div
-            onClick={() => onChange(!checked)}
-            style={{
-                width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
-                background: checked ? '#1a1a2e' : '#e2e8f0', position: 'relative',
-                transition: 'background 0.2s', flexShrink: 0
-            }}
-        >
-            <div style={{
-                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                position: 'absolute', top: '3px',
-                left: checked ? '23px' : '3px',
-                transition: 'left 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-            }} />
+        <div onClick={() => onChange(!checked)}
+            style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: checked ? '#1a1a2e' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: checked ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
         </div>
     )
 }
@@ -64,28 +52,27 @@ function Configuracion() {
         Domingo: { activo: false, desde: '08:00', hasta: '12:00' },
     })
 
-    useEffect(() => {
-        cargarDatos()
-    }, [])
+    // Zonas de delivery
+    const [zonas, setZonas] = useState([])
+    const [modalZona, setModalZona] = useState(false)
+    const [editandoZona, setEditandoZona] = useState(null) // null = nueva, objeto = editar
+    const [formZona, setFormZona] = useState({ nombre: '', costo: '', activa: true })
+
+    useEffect(() => { cargarDatos() }, [])
 
     async function cargarDatos() {
         try {
-            const [u, r, c] = await Promise.all([getUsuarios(), getRoles(), getConfiguracion()])
+            const [u, r, c, z] = await Promise.all([getUsuarios(), getRoles(), getConfiguracion(), getZonas()])
             setUsuarios(u)
             setRoles(r)
             setConfig(c)
+            setZonas(z)
             if (r.length > 0) setRolSeleccionado(r[0])
             if (c.tienda_horario) {
                 try { setHorario(JSON.parse(c.tienda_horario)) } catch (e) {}
             }
         } catch (err) {
-            setModalConfirmar({
-                titulo: 'Error',
-                mensaje: 'No se pudieron cargar los datos.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#888',
-                onConfirmar: () => setModalConfirmar(null)
-            })
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         }
     }
 
@@ -97,13 +84,7 @@ function Configuracion() {
             setFormUsuario({ nombre: '', email: '', password: '', rol_id: '' })
             await cargarDatos()
         } catch (err) {
-            setModalConfirmar({
-                titulo: 'Error',
-                mensaje: err.response?.data?.error || 'No se pudo crear el usuario.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#888',
-                onConfirmar: () => setModalConfirmar(null)
-            })
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el usuario.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         }
     }
 
@@ -111,75 +92,35 @@ function Configuracion() {
         setModalConfirmar({
             titulo: 'Eliminar usuario',
             mensaje: `¿Desactivar el usuario ${usuario.nombre}? No podrá iniciar sesión.`,
-            textoBoton: 'Eliminar',
-            colorBoton: '#ef4444',
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
             onConfirmar: async () => {
-                try {
-                    await eliminarUsuario(usuario.id)
-                    setModalConfirmar(null)
-                    await cargarDatos()
-                } catch (err) {
-                    setModalConfirmar({
-                        titulo: 'Error',
-                        mensaje: 'No se pudo eliminar el usuario.',
-                        textoBoton: 'Cerrar',
-                        colorBoton: '#888',
-                        onConfirmar: () => setModalConfirmar(null)
-                    })
-                }
+                try { await eliminarUsuario(usuario.id); setModalConfirmar(null); await cargarDatos() }
+                catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar el usuario.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
             }
         })
     }
 
     async function handleCrearRol() {
         if (!formRol.nombre) return
-        try {
-            await crearRol(formRol)
-            setModalRol(false)
-            setFormRol({ nombre: '', permisos: {} })
-            await cargarDatos()
-        } catch (err) {
-            setModalConfirmar({
-                titulo: 'Error',
-                mensaje: 'No se pudo crear el rol.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#888',
-                onConfirmar: () => setModalConfirmar(null)
-            })
-        }
+        try { await crearRol(formRol); setModalRol(false); setFormRol({ nombre: '', permisos: {} }); await cargarDatos() }
+        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear el rol.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
 
     async function handleGuardarPermisos() {
         if (!rolSeleccionado) return
         try {
             await actualizarRol(rolSeleccionado.id, { permisos: rolSeleccionado.permisos })
-            setModalConfirmar({
-                titulo: '✅ Guardado',
-                mensaje: 'Permisos actualizados correctamente.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#10b981',
-                onConfirmar: () => setModalConfirmar(null)
-            })
+            setModalConfirmar({ titulo: '✅ Guardado', mensaje: 'Permisos actualizados correctamente.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
         } catch (err) {
-            setModalConfirmar({
-                titulo: 'Error',
-                mensaje: 'No se pudieron guardar los permisos.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#888',
-                onConfirmar: () => setModalConfirmar(null)
-            })
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron guardar los permisos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         }
     }
 
     function togglePermiso(modulo, accion) {
-        if (!rolSeleccionado) return  
+        if (!rolSeleccionado) return
         const permisos = { ...(rolSeleccionado.permisos || {}) }
         const lista = permisos[modulo] || []
-        if (lista.includes(accion)) {
-            permisos[modulo] = lista.filter(a => a !== accion)
-        } else {
-            permisos[modulo] = [...lista, accion]
-        }
+        permisos[modulo] = lista.includes(accion) ? lista.filter(a => a !== accion) : [...lista, accion]
         setRolSeleccionado({ ...rolSeleccionado, permisos })
     }
 
@@ -191,30 +132,57 @@ function Configuracion() {
     async function handleGuardarConfig(extras = {}) {
         setGuardando(true)
         try {
-            await guardarConfiguracionBulk({
-                ...config,
-                tienda_horario: JSON.stringify(horario),
-                ...extras
-            })
-            setModalConfirmar({
-                titulo: '✅ Guardado',
-                mensaje: 'Configuración guardada correctamente.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#10b981',
-                onConfirmar: () => setModalConfirmar(null)
-            })
+            await guardarConfiguracionBulk({ ...config, tienda_horario: JSON.stringify(horario), ...extras })
+            setModalConfirmar({ titulo: '✅ Guardado', mensaje: 'Configuración guardada correctamente.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
         } catch (err) {
-            setModalConfirmar({
-                titulo: 'Error',
-                mensaje: 'No se pudo guardar la configuración.',
-                textoBoton: 'Cerrar',
-                colorBoton: '#888',
-                onConfirmar: () => setModalConfirmar(null)
-            })
-        } finally {
-            setGuardando(false)
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo guardar la configuración.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally { setGuardando(false) }
+    }
+
+    // Zonas handlers
+    function abrirModalZona(zona = null) {
+        if (zona) {
+            setEditandoZona(zona)
+            setFormZona({ nombre: zona.nombre, costo: zona.costo, activa: zona.activa })
+        } else {
+            setEditandoZona(null)
+            setFormZona({ nombre: '', costo: '', activa: true })
+        }
+        setModalZona(true)
+    }
+
+    async function handleGuardarZona() {
+        if (!formZona.nombre || formZona.costo === '') return
+        try {
+            if (editandoZona) {
+                await editarZona(editandoZona.id, { nombre: formZona.nombre, costo: parseInt(formZona.costo), activa: formZona.activa })
+            } else {
+                await crearZona({ nombre: formZona.nombre, costo: parseInt(formZona.costo) })
+            }
+            setModalZona(false)
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo guardar la zona.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         }
     }
+
+    function handleEliminarZona(zona) {
+        setModalConfirmar({
+            titulo: 'Eliminar zona',
+            mensaje: `¿Eliminar la zona "${zona.nombre}"? Esta acción no se puede deshacer.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try { await eliminarZona(zona.id); setModalConfirmar(null); await cargarDatos() }
+                catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la zona.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+            }
+        })
+    }
+
+    // Horario — días abiertos hoy para vista previa
+    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    const diaHoy = diasSemana[new Date().getDay()]
+    const horarioHoy = horario[diaHoy]
+    const abiertaHoy = horarioHoy?.activo
 
     const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', background: '#f8fafc' }
     const labelStyle = { fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
@@ -232,28 +200,13 @@ function Configuracion() {
     return (
         <div style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
 
-            {/* Sidebar de configuración */}
+            {/* Sidebar */}
             <div style={{ width: '220px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', padding: '24px 12px', flexShrink: 0 }}>
-                <p style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px', paddingLeft: '12px' }}>
-                    Configuración
-                </p>
+                <p style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px', paddingLeft: '12px' }}>Configuración</p>
                 {pestanas.map(p => (
-                    <button
-                        key={p.key}
-                        onClick={() => setPestana(p.key)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '10px',
-                            padding: '10px 12px', borderRadius: '8px', border: 'none',
-                            background: pestana === p.key ? 'white' : 'transparent',
-                            color: pestana === p.key ? '#1a1a2e' : '#64748b',
-                            cursor: 'pointer', fontSize: '13px', fontWeight: pestana === p.key ? '700' : '500',
-                            marginBottom: '4px', textAlign: 'left', width: '100%',
-                            boxShadow: pestana === p.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                            transition: 'all 0.15s'
-                        }}
-                    >
-                        <span>{p.icono}</span>
-                        {p.label}
+                    <button key={p.key} onClick={() => setPestana(p.key)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: 'none', background: pestana === p.key ? 'white' : 'transparent', color: pestana === p.key ? '#1a1a2e' : '#64748b', cursor: 'pointer', fontSize: '13px', fontWeight: pestana === p.key ? '700' : '500', marginBottom: '4px', textAlign: 'left', width: '100%', boxShadow: pestana === p.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.15s' }}>
+                        <span>{p.icono}</span>{p.label}
                     </button>
                 ))}
             </div>
@@ -271,16 +224,11 @@ function Configuracion() {
                             </div>
                             <button onClick={() => setModalUsuario(true)} style={btnPrimario}>+ Nuevo usuario</button>
                         </div>
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px' }}>
-
-                            {/* Tabla usuarios */}
                             <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
                                 <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h2 style={{ fontSize: '14px', fontWeight: '700' }}>Usuarios del sistema</h2>
-                                    <span style={{ fontSize: '10px', fontWeight: '700', background: '#e0e7ff', color: '#3730a3', padding: '3px 10px', borderRadius: '20px', textTransform: 'uppercase' }}>
-                                        {usuarios.filter(u => u.disponible).length} activos
-                                    </span>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', background: '#e0e7ff', color: '#3730a3', padding: '3px 10px', borderRadius: '20px', textTransform: 'uppercase' }}>{usuarios.filter(u => u.disponible).length} activos</span>
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
@@ -294,13 +242,10 @@ function Configuracion() {
                                         {usuarios.filter(u => u.disponible).map(u => (
                                             <tr key={u.id} style={{ borderTop: '1px solid #f8fafc' }}
                                                 onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                                            >
+                                                onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                                                 <td style={{ padding: '14px 24px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0e7ff', color: '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', flexShrink: 0 }}>
-                                                            {u.nombre.slice(0, 2).toUpperCase()}
-                                                        </div>
+                                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0e7ff', color: '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', flexShrink: 0 }}>{u.nombre.slice(0, 2).toUpperCase()}</div>
                                                         <div>
                                                             <p style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{u.nombre}</p>
                                                             <p style={{ fontSize: '11px', color: '#94a3b8' }}>{u.email}</p>
@@ -308,19 +253,13 @@ function Configuracion() {
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '14px 16px' }}>
-                                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#475569' }}>
-                                                        {u.rol_nombre || u.rol || '—'}
-                                                    </span>
+                                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#475569' }}>{u.rol_nombre || u.rol || '—'}</span>
                                                 </td>
                                                 <td style={{ padding: '14px 24px', textAlign: 'right' }}>
-                                                    <button
-                                                        onClick={() => handleEliminarUsuario(u)}
+                                                    <button onClick={() => handleEliminarUsuario(u)}
                                                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '13px', padding: '4px 8px', borderRadius: '6px' }}
                                                         onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
-                                                    >
-                                                        🗑️
-                                                    </button>
+                                                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}>🗑️</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -331,7 +270,6 @@ function Configuracion() {
                                 </table>
                             </div>
 
-                            {/* Gestión de roles */}
                             <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h2 style={{ fontSize: '14px', fontWeight: '700' }}>Gestionar roles</h2>
@@ -339,34 +277,19 @@ function Configuracion() {
                                 </div>
                                 <div style={{ padding: '20px 24px', flex: 1 }}>
                                     <label style={labelStyle}>Rol seleccionado</label>
-                                    <select
-                                        value={rolSeleccionado?.id || ''}
-                                        onChange={e => {
-                                            const rol = roles.find(r => r.id === parseInt(e.target.value))
-                                            setRolSeleccionado(rol || null)
-                                        }}
-                                        style={{ ...inputStyle, marginBottom: '20px' }}
-                                    >
-                                        <option value="">Seleccionar rol...</option>  {}
+                                    <select value={rolSeleccionado?.id || ''} onChange={e => { const rol = roles.find(r => r.id === parseInt(e.target.value)); setRolSeleccionado(rol || null) }} style={{ ...inputStyle, marginBottom: '20px' }}>
+                                        <option value="">Seleccionar rol...</option>
                                         {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                                     </select>
-
                                     <p style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>Permisos por módulo</p>
-
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '300px', overflowY: 'auto' }}>
                                         {MODULOS.map(mod => (
                                             <div key={mod.key} style={{ padding: '10px 12px', borderRadius: '8px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    {mod.icono} {mod.label}
-                                                </span>
+                                                <span style={{ fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>{mod.icono} {mod.label}</span>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     {ACCIONES.map(accion => (
                                                         <label key={accion} style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={tienePermiso(mod.key, accion)}
-                                                                onChange={() => togglePermiso(mod.key, accion)}
-                                                            />
+                                                            <input type="checkbox" checked={tienePermiso(mod.key, accion)} onChange={() => togglePermiso(mod.key, accion)} />
                                                             <span style={{ fontSize: '10px', color: '#64748b' }}>{accion}</span>
                                                         </label>
                                                     ))}
@@ -374,7 +297,6 @@ function Configuracion() {
                                             </div>
                                         ))}
                                     </div>
-
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
                                         <button onClick={handleGuardarPermisos} style={{ ...btnPrimario, flex: 1 }}>Guardar cambios</button>
                                         <button onClick={() => cargarDatos()} style={btnSecundario}>Descartar</button>
@@ -392,7 +314,6 @@ function Configuracion() {
                             <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>Notificaciones</h1>
                             <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Gestioná cómo y cuándo recibir alertas críticas del sistema.</p>
                         </div>
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
@@ -402,16 +323,10 @@ function Configuracion() {
                                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Recibí una alerta cuando un producto alcance el umbral mínimo definido.</p>
                                 <label style={labelStyle}>Unidades mínimas</label>
                                 <div style={{ position: 'relative' }}>
-                                    <input
-                                        type="number"
-                                        value={config.notif_stock_minimo || 3}
-                                        onChange={e => setConfig({ ...config, notif_stock_minimo: e.target.value })}
-                                        style={{ ...inputStyle, paddingRight: '80px' }}
-                                    />
+                                    <input type="number" value={config.notif_stock_minimo || 3} onChange={e => setConfig({ ...config, notif_stock_minimo: e.target.value })} style={{ ...inputStyle, paddingRight: '80px' }} />
                                     <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>UNIDADES</span>
                                 </div>
                             </div>
-
                             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                                     <div style={{ padding: '8px', background: '#e0e7ff', borderRadius: '8px', fontSize: '18px' }}>💬</div>
@@ -420,17 +335,11 @@ function Configuracion() {
                                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Alerta de tiempo de espera excesivo para clientes en cola.</p>
                                 <label style={labelStyle}>Tiempo de espera máximo</label>
                                 <div style={{ position: 'relative' }}>
-                                    <input
-                                        type="number"
-                                        value={config.notif_chat_espera_minutos || 5}
-                                        onChange={e => setConfig({ ...config, notif_chat_espera_minutos: e.target.value })}
-                                        style={{ ...inputStyle, paddingRight: '80px' }}
-                                    />
+                                    <input type="number" value={config.notif_chat_espera_minutos || 5} onChange={e => setConfig({ ...config, notif_chat_espera_minutos: e.target.value })} style={{ ...inputStyle, paddingRight: '80px' }} />
                                     <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>MINUTOS</span>
                                 </div>
                             </div>
                         </div>
-
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                             {[
                                 { key: 'notif_pedidos_bot', label: 'Nuevos pedidos del bot', desc: 'Notificar cuando el bot finalice una orden con éxito.', icono: '🤖' },
@@ -444,14 +353,10 @@ function Configuracion() {
                                             <p style={{ fontSize: '12px', color: '#64748b' }}>{item.desc}</p>
                                         </div>
                                     </div>
-                                    <Toggle
-                                        checked={config[item.key] === 'true' || config[item.key] === true}
-                                        onChange={val => setConfig({ ...config, [item.key]: String(val) })}
-                                    />
+                                    <Toggle checked={config[item.key] === 'true' || config[item.key] === true} onChange={val => setConfig({ ...config, [item.key]: String(val) })} />
                                 </div>
                             ))}
                         </div>
-
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                             <button onClick={() => cargarDatos()} style={btnSecundario}>Descartar</button>
                             <button onClick={() => handleGuardarConfig()} disabled={guardando} style={btnPrimario}>{guardando ? 'Guardando...' : 'Guardar configuración'}</button>
@@ -464,16 +369,15 @@ function Configuracion() {
                     <div>
                         <div style={{ marginBottom: '28px' }}>
                             <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>Configuración de la Tienda</h1>
-                            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Administrá la identidad y los horarios de operación.</p>
+                            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Administrá la identidad, horarios y zonas de delivery.</p>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
+                                {/* Info general */}
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        ℹ️ Información general
-                                    </h3>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>ℹ️ Información general</h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div style={{ gridColumn: '1 / -1' }}>
                                             <label style={labelStyle}>Nombre de la tienda</label>
@@ -494,14 +398,23 @@ function Configuracion() {
                                     </div>
                                 </div>
 
+                                {/* Horario */}
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        🕐 Horario de atención
-                                    </h3>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e' }}>🕐 Horario de atención</h3>
+                                        <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: abiertaHoy ? '#dcfce7' : '#fee2e2', color: abiertaHoy ? '#166534' : '#991b1b' }}>
+                                            {abiertaHoy ? `Abierto hoy ${horarioHoy.desde} - ${horarioHoy.hasta}` : 'Cerrado hoy'}
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '14px', background: '#f0f4ff', padding: '8px 12px', borderRadius: '8px' }}>
+                                        El bot responderá fuera de horario con el mensaje configurado en la pestaña Bot.
+                                    </p>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         {DIAS.map(dia => (
-                                            <div key={dia} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderRadius: '8px', background: horario[dia]?.activo ? '#f0f4ff' : '#f8fafc', gap: '12px' }}>
-                                                <span style={{ width: '90px', fontSize: '13px', fontWeight: '600', color: horario[dia]?.activo ? '#1a1a2e' : '#94a3b8' }}>{dia}</span>
+                                            <div key={dia} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderRadius: '8px', background: horario[dia]?.activo ? '#f0f4ff' : '#f8fafc', gap: '12px', border: dia === diaHoy ? '1px solid #c7d2fe' : '1px solid transparent' }}>
+                                                <span style={{ width: '90px', fontSize: '13px', fontWeight: dia === diaHoy ? '800' : '600', color: horario[dia]?.activo ? '#1a1a2e' : '#94a3b8' }}>
+                                                    {dia} {dia === diaHoy && <span style={{ fontSize: '9px', color: '#4f46e5' }}>HOY</span>}
+                                                </span>
                                                 {horario[dia]?.activo ? (
                                                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         <input type="time" value={horario[dia]?.desde || '08:00'} onChange={e => setHorario({ ...horario, [dia]: { ...horario[dia], desde: e.target.value } })} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
@@ -516,25 +429,81 @@ function Configuracion() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Zonas de delivery */}
+                                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div>
+                                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e' }}>🚚 Zonas de delivery</h3>
+                                            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>El bot mostrará estas zonas y costos al cliente al elegir delivery.</p>
+                                        </div>
+                                        <button onClick={() => abrirModalZona()}
+                                            style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>
+                                            + Agregar zona
+                                        </button>
+                                    </div>
+
+                                    {zonas.length === 0 ? (
+                                        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px', marginTop: '12px' }}>
+                                            <p style={{ fontSize: '13px' }}>No hay zonas configuradas.</p>
+                                            <p style={{ fontSize: '11px', marginTop: '4px' }}>Agregá zonas para habilitar delivery en el bot.</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginTop: '12px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto auto', gap: '0', background: '#f8fafc', borderRadius: '8px 8px 0 0', padding: '8px 14px', borderBottom: '1px solid #e2e8f0' }}>
+                                                <span />
+                                                <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Zona</span>
+                                                <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right', minWidth: '100px' }}>Costo</span>
+                                                <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', minWidth: '70px' }}>Estado</span>
+                                                <span style={{ minWidth: '70px' }} />
+                                            </div>
+                                            {zonas.map((zona, i) => (
+                                                <div key={zona.id} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto auto', gap: '0', alignItems: 'center', padding: '12px 14px', borderBottom: i < zonas.length - 1 ? '1px solid #f1f5f9' : 'none', background: 'white' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: zona.activa ? '#10b981' : '#94a3b8' }} />
+                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{zona.nombre}</span>
+                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#1a1a2e', textAlign: 'right', minWidth: '100px' }}>Gs. {parseInt(zona.costo).toLocaleString('es-PY')}</span>
+                                                    <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                                                        <Toggle checked={zona.activa} onChange={async val => {
+                                                            try { await editarZona(zona.id, { activa: val }); await cargarDatos() } catch (e) {}
+                                                        }} />
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', minWidth: '70px' }}>
+                                                        <button onClick={() => abrirModalZona(zona)}
+                                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '11px' }}>✏️</button>
+                                                        <button onClick={() => handleEliminarZona(zona)}
+                                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: '11px' }}>🗑️</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Vista previa */}
-                            <div>
+                            <div style={{ position: 'sticky', top: '0' }}>
                                 <div style={{ background: '#1a1a2e', borderRadius: '12px', padding: '24px', color: 'white', marginBottom: '16px' }}>
                                     <p style={{ fontSize: '10px', fontWeight: '700', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Vista previa</p>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                                         <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🏪</div>
                                         <div>
                                             <p style={{ fontWeight: '700', fontSize: '14px' }}>{config.tienda_nombre || 'Nombre de la tienda'}</p>
-                                            <p style={{ fontSize: '11px', opacity: 0.6 }}>
-                                                {Object.entries(horario).find(([d, h]) => h.activo)
-                                                    ? `Abierto hoy`
-                                                    : 'Cerrado hoy'}
-                                            </p>
+                                            <p style={{ fontSize: '11px', opacity: 0.6 }}>{abiertaHoy ? `Abierto hoy ${horarioHoy.desde} - ${horarioHoy.hasta}` : 'Cerrado hoy'}</p>
                                         </div>
                                     </div>
                                     {config.tienda_telefono && <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>📞 {config.tienda_telefono}</p>}
-                                    {config.tienda_email && <p style={{ fontSize: '12px', opacity: 0.7 }}>✉️ {config.tienda_email}</p>}
+                                    {config.tienda_email && <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>✉️ {config.tienda_email}</p>}
+                                    {zonas.filter(z => z.activa).length > 0 && (
+                                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', marginTop: '8px' }}>
+                                            <p style={{ fontSize: '10px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Delivery disponible</p>
+                                            {zonas.filter(z => z.activa).slice(0, 3).map(z => (
+                                                <p key={z.id} style={{ fontSize: '11px', opacity: 0.7, marginBottom: '2px' }}>• {z.nombre} — Gs. {parseInt(z.costo).toLocaleString('es-PY')}</p>
+                                            ))}
+                                            {zonas.filter(z => z.activa).length > 3 && <p style={{ fontSize: '11px', opacity: 0.5 }}>+{zonas.filter(z => z.activa).length - 3} zonas más</p>}
+                                        </div>
+                                    )}
                                 </div>
                                 <button onClick={() => handleGuardarConfig()} disabled={guardando} style={{ ...btnPrimario, width: '100%', marginBottom: '8px' }}>
                                     {guardando ? 'Guardando...' : 'Guardar cambios'}
@@ -556,66 +525,42 @@ function Configuracion() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'white', padding: '12px 16px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                 <div style={{ textAlign: 'right' }}>
                                     <p style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Estado del bot</p>
-                                    <p style={{ fontSize: '13px', fontWeight: '700', color: config.bot_activo === 'true' ? '#10b981' : '#ef4444' }}>
-                                        {config.bot_activo === 'true' ? 'Activo' : 'Inactivo'}
-                                    </p>
+                                    <p style={{ fontSize: '13px', fontWeight: '700', color: config.bot_activo === 'true' ? '#10b981' : '#ef4444' }}>{config.bot_activo === 'true' ? 'Activo' : 'Inactivo'}</p>
                                 </div>
-                                <Toggle
-                                    checked={config.bot_activo === 'true'}
-                                    onChange={val => setConfig({ ...config, bot_activo: String(val) })}
-                                />
+                                <Toggle checked={config.bot_activo === 'true'} onChange={val => setConfig({ ...config, bot_activo: String(val) })} />
                             </div>
                         </div>
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        💬 Mensajes predeterminados
-                                    </h3>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>💬 Mensajes predeterminados</h3>
                                     <div style={{ marginBottom: '16px' }}>
                                         <label style={labelStyle}>Mensaje de bienvenida</label>
-                                        <textarea
-                                            value={config.bot_mensaje_bienvenida || ''}
-                                            onChange={e => setConfig({ ...config, bot_mensaje_bienvenida: e.target.value })}
-                                            rows={4}
-                                            style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }}
-                                            placeholder="Ej: ¡Hola! Bienvenido a Sosa Bulls 🐾"
-                                        />
+                                        <textarea value={config.bot_mensaje_bienvenida || ''} onChange={e => setConfig({ ...config, bot_mensaje_bienvenida: e.target.value })} rows={4} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} placeholder="Ej: Hola! Bienvenido a Sosa Bulls" />
                                         <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', fontStyle: 'italic' }}>Este mensaje se enviará automáticamente al iniciar una conversación.</p>
                                     </div>
                                     <div>
                                         <label style={labelStyle}>Mensaje fuera de horario</label>
-                                        <textarea
-                                            value={config.bot_mensaje_fuera_horario || ''}
-                                            onChange={e => setConfig({ ...config, bot_mensaje_fuera_horario: e.target.value })}
-                                            rows={4}
-                                            style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }}
-                                            placeholder="Ej: Estamos fuera de horario. Te atenderemos pronto."
-                                        />
+                                        <textarea value={config.bot_mensaje_fuera_horario || ''} onChange={e => setConfig({ ...config, bot_mensaje_fuera_horario: e.target.value })} rows={4} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} placeholder="Ej: Estamos fuera de horario. Te atenderemos pronto." />
                                         <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', fontStyle: 'italic' }}>Se activa automáticamente según el horario configurado en Tienda.</p>
                                     </div>
                                 </div>
-
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                     <button onClick={() => cargarDatos()} style={btnSecundario}>Descartar</button>
                                     <button onClick={() => handleGuardarConfig()} disabled={guardando} style={btnPrimario}>{guardando ? 'Guardando...' : 'Guardar cambios'}</button>
                                 </div>
                             </div>
-
-                            {/* Panel derecho bot */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                                         {[
-                                            { label: 'Interacciones hoy', valor: '—', color: '#1a1a2e', bgDark: true },
-                                            { label: 'Tasa resolución', valor: '—', color: '#0f172a' },
-                                            { label: 'Latencia media', valor: '—', color: '#0f172a' },
+                                            { label: 'Interacciones hoy', valor: '—', bgDark: true },
+                                            { label: 'Tasa resolución', valor: '—' },
+                                            { label: 'Latencia media', valor: '—' },
                                         ].map((stat, i) => (
                                             <div key={i} style={{ padding: '14px', borderRadius: '8px', background: stat.bgDark ? '#1a1a2e' : '#f8fafc' }}>
                                                 <p style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: stat.bgDark ? 'rgba(255,255,255,0.6)' : '#94a3b8', marginBottom: '6px' }}>{stat.label}</p>
-                                                <p style={{ fontSize: '18px', fontWeight: '800', color: stat.bgDark ? 'white' : stat.color }}>{stat.valor}</p>
+                                                <p style={{ fontSize: '18px', fontWeight: '800', color: stat.bgDark ? 'white' : '#0f172a' }}>{stat.valor}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -632,10 +577,8 @@ function Configuracion() {
                             <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>Apariencia</h1>
                             <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Personalizá la experiencia visual del dashboard.</p>
                         </div>
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
+                            <div>
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                     <label style={{ ...labelStyle, marginBottom: '16px' }}>Selección de tema</label>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -643,15 +586,8 @@ function Configuracion() {
                                             { val: 'light', label: 'Modo claro', preview: { bg: '#f8fafc', card: 'white', bar: '#1a1a2e' } },
                                             { val: 'dark', label: 'Modo oscuro', preview: { bg: '#0f172a', card: '#1e293b', bar: '#4f46e5' } },
                                         ].map(tema => (
-                                            <div
-                                                key={tema.val}
-                                                onClick={() => setConfig({ ...config, tema: tema.val })}
-                                                style={{
-                                                    border: `2px solid ${config.tema === tema.val ? '#1a1a2e' : '#e2e8f0'}`,
-                                                    borderRadius: '10px', padding: '4px', cursor: 'pointer',
-                                                    background: config.tema === tema.val ? '#f0f4ff' : 'white'
-                                                }}
-                                            >
+                                            <div key={tema.val} onClick={() => setConfig({ ...config, tema: tema.val })}
+                                                style={{ border: `2px solid ${config.tema === tema.val ? '#1a1a2e' : '#e2e8f0'}`, borderRadius: '10px', padding: '4px', cursor: 'pointer', background: config.tema === tema.val ? '#f0f4ff' : 'white' }}>
                                                 <div style={{ background: tema.preview.bg, borderRadius: '6px', padding: '10px', marginBottom: '8px', height: '80px' }}>
                                                     <div style={{ height: '8px', background: tema.preview.bar, borderRadius: '4px', marginBottom: '6px', width: '100%' }} />
                                                     <div style={{ background: tema.preview.card, borderRadius: '4px', height: '50px' }} />
@@ -664,12 +600,9 @@ function Configuracion() {
                                         ))}
                                     </div>
                                 </div>
-
                             </div>
-
-                            {/* Vista previa */}
                             <div style={{ background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                <div style={{ padding: '12px 16px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ padding: '12px 16px', background: 'white', borderBottom: '1px solid #e2e8f0' }}>
                                     <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vista previa</span>
                                 </div>
                                 <div style={{ padding: '20px' }}>
@@ -685,13 +618,10 @@ function Configuracion() {
                                             <p style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>0</p>
                                         </div>
                                     </div>
-                                    <button style={{ width: '100%', padding: '10px', background: '#1a1a2e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                                        Acción primaria
-                                    </button>
+                                    <button style={{ width: '100%', padding: '10px', background: '#1a1a2e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Acción primaria</button>
                                 </div>
-            </div>
+                            </div>
                         </div>
-
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
                             <button onClick={() => cargarDatos()} style={btnSecundario}>Descartar</button>
                             <button onClick={() => handleGuardarConfig()} disabled={guardando} style={btnPrimario}>{guardando ? 'Guardando...' : 'Guardar configuración'}</button>
@@ -741,6 +671,37 @@ function Configuracion() {
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalRol(false)} style={btnSecundario}>Cancelar</button>
                             <button onClick={handleCrearRol} style={btnPrimario}>Crear rol</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal zona */}
+            {modalZona && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: 'white', borderRadius: '14px', padding: '24px', width: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{editandoZona ? 'Editar zona' : 'Nueva zona de delivery'}</h3>
+                            <button onClick={() => setModalZona(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#888' }}>✕</button>
+                        </div>
+                        <label style={labelStyle}>Nombre de la zona</label>
+                        <input value={formZona.nombre} onChange={e => setFormZona({ ...formZona, nombre: e.target.value })} style={inputStyle} placeholder="Ej: Asunción, Luque, San Lorenzo" />
+                        <label style={labelStyle}>Costo de delivery (Gs.)</label>
+                        <input type="number" value={formZona.costo} onChange={e => setFormZona({ ...formZona, costo: e.target.value })} style={inputStyle} placeholder="Ej: 20000" />
+                        {editandoZona && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#f8fafc', borderRadius: '8px', marginTop: '4px', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '500', color: '#0f172a' }}>Zona activa</span>
+                                <Toggle checked={formZona.activa} onChange={val => setFormZona({ ...formZona, activa: val })} />
+                            </div>
+                        )}
+                        {formZona.nombre && formZona.costo && (
+                            <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#166534' }}>
+                                Vista previa: "{formZona.nombre} — Gs. {parseInt(formZona.costo || 0).toLocaleString('es-PY')}"
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setModalZona(false)} style={btnSecundario}>Cancelar</button>
+                            <button onClick={handleGuardarZona} style={btnPrimario}>{editandoZona ? 'Guardar cambios' : 'Agregar zona'}</button>
                         </div>
                     </div>
                 </div>
