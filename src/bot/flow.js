@@ -2,6 +2,7 @@ const { obtenerSesion, actualizarSesion } = require('./estados')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const { calcularPrecioEfectivo } = require('../services/precios')
+const { recalcularStats } = require('../routes/clientes')
 const db = require('../db/index')
 
 async function enviarYGuardar(numero, texto) {
@@ -503,6 +504,11 @@ async function registrarVenta(numero, sesion, modalidad) {
         }
 
         await client.query('COMMIT')
+
+        // Recalcular stats del cliente en background
+        if (clienteId) {
+            recalcularStats(clienteId).catch(() => {})
+        }
 
     } catch (error) {
         await client.query('ROLLBACK')

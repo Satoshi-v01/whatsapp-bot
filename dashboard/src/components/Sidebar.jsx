@@ -1,13 +1,40 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useApp } from '../App'
 
-function Sidebar({ usuario, onLogout }) {
-    const [expandido, setExpandido] = useState(true)
+function Sidebar() {
+    const [expandido, setExpandido] = useState(() => {
+        const guardado = localStorage.getItem('sidebar_expandido')
+        if (guardado !== null) return guardado === 'true'
+        return window.innerWidth > 1280
+    })
     const location = useLocation()
+    const { puedo } = useApp()
 
     function esActivo(path) {
         return location.pathname === path
     }
+
+    function toggleSidebar() {
+        const nuevo = !expandido
+        setExpandido(nuevo)
+        localStorage.setItem('sidebar_expandido', String(nuevo))
+    }
+
+    const links = [
+    { to: '/', icono: '🏠', label: 'Inicio', modulo: 'home' },      
+    { to: '/caja', icono: '🧾', label: 'Caja', modulo: 'ventas' },
+    { to: '/chat', icono: '💬', label: 'Chat', modulo: 'chat' },
+    { to: '/delivery', icono: '🚚', label: 'Delivery', modulo: 'delivery' },
+    { to: '/ventas', icono: '🛒', label: 'Ventas', modulo: 'ventas' },
+    { to: '/inventario', icono: '📦', label: 'Inventario', modulo: 'inventario' },
+    { to: '/clientes', icono: '👥', label: 'Clientes', modulo: 'clientes' },
+    { to: '/reportes', icono: '📊', label: 'Reportes', modulo: 'reportes' },
+    { to: '/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
+]
+
+    // Filtrar links según permisos — null = siempre visible (Home)
+    const linksFiltrados = links.filter(l => l.modulo === null || puedo(l.modulo, 'ver'))
 
     return (
         <nav style={{
@@ -20,7 +47,7 @@ function Sidebar({ usuario, onLogout }) {
             overflow: 'hidden',
             flexShrink: 0
         }}>
-            {/* Header con botón toggle */}
+            {/* Header */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -29,159 +56,50 @@ function Sidebar({ usuario, onLogout }) {
                 borderBottom: '1px solid #2a2a4e'
             }}>
                 {expandido && (
-                    <span style={{ color: 'white', fontWeight: '600', fontSize: '16px', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: 'white', fontWeight: '700', fontSize: '16px', whiteSpace: 'nowrap' }}>
                         Sosa Bulls
                     </span>
                 )}
                 <button
-                    onClick={() => setExpandido(!expandido)}
+                    onClick={toggleSidebar}
                     style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#a0a0c0',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '6px',
-                        transition: 'background 0.2s'
+                        background: 'none', border: 'none', color: '#a0a0c0',
+                        cursor: 'pointer', fontSize: '18px', padding: '4px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: '6px', transition: 'background 0.2s'
                     }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#2a2a4e'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
                     {expandido ? '✕' : '☰'}
                 </button>
             </div>
 
-            {/* Links de navegación */}
-            <div style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-
-                <Link to="/" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        background: esActivo('/') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🏠</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Inicio</span>}
-                    </div>
-                </Link>
-
-                <Link to="/chat" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        background: esActivo('/chat') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/chat') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>💬</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Chat</span>}
-                    </div>
-                </Link>
-
-                <Link to="/ventas" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        background: esActivo('/ventas') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/ventas') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🛒</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Ventas</span>}
-                    </div>
-                </Link>
-
-                <Link to="/clientes" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 12px', borderRadius: '8px',
-                        background: esActivo('/clientes') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/clientes') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s', cursor: 'pointer', whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>👥</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Clientes</span>}
-                    </div>
-                </Link>
-
-                <Link to="/delivery" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 12px', borderRadius: '8px',
-                        background: esActivo('/delivery') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/delivery') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s', cursor: 'pointer', whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🚚</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Delivery</span>}
-                    </div>
-                </Link>
-
-                <Link to="/caja" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 12px', borderRadius: '8px',
-                        background: esActivo('/venta-presencial') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/venta-presencial') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s', cursor: 'pointer', whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🧾</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Caja</span>}
-                    </div>
-                </Link>
-
-                <Link to="/inventario" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        background: esActivo('/inventario') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/inventario') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>📦</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Inventario</span>}
-                    </div>
-                </Link>
-
-                <Link to="/reportes" style={{ textDecoration: 'none' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 12px', borderRadius: '8px',
-                        background: esActivo('/reportes') ? '#2a2a4e' : 'transparent',
-                        color: esActivo('/reportes') ? 'white' : '#a0a0c0',
-                        transition: 'background 0.2s', cursor: 'pointer', whiteSpace: 'nowrap'
-                    }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>📊</span>
-                        {expandido && <span style={{ fontSize: '14px' }}>Reportes</span>}
-                    </div>
-                </Link>
-
+            {/* Links */}
+            <div style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {linksFiltrados.map(link => {
+                    const activo = esActivo(link.to)
+                    return (
+                        <Link key={link.to} to={link.to} style={{ textDecoration: 'none' }}>
+                            <div
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    padding: '10px 12px', borderRadius: '8px',
+                                    background: activo ? '#2a2a4e' : 'transparent',
+                                    color: activo ? 'white' : '#a0a0c0',
+                                    transition: 'background 0.2s, color 0.2s',
+                                    cursor: 'pointer', whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={e => { if (!activo) e.currentTarget.style.background = '#252545' }}
+                                onMouseLeave={e => { if (!activo) e.currentTarget.style.background = 'transparent' }}
+                            >
+                                <span style={{ fontSize: '18px', flexShrink: 0 }}>{link.icono}</span>
+                                {expandido && <span style={{ fontSize: '14px' }}>{link.label}</span>}
+                            </div>
+                        </Link>
+                    )
+                })}
             </div>
-
         </nav>
     )
 }

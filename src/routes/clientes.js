@@ -3,10 +3,19 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 
+// Función interna para recalcular stats de un cliente
+async function recalcularStats(cliente_id) {
+    try {
+        await db.query('SELECT recalcular_stats_cliente($1)', [cliente_id])
+    } catch (err) {
+        // Silencioso — no rompe el flujo principal
+    }
+}
+
 // 1. Buscar/listar clientes
 router.get('/', async (req, res) => {
     try {
-        const { buscar, tipo, origen } = req.query
+        const { buscar, tipo, origen, estado_actividad } = req.query
 
         let condiciones = ['c.activo = true']
         let valores = []
@@ -30,15 +39,24 @@ router.get('/', async (req, res) => {
             i++
         }
 
+        // Filtro activo/inactivo desde clientes_stats
+        if (estado_actividad === 'activo') {
+            condiciones.push(`cs.activo = true`)
+        } else if (estado_actividad === 'inactivo') {
+            condiciones.push(`(cs.activo = false OR cs.activo IS NULL)`)
+        }
+
         const resultado = await db.query(
             `SELECT c.*,
-                COUNT(v.id) as total_compras,
-                COALESCE(SUM(v.precio), 0) as monto_total,
-                MAX(v.created_at) as ultima_compra
+                COALESCE(cs.total_compras, 0) as total_compras,
+                COALESCE(cs.monto_total, 0) as monto_total,
+                cs.ultima_compra,
+                cs.activo as cliente_activo,
+                cs.frecuencia_dias,
+                cs.proxima_compra_estimada
              FROM clientes c
-             LEFT JOIN ventas v ON v.cliente_id = c.id
+             LEFT JOIN clientes_stats cs ON cs.cliente_id = c.id
              WHERE ${condiciones.join(' AND ')}
-             GROUP BY c.id
              ORDER BY c.nombre ASC`,
             valores
         )
@@ -72,7 +90,14 @@ router.get('/:id', async (req, res) => {
         const { id } = req.params
 
         const cliente = await db.query(
-            `SELECT * FROM clientes WHERE id = $1`,
+            `SELECT c.*,
+                cs.activo as cliente_activo,
+                cs.frecuencia_dias,
+                cs.proxima_compra_estimada,
+                cs.updated_at as stats_updated_at
+             FROM clientes c
+             LEFT JOIN clientes_stats cs ON cs.cliente_id = c.id
+             WHERE c.id = $1`,
             [id]
         )
 
@@ -146,7 +171,11 @@ router.post('/', async (req, res) => {
             [tipo || 'persona', nombre, ruc, telefono, email, direccion, ciudad, notas, origen || 'manual']
         )
 
-        res.status(201).json(resultado.rows[0])
+        // Inicializar stats vacías para el nuevo cliente
+        const nuevoCliente = resultado.rows[0]
+        await recalcularStats(nuevoCliente.id)
+
+        res.status(201).json(nuevoCliente)
     } catch (error) {
         manejarError(res, error)
     }
@@ -208,3 +237,5 @@ router.get('/buscar/autocomplete', async (req, res) => {
 })
 
 module.exports = router
+
+module.exports.recalcularStats = recalcularStats

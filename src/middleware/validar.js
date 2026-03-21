@@ -47,5 +47,3 @@ function manejarError(res, error) {
 }
 
 module.exports = { validarVentaPresencial, validarEstado, validarId, manejarError }
-
-module.exports = { validarVentaPresencial, validarEstado, validarId }

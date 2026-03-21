@@ -1,7 +1,7 @@
 function ModalConfirmar({ titulo, mensaje, onConfirmar, onCancelar, colorBoton = '#ef4444', textoBoton = 'Confirmar' }) {
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', width: '380px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
+            <div style={{ background: 'var(--color-surface)', borderRadius: '12px', padding: '24px', width: '380px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>{titulo}</h3>
                 <p style={{ fontSize: '13px', color: '#555', marginBottom: '20px', lineHeight: '1.6' }}>{mensaje}</p>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
