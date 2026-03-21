@@ -113,7 +113,8 @@ router.get('/notificaciones', async (req, res) => {
     try {
         const chats = await db.query(
             `SELECT cliente_numero, ultimo_mensaje 
-             FROM sesiones WHERE modo = 'esperando_agente'
+             FROM sesiones 
+             WHERE modo = 'esperando_agente'
              ORDER BY ultimo_mensaje ASC`
         )
 
@@ -127,10 +128,11 @@ router.get('/notificaciones', async (req, res) => {
 
         const notificaciones = [
             ...chats.rows.map(c => ({
-                tipo: 'chat',
-                mensaje: `${c.cliente_numero} requiere un agente`,
+                tipo: 'agente',
+                mensaje: `${c.cliente_numero} necesita un agente`,
                 tiempo: c.ultimo_mensaje,
-                urgente: true
+                urgente: true,
+                cliente_numero: c.cliente_numero
             })),
             ...stockBajo.rows.map(s => ({
                 tipo: 'stock',
@@ -140,7 +142,13 @@ router.get('/notificaciones', async (req, res) => {
             }))
         ]
 
-        res.json(notificaciones)
+        res.json({
+            notificaciones,
+            total: notificaciones.length,
+            chats_esperando: chats.rows.length,   // para el badge del sidebar
+            urgentes: notificaciones.filter(n => n.urgente).length
+        })
+
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
