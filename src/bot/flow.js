@@ -229,7 +229,7 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
         const precioTexto = con_descuento
             ? `~~Gs. ${p.precio_venta.toLocaleString('es-PY')}~~ *Gs. ${precio.toLocaleString('es-PY')}* (oferta)`
             : `Gs. ${precio.toLocaleString('es-PY')}`
-        return `${i + 1}. ${p.nombre} - ${precioTexto} (${p.disponible} disponibles)`
+        return `${i + 1}. ${p.nombre} - ${precioTexto}`
     }).join('\n')
 
     await enviarYGuardar(numero,
