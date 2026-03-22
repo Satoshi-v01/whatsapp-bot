@@ -24,6 +24,7 @@ function Sidebar() {
     const links = [
     { to: '/', icono: '🏠', label: 'Inicio', modulo: 'home' },      
     { to: '/caja', icono: '🧾', label: 'Caja', modulo: 'ventas' },
+    { to: '/ordenes', icono: '📋', label: 'Ordenes', modulo: 'ordenes' },
     { to: '/chat', icono: '💬', label: 'Chat', modulo: 'chat' },
     { to: '/delivery', icono: '🚚', label: 'Delivery', modulo: 'delivery' },
     { to: '/ventas', icono: '🛒', label: 'Ventas', modulo: 'ventas' },
@@ -31,6 +32,7 @@ function Sidebar() {
     { to: '/clientes', icono: '👥', label: 'Clientes', modulo: 'clientes' },
     { to: '/reportes', icono: '📊', label: 'Reportes', modulo: 'reportes' },
     { to: '/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
+    
 ]
 
     // Filtrar links según permisos — null = siempre visible (Home)
