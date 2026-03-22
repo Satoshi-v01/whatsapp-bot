@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
+const { manejarError } = require('../middleware/validar')
 
 // Resumen del día
 router.get('/resumen', async (req, res) => {
@@ -57,7 +58,7 @@ router.get('/resumen', async (req, res) => {
         })
 
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -79,7 +80,7 @@ router.get('/ventas-semana', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -104,7 +105,7 @@ router.get('/top-productos', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -113,8 +114,7 @@ router.get('/notificaciones', async (req, res) => {
     try {
         const chats = await db.query(
             `SELECT cliente_numero, ultimo_mensaje 
-             FROM sesiones 
-             WHERE modo = 'esperando_agente'
+             FROM sesiones WHERE modo = 'esperando_agente'
              ORDER BY ultimo_mensaje ASC`
         )
 
@@ -128,11 +128,10 @@ router.get('/notificaciones', async (req, res) => {
 
         const notificaciones = [
             ...chats.rows.map(c => ({
-                tipo: 'agente',
-                mensaje: `${c.cliente_numero} necesita un agente`,
+                tipo: 'chat',
+                mensaje: `${c.cliente_numero} requiere un agente`,
                 tiempo: c.ultimo_mensaje,
-                urgente: true,
-                cliente_numero: c.cliente_numero
+                urgente: true
             })),
             ...stockBajo.rows.map(s => ({
                 tipo: 'stock',
@@ -142,15 +141,9 @@ router.get('/notificaciones', async (req, res) => {
             }))
         ]
 
-        res.json({
-            notificaciones,
-            total: notificaciones.length,
-            chats_esperando: chats.rows.length,   // para el badge del sidebar
-            urgentes: notificaciones.filter(n => n.urgente).length
-        })
-
+        res.json(notificaciones)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -187,7 +180,7 @@ router.get('/ventas-por-dia', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -213,7 +206,7 @@ router.get('/ventas-por-canal', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -266,7 +259,7 @@ router.get('/ranking-productos', async (req, res) => {
 
         res.json({ top: top.rows, bottom: bottom.rows })
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -296,7 +289,7 @@ router.get('/top-clientes', async (req, res) => {
         )
         res.json(resultado.rows)
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        manejarError(res, error)
     }
 })
 
@@ -349,6 +342,62 @@ router.get('/metricas', async (req, res) => {
             valores
         )
         res.json(resultado.rows[0])
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Estadísticas de delivery por zona
+router.get('/delivery-zonas', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+        let intervalo = '30 days'
+        if (periodo === 'semana') intervalo = '7 days'
+        if (periodo === 'anual') intervalo = '365 days'
+        if (periodo === 'hoy') intervalo = '1 day'
+
+        // Pedidos y recaudación por zona
+        const porZona = await db.query(
+            `SELECT
+                COALESCE(v.zona_delivery, 'Sin zona') as zona,
+                COUNT(DISTINCT d.id) as cantidad_pedidos,
+                COALESCE(SUM(v.costo_delivery), 0) as total_delivery,
+                COALESCE(SUM(v.precio), 0) as total_ventas
+             FROM deliveries d
+             JOIN ventas v ON d.venta_id = v.id
+             WHERE d.created_at >= NOW() - INTERVAL '${intervalo}'
+             AND d.estado != 'cancelado'
+             GROUP BY v.zona_delivery
+             ORDER BY cantidad_pedidos DESC`
+        )
+
+        // Clientes por zona (ciudad)
+        const clientesPorZona = await db.query(
+            `SELECT
+                COALESCE(ciudad, 'Sin ciudad') as zona,
+                COUNT(*) as total_clientes,
+                COUNT(*) FILTER (WHERE activo = true) as clientes_activos,
+                COUNT(*) FILTER (WHERE activo = false OR activo IS NULL) as clientes_inactivos
+             FROM clientes
+             WHERE ciudad IS NOT NULL AND ciudad != ''
+             GROUP BY ciudad
+             ORDER BY total_clientes DESC`
+        )
+
+        // Total recaudado por delivery en el período
+        const totalDelivery = await db.query(
+            `SELECT COALESCE(SUM(v.costo_delivery), 0) as total
+             FROM ventas v
+             JOIN deliveries d ON v.id = d.venta_id
+             WHERE d.created_at >= NOW() - INTERVAL '${intervalo}'
+             AND d.estado != 'cancelado'`
+        )
+
+        res.json({
+            por_zona: porZona.rows,
+            clientes_por_zona: clientesPorZona.rows,
+            total_delivery_periodo: parseInt(totalDelivery.rows[0].total)
+        })
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
