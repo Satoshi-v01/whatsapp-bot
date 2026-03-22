@@ -5,6 +5,7 @@ import { buscarClientes, crearCliente } from '../services/clientes'
 import { getSesiones } from '../services/sesiones'
 import { registrarVentaPresencial } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
+import { confirmarOrden } from '../services/ordenes'
 import { useApp } from '../App'
 
 function Caja() {
@@ -43,13 +44,41 @@ function Caja() {
     const [canal, setCanal] = useState('en_tienda')
     const [sesionSeleccionada, setSesionSeleccionada] = useState(null)
     const [metodoPago, setMetodoPago] = useState('efectivo')
+    const [opOrigen, setOpOrigen] = useState(null)
 
-    useEffect(() => { cargarDatos() }, [])
-    useEffect(() => {
-        if (clienteSeleccionado?.ruc) setRucFactura(clienteSeleccionado.ruc)
-        if (clienteSeleccionado?.nombre) setRazonSocial(clienteSeleccionado.nombre)
-    }, [clienteSeleccionado])
+    useEffect(() => { 
+    cargarDatos()
+    cargarOpPrecargada()
+    }, [])
 
+    async function cargarOpPrecargada() {
+        const opJson = sessionStorage.getItem('op_precargada')
+        if (!opJson) return
+        sessionStorage.removeItem('op_precargada')
+
+        const op = JSON.parse(opJson)
+
+        // Precargar cliente
+        if (op.cliente_nombre || op.cliente_numero) {
+            setClienteSeleccionado({
+                id: op.cliente_id,
+                nombre: op.cliente_nombre || `Cliente ${op.cliente_numero}`,
+                telefono: op.cliente_telefono || op.cliente_numero,
+                ruc: op.ruc_factura || ''
+            })
+            setBusquedaCliente(op.cliente_nombre || op.cliente_numero || '')
+        }
+
+        // Precargar factura
+        if (op.razon_social) setRazonSocial(op.razon_social)
+        if (op.ruc_factura) setRucFactura(op.ruc_factura)
+
+        // Precargar método de pago
+        if (op.metodo_pago) setMetodoPago(op.metodo_pago)
+
+        // Marcar que esta venta viene de una OP
+        setOpOrigen(op)
+    }
     async function cargarDatos() {
         try {
             const [prods, sess] = await Promise.all([getProductos(), getSesiones()])
@@ -130,6 +159,17 @@ function Caja() {
                         const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
                         await registrarVentaPresencial({ cliente_id: clienteSeleccionado?.id || null, presentacion_id: linea.presentacionSeleccionada.id, cantidad: linea.cantidad, precio: precio * linea.cantidad, metodo_pago: metodoPago, quiere_factura: razonSocial || rucFactura ? true : false, ruc_factura: rucFactura || null, razon_social: razonSocial || (clienteSeleccionado ? null : 'Cliente'), agente_id: 1, canal: canalFinal, es_de_whatsapp: canal === 'whatsapp_delivery', sesion_numero: canal === 'whatsapp_delivery' ? sesionSeleccionada : null })
                     }
+
+                        // Si viene de una OP, marcarla como confirmada
+                        if (opOrigen) {
+                            try {
+                                await confirmarOrden(opOrigen.id, {
+                                    modalidad: canal === 'whatsapp_delivery' ? 'delivery' : 'presencial',
+                                    metodo_pago: metodoPago
+                                })
+                            } catch (e) {}
+                            setOpOrigen(null)
+                        }
                     setLineas([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1 }])
                     setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial(''); setCanal('en_tienda'); setSesionSeleccionada(null); setMetodoPago('efectivo')
                     setModalConfirmar({ titulo: '✅ Venta registrada', mensaje: `Venta registrada correctamente por Gs. ${total.toLocaleString()}.`, textoBoton: 'Nueva venta', colorBoton: '#10b981', onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() } })
@@ -174,6 +214,19 @@ function Caja() {
                         Ver ventas
                     </button>
                 </div>
+
+                {opOrigen && (
+                    <div style={{ background: darkMode ? '#1e3a5f' : '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <p style={{ fontSize: '12px', fontWeight: '800', color: '#1d4ed8' }}>Procesando orden {opOrigen.numero}</p>
+                            <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>
+                                Los productos deben agregarse manualmente. Al confirmar la venta, la orden quedara como confirmada.
+                            </p>
+                        </div>
+                        <button onClick={() => setOpOrigen(null)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, fontSize: '16px' }}>✕</button>
+                    </div>
+                )}
 
                 {/* Productos */}
                 <section style={{ marginBottom: '24px' }}>

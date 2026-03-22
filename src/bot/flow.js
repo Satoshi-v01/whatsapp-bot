@@ -33,14 +33,19 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
 
     if (!pasosLibres.includes(sesion.paso)) {
         const abierto = await estaAbierto()
-        if (!abierto) {
+        if (!abierto && !sesion.datos.aviso_horario_enviado) {
             const msgFuera = await getMensajeFueraHorario()
             await enviarYGuardar(numero,
                 `${msgFuera}\n\n` +
                 `Igual podes dejarnos tu pedido y lo procesamos cuando abramos 🐾\n\n` +
                 `Escribi el producto que queres pedir.`
             )
-            // No bloqueamos — dejamos que el flujo continúe para que pueda pedir igual
+            // Marcar que ya se envió el aviso para no repetirlo
+            await actualizarSesion(numero, {
+                paso: sesion.paso,
+                modo: sesion.modo,
+                datos: { ...sesion.datos, aviso_horario_enviado: true }
+            })
         }
     }
 
@@ -645,7 +650,7 @@ async function manejarFactura(numero, texto, sesion) {
 
     if (t === '1') {
         await actualizarSesion(numero, { paso: 'ruc_factura', modo: 'bot', datos: { ...sesion.datos, quiere_factura: true } })
-        await enviarYGuardar(numero, `Ingresa tu NOMBRE o RAZON SOCIAL y tu RUC o cedula para la factura.\nEjemplo: Juan Perez *4.178.154-4*`)
+        await enviarYGuardar(numero, `Ingresa tu NOMBRE o RAZON SOCIAL seguido de tu RUC o cedula para la factura.\nEjemplo: Juan Perez *4.178.154-4*`)
         return
     }
     if (t === '2') {
@@ -657,15 +662,50 @@ async function manejarFactura(numero, texto, sesion) {
 }
 
 async function manejarRucFactura(numero, texto, sesion) {
-    const datos = { ...sesion.datos, quiere_factura: true, ruc_factura: texto, razon_social: `Cliente ${numero}` }
+    // Parsear: "Lucas Sosa 4154264-9" → nombre = "Lucas Sosa", ruc = "4154264-9"
+    const partes = texto.trim().split(' ')
+    let ruc = ''
+    let razonSocial = ''
+
+    // El RUC/CI suele ser el último elemento (contiene números y guiones)
+    const ultimaParte = partes[partes.length - 1]
+    const esRuc = /^[\d\.\-]+$/.test(ultimaParte)
+
+    if (esRuc && partes.length > 1) {
+        ruc = ultimaParte
+        razonSocial = partes.slice(0, -1).join(' ')
+    } else {
+        // Si no detecta RUC, tomar todo como razón social
+        razonSocial = texto.trim()
+        ruc = texto.trim()
+    }
+
+    const datos = {
+        ...sesion.datos,
+        quiere_factura: true,
+        ruc_factura: ruc,
+        razon_social: razonSocial
+    }
+
+    // Actualizar nombre del cliente en DB si tiene nombre real
+    if (razonSocial && !razonSocial.startsWith('Cliente ')) {
+        db.query(
+            `UPDATE clientes SET nombre = $1 WHERE telefono = $2`,
+            [razonSocial, numero]
+        ).catch(() => {})
+    }
 
     if (sesion.datos.modalidad === 'retiro') {
         await actualizarSesion(numero, { paso: 'confirmando_pedido', modo: 'bot', datos })
         await mostrarResumenFinal(numero, datos)
     } else {
-        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...datos, paso_delivery: 'ubicacion' } })
+        await actualizarSesion(numero, {
+            paso: 'datos_delivery',
+            modo: 'bot',
+            datos: { ...datos, paso_delivery: 'ubicacion' }
+        })
         await enviarYGuardar(numero,
-            `RUC registrado: *${texto}*\n\n` +
+            `Registrado: *${razonSocial}* — RUC/CI: *${ruc}*\n\n` +
             `Paso 1 de 5 - Datos de entrega\n\n` +
             `Cual es tu ubicacion o barrio? Podes escribirla o compartir tu ubicacion por WhatsApp.`
         )
@@ -770,7 +810,7 @@ async function mostrarResumenFinal(numero, datos) {
     }
 
     if (datos.quiere_factura) {
-        resumen += `Factura: Si (${datos.ruc_factura})\n`
+        resumen += `Factura: ${datos.razon_social} — RUC/CI: ${datos.ruc_factura}\n`
     }
 
     resumen += `\nConfirmas el pedido?\n\n1. Confirmar\n2. Cancelar`
@@ -807,8 +847,10 @@ async function registrarPedido(numero, sesion) {
             return
         }
 
-        const lineas = carrito.map(item => ({ presentacion_id: item.presentacion_id, cantidad: item.cantidad }))
-        const stockCheck = await verificarStockParaVenta(lineas, numero)
+        const stockCheck = await verificarStockParaVenta(
+            carrito.map(item => ({ presentacion_id: item.presentacion_id, cantidad: item.cantidad })),
+            numero
+        )
 
         if (!stockCheck.ok) {
             const errMsg = stockCheck.errores.map(e =>
@@ -826,57 +868,81 @@ async function registrarPedido(numero, sesion) {
 
         await client.query('BEGIN')
 
+        // Buscar o crear cliente
         let clienteId = null
-        const clienteExistente = await client.query(`SELECT id FROM clientes WHERE telefono = $1`, [numero])
-
+        const clienteExistente = await client.query(
+            `SELECT id FROM clientes WHERE telefono = $1`, [numero]
+        )
         if (clienteExistente.rows.length > 0) {
             clienteId = clienteExistente.rows[0].id
             if (sesion.datos.modalidad === 'delivery' && sesion.datos.ubicacion) {
-                await client.query(`UPDATE clientes SET direccion = $1, updated_at = NOW() WHERE id = $2`, [sesion.datos.ubicacion, clienteId])
+                await client.query(
+                    `UPDATE clientes SET direccion = $1, ciudad = $2, updated_at = NOW() WHERE id = $3`,
+                    [sesion.datos.ubicacion, sesion.datos.zona_nombre || null, clienteId]
+                )
             }
         } else {
             const nuevo = await client.query(
-                `INSERT INTO clientes (nombre, telefono, origen, direccion) VALUES ($1, $2, 'bot', $3) RETURNING id`,
-                [`Cliente ${numero}`, numero, sesion.datos.ubicacion || null]
+                `INSERT INTO clientes (nombre, telefono, origen, direccion, ciudad)
+                 VALUES ($1, $2, 'bot', $3, $4) RETURNING id`,
+                [`Cliente ${numero}`, numero,
+                 sesion.datos.ubicacion || null,
+                 sesion.datos.zona_nombre || null]
             )
             clienteId = nuevo.rows[0].id
         }
 
-        const ventasIds = []
+        // Obtener tiempo de reserva
+        const configRes = await client.query(
+            `SELECT valor FROM configuracion WHERE clave = 'op_tiempo_reserva_horas'`
+        )
+        const horas = parseInt(configRes.rows[0]?.valor || '2')
+        const expira_at = new Date(Date.now() + horas * 60 * 60 * 1000)
 
-        for (let i = 0; i < carrito.length; i++) {
-            const item = carrito[i]
-            const venta = await client.query(
-                `INSERT INTO ventas (
-                    cliente_numero, presentacion_id, cantidad, precio,
-                    canal, estado, cliente_id,
-                    quiere_factura, ruc_factura, razon_social,
-                    costo_delivery, zona_delivery
-                 ) VALUES ($1, $2, $3, $4, 'whatsapp_bot', 'pendiente_pago', $5, $6, $7, $8, $9, $10)
-                 RETURNING id`,
-                [
-                    numero, item.presentacion_id, item.cantidad, item.precio * item.cantidad,
-                    clienteId,
-                    sesion.datos.quiere_factura || false,
-                    sesion.datos.ruc_factura || null,
-                    sesion.datos.razon_social || null,
-                    i === 0 ? (sesion.datos.costo_delivery || 0) : 0,
-                    i === 0 ? (sesion.datos.zona_nombre || null) : null
-                ]
-            )
-            await client.query(`UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`, [item.cantidad, item.presentacion_id])
-            ventasIds.push(venta.rows[0].id)
-        }
+        // Crear orden de pedido
+        const orden = await client.query(
+            `INSERT INTO ordenes_pedido (
+                canal, cliente_id, cliente_numero,
+                modalidad, ubicacion, referencia, horario,
+                contacto_entrega, metodo_pago,
+                zona_delivery, costo_delivery, zona_id,
+                quiere_factura, ruc_factura, razon_social,
+                expira_at
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+             RETURNING *`,
+            [
+                'whatsapp_bot', clienteId, numero,
+                sesion.datos.modalidad || 'retiro',
+                sesion.datos.ubicacion || null,
+                sesion.datos.referencia || null,
+                sesion.datos.horario || null,
+                sesion.datos.contacto_entrega || null,
+                sesion.datos.metodo_pago || null,
+                sesion.datos.zona_nombre || null,
+                sesion.datos.costo_delivery || 0,
+                sesion.datos.zona_id || null,
+                sesion.datos.quiere_factura || false,
+                sesion.datos.ruc_factura || null,
+                sesion.datos.razon_social || null,
+                expira_at
+            ]
+        )
 
-        if (sesion.datos.modalidad === 'delivery') {
+        const ordenId = orden.rows[0].id
+        const numeroOrden = orden.rows[0].numero
+
+        // Insertar items
+        for (const item of carrito) {
             await client.query(
-                `INSERT INTO deliveries (venta_id, cliente_numero, ubicacion, referencia, horario, contacto_entrega, metodo_pago, estado)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendiente')`,
-                [ventasIds[0], numero, sesion.datos.ubicacion, sesion.datos.referencia, sesion.datos.horario, sesion.datos.contacto_entrega, sesion.datos.metodo_pago || 'efectivo']
+                `INSERT INTO ordenes_pedido_items (orden_id, presentacion_id, cantidad, precio_unitario, precio_total)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [ordenId, item.presentacion_id, item.cantidad, item.precio, item.precio * item.cantidad]
             )
         }
 
         await client.query('COMMIT')
+
+        // Limpiar carrito y sesión — las reservas se mantienen hasta que expire la OP
         await limpiarReservasPostVenta(numero)
         await limpiarCarrito(numero)
         await reiniciarSesion(numero)
@@ -888,11 +954,17 @@ async function registrarPedido(numero, sesion) {
             ? `Delivery a ${sesion.datos.zona_nombre}`
             : `Retiro en tienda`
 
+        const abierto = await estaAbierto()
+        const mensajeCierre = !abierto
+            ? `\n\nRecorda que estamos fuera de horario. Tu orden sera procesada cuando abramos 🐾`
+            : ''
+
         await enviarYGuardar(numero,
-            `Pedido registrado! 🐾\n\n` +
+            `Tu orden fue registrada! 🐾\n\n` +
+            `*Numero de orden: ${numeroOrden}*\n` +
             `${modalidadTexto}\n` +
             `Total: Gs. ${total.toLocaleString('es-PY')}\n\n` +
-            `Un agente confirmara tu pedido pronto. Gracias por elegirnos! 😊`
+            `Un agente confirmara tu pedido pronto. Gracias por elegirnos! 😊${mensajeCierre}`
         )
 
     } catch (error) {

@@ -11,6 +11,8 @@ async function procesarTimeouts() {
         await enviarRecordatorios()
         await cerrarSesionesInactivas()
         await limpiarReservasExpiradas()
+        await db.query(`SELECT expirar_ordenes_pedido()`)
+
     } catch (err) {
         console.error('Error en procesarTimeouts:', err.message)
     }

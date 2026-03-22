@@ -6,6 +6,7 @@ import Delivery from './pages/Delivery'
 import Chat from './pages/Chat'
 import Ventas from './pages/Ventas'
 import Inventario from './pages/Inventario'
+import Ordenes from './pages/Ordenes'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Reportes from './pages/Reportes'
@@ -121,6 +122,9 @@ function App() {
                             } />
                             <Route path="/configuracion" element={
                                 <RutaProtegida modulo="configuracion"><Configuracion /></RutaProtegida>
+                            } />
+                            <Route path="/ordenes" element={
+                                <RutaProtegida modulo="ordenes" accion="ver"><Ordenes /></RutaProtegida>
                             } />
                         </Routes>
                     </main>

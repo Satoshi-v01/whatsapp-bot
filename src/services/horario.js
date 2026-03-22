@@ -41,7 +41,7 @@ async function getMensajeFueraHorario() {
     }
 }
 
-async function estaAbiertoParagDelivery() {
+async function estaAbiertoParaDelivery() {
     try {
         const ahora = new Date()
         const horas = ahora.getHours()
@@ -52,6 +52,4 @@ async function estaAbiertoParagDelivery() {
     }
 }
 
-module.exports = { estaAbierto, getMensajeFueraHorario, estaAbiertoParagDelivery }
-
-module.exports = { estaAbierto, getMensajeFueraHorario }
+module.exports = { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery }
