@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { getMarcas, getCategorias } from '../services/productos'
-import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes } from '../services/estadisticas'
 import { getReporte } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
+import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas } from '../services/estadisticas'
 import { useApp } from '../App'
 
 function Reportes() {
@@ -41,6 +41,7 @@ function Reportes() {
     const [ventasPorCanal, setVentasPorCanal] = useState([])
     const [rankingProductos, setRankingProductos] = useState({ top: [], bottom: [] })
     const [topClientes, setTopClientes] = useState([])
+    const [deliveryZonas, setDeliveryZonas] = useState({ por_zona: [], clientes_por_zona: [], total_delivery_periodo: 0 })
 
     useEffect(() => { cargarFiltros() }, [])
     useEffect(() => { cargarDatos() }, [periodo, canal, marcaId, categoriaId])
@@ -59,12 +60,13 @@ function Reportes() {
             if (canal) params.canal = canal
             if (marcaId) params.marca_id = marcaId
             if (categoriaId) params.categoria_id = categoriaId
-            const [met, dias, canales, ranking, clientes] = await Promise.all([
+            const [met, dias, canales, ranking, clientes, delZonas] = await Promise.all([
                 getMetricas(params), getVentasPorDia({ periodo, canal }),
-                getVentasPorCanal({ periodo }), getRankingProductos({ periodo }), getTopClientes({ periodo })
+                getVentasPorCanal({ periodo }), getRankingProductos({ periodo }),
+                getTopClientes({ periodo }), getDeliveryZonas({ periodo })
             ])
             setMetricas(met); setVentasPorDia(dias); setVentasPorCanal(canales)
-            setRankingProductos(ranking); setTopClientes(clientes)
+            setRankingProductos(ranking); setTopClientes(clientes); setDeliveryZonas(delZonas)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -86,7 +88,7 @@ function Reportes() {
             }
             const filas = datos.map(v => ({
                 'Fecha': new Date(v.fecha).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                'Cliente': v.cliente || 'Consumidor final', 'RUC': v.ruc || '', 'Teléfono': v.telefono || '',
+                'Cliente': v.cliente || 'Cliente', 'RUC': v.ruc || '', 'Teléfono': v.telefono || '',
                 'Marca': v.marca || '', 'Producto': v.producto || '', 'Presentación': v.presentacion || '',
                 'Cantidad': v.cantidad, 'Monto (Gs.)': parseInt(v.monto), 'IVA 10% (Gs.)': parseInt(v.iva),
                 'Canal': v.canal || '', 'Método de pago': v.metodo_pago || '', 'Estado': v.estado || ''
@@ -312,6 +314,103 @@ function Reportes() {
                                 {topClientes.length === 0 && <tr><td colSpan={2} style={{ padding: '20px', textAlign: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos</td></tr>}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* Sección Delivery */}
+            <div style={{ marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div>
+                        <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text }}>Delivery por zonas</h2>
+                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>
+                            Total recaudado en costos de delivery: <strong style={{ color: s.text }}>{formatearGs(deliveryZonas.total_delivery_periodo)}</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+                    {/* Pedidos y recaudación por zona */}
+                    <div style={{ background: s.surface, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                        <div style={{ padding: '18px 24px', borderBottom: `1px solid ${s.borderLight}` }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: s.text }}>Pedidos por zona</h3>
+                            <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>Cantidad de deliveries y recaudacion por zona</p>
+                        </div>
+                        <div style={{ overflowY: 'auto', maxHeight: '360px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: s.surfaceLow }}>
+                                        <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Zona</th>
+                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Pedidos</th>
+                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Delivery</th>
+                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Ventas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {deliveryZonas.por_zona.length === 0 ? (
+                                        <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos en este período</td></tr>
+                                    ) : deliveryZonas.por_zona.map((z, i) => (
+                                        <tr key={i} style={{ borderTop: `1px solid ${s.borderLight}` }}
+                                            onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
+                                            onMouseLeave={e => e.currentTarget.style.background = s.surface}>
+                                            <td style={{ padding: '12px 16px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: coloresCanal[i % coloresCanal.length], flexShrink: 0 }} />
+                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{z.zona}</span>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '700', color: s.text }}>{z.cantidad_pedidos}</td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#10b981' }}>{formatearGs(z.total_delivery)}</td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', color: s.textMuted }}>{formatearGs(z.total_ventas)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Clientes por zona */}
+                    <div style={{ background: s.surface, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                        <div style={{ padding: '18px 24px', borderBottom: `1px solid ${s.borderLight}` }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: s.text }}>Clientes por zona</h3>
+                            <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>Distribucion de clientes activos e inactivos por ciudad</p>
+                        </div>
+                        <div style={{ overflowY: 'auto', maxHeight: '360px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: s.surfaceLow }}>
+                                        <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Ciudad</th>
+                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Total</th>
+                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Activos</th>
+                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Inactivos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {deliveryZonas.clientes_por_zona.length === 0 ? (
+                                        <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos de ciudades</td></tr>
+                                    ) : deliveryZonas.clientes_por_zona.map((z, i) => {
+                                        const pctActivos = z.total_clientes > 0 ? Math.round((z.clientes_activos / z.total_clientes) * 100) : 0
+                                        return (
+                                            <tr key={i} style={{ borderTop: `1px solid ${s.borderLight}` }}
+                                                onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
+                                                onMouseLeave={e => e.currentTarget.style.background = s.surface}>
+                                                <td style={{ padding: '12px 16px' }}>
+                                                    <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{z.zona}</p>
+                                                    <div style={{ marginTop: '4px', height: '4px', background: s.barTrack, borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <div style={{ height: '100%', width: `${pctActivos}%`, background: '#10b981', borderRadius: '4px' }} />
+                                                    </div>
+                                                    <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '2px' }}>{pctActivos}% activos</p>
+                                                </td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', fontWeight: '800', color: s.text }}>{z.total_clientes}</td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#10b981' }}>{z.clientes_activos}</td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#ef4444' }}>{z.clientes_inactivos}</td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

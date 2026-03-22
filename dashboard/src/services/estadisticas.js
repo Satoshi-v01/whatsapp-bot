@@ -20,32 +20,38 @@ export async function getNotificaciones() {
     return res.data
 }
 
+export async function getMetricas(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/metricas?${query}`)
+    return res.data
+}
+
 export async function getVentasPorDia(params = {}) {
     const query = new URLSearchParams(params).toString()
-    const res = await api.get(`/estadisticas/ventas-por-dia${query ? `?${query}` : ''}`)
+    const res = await api.get(`/estadisticas/ventas-por-dia?${query}`)
     return res.data
 }
 
 export async function getVentasPorCanal(params = {}) {
     const query = new URLSearchParams(params).toString()
-    const res = await api.get(`/estadisticas/ventas-por-canal${query ? `?${query}` : ''}`)
+    const res = await api.get(`/estadisticas/ventas-por-canal?${query}`)
     return res.data
 }
 
 export async function getRankingProductos(params = {}) {
     const query = new URLSearchParams(params).toString()
-    const res = await api.get(`/estadisticas/ranking-productos${query ? `?${query}` : ''}`)
+    const res = await api.get(`/estadisticas/ranking-productos?${query}`)
     return res.data
 }
 
 export async function getTopClientes(params = {}) {
     const query = new URLSearchParams(params).toString()
-    const res = await api.get(`/estadisticas/top-clientes${query ? `?${query}` : ''}`)
+    const res = await api.get(`/estadisticas/top-clientes?${query}`)
     return res.data
 }
 
-export async function getMetricas(params = {}) {
+export async function getDeliveryZonas(params = {}) {
     const query = new URLSearchParams(params).toString()
-    const res = await api.get(`/estadisticas/metricas${query ? `?${query}` : ''}`)
+    const res = await api.get(`/estadisticas/delivery-zonas?${query}`)
     return res.data
 }
