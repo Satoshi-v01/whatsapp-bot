@@ -3,6 +3,7 @@ import api from '../services/api'
 import { getSesiones, tomarSesion, responderSesion, devolverBot, cerrarConversacion } from '../services/sesiones'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Chat() {
     const [sesiones, setSesiones] = useState([])

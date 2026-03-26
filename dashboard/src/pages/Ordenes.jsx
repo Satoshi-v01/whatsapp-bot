@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react'
-import { getOrdenes, confirmarOrden, cancelarOrden } from '../services/ordenes'
-import { getProductos } from '../services/productos'
-import { buscarClientes } from '../services/clientes'
-import { getZonas } from '../services/zonas'
+import { getOrdenes, cancelarOrden } from '../services/ordenes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../App'
-
+import { formatearFecha } from '../utils/fecha'
 
 function Ordenes() {
     const [ordenes, setOrdenes] = useState([])
@@ -14,10 +11,8 @@ function Ordenes() {
     const [filtroEstado, setFiltroEstado] = useState('pendiente')
     const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
     const [modalConfirmar, setModalConfirmar] = useState(null)
-    const [modalConfirmarOrden, setModalConfirmarOrden] = useState(false)
-    const [formConfirmar, setFormConfirmar] = useState({ modalidad: '', metodo_pago: 'efectivo' })
     const navigate = useNavigate()
-    const { darkMode, puedo } = useApp()
+    const { darkMode } = useApp()
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -33,10 +28,10 @@ function Ordenes() {
     }
 
     const estadoConfig = {
-        pendiente:  { label: 'Pendiente',   color: '#f59e0b', bg: '#fef3c7', textColor: '#92400e' },
-        confirmada: { label: 'Confirmada',  color: '#10b981', bg: '#d1fae5', textColor: '#065f46' },
-        expirada:   { label: 'Expirada',    color: '#94a3b8', bg: '#f1f5f9', textColor: '#475569' },
-        cancelada:  { label: 'Cancelada',   color: '#ef4444', bg: '#fee2e2', textColor: '#991b1b' },
+        pendiente:  { label: 'Pendiente',  color: '#f59e0b', bg: '#fef3c7', textColor: '#92400e' },
+        confirmada: { label: 'Confirmada', color: '#10b981', bg: '#d1fae5', textColor: '#065f46' },
+        expirada:   { label: 'Expirada',   color: '#94a3b8', bg: '#f1f5f9', textColor: '#475569' },
+        cancelada:  { label: 'Cancelada',  color: '#ef4444', bg: '#fee2e2', textColor: '#991b1b' },
     }
 
     const filtros = [
@@ -61,11 +56,6 @@ function Ordenes() {
         } finally { setCargando(false) }
     }
 
-    function formatearFecha(f) {
-        if (!f) return '—'
-        return new Date(f).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    }
-
     function tiempoRestante(expira_at) {
         if (!expira_at) return null
         const diff = new Date(expira_at) - new Date()
@@ -82,21 +72,9 @@ function Ordenes() {
         return subtotal + (orden.costo_delivery || 0)
     }
 
-    async function handleConfirmar() {
-        if (!ordenSeleccionada) return
-        if (!formConfirmar.modalidad) {
-            setModalConfirmar({ titulo: 'Falta modalidad', mensaje: 'Selecciona si es presencial o delivery.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
-            return
-        }
-        try {
-            await confirmarOrden(ordenSeleccionada.id, formConfirmar)
-            setModalConfirmarOrden(false)
-            setOrdenSeleccionada(null)
-            await cargarOrdenes()
-            setModalConfirmar({ titulo: 'Confirmada', mensaje: 'Orden confirmada y venta registrada correctamente.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
-        } catch (err) {
-            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo confirmar la orden.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
-        }
+    function handleProcesarEnCaja(orden) {
+        sessionStorage.setItem('op_precargada', JSON.stringify(orden))
+        navigate('/caja')
     }
 
     function handleCancelar(orden) {
@@ -118,9 +96,6 @@ function Ordenes() {
         })
     }
 
-    const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '5px' }
-    const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text, outline: 'none', marginBottom: '12px' }
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
 
@@ -137,7 +112,6 @@ function Ordenes() {
                     </button>
                 </div>
 
-                {/* Filtros */}
                 <div style={{ display: 'flex', gap: '6px' }}>
                     {filtros.map(f => {
                         const cfg = estadoConfig[f.valor]
@@ -178,7 +152,12 @@ function Ordenes() {
                                 onMouseEnter={e => { if (!activo) e.currentTarget.style.background = s.surfaceLow }}
                                 onMouseLeave={e => { if (!activo) e.currentTarget.style.background = s.surface }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: '800', color: s.text }}>{o.numero}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: '800', color: s.text }}>{o.numero}</span>
+                                        <span style={{ padding: '1px 7px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: o.modalidad === 'delivery' ? '#dbeafe' : '#dcfce7', color: o.modalidad === 'delivery' ? '#1d4ed8' : '#166534' }}>
+                                            {o.modalidad === 'delivery' ? '🚚 Delivery' : '🏪 Retiro'}
+                                        </span>
+                                    </div>
                                     <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg }}>
                                         {cfg.label}
                                     </span>
@@ -216,10 +195,15 @@ function Ordenes() {
 
                             {/* Header orden */}
                             <div style={{ background: s.surface, borderRadius: '12px', padding: '20px', border: `1px solid ${s.border}`, marginBottom: '16px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                                     <div>
-                                        <h2 style={{ fontSize: '20px', fontWeight: '800', color: s.text }}>{ordenSeleccionada.numero}</h2>
-                                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                                            <h2 style={{ fontSize: '20px', fontWeight: '800', color: s.text }}>{ordenSeleccionada.numero}</h2>
+                                            <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: ordenSeleccionada.modalidad === 'delivery' ? '#dbeafe' : '#dcfce7', color: ordenSeleccionada.modalidad === 'delivery' ? '#1d4ed8' : '#166534' }}>
+                                                {ordenSeleccionada.modalidad === 'delivery' ? '🚚 Delivery' : '🏪 Retiro en tienda'}
+                                            </span>
+                                        </div>
+                                        <p style={{ fontSize: '12px', color: s.textMuted }}>
                                             Creada: {formatearFecha(ordenSeleccionada.created_at)}
                                         </p>
                                         {ordenSeleccionada.estado === 'pendiente' && (
@@ -228,20 +212,18 @@ function Ordenes() {
                                             </p>
                                         )}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        {ordenSeleccionada.estado === 'pendiente' && (
-                                            <>
-                                                <button onClick={() => { setFormConfirmar({ modalidad: ordenSeleccionada.modalidad || '', metodo_pago: ordenSeleccionada.metodo_pago || 'efectivo' }); setModalConfirmarOrden(true) }}
-                                                    style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>
-                                                    Confirmar orden
-                                                </button>
-                                                <button onClick={() => handleCancelar(ordenSeleccionada)}
-                                                    style={{ padding: '8px 16px', borderRadius: '8px', border: `1px solid #fca5a5`, background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                                                    Cancelar
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
+                                    {ordenSeleccionada.estado === 'pendiente' && (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button onClick={() => handleProcesarEnCaja(ordenSeleccionada)}
+                                                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '800' }}>
+                                                🧾 Procesar en Caja
+                                            </button>
+                                            <button onClick={() => handleCancelar(ordenSeleccionada)}
+                                                style={{ padding: '10px 16px', borderRadius: '8px', border: `1px solid #fca5a5`, background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Info cliente */}
@@ -250,7 +232,6 @@ function Ordenes() {
                                         { label: 'Cliente', val: ordenSeleccionada.cliente_nombre },
                                         { label: 'Telefono', val: ordenSeleccionada.cliente_telefono || ordenSeleccionada.cliente_numero },
                                         { label: 'Canal', val: ordenSeleccionada.canal },
-                                        { label: 'Modalidad', val: ordenSeleccionada.modalidad },
                                         { label: 'Metodo de pago', val: ordenSeleccionada.metodo_pago },
                                         { label: 'Zona', val: ordenSeleccionada.zona_delivery },
                                     ].filter(i => i.val).map((item, i) => (
@@ -321,50 +302,6 @@ function Ordenes() {
                     )}
                 </div>
             </div>
-
-            {/* Modal confirmar orden */}
-            {modalConfirmarOrden && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: s.surface, borderRadius: '16px', padding: '24px', width: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '800', color: s.text }}>Confirmar orden {ordenSeleccionada?.numero}</h3>
-                            <button onClick={() => setModalConfirmarOrden(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
-                        </div>
-
-                        <label style={labelStyle}>Modalidad de entrega</label>
-                        <select value={formConfirmar.modalidad} onChange={e => setFormConfirmar({ ...formConfirmar, modalidad: e.target.value })} style={inputStyle}>
-                            <option value="">Seleccionar...</option>
-                            <option value="presencial">Retiro en tienda</option>
-                            <option value="delivery">Delivery</option>
-                        </select>
-
-                        <label style={labelStyle}>Metodo de pago</label>
-                        <select value={formConfirmar.metodo_pago} onChange={e => setFormConfirmar({ ...formConfirmar, metodo_pago: e.target.value })} style={inputStyle}>
-                            <option value="efectivo">Efectivo</option>
-                            <option value="transferencia">Transferencia</option>
-                            <option value="tarjeta">Tarjeta</option>
-                        </select>
-
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
-                            <p style={{ fontSize: '12px', color: s.textMuted }}>
-                                Al confirmar se registrara la venta, se descontara el stock y la orden desaparecera de pendientes.
-                                {formConfirmar.modalidad === 'delivery' && ' Se creara el delivery automaticamente.'}
-                            </p>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalConfirmarOrden(false)}
-                                style={{ padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px' }}>
-                                Cancelar
-                            </button>
-                            <button onClick={handleConfirmar}
-                                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '800' }}>
-                                Confirmar y registrar venta
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {modalConfirmar && (
                 <ModalConfirmar

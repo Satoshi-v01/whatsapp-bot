@@ -8,6 +8,7 @@ import { getZonas } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import api from '../services/api'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Caja() {
     const navigate = useNavigate()
@@ -53,8 +54,11 @@ function Caja() {
     })
 
     useEffect(() => {
-        cargarDatos()
-        cargarOpPrecargada()
+        async function init() {
+            await cargarDatos()
+            await cargarOpPrecargada()
+        }
+        init()
     }, [])
 
     useEffect(() => {
@@ -164,6 +168,40 @@ function Caja() {
         } else {
             setCanal('presencial')
         }
+
+        // Precargar productos de la OP
+        if (op.items?.length > 0) {
+            try {
+                const prods = await getProductos()
+                const lineasPrecargadas = []
+
+                for (const item of op.items) {
+                    if (!item.presentacion_id) continue
+
+                    // Buscar el producto que contiene esta presentacion
+                    const producto = prods.find(p =>
+                        p.presentaciones?.some(pr => pr.id === item.presentacion_id)
+                    )
+                    if (!producto) continue
+
+                    const presentacion = producto.presentaciones.find(pr => pr.id === item.presentacion_id)
+                    if (!presentacion) continue
+
+                    lineasPrecargadas.push({
+                        id: item.presentacion_id,
+                        busqueda: `${producto.marca_nombre ? producto.marca_nombre + ' — ' : ''}${producto.nombre}`,
+                        productosFiltrados: [],
+                        productoSeleccionado: producto,
+                        presentacionSeleccionada: presentacion,
+                        cantidad: item.cantidad || 1
+                    })
+                }
+
+                if (lineasPrecargadas.length > 0) {
+                    setLineas(lineasPrecargadas)
+                }
+            } catch (e) {}
+        }
     }
 
     async function handleBuscarCliente(valor) {
@@ -265,7 +303,9 @@ function Caja() {
             }).catch(() => {})
         }
 
-        const canalFinal = canal === 'delivery' ? 'agente_delivery' : 'agente_presencial'
+       const canalFinal = opOrigen
+            ? (canal === 'delivery' ? 'whatsapp_delivery' : 'whatsapp_bot')
+            : (canal === 'delivery' ? 'agente_delivery' : 'agente_presencial')
 
         setModalConfirmar({
             titulo: 'Confirmar venta',
