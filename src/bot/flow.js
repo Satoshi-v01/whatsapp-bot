@@ -49,7 +49,27 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
         }
     }
 
-    if (['audio', 'image', 'video', 'document', 'sticker'].includes(tipoMensaje)) {
+    if (['audio', 'video', 'document', 'sticker'].includes(tipoMensaje)) {
+        await enviarYGuardar(numero, `Perdon 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitas.`)
+        return
+    }
+
+    if (tipoMensaje === 'image') {
+        // Si está esperando comprobante de transferencia
+        if (sesion.datos.esperando_comprobante) {
+            await actualizarSesion(numero, {
+                paso: sesion.paso,
+                modo: sesion.modo,
+                datos: { ...sesion.datos, esperando_comprobante: false, comprobante_recibido: true }
+            })
+            await enviarYGuardar(numero,
+                `✅ *Comprobante recibido!*\n\n` +
+                `Un agente verificará el pago y confirmará tu pedido en breve. Gracias por tu paciencia 🐾`
+            )
+            // Notificar al agente
+            await actualizarSesion(numero, { paso: sesion.paso, modo: 'esperando_agente', datos: { ...sesion.datos, esperando_comprobante: false, comprobante_recibido: true } })
+            return
+        }
         await enviarYGuardar(numero, `Perdon 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitas.`)
         return
     }
@@ -736,26 +756,36 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
     if (paso === 'ubicacion') {
         const ubicacion = tipoMensaje === 'location' ? `${texto}` : texto
         await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, ubicacion, paso_delivery: 'referencia' } })
-        await enviarYGuardar(numero, `Paso 2 de 5\nNumero de casa o referencia para encontrarte?`)
+        await enviarYGuardar(numero,
+            `📍 *Paso 2 de 5*\n\n` +
+            `Numero de casa o referencia para encontrarte?`
+        )
         return
     }
     if (paso === 'referencia') {
         await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, referencia: texto, paso_delivery: 'horario' } })
-        await enviarYGuardar(numero, `Paso 3 de 5\nEn que horario podes recibir la entrega?`)
+        await enviarYGuardar(numero,
+            `🕐 *Paso 3 de 5*\n\n` +
+            `En que horario podes recibir la entrega?`
+        )
         return
     }
     if (paso === 'horario') {
         await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, horario: texto, paso_delivery: 'contacto' } })
-        await enviarYGuardar(numero, `Paso 4 de 5\nNombre y numero de quien recibe el pedido?`)
+        await enviarYGuardar(numero,
+            `👤 *Paso 4 de 5*\n\n` +
+            `Nombre y numero de quien recibe el pedido?`
+        )
         return
     }
     if (paso === 'contacto') {
         await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, contacto_entrega: texto, paso_delivery: 'pago' } })
         await enviarYGuardar(numero,
-            `Paso 5 de 5\nCual es tu metodo de pago?\n\n` +
+            `💳 *Paso 5 de 5*\n\n` +
+            `Cual es tu metodo de pago?\n\n` +
             `1. Efectivo\n` +
             `2. Transferencia bancaria\n\n` +
-            `_(Por el momento no aceptamos tarjeta para envios a domicilio)_`
+            `_Por el momento no aceptamos tarjeta para envios a domicilio._`
         )
         return
     }
@@ -770,69 +800,24 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
 
         if (t === '2') {
             await enviarYGuardar(numero,
-                `Genial, estos son los datos para la transferencia:\n\n` +
-                `Banco Itau\n` +
+                `🏦 *Datos para la transferencia*\n\n` +
+                `Banco: Itau\n` +
                 `Beneficiario: Osvaldo Sosa CI 1676634\n` +
-                `Numero de cuenta: 025618408\n` +
-                `O directamente al alias CI 1676634\n\n` +
-                `Envianos el comprobante y una vez verificado el agente confirmara tu pedido!`
+                `Cuenta: 025618408\n` +
+                `Alias: CI 1676634\n\n` +
+                `📸 *Envia el comprobante por aqui una vez realizada la transferencia.*\n\n` +
+                `Un agente verificara el pago y confirmara tu pedido en breve!`
             )
+            datos.esperando_comprobante = true
+            await actualizarSesion(numero, { paso: 'confirmando_pedido', modo: 'bot', datos })
+            await mostrarResumenFinal(numero, datos)
+            return
         }
 
         await actualizarSesion(numero, { paso: 'confirmando_pedido', modo: 'bot', datos })
         await mostrarResumenFinal(numero, datos)
         return
     }
-}
-
-// ─────────────────────────────────────────────
-// RESUMEN FINAL
-// ─────────────────────────────────────────────
-async function mostrarResumenFinal(numero, datos) {
-    const carrito = await getCarrito(numero)
-    const { total } = calcularTotal(carrito, datos.costo_delivery || 0)
-
-    let resumen = `Resumen de tu pedido:\n\n`
-    resumen += formatearCarrito(carrito, datos.zona_nombre, datos.costo_delivery || 0)
-    resumen += `\n\n`
-
-    if (datos.modalidad === 'delivery') {
-        if (datos.delivery_dia_siguiente) {
-            resumen += `Entrega: Manana (pedido realizado despues de las 16:00)\n`
-        }
-        resumen += `Ubicacion: ${datos.ubicacion}\n`
-        resumen += `Referencia: ${datos.referencia}\n`
-        resumen += `Horario: ${datos.horario}\n`
-        resumen += `Contacto: ${datos.contacto_entrega}\n`
-        resumen += `Pago: ${datos.metodo_pago}\n`
-    } else {
-        resumen += `Modalidad: Retiro en tienda\n`
-    }
-
-    if (datos.quiere_factura) {
-        resumen += `Factura: ${datos.razon_social} — RUC/CI: ${datos.ruc_factura}\n`
-    }
-
-    resumen += `\nConfirmas el pedido?\n\n1. Confirmar\n2. Cancelar`
-
-    await enviarYGuardar(numero, resumen)
-}
-
-// ─────────────────────────────────────────────
-// CONFIRMACION FINAL
-// ─────────────────────────────────────────────
-async function manejarConfirmandoPedido(numero, texto, sesion) {
-    const t = texto.trim()
-
-    if (t === '1') { await registrarPedido(numero, sesion); return }
-    if (t === '2') {
-        await limpiarCarrito(numero)
-        await reiniciarSesion(numero)
-        await enviarYGuardar(numero, `Pedido cancelado.\n\nPodes volver a escribir cuando quieras 🐾`)
-        return
-    }
-
-    await enviarYGuardar(numero, `Responde *1* para confirmar o *2* para cancelar.`)
 }
 
 // ─────────────────────────────────────────────

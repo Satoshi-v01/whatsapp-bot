@@ -79,3 +79,8 @@ export async function actualizarDisponible(presentacionId, disponible) {
     const res = await api.patch(`/productos/presentaciones/${presentacionId}/disponible`, { disponible })
     return res.data
 }
+
+export async function actualizarCodigoBarras(id, codigo_barras) {
+    const res = await api.patch(`/productos/presentaciones/${id}/codigos`, { codigo_barras })
+    return res.data
+}

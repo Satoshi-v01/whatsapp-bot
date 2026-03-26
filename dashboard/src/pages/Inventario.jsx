@@ -5,10 +5,21 @@ import {
     crearCategoria, editarCategoria,
     verificarEliminarCategoria, confirmarEliminarCategoria,
     crearProducto, editarProducto, agregarPresentacion,
-    actualizarStock, actualizarPrecio
+    actualizarStock, actualizarPrecio, actualizarCodigoBarras
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import { formatearFecha } from '../utils/fecha'
+
+function Modal({ children, zIndex = 1000, s }) {
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex }}>
+            <div style={{ background: s.surface, borderRadius: '14px', padding: '24px', maxHeight: '90vh', overflowY: 'auto', color: s.text, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                {children}
+            </div>
+        </div>
+    )
+}
 
 function Inventario() {
     const { darkMode } = useApp()
@@ -47,13 +58,15 @@ function Inventario() {
     const [modalPresentacion, setModalPresentacion] = useState(null)
     const [modalPrecio, setModalPrecio] = useState(null)
     const [modalEditarProducto, setModalEditarProducto] = useState(null)
+    const [modalCodigoBarras, setModalCodigoBarras] = useState(null)
     const [nuevaMarca, setNuevaMarca] = useState('')
     const [errorMarca, setErrorMarca] = useState('')
     const [confirmEliminarMarca, setConfirmEliminarMarca] = useState(null)
-    const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '' })
-    const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_compra: '', stock: 0 })
+    const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '' })
+    const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' })
     const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_compra: '', precio_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
-    const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '' })
+    const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '' })
+    const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
@@ -84,7 +97,7 @@ function Inventario() {
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la marca.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleCrearProducto() {
-        try { await crearProducto(nuevoProducto); setModalProducto(false); setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '' }); await cargarDatos() }
+        try { await crearProducto(nuevoProducto); setModalProducto(false); setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleCrearCategoria() {
@@ -109,7 +122,7 @@ function Inventario() {
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo editar el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleAgregarPresentacion(productoId) {
-        try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0 }); await cargarDatos() }
+        try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleConfirmarStock() {
@@ -122,14 +135,26 @@ function Inventario() {
             setModalPrecio(null); await cargarDatos()
         } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo actualizar el precio.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
+    async function handleGuardarCodigoBarras() {
+        try {
+            await actualizarCodigoBarras(modalCodigoBarras.id, codigoBarrasValor)
+            setModalCodigoBarras(null)
+            setCodigoBarrasValor('')
+            await cargarDatos()
+        } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo actualizar el codigo de barras.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
 
     function abrirModalPrecio(pr) {
         setPrecioForm({ precio_venta: pr.precio_venta || '', precio_compra: pr.precio_compra || '', precio_descuento: pr.precio_descuento || '', descuento_activo: pr.descuento_activo || false, descuento_desde: pr.descuento_desde ? pr.descuento_desde.slice(0, 16) : '', descuento_hasta: pr.descuento_hasta ? pr.descuento_hasta.slice(0, 16) : '', descuento_stock: pr.descuento_stock || '' })
         setModalPrecio(pr)
     }
     function abrirModalEditar(producto) {
-        setEditarForm({ nombre: producto.nombre, descripcion: producto.descripcion || '', calidad: producto.calidad, categoria_id: producto.categoria_id || '', marca_id: producto.marca_id || '' })
+        setEditarForm({ nombre: producto.nombre, descripcion: producto.descripcion || '', calidad: producto.calidad, categoria_id: producto.categoria_id || '', marca_id: producto.marca_id || '', sku: producto.sku || '' })
         setModalEditarProducto(producto)
+    }
+    function abrirModalCodigoBarras(pr) {
+        setCodigoBarrasValor(pr.codigo_barras || '')
+        setModalCodigoBarras(pr)
     }
     function calcularPrecioEfectivo(pr) {
         const ahora = new Date()
@@ -142,7 +167,6 @@ function Inventario() {
         return Math.round(((precio - pr.precio_compra) / precio) * 100)
     }
 
-    // Métricas rápidas
     const totalProductos = productos.length
     const totalPresentaciones = productos.reduce((sum, p) => sum + p.presentaciones.length, 0)
     const stockBajo = productos.reduce((sum, p) => sum + p.presentaciones.filter(pr => pr.stock <= 3 && pr.stock > 0).length, 0)
@@ -151,17 +175,11 @@ function Inventario() {
     const productosFiltrados = productos.filter(p =>
         p.nombre.toLowerCase().includes(buscar.toLowerCase()) ||
         (p.marca_nombre && p.marca_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
-        (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(buscar.toLowerCase()))
+        (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
+        (p.sku && p.sku.toLowerCase().includes(buscar.toLowerCase()))
     )
 
-    const Modal = ({ children, zIndex = 1000 }) => (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex }}>
-            <div style={{ background: s.surface, borderRadius: '14px', padding: '24px', maxHeight: '90vh', overflowY: 'auto', color: s.text, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                {children}
-            </div>
-        </div>
-    )
-
+    
     if (cargando) return (
         <div style={{ padding: '32px', background: s.bg, color: s.textMuted, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             Cargando inventario...
@@ -202,12 +220,12 @@ function Inventario() {
                 ))}
             </div>
 
-            {/* Buscador y filtros */}
+            {/* Buscador */}
             <div style={{ background: s.surface, borderRadius: '12px 12px 0 0', border: `1px solid ${s.border}`, borderBottom: 'none', padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', color: s.textFaint }}>🔍</span>
                     <input
-                        placeholder="Buscar por nombre, marca o categoría..."
+                        placeholder="Buscar por nombre, marca, categoría o SKU..."
                         value={buscar}
                         onChange={e => setBuscar(e.target.value)}
                         style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surfaceLow, color: s.text, fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
@@ -221,17 +239,15 @@ function Inventario() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: s.tableTh, borderBottom: `1px solid ${s.borderLight}` }}>
-                            <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Producto</th>
-                            <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Categoría</th>
-                            <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calidad</th>
-                            <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</th>
-                            <th style={{ padding: '14px 20px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Acciones</th>
+                            {['Producto', 'SKU', 'Categoría', 'Calidad', 'Presentaciones', 'Acciones'].map(h => (
+                                <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
+                            ))}
                         </tr>
                     </thead>
                     <tbody>
                         {productosFiltrados.length === 0 ? (
                             <tr>
-                                <td colSpan={5} style={{ padding: '48px', textAlign: 'center', color: s.textMuted, fontSize: '14px' }}>
+                                <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: s.textMuted, fontSize: '14px' }}>
                                     <p style={{ fontSize: '32px', marginBottom: '8px' }}>📦</p>
                                     <p>No hay productos que coincidan con la búsqueda.</p>
                                 </td>
@@ -250,22 +266,26 @@ function Inventario() {
                                             onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
-                                            <td style={{ padding: '16px 20px' }}>
+                                            <td style={{ padding: '16px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: s.surfaceLow, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-                                                        🐾
-                                                    </div>
+                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: s.surfaceLow, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🐾</div>
                                                     <div>
                                                         <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>
                                                             {producto.marca_nombre && <span style={{ color: s.textMuted }}>{producto.marca_nombre} — </span>}
                                                             {producto.nombre}
                                                         </p>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                                                            <span style={{ fontSize: '11px', color: s.textFaint }}>Stock total: {stockTotal}</span>
+                                                            <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {stockTotal}</span>
                                                             {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>⚠️ {alertas} bajo</span>}
                                                         </div>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td style={{ padding: '16px' }}>
+                                                {producto.sku
+                                                    ? <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', padding: '3px 8px', borderRadius: '6px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>{producto.sku}</span>
+                                                    : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>
+                                                }
                                             </td>
                                             <td style={{ padding: '16px' }}>
                                                 <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>
@@ -287,21 +307,21 @@ function Inventario() {
                                                     {producto.presentaciones.length > 3 && <span style={{ fontSize: '10px', color: s.textFaint }}>+{producto.presentaciones.length - 3}</span>}
                                                 </div>
                                             </td>
-                                            <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                                            <td style={{ padding: '16px', textAlign: 'right' }}>
                                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                                     <button onClick={e => { e.stopPropagation(); abrirModalEditar(producto) }}
                                                         style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>
                                                         ✏️ Editar
                                                     </button>
-                                                    <span style={{ fontSize: '12px', color: s.textFaint, marginLeft: '4px' }}>{expandido ? '▲' : '▼'}</span>
+                                                    <span style={{ fontSize: '12px', color: s.textFaint }}>{expandido ? '▲' : '▼'}</span>
                                                 </div>
                                             </td>
                                         </tr>
 
-                                        {/* Fila expandida con presentaciones */}
+                                        {/* Fila expandida */}
                                         {expandido && (
                                             <tr key={`${producto.id}-expand`}>
-                                                <td colSpan={5} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
+                                                <td colSpan={6} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
                                                     <div style={{ padding: '16px 20px' }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                                             <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</p>
@@ -313,7 +333,7 @@ function Inventario() {
                                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                             <thead>
                                                                 <tr style={{ background: s.surface }}>
-                                                                    {['Nombre', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Acciones'].map(h => (
+                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Acciones'].map(h => (
                                                                         <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                                                                     ))}
                                                                 </tr>
@@ -325,6 +345,12 @@ function Inventario() {
                                                                     return (
                                                                         <tr key={pr.id} style={{ borderTop: `1px solid ${s.borderLight}` }}>
                                                                             <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: '600', color: s.text }}>{pr.nombre}</td>
+                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                {pr.codigo_barras
+                                                                                    ? <span style={{ fontSize: '11px', fontFamily: 'monospace', color: s.text }}>{pr.codigo_barras}</span>
+                                                                                    : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>
+                                                                                }
+                                                                            </td>
                                                                             <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>{pr.precio_compra ? `Gs. ${pr.precio_compra.toLocaleString()}` : '—'}</td>
                                                                             <td style={{ padding: '10px 12px', fontSize: '12px', color: s.text }}>
                                                                                 {conDescuento ? (
@@ -336,7 +362,9 @@ function Inventario() {
                                                                                 ) : `Gs. ${(pr.precio_venta || 0).toLocaleString()}`}
                                                                             </td>
                                                                             <td style={{ padding: '10px 12px', fontSize: '12px' }}>
-                                                                                {pr.descuento_activo && pr.precio_descuento ? <span style={{ color: '#10b981', fontWeight: '600' }}>Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span> : <span style={{ color: s.textFaint }}>—</span>}
+                                                                                {pr.descuento_activo && pr.precio_descuento
+                                                                                    ? <span style={{ color: '#10b981', fontWeight: '600' }}>Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span>
+                                                                                    : <span style={{ color: s.textFaint }}>—</span>}
                                                                             </td>
                                                                             <td style={{ padding: '10px 12px' }}>
                                                                                 {mg !== null ? (
@@ -357,14 +385,18 @@ function Inventario() {
                                                                                 </div>
                                                                             </td>
                                                                             <td style={{ padding: '10px 12px' }}>
-                                                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                                                <div style={{ display: 'flex', gap: '4px' }}>
                                                                                     <button onClick={() => { setNuevoStockValor(String(pr.stock)); setModalStock({ id: pr.id, nombre: pr.nombre, stockActual: pr.stock }) }}
-                                                                                        style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                                                                                         Stock
                                                                                     </button>
                                                                                     <button onClick={() => abrirModalPrecio(pr)}
-                                                                                        style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                                                                                         Precio
+                                                                                    </button>
+                                                                                    <button onClick={() => abrirModalCodigoBarras(pr)}
+                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                                                                                        🔢 Cod.
                                                                                     </button>
                                                                                 </div>
                                                                             </td>
@@ -384,7 +416,6 @@ function Inventario() {
                     </tbody>
                 </table>
 
-                {/* Footer tabla */}
                 <div style={{ padding: '12px 20px', background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(248,250,252,0.8)', borderTop: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <p style={{ fontSize: '12px', color: s.textFaint }}>
                         Mostrando <strong style={{ color: s.text }}>{productosFiltrados.length}</strong> de <strong style={{ color: s.text }}>{productos.length}</strong> productos
@@ -396,7 +427,7 @@ function Inventario() {
             {/* ===== MODALES ===== */}
 
             {modalMarca && (
-                <Modal>
+                <Modal s={s}>
                     <div style={{ width: '400px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Gestión de marcas</h3>
@@ -421,7 +452,7 @@ function Inventario() {
             )}
 
             {modalProducto && (
-                <Modal>
+                <Modal s={s}>
                     <div style={{ width: '420px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: s.text }}>Nuevo producto</h3>
                         <label style={labelStyle}>Marca</label>
@@ -431,6 +462,8 @@ function Inventario() {
                         </select>
                         <label style={labelStyle}>Nombre</label>
                         <input value={nuevoProducto.nombre} onChange={e => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })} style={inputStyle} />
+                        <label style={labelStyle}>SKU (codigo interno)</label>
+                        <input value={nuevoProducto.sku} onChange={e => setNuevoProducto({ ...nuevoProducto, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" style={inputStyle} />
                         <label style={labelStyle}>Descripción</label>
                         <input value={nuevoProducto.descripcion} onChange={e => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Calidad</label>
@@ -454,7 +487,7 @@ function Inventario() {
             )}
 
             {modalEditarProducto && (
-                <Modal>
+                <Modal s={s}>
                     <div style={{ width: '420px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: s.text }}>Editar producto</h3>
                         <label style={labelStyle}>Marca</label>
@@ -464,6 +497,8 @@ function Inventario() {
                         </select>
                         <label style={labelStyle}>Nombre</label>
                         <input value={editarForm.nombre} onChange={e => setEditarForm({ ...editarForm, nombre: e.target.value })} style={inputStyle} />
+                        <label style={labelStyle}>SKU (codigo interno)</label>
+                        <input value={editarForm.sku} onChange={e => setEditarForm({ ...editarForm, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" style={inputStyle} />
                         <label style={labelStyle}>Descripción</label>
                         <input value={editarForm.descripcion} onChange={e => setEditarForm({ ...editarForm, descripcion: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Calidad</label>
@@ -487,7 +522,7 @@ function Inventario() {
             )}
 
             {modalPresentacion && (
-                <Modal>
+                <Modal s={s}>
                     <div style={{ width: '400px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: s.text }}>Nueva presentación</h3>
                         <label style={labelStyle}>Nombre</label>
@@ -498,6 +533,8 @@ function Inventario() {
                         <input type="number" value={nuevaPresentacion.precio_venta} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_venta: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Stock inicial</label>
                         <input type="number" value={nuevaPresentacion.stock} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, stock: e.target.value })} style={inputStyle} />
+                        <label style={labelStyle}>Codigo de barras (opcional)</label>
+                        <input value={nuevaPresentacion.codigo_barras} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, codigo_barras: e.target.value })} placeholder="Escanea o ingresa manualmente" style={inputStyle} />
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalPresentacion(null)} style={btnSecundario}>Cancelar</button>
                             <button onClick={() => handleAgregarPresentacion(modalPresentacion)} style={btnPrimario}>Agregar</button>
@@ -506,8 +543,32 @@ function Inventario() {
                 </Modal>
             )}
 
+            {modalCodigoBarras && (
+                <Modal s={s} zIndex={2000}>
+                    <div style={{ width: '380px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '6px', color: s.text }}>Codigo de barras</h3>
+                        <p style={{ fontSize: '13px', color: s.textMuted, marginBottom: '20px' }}>{modalCodigoBarras.nombre}</p>
+                        <label style={labelStyle}>Codigo de barras</label>
+                        <input
+                            value={codigoBarrasValor}
+                            onChange={e => setCodigoBarrasValor(e.target.value)}
+                            placeholder="Escanea con lector o ingresa manualmente"
+                            style={inputStyle}
+                            autoFocus
+                        />
+                        <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '16px' }}>
+                            Si tenes un lector de codigo de barras, conectalo por USB y escanea el producto directamente en este campo.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setModalCodigoBarras(null)} style={btnSecundario}>Cancelar</button>
+                            <button onClick={handleGuardarCodigoBarras} style={btnPrimario}>Guardar</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {modalPrecio && (
-                <Modal>
+                <Modal s={s}>
                     <div style={{ width: '420px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px', color: s.text }}>Precio y descuento</h3>
                         <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>{modalPrecio.nombre}</p>
@@ -552,7 +613,7 @@ function Inventario() {
             )}
 
             {modalCategorias && (
-                <Modal>
+                <Modal s={s}>
                     <div style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Gestión de categorías</h3>
@@ -591,7 +652,7 @@ function Inventario() {
             )}
 
             {modalStock && (
-                <Modal zIndex={2000}>
+                <Modal s={s} zIndex={2000}>
                     <div style={{ width: '360px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '6px', color: s.text }}>Actualizar stock</h3>
                         <p style={{ fontSize: '13px', color: s.textMuted, marginBottom: '20px' }}>{modalStock.nombre}</p>
@@ -610,7 +671,7 @@ function Inventario() {
             )}
 
             {confirmEliminarMarca && (
-                <Modal zIndex={1100}>
+                <Modal s={s} zIndex={1100}>
                     <div style={{ width: '400px' }}>
                         <h3 style={{ marginBottom: '12px', color: confirmEliminarMarca.cantidad > 0 ? '#ef4444' : s.text }}>
                             {confirmEliminarMarca.cantidad > 0 ? '⚠️ Atención' : 'Eliminar marca'}
@@ -632,7 +693,7 @@ function Inventario() {
             )}
 
             {confirmEliminarCategoria && (
-                <Modal zIndex={1100}>
+                <Modal s={s} zIndex={1100}>
                     <div style={{ width: '400px' }}>
                         <h3 style={{ marginBottom: '12px', color: confirmEliminarCategoria.cantidad > 0 ? '#ef4444' : s.text }}>
                             {confirmEliminarCategoria.cantidad > 0 ? '⚠️ Atención' : 'Eliminar categoría'}

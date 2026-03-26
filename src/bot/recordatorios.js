@@ -12,7 +12,7 @@ async function procesarTimeouts() {
         await cerrarSesionesInactivas()
         await limpiarReservasExpiradas()
         await db.query(`SELECT expirar_ordenes_pedido()`)
-
+        await recordatorioComprobante()
     } catch (err) {
         console.error('Error en procesarTimeouts:', err.message)
     }
@@ -101,6 +101,31 @@ async function cerrarSesionesInactivas() {
 
 async function limpiarReservasExpiradas() {
     await db.query(`SELECT limpiar_reservas_expiradas()`)
+}
+
+async function recordatorioComprobante() {
+    const resultado = await db.query(
+        `SELECT cliente_numero, datos, ultimo_mensaje
+         FROM sesiones
+         WHERE datos->>'esperando_comprobante' = 'true'
+         AND ultimo_mensaje < NOW() - INTERVAL '30 minutes'
+         AND modo = 'bot'`
+    )
+
+    for (const sesion of resultado.rows) {
+        try {
+            const msg =
+                `⏰ *Recordatorio*\n\n` +
+                `Todavia no recibimos tu comprobante de transferencia.\n\n` +
+                `Si ya realizaste el pago, envialo por aqui 📸\n` +
+                `Si tuviste algun problema escribi *agente* y te ayudamos.`
+
+            await enviarMensaje(sesion.cliente_numero, msg)
+            await guardarMensaje(sesion.cliente_numero, msg, 'bot')
+        } catch (err) {
+            console.error(`Error recordatorio comprobante ${sesion.cliente_numero}:`, err.message)
+        }
+    }
 }
 
 module.exports = { procesarTimeouts }
