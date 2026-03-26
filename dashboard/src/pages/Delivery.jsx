@@ -4,6 +4,7 @@ import { getProductos, getCategorias } from '../services/productos'
 import { buscarClientes } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Delivery() {
     const [deliveries, setDeliveries] = useState([])
@@ -85,11 +86,6 @@ function Delivery() {
     function formatearFecha(fecha) {
         if (!fecha) return '—'
         return new Date(fecha).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    }
-
-    function formatearHora(fecha) {
-        if (!fecha) return null
-        return new Date(fecha).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })
     }
 
     const conteos = {}
