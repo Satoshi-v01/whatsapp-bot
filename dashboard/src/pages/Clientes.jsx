@@ -3,6 +3,57 @@ import { getClientes, getCliente, crearCliente, editarCliente } from '../service
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 
+// ANTES del function Clientes() — componente separado
+function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, darkMode }) {
+    const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, marginBottom: '10px', fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text, outline: 'none' }
+    const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
+    const btnPrimario = { padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
+    const btnSecundario = { padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
+
+    function formatearRUC(valor) {
+        const solo = valor.replace(/[^\d]/g, '')
+        if (solo.length <= 7) return solo.replace(/(\d{1,3})(\d{1,3})?(\d{1,3})?/, (_, a, b, c) => [a, b, c].filter(Boolean).join('.'))
+        const cuerpo = solo.slice(0, -1)
+        const dv = solo.slice(-1)
+        return `${cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`
+    }
+
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>{titulo}</h3>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                </div>
+                <label style={labelStyle}>Tipo</label>
+                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={inputStyle}>
+                    <option value="persona">Persona física</option>
+                    <option value="empresa">Empresa</option>
+                </select>
+                <label style={labelStyle}>Nombre / Razón social *</label>
+                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+                <label style={labelStyle}>RUC</label>
+                <input value={form.ruc} onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })} style={inputStyle} />
+                <label style={labelStyle}>Teléfono / WhatsApp</label>
+                <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
+                <label style={labelStyle}>Email</label>
+                <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div><label style={labelStyle}>Ciudad</label><input value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                    <div><label style={labelStyle}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                </div>
+                <label style={{ ...labelStyle, marginTop: '10px' }}>Notas internas</label>
+                <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                    <button onClick={onClose} style={btnSecundario}>Cancelar</button>
+                    <button onClick={onSubmit} style={btnPrimario}>{submitLabel}</button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+
 function Clientes() {
     const [clientes, setClientes] = useState([])
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
@@ -254,40 +305,7 @@ function Clientes() {
         )
     }
 
-    const FormModal = ({ titulo, onClose, onSubmit, submitLabel }) => (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>{titulo}</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
-                </div>
-                <label style={labelStyle}>Tipo</label>
-                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={inputStyle}>
-                    <option value="persona">Persona física</option>
-                    <option value="empresa">Empresa</option>
-                </select>
-                <label style={labelStyle}>Nombre / Razón social *</label>
-                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
-                <label style={labelStyle}>RUC</label>
-                <input value={form.ruc} onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })} style={inputStyle} />
-                <label style={labelStyle}>Teléfono / WhatsApp</label>
-                <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
-                <label style={labelStyle}>Email</label>
-                <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div><label style={labelStyle}>Ciudad</label><input value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                    <div><label style={labelStyle}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                </div>
-                <label style={{ ...labelStyle, marginTop: '10px' }}>Notas internas</label>
-                <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <button onClick={onClose} style={btnSecundario}>Cancelar</button>
-                    <button onClick={onSubmit} style={btnPrimario}>{submitLabel}</button>
-                </div>
-            </div>
-        </div>
-    )
-
+    
     return (
         <div style={{ background: s.bg, minHeight: '100%' }}>
 
@@ -598,8 +616,30 @@ function Clientes() {
                 </div>
             )}
 
-            {modalNuevo && <FormModal titulo="Nuevo cliente" onClose={() => setModalNuevo(false)} onSubmit={handleCrearCliente} submitLabel="Crear cliente" />}
-            {modalEditar && <FormModal titulo="Editar cliente" onClose={() => setModalEditar(false)} onSubmit={handleEditarCliente} submitLabel="Guardar cambios" />}
+            {modalNuevo && (
+                <FormModal
+                    titulo="Nuevo cliente"
+                    onClose={() => setModalNuevo(false)}
+                    onSubmit={handleCrearCliente}
+                    submitLabel="Crear cliente"
+                    form={form}
+                    setForm={setForm}
+                    s={s}
+                    darkMode={darkMode}
+                />
+            )}
+            {modalEditar && (
+                <FormModal
+                    titulo="Editar cliente"
+                    onClose={() => setModalEditar(false)}
+                    onSubmit={handleEditarCliente}
+                    submitLabel="Guardar cambios"
+                    form={form}
+                    setForm={setForm}
+                    s={s}
+                    darkMode={darkMode}
+                />
+            )}
             {modalConfirmar && (
                 <ModalConfirmar
                     titulo={modalConfirmar.titulo}

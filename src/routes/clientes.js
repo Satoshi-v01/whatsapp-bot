@@ -221,11 +221,21 @@ router.get('/buscar/autocomplete', async (req, res) => {
         if (!q || q.length < 2) return res.json([])
 
         const resultado = await db.query(
-            `SELECT id, nombre, ruc, telefono, tipo
-             FROM clientes
-             WHERE activo = true
-             AND (LOWER(nombre) ILIKE $1 OR ruc ILIKE $1 OR telefono ILIKE $1)
-             ORDER BY nombre ASC
+            `SELECT c.id, c.nombre, c.ruc, c.telefono, c.tipo, c.direccion, c.ciudad,
+                    d.referencia as ultima_referencia
+             FROM clientes c
+             LEFT JOIN LATERAL (
+                 SELECT d.referencia
+                 FROM deliveries d
+                 JOIN ventas v ON d.venta_id = v.id
+                 WHERE v.cliente_id = c.id
+                 AND d.referencia IS NOT NULL
+                 ORDER BY d.created_at DESC
+                 LIMIT 1
+             ) d ON true
+             WHERE c.activo = true
+             AND (LOWER(c.nombre) ILIKE $1 OR c.ruc ILIKE $1 OR c.telefono ILIKE $1)
+             ORDER BY c.nombre ASC
              LIMIT 10`,
             [`%${q.toLowerCase()}%`]
         )

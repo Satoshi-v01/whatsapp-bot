@@ -275,4 +275,27 @@ router.post('/:id/nota', async (req, res) => {
     }
 })
 
+// Crear delivery simple desde caja (ya tiene venta_id)
+router.post('/simple', async (req, res) => {
+    try {
+        const {
+            venta_id, cliente_numero, ubicacion, referencia,
+            horario, contacto_entrega, metodo_pago
+        } = req.body
+
+        if (!venta_id) return res.status(400).json({ error: 'venta_id es requerido' })
+
+        const resultado = await db.query(
+            `INSERT INTO deliveries (venta_id, cliente_numero, ubicacion, referencia, horario, contacto_entrega, metodo_pago, estado)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendiente')
+             RETURNING *`,
+            [venta_id, cliente_numero || null, ubicacion || null, referencia || null,
+             horario || null, contacto_entrega || null, metodo_pago || 'efectivo']
+        )
+
+        res.status(201).json({ ok: true, delivery: resultado.rows[0] })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
 module.exports = router
