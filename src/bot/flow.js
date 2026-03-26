@@ -943,9 +943,8 @@ async function registrarPedido(numero, sesion) {
         await client.query('COMMIT')
 
         // Limpiar carrito y sesión — las reservas se mantienen hasta que expire la OP
-        await limpiarReservasPostVenta(numero)
-        await limpiarCarrito(numero)
-        await reiniciarSesion(numero)
+        await limpiarCarrito(numero)  // solo limpia el carrito de la sesión
+        await reiniciarSesion(numero) // reinicia la sesión pero NO toca las reservas
 
         if (clienteId) recalcularStats(clienteId).catch(() => {})
 

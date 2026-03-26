@@ -107,8 +107,15 @@ function Reportes() {
     function formatearGs(n) { return `Gs. ${parseInt(n || 0).toLocaleString('es-PY')}` }
     function formatearFecha(f) { return new Date(f).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' }) }
     function iniciales(n) { if (!n) return 'CF'; return n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) }
-    function labelCanal(c) { return { en_tienda: '🏪 Tienda', whatsapp_bot: '🤖 WA Bot', whatsapp: '💬 WhatsApp', whatsapp_delivery: '🚚 Delivery', pagina_web: '🌐 Web', presencial: '🏪 Presencial', otro: '📋 Otro' }[c] || c }
-
+    function labelCanal(c) {
+        return {
+            bot: 'WhatsApp Bot',
+            tienda: 'Tienda / Presencial',
+            delivery: 'Delivery',
+            web: 'Pagina Web',
+            otro: 'Otro'
+        }[c] || c
+    }
     const coloresCanal = ['#1a1a2e', '#4f46e5', '#818cf8', '#c7d2fe', '#e0e7ff', '#94a3b8']
     const maxVenta = Math.max(...ventasPorDia.map(v => parseInt(v.total)), 1)
     const totalCanal = ventasPorCanal.reduce((sum, c) => sum + parseInt(c.total), 0)
@@ -184,10 +191,10 @@ function Reportes() {
                         <label style={labelStyle}>Canal</label>
                         <select value={canal} onChange={e => setCanal(e.target.value)} style={inputStyle}>
                             <option value="">Todos los canales</option>
-                            <option value="en_tienda">En tienda</option>
-                            <option value="whatsapp_bot">WhatsApp Bot</option>
-                            <option value="whatsapp">WhatsApp</option>
-                            <option value="presencial">Presencial</option>
+                            <option value="bot">WhatsApp Bot</option>
+                            <option value="tienda">Tienda / Presencial</option>
+                            <option value="delivery">Delivery</option>
+                            <option value="web">Pagina Web</option>
                         </select>
                     </div>
                     <div>
@@ -423,12 +430,12 @@ function Reportes() {
                     <div><label style={labelStyle}>Hasta</label><input type="date" value={exportHasta} onChange={e => setExportHasta(e.target.value)} style={inputStyle} /></div>
                     <div>
                         <label style={labelStyle}>Canal (opcional)</label>
-                        <select value={exportCanal} onChange={e => setExportCanal(e.target.value)} style={inputStyle}>
-                            <option value="">Todos</option>
-                            <option value="en_tienda">En tienda</option>
-                            <option value="whatsapp_bot">WhatsApp Bot</option>
-                            <option value="whatsapp">WhatsApp</option>
-                            <option value="presencial">Presencial</option>
+                        <select value={canal} onChange={e => setCanal(e.target.value)} style={inputStyle}>
+                            <option value="">Todos los canales</option>
+                            <option value="bot">WhatsApp Bot</option>
+                            <option value="tienda">Tienda / Presencial</option>
+                            <option value="delivery">Delivery</option>
+                            <option value="web">Pagina Web</option>
                         </select>
                     </div>
                     <button onClick={handleExportarExcel} disabled={exportando}
