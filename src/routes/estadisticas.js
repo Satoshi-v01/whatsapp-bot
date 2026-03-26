@@ -193,17 +193,23 @@ router.get('/ventas-por-canal', async (req, res) => {
         if (periodo === 'semana') intervalo = '7 days'
         if (periodo === 'anual') intervalo = '365 days'
 
-        const resultado = await db.query(
-            `SELECT
-                v.canal,
-                COUNT(*) as cantidad,
-                COALESCE(SUM(v.precio), 0) as total
-             FROM ventas v
-             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
-             AND v.estado != 'cancelado'
-             GROUP BY v.canal
-             ORDER BY total DESC`
-        )
+    const resultado = await db.query(
+        `SELECT
+            CASE
+                WHEN canal IN ('whatsapp_bot', 'whatsapp') THEN 'bot'
+                WHEN canal IN ('en_tienda', 'presencial', 'agente_presencial') THEN 'tienda'
+                WHEN canal IN ('agente_delivery', 'whatsapp_delivery') THEN 'delivery'
+                WHEN canal = 'pagina_web' THEN 'web'
+                ELSE 'otro'
+            END as canal,
+            COUNT(*) as cantidad,
+            COALESCE(SUM(v.precio), 0) as total
+        FROM ventas v
+        WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+        AND v.estado != 'cancelado'
+        GROUP BY 1
+        ORDER BY total DESC`
+    )
         res.json(resultado.rows)
     } catch (error) {
         manejarError(res, error)
@@ -311,9 +317,20 @@ router.get('/metricas', async (req, res) => {
         let i = 1
 
         if (canal) {
-            condiciones.push(`v.canal = $${i}`)
-            valores.push(canal)
-            i++
+            // Mapear canal unificado a canales reales
+            const mapCanal = {
+                bot: `v.canal IN ('whatsapp_bot', 'whatsapp')`,
+                tienda: `v.canal IN ('en_tienda', 'presencial', 'agente_presencial')`,
+                delivery: `v.canal IN ('agente_delivery', 'whatsapp_delivery')`,
+                web: `v.canal = 'pagina_web'`
+            }
+            if (mapCanal[canal]) {
+                condiciones.push(mapCanal[canal])
+            } else {
+                condiciones.push(`v.canal = $${i}`)
+                valores.push(canal)
+                i++
+            }
         }
 
         if (marca_id) {

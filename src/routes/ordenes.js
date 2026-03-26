@@ -282,6 +282,11 @@ router.post('/:id/confirmar', async (req, res) => {
 
         await client.query('COMMIT')
 
+        await db.query(
+            `DELETE FROM reservas_carrito WHERE cliente_numero = $1`,
+            [orden.cliente_numero]
+        )
+
         // Notificar al cliente por WhatsApp si vino del bot
         if (orden.cliente_numero) {
             try {
