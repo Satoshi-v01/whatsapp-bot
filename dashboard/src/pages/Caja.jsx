@@ -61,6 +61,11 @@ function Caja() {
         if (!clienteSeleccionado) return
         if (clienteSeleccionado.ruc) setRucFactura(clienteSeleccionado.ruc)
         if (clienteSeleccionado.nombre) setRazonSocial(clienteSeleccionado.nombre)
+        if (!clienteSeleccionado) return
+            console.log('cliente seleccionado:', clienteSeleccionado)
+            console.log('zonas:', zonas)
+            console.log('direccion:', clienteSeleccionado.direccion)
+            console.log('ciudad:', clienteSeleccionado.ciudad)
 
         // Precargar datos de delivery si el cliente tiene dirección guardada
         if (clienteSeleccionado.direccion || clienteSeleccionado.ciudad) {
@@ -68,6 +73,8 @@ function Caja() {
                 ...prev,
                 ubicacion: clienteSeleccionado.direccion || prev.ubicacion,
                 contacto_entrega: clienteSeleccionado.nombre || prev.contacto_entrega,
+                referencia: clienteSeleccionado.ultima_referencia || prev.referencia,
+
             }))
 
             // Si tiene ciudad, buscar la zona correspondiente
@@ -84,7 +91,25 @@ function Caja() {
                     }))
                 }
             }
-        }
+            if (clienteSeleccionado.ciudad) {
+                const normalizar = str => str.toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim()
+
+                const ciudadNorm = normalizar(clienteSeleccionado.ciudad)
+                const zonaMatch = zonas.find(z => normalizar(z.nombre) === ciudadNorm)
+
+                if (zonaMatch) {
+                    setFormDelivery(prev => ({
+                        ...prev,
+                        zona_id: zonaMatch.id,
+                        zona_nombre: zonaMatch.nombre,
+                        costo_delivery: zonaMatch.costo
+                    }))
+                }
+            }
+        }       
     }, [clienteSeleccionado, zonas])
 
     async function cargarDatos() {
@@ -234,9 +259,10 @@ function Caja() {
             setModalConfirmar({ titulo: 'Falta el producto', mensaje: 'Agrega al menos un producto con presentacion seleccionada.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
-        if (canal === 'delivery' && !formDelivery.ubicacion) {
-            setModalConfirmar({ titulo: 'Falta la ubicacion', mensaje: 'Ingresa la ubicacion del cliente para el delivery.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
-            return
+        if (canal === 'delivery' && clienteSeleccionado?.id && formDelivery.referencia) {
+            api.patch(`/clientes/${clienteSeleccionado.id}`, {
+                referencia_delivery: formDelivery.referencia
+            }).catch(() => {})
         }
 
         const canalFinal = canal === 'delivery' ? 'agente_delivery' : 'agente_presencial'
@@ -252,7 +278,7 @@ function Caja() {
                     for (let i = 0; i < lineasValidas.length; i++) {
                         const linea = lineasValidas[i]
                         const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
-                        const venta = await registrarVentaPresencial({
+                        const respuesta = await registrarVentaPresencial({
                             cliente_id: clienteSeleccionado?.id || null,
                             presentacion_id: linea.presentacionSeleccionada.id,
                             cantidad: linea.cantidad,
@@ -265,20 +291,19 @@ function Caja() {
                             costo_delivery: i === 0 ? costoDelivery : 0,
                             zona_delivery: i === 0 ? (formDelivery.zona_nombre || null) : null
                         })
-                        ventasIds.push(venta?.id)
+                        ventasIds.push(respuesta?.venta?.id)
                     }
 
                     // Si es delivery, crear el delivery
                     if (canal === 'delivery' && ventasIds[0]) {
-                        await api.post('/deliveries', {
+                        await api.post('/deliveries/simple', {
                             venta_id: ventasIds[0],
                             cliente_numero: clienteSeleccionado?.telefono || null,
                             ubicacion: formDelivery.ubicacion,
                             referencia: formDelivery.referencia,
                             horario: formDelivery.horario,
                             contacto_entrega: formDelivery.contacto_entrega,
-                            metodo_pago: metodoPago,
-                            estado: 'pendiente'
+                            metodo_pago: metodoPago
                         })
                     }
 
