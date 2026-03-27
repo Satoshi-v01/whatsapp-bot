@@ -14,6 +14,7 @@ import Clientes from './pages/Clientes'
 import Proveedores from './pages/Proveedores'
 import Caja from './pages/Caja'
 import Configuracion from './pages/Configuracion'
+import Repartidor from './pages/Repartidor'
 import './App.css'
 
 export const AppContext = createContext({})
@@ -89,47 +90,59 @@ function App() {
         return children
     }
 
+    // Detectar si es repartidor — redirigir automáticamente
+    const esRepartidor = usuario.rol_nombre?.toLowerCase() === 'repartidor' || 
+                        (usuario.permisos && Object.keys(usuario.permisos).length === 1 && usuario.permisos.delivery)
+
     return (
         <AppContext.Provider value={{ darkMode, toggleDarkMode, usuario, puedo }}>
             <div className="app" data-theme={darkMode ? 'dark' : ''}>
-                <Sidebar />
+                {!esRepartidor && <Sidebar />}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <TopBar usuario={usuario} onLogout={handleLogout} />
-                    <main className="contenido">
+                    {!esRepartidor && <TopBar usuario={usuario} onLogout={handleLogout} />}
+                    <main className={esRepartidor ? '' : 'contenido'}>
                         <Routes>
-                            <Route path="/" element={
-                                puedo('home', 'ver') ? <Home /> : <Navigate to="/delivery" replace />
-                            } />
-                            <Route path="/chat" element={
-                                <RutaProtegida modulo="chat"><Chat /></RutaProtegida>
-                            } />
-                            <Route path="/ventas" element={
-                                <RutaProtegida modulo="ventas"><Ventas /></RutaProtegida>
-                            } />
-                            <Route path="/inventario" element={
-                                <RutaProtegida modulo="inventario"><Inventario /></RutaProtegida>
-                            } />
-                            <Route path="/proveedores" element={
-                                <RutaProtegida modulo="proveedores" accion="ver"><Proveedores /></RutaProtegida>
-                            } />
-                            <Route path="/clientes" element={
-                                <RutaProtegida modulo="clientes"><Clientes /></RutaProtegida>
-                            } />
-                            <Route path="/caja" element={
-                                <RutaProtegida modulo="ventas"><Caja /></RutaProtegida>
-                            } />
-                            <Route path="/delivery" element={
-                                <RutaProtegida modulo="delivery"><Delivery /></RutaProtegida>
-                            } />
-                            <Route path="/reportes" element={
-                                <RutaProtegida modulo="reportes"><Reportes /></RutaProtegida>
-                            } />
-                            <Route path="/configuracion" element={
-                                <RutaProtegida modulo="configuracion"><Configuracion /></RutaProtegida>
-                            } />
-                            <Route path="/ordenes" element={
-                                <RutaProtegida modulo="ordenes" accion="ver"><Ordenes /></RutaProtegida>
-                            } />
+                            {esRepartidor ? (
+                                <>
+                                    <Route path="*" element={<Repartidor usuario={usuario} onLogout={handleLogout} />} />
+                                </>
+                            ) : (
+                                <>
+                                    <Route path="/" element={
+                                        puedo('home', 'ver') ? <Home /> : <Navigate to="/delivery" replace />
+                                    } />
+                                    <Route path="/chat" element={
+                                        <RutaProtegida modulo="chat"><Chat /></RutaProtegida>
+                                    } />
+                                    <Route path="/ventas" element={
+                                        <RutaProtegida modulo="ventas"><Ventas /></RutaProtegida>
+                                    } />
+                                    <Route path="/inventario" element={
+                                        <RutaProtegida modulo="inventario"><Inventario /></RutaProtegida>
+                                    } />
+                                    <Route path="/proveedores" element={
+                                        <RutaProtegida modulo="proveedores" accion="ver"><Proveedores /></RutaProtegida>
+                                    } />
+                                    <Route path="/clientes" element={
+                                        <RutaProtegida modulo="clientes"><Clientes /></RutaProtegida>
+                                    } />
+                                    <Route path="/caja" element={
+                                        <RutaProtegida modulo="ventas"><Caja /></RutaProtegida>
+                                    } />
+                                    <Route path="/delivery" element={
+                                        <RutaProtegida modulo="delivery"><Delivery /></RutaProtegida>
+                                    } />
+                                    <Route path="/reportes" element={
+                                        <RutaProtegida modulo="reportes"><Reportes /></RutaProtegida>
+                                    } />
+                                    <Route path="/configuracion" element={
+                                        <RutaProtegida modulo="configuracion"><Configuracion /></RutaProtegida>
+                                    } />
+                                    <Route path="/ordenes" element={
+                                        <RutaProtegida modulo="ordenes" accion="ver"><Ordenes /></RutaProtegida>
+                                    } />
+                                </>
+                            )}
                         </Routes>
                     </main>
                 </div>

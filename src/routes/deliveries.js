@@ -9,6 +9,9 @@ const { descontarStockFEFO } = require('../services/stock')
 // Ver todos los deliveries
 router.get('/', async (req, res) => {
     try {
+        const { fecha } = req.query
+        const fechaFiltro = fecha || new Date().toISOString().slice(0, 10)
+
         const resultado = await db.query(
             `SELECT d.*,
                     v.precio,
@@ -23,16 +26,106 @@ router.get('/', async (req, res) => {
                     c.nombre as cliente_nombre,
                     c.ruc as cliente_ruc,
                     c.telefono as cliente_telefono,
-                    c.id as cliente_id
+                    c.id as cliente_id,
+                    u.nombre as repartidor_nombre
              FROM deliveries d
              JOIN ventas v ON d.venta_id = v.id
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
              LEFT JOIN clientes c ON v.cliente_id = c.id
-             ORDER BY d.created_at DESC`
+             LEFT JOIN usuarios u ON d.repartidor_id = u.id
+             WHERE DATE(d.created_at AT TIME ZONE 'America/Asuncion') = $1
+             ORDER BY d.created_at DESC`,
+            [fechaFiltro]
         )
         res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Asignar repartidor
+router.patch('/:id/asignar', async (req, res) => {
+    try {
+        const { repartidor_id } = req.body
+        const resultado = await db.query(
+            `UPDATE deliveries SET 
+                repartidor_id = $1,
+                asignado_at = NOW(),
+                updated_at = NOW()
+             WHERE id = $2 RETURNING *`,
+            [repartidor_id || null, req.params.id]
+        )
+        if (!resultado.rows.length) return res.status(404).json({ error: 'Delivery no encontrado' })
+        res.json(resultado.rows[0])
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Deliveries del repartidor autenticado
+router.get('/mis-deliveries', async (req, res) => {
+    try {
+        const { repartidor_id } = req.query
+        if (!repartidor_id) return res.status(400).json({ error: 'repartidor_id requerido' })
+
+        const resultado = await db.query(
+            `SELECT d.*,
+                c.nombre as cliente_nombre,
+                c.telefono as cliente_telefono,
+                v.precio as monto,
+                v.metodo_pago,
+                pr.nombre as presentacion_nombre,
+                p.nombre as producto_nombre,
+                u.nombre as repartidor_nombre,
+                d.repartidor_id,
+                d.asignado_at
+             FROM deliveries d
+             LEFT JOIN ventas v ON d.venta_id = v.id
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             LEFT JOIN usuarios u ON d.repartidor_id = u.id
+             WHERE d.repartidor_id = $1
+             AND d.estado NOT IN ('entregado', 'cancelado')
+             AND DATE(d.created_at) = CURRENT_DATE
+             ORDER BY 
+                CASE d.estado 
+                    WHEN 'pendiente' THEN 1 
+                    WHEN 'confirmado' THEN 2 
+                    WHEN 'en_camino' THEN 3 
+                    ELSE 4 
+                END ASC`,
+            [repartidor_id]
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Cambiar estado (repartidor) — solo en_camino y entregado
+router.patch('/:id/estado-repartidor', async (req, res) => {
+    try {
+        const { estado } = req.body
+        if (!['en_camino', 'entregado'].includes(estado)) {
+            return res.status(400).json({ error: 'Estado inválido' })
+        }
+        const resultado = await db.query(
+            `UPDATE deliveries SET estado = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+            [estado, req.params.id]
+        )
+        if (!resultado.rows.length) return res.status(404).json({ error: 'Delivery no encontrado' })
+
+        // Si entregado, actualizar venta
+        if (estado === 'entregado') {
+            await db.query(
+                `UPDATE ventas SET estado = 'entregado' WHERE id = $1`,
+                [resultado.rows[0].venta_id]
+            )
+        }
+        res.json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
     }
