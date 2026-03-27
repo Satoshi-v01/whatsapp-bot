@@ -3,13 +3,15 @@ import * as XLSX from 'xlsx'
 import { getMarcas, getCategorias } from '../services/productos'
 import { getReporte } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
-import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas } from '../services/estadisticas'
 import { useApp } from '../App'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas } from '../services/estadisticas'
 
 function Reportes() {
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const { darkMode } = useApp()
+    const [comparativas, setComparativas] = useState(null)
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -60,13 +62,15 @@ function Reportes() {
             if (canal) params.canal = canal
             if (marcaId) params.marca_id = marcaId
             if (categoriaId) params.categoria_id = categoriaId
-            const [met, dias, canales, ranking, clientes, delZonas] = await Promise.all([
+            const [met, dias, canales, ranking, clientes, delZonas, comp] = await Promise.all([
                 getMetricas(params), getVentasPorDia({ periodo, canal }),
                 getVentasPorCanal({ periodo }), getRankingProductos({ periodo }),
-                getTopClientes({ periodo }), getDeliveryZonas({ periodo })
+                getTopClientes({ periodo }), getDeliveryZonas({ periodo }),
+                getComparativas({ periodo })
             ])
             setMetricas(met); setVentasPorDia(dias); setVentasPorCanal(canales)
             setRankingProductos(ranking); setTopClientes(clientes); setDeliveryZonas(delZonas)
+            setComparativas(comp)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -105,7 +109,6 @@ function Reportes() {
     }
 
     function formatearGs(n) { return `Gs. ${parseInt(n || 0).toLocaleString('es-PY')}` }
-    function formatearFecha(f) { return new Date(f).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' }) }
     function iniciales(n) { if (!n) return 'CF'; return n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) }
     function labelCanal(c) {
         return {
@@ -230,6 +233,120 @@ function Reportes() {
                             <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '4px' }}>{m.sub}</p>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Comparativas */}
+            {comparativas && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+
+                    {/* Ventas período actual vs anterior */}
+                    {(() => {
+                        const pct = comparativas.ventas.pct_total
+                        const subida = pct >= 0
+                        const labelPeriodo = periodo === 'semana' ? 'semana anterior' : periodo === 'anual' ? 'año anterior' : 'mes anterior'
+                        return (
+                            <div style={{ background: s.surface, borderRadius: '12px', padding: '22px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ventas vs {labelPeriodo}</p>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '20px', background: subida ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2'), color: subida ? '#10b981' : '#ef4444' }}>
+                                        {subida ? '↑' : '↓'} {Math.abs(pct)}%
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '20px', marginBottom: '14px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>Este período</p>
+                                        <p style={{ fontSize: '20px', fontWeight: '800', color: s.text }}>{formatearGs(comparativas.ventas.actual.total)}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted }}>{comparativas.ventas.actual.cantidad} ventas</p>
+                                    </div>
+                                    <div style={{ borderLeft: `1px solid ${s.border}`, paddingLeft: '20px' }}>
+                                        <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>{labelPeriodo}</p>
+                                        <p style={{ fontSize: '20px', fontWeight: '800', color: s.textMuted }}>{formatearGs(comparativas.ventas.anterior.total)}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted }}>{comparativas.ventas.anterior.cantidad} ventas</p>
+                                    </div>
+                                </div>
+                                <div style={{ height: '6px', background: s.barTrack, borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${Math.min(Math.abs(pct), 100)}%`, background: subida ? '#10b981' : '#ef4444', borderRadius: '3px', transition: 'width 0.5s' }} />
+                                </div>
+                                <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '6px' }}>
+                                    {subida ? `+${formatearGs(comparativas.ventas.actual.total - comparativas.ventas.anterior.total)} más que el ${labelPeriodo}` : `${formatearGs(comparativas.ventas.anterior.total - comparativas.ventas.actual.total)} menos que el ${labelPeriodo}`}
+                                </p>
+                            </div>
+                        )
+                    })()}
+
+                    {/* Nuevos clientes */}
+                    {(() => {
+                        const pct = comparativas.nuevos_clientes.pct
+                        const subida = pct >= 0
+                        const labelPeriodo = periodo === 'semana' ? 'semana anterior' : periodo === 'anual' ? 'año anterior' : 'mes anterior'
+                        return (
+                            <div style={{ background: s.surface, borderRadius: '12px', padding: '22px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nuevos clientes vs {labelPeriodo}</p>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '20px', background: subida ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2'), color: subida ? '#10b981' : '#ef4444' }}>
+                                        {subida ? '↑' : '↓'} {Math.abs(pct)}%
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '20px', marginBottom: '14px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>Este período</p>
+                                        <p style={{ fontSize: '40px', fontWeight: '800', color: '#3b82f6', lineHeight: 1 }}>{comparativas.nuevos_clientes.actual}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted }}>primera compra</p>
+                                    </div>
+                                    <div style={{ borderLeft: `1px solid ${s.border}`, paddingLeft: '20px' }}>
+                                        <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>{labelPeriodo}</p>
+                                        <p style={{ fontSize: '40px', fontWeight: '800', color: s.textMuted, lineHeight: 1 }}>{comparativas.nuevos_clientes.anterior}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted }}>primera compra</p>
+                                    </div>
+                                </div>
+                                <div style={{ height: '6px', background: s.barTrack, borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${Math.min(Math.abs(pct), 100)}%`, background: subida ? '#3b82f6' : '#ef4444', borderRadius: '3px', transition: 'width 0.5s' }} />
+                                </div>
+                                <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '6px' }}>
+                                    {subida
+                                        ? `${comparativas.nuevos_clientes.actual - comparativas.nuevos_clientes.anterior} más que el ${labelPeriodo}`
+                                        : `${comparativas.nuevos_clientes.anterior - comparativas.nuevos_clientes.actual} menos que el ${labelPeriodo}`}
+                                </p>
+                            </div>
+                        )
+                    })()}
+
+                    {/* Hoy vs promedio diario */}
+                    {(() => {
+                        const pct = comparativas.dia_vs_promedio.pct
+                        const subida = pct >= 0
+                        return (
+                            <div style={{ background: s.surface, borderRadius: '12px', padding: '22px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hoy vs promedio diario</p>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '20px', background: subida ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2'), color: subida ? '#10b981' : '#ef4444' }}>
+                                        {subida ? '↑' : '↓'} {Math.abs(pct)}%
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '20px', marginBottom: '14px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>Hoy</p>
+                                        <p style={{ fontSize: '20px', fontWeight: '800', color: s.text }}>{formatearGs(comparativas.dia_vs_promedio.hoy)}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted }}>{comparativas.dia_vs_promedio.cantidad_hoy} ventas</p>
+                                    </div>
+                                    <div style={{ borderLeft: `1px solid ${s.border}`, paddingLeft: '20px' }}>
+                                        <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>Promedio diario</p>
+                                        <p style={{ fontSize: '20px', fontWeight: '800', color: s.textMuted }}>{formatearGs(comparativas.dia_vs_promedio.promedio_diario)}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted }}>{comparativas.dia_vs_promedio.promedio_cantidad} ventas/día</p>
+                                    </div>
+                                </div>
+                                <div style={{ height: '6px', background: s.barTrack, borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${Math.min(Math.abs(pct), 100)}%`, background: subida ? '#10b981' : '#ef4444', borderRadius: '3px', transition: 'width 0.5s' }} />
+                                </div>
+                                <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '6px' }}>
+                                    {subida
+                                        ? `Por encima del promedio del período`
+                                        : `Por debajo del promedio del período`}
+                                </p>
+                            </div>
+                        )
+                    })()}
                 </div>
             )}
 
