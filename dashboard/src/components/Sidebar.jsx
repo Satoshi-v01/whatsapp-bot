@@ -29,6 +29,7 @@ function Sidebar() {
     { to: '/delivery', icono: '🚚', label: 'Delivery', modulo: 'delivery' },
     { to: '/ventas', icono: '🛒', label: 'Ventas', modulo: 'ventas' },
     { to: '/inventario', icono: '📦', label: 'Inventario', modulo: 'inventario' },
+    { to: '/proveedores', icono: '🏭', label: 'Proveedores', modulo: 'proveedores' },
     { to: '/clientes', icono: '👥', label: 'Clientes', modulo: 'clientes' },
     { to: '/reportes', icono: '📊', label: 'Reportes', modulo: 'reportes' },
     { to: '/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
