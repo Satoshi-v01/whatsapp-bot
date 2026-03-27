@@ -4,7 +4,8 @@ import { getProductos, getCategorias } from '../services/productos'
 import { buscarClientes } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { getUsuarios } from '../services/usuarios'
+import { asignarRepartidor } from '../services/deliveries'
 
 function Delivery() {
     const [deliveries, setDeliveries] = useState([])
@@ -15,6 +16,8 @@ function Delivery() {
     const [modalNuevo, setModalNuevo] = useState(false)
     const [notaTexto, setNotaTexto] = useState('')
     const [enviandoNota, setEnviandoNota] = useState(false)
+    const [repartidores, setRepartidores] = useState([])
+    const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().slice(0, 10))
     const { darkMode, puedo } = useApp()
     
     const s = {
@@ -44,16 +47,30 @@ function Delivery() {
         { tipo: 'no_encontrado', label: '📍 No encontré la dirección' },
     ]
 
-    useEffect(() => { cargarDeliveries() }, [])
+    useEffect(() => { cargarDeliveries() }, [fechaFiltro])
 
     async function cargarDeliveries() {
         try {
             setCargando(true)
-            const datos = await getDeliveries()
+            const [datos, usuarios] = await Promise.all([getDeliveries(fechaFiltro), getUsuarios()])
             setDeliveries(datos)
+            // Filtrar solo repartidores
+            setRepartidores(usuarios.filter(u => u.rol_nombre?.toLowerCase() === 'repartidor' && u.disponible))
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los deliveries.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
+    }
+
+    async function handleAsignarRepartidor(deliveryId, repartidorId) {
+        try {
+            await asignarRepartidor(deliveryId, repartidorId || null)
+            await cargarDeliveries()
+            if (detalle?.id === deliveryId) {
+                setDetalle(prev => ({ ...prev, repartidor_id: repartidorId || null }))
+            }
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo asignar el repartidor.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        }
     }
 
     async function cambiarEstado(id, nuevoEstado) {
@@ -235,6 +252,12 @@ function Delivery() {
                             style={{ padding: '8px 16px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surfaceLow, color: s.text, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                             ↻ Actualizar
                         </button>
+                        <input
+                            type="date"
+                            value={fechaFiltro}
+                            onChange={e => setFechaFiltro(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                        />
                         <button onClick={() => setModalNuevo(true)}
                             style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                             + Nuevo delivery
@@ -313,6 +336,11 @@ function Delivery() {
                                                 {pagado ? '✓ Pagado' : '⏳ Pendiente'}
                                             </span>
                                         </div>
+                                        {d.repartidor_nombre && (    
+                                            <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '3px' }}>
+                                                🚴 {d.repartidor_nombre}
+                                            </p>
+                                        )}
                                     </div>
                                 )
                             })
@@ -375,6 +403,27 @@ function Delivery() {
                                     </a>
                                 )}
                             </div>
+
+                            {/* Asignar repartidor */}
+                            {repartidores.length > 0 && (
+                                <div style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Repartidor asignado</p>
+                                    <select
+                                        value={detalle.repartidor_id || ''}
+                                        onChange={e => handleAsignarRepartidor(detalle.id, e.target.value ? parseInt(e.target.value) : null)}
+                                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
+                                        <option value="">Sin asignar</option>
+                                        {repartidores.map(r => (
+                                            <option key={r.id} value={r.id}>{r.nombre}</option>
+                                        ))}
+                                    </select>
+                                    {detalle.repartidor_id && detalle.asignado_at && (
+                                        <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '6px' }}>
+                                            Asignado: {new Date(detalle.asignado_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Cambiar estado */}
                             <div style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
