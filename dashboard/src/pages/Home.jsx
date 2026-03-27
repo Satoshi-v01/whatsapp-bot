@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { getResumen, getVentasSemana, getTopProductos } from '../services/estadisticas'
+import { getReportes } from '../services/proveedores'
 import { useNavigate } from 'react-router-dom'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Home() {
     const [resumen, setResumen] = useState(null)
     const [ventasSemana, setVentasSemana] = useState([])
     const [topProductos, setTopProductos] = useState([])
+    const [reportesProveedores, setReportesProveedores] = useState(null)
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const navigate = useNavigate()
@@ -33,17 +36,32 @@ function Home() {
 
     async function cargarDatos() {
         try {
-            const [res, semana, top] = await Promise.all([getResumen(), getVentasSemana(), getTopProductos()])
-            setResumen(res); setVentasSemana(semana); setTopProductos(top)
+            const [res, semana, top, reportes] = await Promise.all([
+                getResumen(),
+                getVentasSemana(),
+                getTopProductos(),
+                getReportes({ periodo: 'mes' }).catch(() => null)
+            ])
+            setResumen(res)
+            setVentasSemana(semana)
+            setTopProductos(top)
+            setReportesProveedores(reportes)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos del resumen.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
     }
 
     function formatearGs(numero) { return `Gs. ${parseInt(numero || 0).toLocaleString('es-PY')}` }
-    function formatearFecha(fecha) { return new Date(fecha).toLocaleDateString('es-PY', { weekday: 'short', day: '2-digit', month: '2-digit' }) }
     function alturaBar(valor, max) { return max === 0 ? 0 : Math.max((valor / max) * 100, 2) }
     const maxVenta = Math.max(...ventasSemana.map(v => parseInt(v.total)), 1)
+
+    const proximasVencer = reportesProveedores?.proximas_vencer || []
+    const facturasVencidas = reportesProveedores?.vencidas || []
+
+    function diasParaVencer(fecha) {
+        if (!fecha) return null
+        return Math.ceil((new Date(fecha) - new Date()) / (1000 * 60 * 60 * 24))
+    }
 
     const tarjetas = [
         { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `Ganancia: ${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: '#10b981', accentBg: darkMode ? '#052e16' : '#f0fdf4', accentText: '#10b981', icono: '📈', ruta: '/ventas' },
@@ -69,13 +87,94 @@ function Home() {
                         {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                     </p>
                 </div>
-                <button
-                    onClick={cargarDatos}
-                    style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}
-                >
+                <button onClick={cargarDatos}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>
                     ↻ Actualizar
                 </button>
             </div>
+
+            {/* Alertas facturas proveedores */}
+            {(facturasVencidas.length > 0 || proximasVencer.length > 0) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+                    {/* Vencidas */}
+                    {facturasVencidas.length > 0 && (
+                        <div style={{ background: darkMode ? 'rgba(239,68,68,0.1)' : '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '14px 18px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '16px' }}>🔴</span>
+                                    <p style={{ fontSize: '13px', fontWeight: '800', color: '#991b1b' }}>
+                                        {facturasVencidas.length} factura{facturasVencidas.length !== 1 ? 's' : ''} vencida{facturasVencidas.length !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                                <button onClick={() => navigate('/proveedores')}
+                                    style={{ fontSize: '12px', fontWeight: '600', color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    Ver todas →
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {facturasVencidas.slice(0, 3).map(f => (
+                                    <div key={f.id} onClick={() => navigate('/proveedores')}
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(239,68,68,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fca5a5' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2'}
+                                        onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(239,68,68,0.08)' : 'white'}>
+                                        <div>
+                                            <p style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{f.proveedor_nombre} — {f.numero_factura}</p>
+                                            <p style={{ fontSize: '11px', color: '#ef4444' }}>Venció el {formatearSoloFecha(f.fecha_vencimiento)} · {f.dias_vencida} día{f.dias_vencida !== 1 ? 's' : ''} vencida</p>
+                                        </div>
+                                        <p style={{ fontSize: '13px', fontWeight: '800', color: '#ef4444', flexShrink: 0 }}>Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
+                                    </div>
+                                ))}
+                                {facturasVencidas.length > 3 && (
+                                    <p style={{ fontSize: '11px', color: '#ef4444', textAlign: 'center', fontWeight: '600' }}>
+                                        +{facturasVencidas.length - 3} más vencidas
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Próximas a vencer */}
+                    {proximasVencer.length > 0 && (
+                        <div style={{ background: darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 18px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '16px' }}>⏰</span>
+                                    <p style={{ fontSize: '13px', fontWeight: '800', color: '#92400e' }}>
+                                        {proximasVencer.length} factura{proximasVencer.length !== 1 ? 's' : ''} próxima{proximasVencer.length !== 1 ? 's' : ''} a vencer
+                                    </p>
+                                </div>
+                                <button onClick={() => navigate('/proveedores')}
+                                    style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    Ver todas →
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {proximasVencer.slice(0, 3).map(f => {
+                                    const dias = diasParaVencer(f.fecha_vencimiento)
+                                    return (
+                                        <div key={f.id} onClick={() => navigate('/proveedores')}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(245,158,11,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fde68a' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7'}
+                                            onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.08)' : 'white'}>
+                                            <div>
+                                                <p style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{f.proveedor_nombre} — {f.numero_factura}</p>
+                                                <p style={{ fontSize: '11px', color: '#f59e0b' }}>Vence el {formatearSoloFecha(f.fecha_vencimiento)} · en {dias} día{dias !== 1 ? 's' : ''}</p>
+                                            </div>
+                                            <p style={{ fontSize: '13px', fontWeight: '800', color: '#f59e0b', flexShrink: 0 }}>Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
+                                        </div>
+                                    )
+                                })}
+                                {proximasVencer.length > 3 && (
+                                    <p style={{ fontSize: '11px', color: '#f59e0b', textAlign: 'center', fontWeight: '600' }}>
+                                        +{proximasVencer.length - 3} más próximas a vencer
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Tarjetas métricas */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
@@ -102,7 +201,7 @@ function Home() {
                 ))}
             </div>
 
-            {/* Gráfico + Alertas */}
+            {/* Gráfico + Alertas inventario */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
 
                 {/* Gráfico barras */}
@@ -127,7 +226,7 @@ function Home() {
                                                 {formatearGs(dia.total).replace('Gs. ', '')}
                                             </p>
                                             <div
-                                                style={{ width: '100%', height: `${alturaBar(parseInt(dia.total), maxVenta)}%`, background: esHoy ? s.barColor : `${s.barColor}40`, borderRadius: '4px 4px 0 0', minHeight: '4px', transition: 'height 0.3s ease, background 0.2s' }}
+                                                style={{ width: '100%', height: `${alturaBar(parseInt(dia.total), maxVenta)}%`, background: esHoy ? s.barColor : `${s.barColor}40`, borderRadius: '4px 4px 0 0', minHeight: '4px', transition: 'height 0.3s ease' }}
                                                 onMouseEnter={e => e.currentTarget.style.background = s.barColor}
                                                 onMouseLeave={e => e.currentTarget.style.background = esHoy ? s.barColor : `${s.barColor}40`}
                                                 title={`${formatearGs(dia.total)} — ${dia.cantidad} ventas`}
@@ -169,8 +268,7 @@ function Home() {
                                 <div key={i} onClick={() => navigate('/inventario')}
                                     style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
                                     onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}
-                                >
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
                                     <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: item.stock === 0 ? '#fee2e2' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                                         {item.stock === 0 ? '🚫' : '⚠️'}
                                     </div>
@@ -189,8 +287,7 @@ function Home() {
                     <button onClick={() => navigate('/inventario')}
                         style={{ marginTop: '16px', padding: '10px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'background 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         Ver inventario completo
                     </button>
                 </div>
@@ -212,26 +309,18 @@ function Home() {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: s.surfaceLow }}>
-                                <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>#</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Producto</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendidos</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</th>
-                                <th style={{ padding: '12px 24px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ganancia</th>
+                                {['#', 'Producto', 'Vendidos', 'Total', 'Ganancia'].map((h, i) => (
+                                    <th key={i} style={{ padding: '12px 24px', textAlign: i >= 2 ? 'right' : 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
                             {topProductos.map((prod, i) => (
                                 <tr key={i} style={{ borderTop: `1px solid ${s.border}`, transition: 'background 0.1s' }}
                                     onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                >
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                     <td style={{ padding: '14px 24px' }}>
-                                        <span style={{
-                                            width: '28px', height: '28px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            background: i === 0 ? '#fef3c7' : i === 1 ? '#f1f5f9' : i === 2 ? '#fde8d8' : s.surfaceLow,
-                                            color: i === 0 ? '#92400e' : i === 1 ? '#475569' : i === 2 ? '#9a3412' : s.textMuted,
-                                            fontSize: '11px', fontWeight: '800'
-                                        }}>
+                                        <span style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: i === 0 ? '#fef3c7' : i === 1 ? '#f1f5f9' : i === 2 ? '#fde8d8' : s.surfaceLow, color: i === 0 ? '#92400e' : i === 1 ? '#475569' : i === 2 ? '#9a3412' : s.textMuted, fontSize: '11px', fontWeight: '800' }}>
                                             {i + 1}
                                         </span>
                                     </td>

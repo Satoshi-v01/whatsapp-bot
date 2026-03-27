@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getHistorial, actualizarEstadoVenta } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Ventas() {
     const [datos, setDatos] = useState(null)
@@ -30,10 +31,11 @@ function Ventas() {
     const [metodoPago, setMetodoPago] = useState('')
     const [canal, setCanal] = useState('')
     const [pagina, setPagina] = useState(1)
+    const [estadoFiltro, setEstadoFiltro] = useState('')
 
-    useEffect(() => {
+   useEffect(() => {
         cargarHistorial()
-    }, [periodo, metodoPago, canal, pagina])
+    }, [periodo, metodoPago, canal, pagina, estadoFiltro])
 
     useEffect(() => {
         const timeout = setTimeout(() => cargarHistorial(), 400)
@@ -44,6 +46,7 @@ function Ventas() {
         try {
             setCargando(true)
             const params = { periodo, pagina }
+            if (estadoFiltro) params.estado = estadoFiltro 
             if (buscar) params.buscar = buscar
             if (metodoPago) params.metodo_pago = metodoPago
             if (canal) params.canal = canal
@@ -80,18 +83,7 @@ function Ventas() {
         }
     }
 
-    function formatearFecha(fecha) {
-        const d = new Date(fecha)
-        const hoy = new Date()
-        const ayer = new Date(hoy)
-        ayer.setDate(ayer.getDate() - 1)
-        const hora = d.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })
-        if (d.toDateString() === hoy.toDateString()) return `Hoy ${hora}`
-        if (d.toDateString() === ayer.toDateString()) return `Ayer ${hora}`
-        return d.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ` ${hora}`
-    }
-
-    function formatearGs(numero) {
+   function formatearGs(numero) {
         return `Gs. ${parseInt(numero || 0).toLocaleString('es-PY')}`
     }
 
@@ -190,7 +182,7 @@ function Ventas() {
                 </div>
 
                 {/* Filtros */}
-                <div style={{ padding: '20px 24px', background: s.surfaceLow, display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '12px', alignItems: 'end', borderBottom: `1px solid ${s.borderLight}` }}>
+                <div style={{ padding: '20px 24px', background: s.surfaceLow, display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '12px', alignItems: 'end', borderBottom: `1px solid ${s.borderLight}` }}>
                     <div>
                         <label style={labelStyle}>Buscar transacción / cliente</label>
                         <input placeholder="ID, nombre o número..." value={buscar} onChange={e => { setBuscar(e.target.value); setPagina(1) }} style={inputStyle} />
@@ -215,7 +207,17 @@ function Ventas() {
                         </select>
                     </div>
                     <div>
-                        <button onClick={() => { setBuscar(''); setMetodoPago(''); setCanal(''); setPagina(1) }}
+                        <label style={labelStyle}>Estado</label>
+                        <select value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPagina(1) }} style={inputStyle}>
+                            <option value="">Todos</option>
+                            <option value="pendiente_pago">⏳ Pendiente de pago</option>
+                            <option value="pagado">✅ Pagado</option>
+                            <option value="entregado">📦 Entregado</option>
+                            <option value="cancelado">❌ Cancelado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button onClick={() => { setBuscar(''); setMetodoPago(''); setCanal(''); setEstadoFiltro(''); setPagina(1) }}
                             style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, fontSize: '13px', cursor: 'pointer', color: s.textMuted, fontWeight: '500' }}>
                             Limpiar filtros
                         </button>
@@ -343,7 +345,7 @@ function Ventas() {
                                     {iniciales(ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'CF')}
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Consumidor final'}</p>
+                                    <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Cliente'}</p>
                                     {ventaDetalle.cliente_ruc && <p style={{ fontSize: '12px', color: s.textMuted }}>RUC: {ventaDetalle.cliente_ruc}</p>}
                                     {ventaDetalle.cliente_numero && <p style={{ fontSize: '12px', color: s.textMuted }}>📱 {ventaDetalle.cliente_numero}</p>}
                                 </div>

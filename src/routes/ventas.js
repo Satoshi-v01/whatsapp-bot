@@ -5,6 +5,7 @@ const { validarVentaPresencial, validarEstado, validarId } = require('../middlew
 const { recalcularStats } = require('./clientes')
 const { manejarError } = require('../middleware/validar')
 
+
 // 1. Ver todas las ventas
 router.get('/', async (req, res) => {
     try {
@@ -57,11 +58,12 @@ router.get('/estado/:estado', async (req, res) => {
 // 3. Historial con filtros y paginación
 router.get('/historial', async (req, res) => {
     try {
-        const {
+       const {
             periodo = 'recientes',
             buscar,
             metodo_pago,
             canal,
+            estado,        // ← agregar aquí
             fecha_desde,
             fecha_hasta,
             pagina = 1,
@@ -86,6 +88,11 @@ router.get('/historial', async (req, res) => {
             condiciones.push(`v.created_at >= $${i} AND v.created_at <= $${i + 1}`)
             valores.push(fecha_desde, fecha_hasta)
             i += 2
+        }
+        if (estado) {
+            condiciones.push(`v.estado = $${i}`)
+            valores.push(estado)
+            i++
         }
 
         if (buscar) {
