@@ -10,6 +10,7 @@ import {
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha } from '../utils/fecha'
+import { getLotesPresentacion, crearLote, eliminarLote } from '../services/lotes'
 
 function Modal({ children, zIndex = 1000, s }) {
     return (
@@ -70,6 +71,10 @@ function Inventario() {
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
+    const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
+    const [lotes, setLotes] = useState([])
+    const [cargandoLotes, setCargandoLotes] = useState(false)
+    const [nuevoLote, setNuevoLote] = useState({ numero_lote: '', fecha_vencimiento: '', stock_inicial: '' })
 
     useEffect(() => { cargarDatos() }, [])
 
@@ -125,6 +130,57 @@ function Inventario() {
         try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
+
+    async function abrirModalLotes(pr) {
+    setModalLotes(pr)
+    setNuevoLote({ numero_lote: '', fecha_vencimiento: '', stock_inicial: '' })
+    try {
+        setCargandoLotes(true)
+        const datos = await getLotesPresentacion(pr.id)
+        setLotes(datos)
+    } catch (err) {
+        setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los lotes.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+    } finally { setCargandoLotes(false) }
+}
+
+async function handleCrearLote() {
+    if (!nuevoLote.fecha_vencimiento || !nuevoLote.stock_inicial) return
+    try {
+        await crearLote({ ...nuevoLote, presentacion_id: modalLotes.id, stock_inicial: parseInt(nuevoLote.stock_inicial) })
+        const datos = await getLotesPresentacion(modalLotes.id)
+        setLotes(datos)
+        setNuevoLote({ numero_lote: '', fecha_vencimiento: '', stock_inicial: '' })
+        await cargarDatos()
+    } catch (err) {
+        setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el lote.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+    }
+}
+
+async function handleEliminarLote(lote) {
+    setModalConfirmar({
+        titulo: 'Eliminar lote',
+        mensaje: `¿Eliminar el lote ${lote.numero_lote || 'sin número'}? Se restarán ${lote.stock_actual} unidades del stock.`,
+        textoBoton: 'Eliminar', colorBoton: '#ef4444',
+        onConfirmar: async () => {
+            try {
+                await eliminarLote(lote.id)
+                const datos = await getLotesPresentacion(modalLotes.id)
+                setLotes(datos)
+                setModalConfirmar(null)
+                await cargarDatos()
+            } catch (err) {
+                setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar el lote.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            }
+        }
+    })
+}
+
+function colorVencimiento(diasParaVencer) {
+    if (diasParaVencer < 0) return '#ef4444'
+    if (diasParaVencer <= 30) return '#f59e0b'
+    return '#10b981'
+}
+
     async function handleConfirmarStock() {
         try { await actualizarStock(modalStock.id, parseInt(nuevoStockValor)); setModalStock(null); setNuevoStockValor(''); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo actualizar el stock.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
@@ -386,6 +442,7 @@ function Inventario() {
                                                                             </td>
                                                                             <td style={{ padding: '10px 12px' }}>
                                                                                 <div style={{ display: 'flex', gap: '4px' }}>
+                                                                                    <div style={{ display: 'flex', gap: '4px' }}>
                                                                                     <button onClick={() => { setNuevoStockValor(String(pr.stock)); setModalStock({ id: pr.id, nombre: pr.nombre, stockActual: pr.stock }) }}
                                                                                         style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                                                                                         Stock
@@ -398,6 +455,11 @@ function Inventario() {
                                                                                         style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                                                                                         🔢 Cod.
                                                                                     </button>
+                                                                                    <button onClick={() => abrirModalLotes(pr)}
+                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                                                                                        📅 Lotes
+                                                                                    </button>
+                                                                                </div>
                                                                                 </div>
                                                                             </td>
                                                                         </tr>
@@ -713,6 +775,99 @@ function Inventario() {
                     </div>
                 </Modal>
             )}
+
+            {modalLotes && (
+            <Modal s={s} zIndex={2000}>
+                <div style={{ width: '560px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Lotes — {modalLotes.nombre}</h3>
+                        <button onClick={() => setModalLotes(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                    </div>
+                    <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
+                        Stock total: <strong style={{ color: s.text }}>{modalLotes.stock}</strong> unidades · FEFO activo (vence primero, sale primero)
+                    </p>
+                    <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+                        <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Agregar lote</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                            <div>
+                                <label style={labelStyle}>N° de lote</label>
+                                <input value={nuevoLote.numero_lote} onChange={e => setNuevoLote({ ...nuevoLote, numero_lote: e.target.value })}
+                                    placeholder="Opcional" style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Fecha de vencimiento *</label>
+                                <input type="date" value={nuevoLote.fecha_vencimiento} onChange={e => setNuevoLote({ ...nuevoLote, fecha_vencimiento: e.target.value })}
+                                    style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Stock inicial *</label>
+                                <input type="number" value={nuevoLote.stock_inicial} onChange={e => setNuevoLote({ ...nuevoLote, stock_inicial: e.target.value })}
+                                    placeholder="Unidades" style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                        </div>
+                        <button onClick={handleCrearLote}
+                            style={{ ...btnPrimario, width: '100%', justifyContent: 'center', fontSize: '12px' }}>
+                            + Agregar lote
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {cargandoLotes ? (
+                            <p style={{ textAlign: 'center', color: s.textMuted, padding: '20px' }}>Cargando lotes...</p>
+                        ) : lotes.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '32px', color: s.textMuted }}>
+                                <p style={{ fontSize: '24px', marginBottom: '8px' }}>📦</p>
+                                <p style={{ fontSize: '13px' }}>No hay lotes cargados para esta presentación.</p>
+                                <p style={{ fontSize: '11px', marginTop: '4px', color: s.textFaint }}>El stock se gestiona de forma global hasta que cargues lotes.</p>
+                            </div>
+                        ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: s.surfaceLow }}>
+                                        {['N° Lote', 'Vencimiento', 'Días', 'Stock inicial', 'Stock actual', ''].map(h => (
+                                            <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lotes.map(lote => {
+                                        const dias = parseInt(lote.dias_para_vencer)
+                                        const color = colorVencimiento(dias)
+                                        const vencido = dias < 0
+                                        return (
+                                            <tr key={lote.id} style={{ borderTop: `1px solid ${s.borderLight}` }}>
+                                                <td style={{ padding: '10px 12px', fontSize: '12px', fontFamily: 'monospace', color: s.text }}>
+                                                    {lote.numero_lote || <span style={{ color: s.textFaint }}>—</span>}
+                                                </td>
+                                                <td style={{ padding: '10px 12px', fontSize: '12px', color: s.text }}>
+                                                    {new Date(lote.fecha_vencimiento).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })}
+                                                </td>
+                                                <td style={{ padding: '10px 12px' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: `${color}20`, color }}>
+                                                        {vencido ? `Vencido (${Math.abs(dias)}d)` : dias === 0 ? 'Vence hoy' : `${dias}d`}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>{lote.stock_inicial}</td>
+                                                <td style={{ padding: '10px 12px' }}>
+                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: lote.stock_actual === 0 ? s.textFaint : s.text }}>
+                                                        {lote.stock_actual}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '10px 12px' }}>
+                                                    <button onClick={() => handleEliminarLote(lote)}
+                                                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '11px', cursor: 'pointer' }}>
+                                                        🗑️
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+        )}
 
             {modalConfirmar && (
                 <ModalConfirmar

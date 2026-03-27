@@ -1,4 +1,5 @@
 const db = require('../db/index')
+const { descontarStockFEFO } = require('../services/stock') // al inicio del archivo
 
 async function registrarVentaPresencial(datos) {
     const {
@@ -21,10 +22,12 @@ async function registrarVentaPresencial(datos) {
          quiere_factura || false, ruc_factura || null, razon_social || null, agente_id || null]
     )
 
-    await db.query(
-        `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
-        [cantidad, presentacion_id]
-    )
+    const lotesExisten = await client.query(`SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`, [linea.presentacion_id])
+    if (parseInt(lotesExisten.rows[0].total) > 0) {
+        await descontarStockFEFO(client, linea.presentacion_id, cantidad)
+    } else {
+        await client.query(`UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`, [cantidad, linea.presentacion_id])
+    }
 
     return venta.rows[0]
 }

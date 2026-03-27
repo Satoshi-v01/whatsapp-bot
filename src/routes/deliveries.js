@@ -4,6 +4,7 @@ const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
+const { descontarStockFEFO } = require('../services/stock')
 
 // Ver todos los deliveries
 router.get('/', async (req, res) => {
@@ -135,10 +136,14 @@ router.post('/', async (req, res) => {
                  razon_social || null, cliente_nuevo?.telefono || null]
             )
 
-            await client.query(
-                `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
-                [cantidad, linea.presentacion_id]
-            )
+            const lotesExisten = await db.query(`SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`, [presentacion_id])
+            if (parseInt(lotesExisten.rows[0].total) > 0) {
+                const client = await db.pool.connect()
+                try { await descontarStockFEFO(client, presentacion_id, cantidad) }
+                finally { client.release() }
+            } else {
+                await db.query(`UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`, [cantidad, presentacion_id])
+            }
 
             const delivery = await client.query(
                 `INSERT INTO deliveries (

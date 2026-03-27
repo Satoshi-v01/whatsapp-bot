@@ -22,6 +22,7 @@ const { procesarTimeouts } = require('./src/bot/recordatorios')
 const helmet = require('helmet')
 const cors = require('cors')
 const logger = require('./src/middleware/logger')
+const lotesRoutes = require('./src/routes/lotes')
 
 
 const app = express()
@@ -101,6 +102,7 @@ app.use('/clientes', limiterGeneral, autenticar, clientesRoutes)
 app.use('/zonas/publico', limiterGeneral, zonasRoutes)
 app.use('/zonas', limiterGeneral, autenticar, zonasRoutes)
 app.use('/carrito', limiterGeneral, autenticar, carritoRoutes)
+app.use('/lotes', limiterGeneral, autenticar, lotesRoutes)
 
 
 app.get('/', (req, res) => {

@@ -20,6 +20,35 @@ async function stockDisponibleBulk(presentacion_ids, cliente_numero = null) {
     return resultado.rows
 }
 
+async function descontarStockFEFO(client, presentacion_id, cantidad) {
+    // Obtener lotes ordenados por fecha de vencimiento (más próximo primero)
+    const lotes = await client.query(
+        `SELECT id, stock_actual FROM lotes
+         WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0
+         ORDER BY fecha_vencimiento ASC`,
+        [presentacion_id]
+    )
+
+    let restante = cantidad
+
+    for (const lote of lotes.rows) {
+        if (restante <= 0) break
+        const aDescontar = Math.min(lote.stock_actual, restante)
+        await client.query(
+            `UPDATE lotes SET stock_actual = stock_actual - $1, updated_at = NOW() WHERE id = $2`,
+            [aDescontar, lote.id]
+        )
+        restante -= aDescontar
+    }
+
+    // También descontar del stock general de la presentación
+    await client.query(
+        `UPDATE presentaciones SET stock = stock - $1, updated_at = NOW() WHERE id = $2`,
+        [cantidad, presentacion_id]
+    )
+}
+
+
 // Verificar si hay stock suficiente para confirmar venta
 async function verificarStockParaVenta(lineas, cliente_numero = null) {
     const errores = []
@@ -44,4 +73,4 @@ async function verificarStockParaVenta(lineas, cliente_numero = null) {
     return { ok: errores.length === 0, errores }
 }
 
-module.exports = { stockDisponible, stockDisponibleBulk, verificarStockParaVenta }
+module.exports = { stockDisponible, stockDisponibleBulk, verificarStockParaVenta, descontarStockFEFO }

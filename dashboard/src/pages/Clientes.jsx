@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getClientes, getCliente, crearCliente, editarCliente } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 // ANTES del function Clientes() — componente separado
 function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, darkMode }) {
@@ -11,11 +12,15 @@ function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, d
     const btnSecundario = { padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 
     function formatearRUC(valor) {
-        const solo = valor.replace(/[^\d]/g, '')
-        if (solo.length <= 7) return solo.replace(/(\d{1,3})(\d{1,3})?(\d{1,3})?/, (_, a, b, c) => [a, b, c].filter(Boolean).join('.'))
-        const cuerpo = solo.slice(0, -1)
-        const dv = solo.slice(-1)
-        return `${cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`
+        const partes = valor.split('-')
+        const cuerpo = partes[0].replace(/[^\d]/g, '')
+        const dv = partes.length > 1 ? partes[1].replace(/[^\d]/g, '').slice(0, 1) : ''
+
+        const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+        if (partes.length > 1) return `${cuerpoFormateado}-${dv}`
+        if (valor.endsWith('-')) return `${cuerpoFormateado}-`
+        return cuerpoFormateado
     }
 
     return (
@@ -142,19 +147,6 @@ function Clientes() {
     function abrirModalEditar() {
         setForm({ tipo: clienteSeleccionado.tipo, nombre: clienteSeleccionado.nombre, ruc: clienteSeleccionado.ruc || '', telefono: clienteSeleccionado.telefono || '', email: clienteSeleccionado.email || '', direccion: clienteSeleccionado.direccion || '', ciudad: clienteSeleccionado.ciudad || '', notas: clienteSeleccionado.notas || '' })
         setModalEditar(true)
-    }
-
-    function formatearRUC(valor) {
-        const solo = valor.replace(/[^\d]/g, '')
-        if (solo.length <= 7) return solo.replace(/(\d{1,3})(\d{1,3})?(\d{1,3})?/, (_, a, b, c) => [a, b, c].filter(Boolean).join('.'))
-        const cuerpo = solo.slice(0, -1)
-        const dv = solo.slice(-1)
-        return `${cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`
-    }
-
-    function formatearFecha(fecha) {
-        if (!fecha) return '—'
-        return new Date(fecha).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }
 
     function formatearGs(numero) { return `Gs. ${parseInt(numero || 0).toLocaleString('es-PY')}` }
