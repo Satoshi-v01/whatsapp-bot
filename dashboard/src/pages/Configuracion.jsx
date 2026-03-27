@@ -3,6 +3,7 @@ import { getUsuarios, getRoles, crearRol, actualizarRol, eliminarRol, crearUsuar
 import { getConfiguracion, guardarConfiguracionBulk } from '../services/configuracion'
 import { getZonas, crearZona, editarZona, eliminarZona } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 const MODULOS = [
     { key: 'ventas', label: 'Ventas', icono: '🛒' },
@@ -538,6 +539,28 @@ function Configuracion() {
                                         <label style={labelStyle}>Mensaje de bienvenida</label>
                                         <textarea value={config.bot_mensaje_bienvenida || ''} onChange={e => setConfig({ ...config, bot_mensaje_bienvenida: e.target.value })} rows={4} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} placeholder="Ej: Hola! Bienvenido a Sosa Bulls" />
                                         <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', fontStyle: 'italic' }}>Este mensaje se enviará automáticamente al iniciar una conversación.</p>
+                                    </div>
+                                    {/* Tiempo de reserva */}
+                                    <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                        <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px' }}>⏱️ Tiempo de reserva de stock</h3>
+                                        <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '20px' }}>
+                                            Cuando el cliente confirma una orden por el bot, el stock queda reservado durante este tiempo mientras un agente procesa el pedido. Si no se confirma, la reserva se libera automáticamente.
+                                        </p>
+                                        <label style={labelStyle}>Duración de la reserva</label>
+                                        <div style={{ position: 'relative', maxWidth: '200px' }}>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="72"
+                                                value={config.op_tiempo_reserva_horas || 2}
+                                                onChange={e => setConfig({ ...config, op_tiempo_reserva_horas: e.target.value })}
+                                                style={{ ...inputStyle, paddingRight: '70px' }}
+                                            />
+                                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>HORAS</span>
+                                        </div>
+                                        <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px', fontStyle: 'italic' }}>
+                                            Recomendado: entre 1 y 4 horas. Máximo 72 horas.
+                                        </p>
                                     </div>
                                     <div>
                                         <label style={labelStyle}>Mensaje fuera de horario</label>
