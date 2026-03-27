@@ -11,6 +11,7 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import Reportes from './pages/Reportes'
 import Clientes from './pages/Clientes'
+import Proveedores from './pages/Proveedores'
 import Caja from './pages/Caja'
 import Configuracion from './pages/Configuracion'
 import './App.css'
@@ -107,6 +108,9 @@ function App() {
                             } />
                             <Route path="/inventario" element={
                                 <RutaProtegida modulo="inventario"><Inventario /></RutaProtegida>
+                            } />
+                            <Route path="/proveedores" element={
+                                <RutaProtegida modulo="proveedores" accion="ver"><Proveedores /></RutaProtegida>
                             } />
                             <Route path="/clientes" element={
                                 <RutaProtegida modulo="clientes"><Clientes /></RutaProtegida>
