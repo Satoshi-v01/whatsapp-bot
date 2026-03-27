@@ -55,3 +55,9 @@ export async function getDeliveryZonas(params = {}) {
     const res = await api.get(`/estadisticas/delivery-zonas?${query}`)
     return res.data
 }
+
+export async function getComparativas(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/comparativas?${query}`)
+    return res.data
+}

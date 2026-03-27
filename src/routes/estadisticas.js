@@ -364,6 +364,128 @@ router.get('/metricas', async (req, res) => {
     }
 })
 
+router.get('/comparativas', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+
+        let intervaloActual, intervaloAnterior
+        if (periodo === 'semana') {
+            intervaloActual = `DATE_TRUNC('week', NOW())`
+            intervaloAnterior = `DATE_TRUNC('week', NOW()) - INTERVAL '7 days'`
+        } else if (periodo === 'anual') {
+            intervaloActual = `DATE_TRUNC('year', NOW())`
+            intervaloAnterior = `DATE_TRUNC('year', NOW()) - INTERVAL '1 year'`
+        } else {
+            intervaloActual = `DATE_TRUNC('month', NOW())`
+            intervaloAnterior = `DATE_TRUNC('month', NOW()) - INTERVAL '1 month'`
+        }
+
+        // Ventas período actual vs anterior
+        const ventasActual = await db.query(
+            `SELECT COUNT(*) as cantidad, COALESCE(SUM(precio), 0) as total
+             FROM ventas
+             WHERE created_at >= ${intervaloActual}
+             AND estado != 'cancelado'`
+        )
+        const ventasAnterior = await db.query(
+            `SELECT COUNT(*) as cantidad, COALESCE(SUM(precio), 0) as total
+             FROM ventas
+             WHERE created_at >= ${intervaloAnterior}
+             AND created_at < ${intervaloActual}
+             AND estado != 'cancelado'`
+        )
+
+        // Nuevos clientes — primera compra en período actual vs anterior
+        const nuevosActual = await db.query(
+            `SELECT COUNT(DISTINCT v.cliente_id) as cantidad
+             FROM ventas v
+             WHERE v.created_at >= ${intervaloActual}
+             AND v.cliente_id IS NOT NULL
+             AND v.estado != 'cancelado'
+             AND NOT EXISTS (
+                 SELECT 1 FROM ventas v2
+                 WHERE v2.cliente_id = v.cliente_id
+                 AND v2.created_at < ${intervaloActual}
+                 AND v2.estado != 'cancelado'
+             )`
+        )
+        const nuevosAnterior = await db.query(
+            `SELECT COUNT(DISTINCT v.cliente_id) as cantidad
+             FROM ventas v
+             WHERE v.created_at >= ${intervaloAnterior}
+             AND v.created_at < ${intervaloActual}
+             AND v.cliente_id IS NOT NULL
+             AND v.estado != 'cancelado'
+             AND NOT EXISTS (
+                 SELECT 1 FROM ventas v2
+                 WHERE v2.cliente_id = v.cliente_id
+                 AND v2.created_at < ${intervaloAnterior}
+                 AND v2.estado != 'cancelado'
+             )`
+        )
+
+        // Promedio diario del período anterior para comparar con hoy
+        const hoy = await db.query(
+            `SELECT COALESCE(SUM(precio), 0) as total, COUNT(*) as cantidad
+             FROM ventas
+             WHERE created_at >= CURRENT_DATE
+             AND created_at < CURRENT_DATE + INTERVAL '1 day'
+             AND estado != 'cancelado'`
+        )
+        const promedioDiario = await db.query(
+            `SELECT COALESCE(AVG(total_dia), 0) as promedio, COALESCE(AVG(cantidad_dia), 0) as promedio_cantidad
+             FROM (
+                 SELECT DATE(created_at) as dia,
+                        SUM(precio) as total_dia,
+                        COUNT(*) as cantidad_dia
+                 FROM ventas
+                 WHERE created_at >= ${intervaloAnterior}
+                 AND created_at < ${intervaloActual}
+                 AND estado != 'cancelado'
+                 GROUP BY DATE(created_at)
+             ) dias`
+        )
+
+        // Calcular % de cambio
+        function calcPct(actual, anterior) {
+            if (!anterior || anterior == 0) return actual > 0 ? 100 : 0
+            return Math.round(((actual - anterior) / anterior) * 100)
+        }
+
+        const totalActual = parseInt(ventasActual.rows[0].total)
+        const totalAnterior = parseInt(ventasAnterior.rows[0].total)
+        const cantActual = parseInt(ventasActual.rows[0].cantidad)
+        const cantAnterior = parseInt(ventasAnterior.rows[0].cantidad)
+        const nuevosAct = parseInt(nuevosActual.rows[0].cantidad)
+        const nuevosAnt = parseInt(nuevosAnterior.rows[0].cantidad)
+        const totalHoy = parseInt(hoy.rows[0].total)
+        const promedio = parseInt(promedioDiario.rows[0].promedio)
+
+        res.json({
+            ventas: {
+                actual: { total: totalActual, cantidad: cantActual },
+                anterior: { total: totalAnterior, cantidad: cantAnterior },
+                pct_total: calcPct(totalActual, totalAnterior),
+                pct_cantidad: calcPct(cantActual, cantAnterior)
+            },
+            nuevos_clientes: {
+                actual: nuevosAct,
+                anterior: nuevosAnt,
+                pct: calcPct(nuevosAct, nuevosAnt)
+            },
+            dia_vs_promedio: {
+                hoy: totalHoy,
+                promedio_diario: promedio,
+                pct: calcPct(totalHoy, promedio),
+                cantidad_hoy: parseInt(hoy.rows[0].cantidad),
+                promedio_cantidad: Math.round(parseFloat(promedioDiario.rows[0].promedio_cantidad))
+            }
+        })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // Estadísticas de delivery por zona
 router.get('/delivery-zonas', async (req, res) => {
     try {
