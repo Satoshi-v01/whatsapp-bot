@@ -39,11 +39,20 @@ router.post('/', async (req, res) => {
             return res.status(200).send('OK')
         }
 
+        if (tipo === 'image') {
+            const imageId = mensaje.image?.id || ''
+            await guardarMensaje(numero, `[imagen: ${imageId}]`, 'cliente')
+            await procesarMensaje(numero, imageId, 'image')
+            return res.status(200).send('OK')
+        }
+
+        if (tipo === 'audio' || tipo === 'video' || tipo === 'document' || tipo === 'sticker') {
+            await guardarMensaje(numero, `[${tipo}]`, 'cliente')
+            await procesarMensaje(numero, '', tipo)
+            return res.status(200).send('OK')
+        }
+
         if (tipo !== 'text') {
-            await enviarMensaje(numero,
-                'Por el momento solo puedo entender mensajes de texto. ' +
-                '¿Podés escribirme el nombre del producto que estás buscando?'
-            )
             return res.status(200).send('OK')
         }
 

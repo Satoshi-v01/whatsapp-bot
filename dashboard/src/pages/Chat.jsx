@@ -3,7 +3,7 @@ import api from '../services/api'
 import { getSesiones, tomarSesion, responderSesion, devolverBot, cerrarConversacion } from '../services/sesiones'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { formatearFecha, formatearHora } from '../utils/fecha'
 
 function Chat() {
     const [sesiones, setSesiones] = useState([])
@@ -147,14 +147,6 @@ function Chat() {
         humano: { label: 'Con agente', color: '#3b82f6', bg: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe', textColor: '#1d4ed8' },
     }
 
-    function formatearFecha(fecha) {
-        return new Date(fecha).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-    }
-
-    function formatearHora(fecha) {
-        return new Date(fecha).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })
-    }
-
     // Pasos del bot
     const pasosOrden = ['inicio', 'buscando_producto', 'eligiendo_producto', 'eligiendo_presentacion', 'confirmando', 'factura', 'eligiendo_envio', 'datos_delivery', 'venta_registrada']
     function indexPaso(paso) { return pasosOrden.findIndex(p => paso?.includes(p.replace('_', ''))) }
@@ -294,7 +286,23 @@ function Chat() {
                                                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                                                 border: esCliente ? `1px solid ${s.borderLight}` : esBot ? `1px solid rgba(99,102,241,0.2)` : 'none'
                                             }}>
-                                                <p>{msg.texto}</p>
+                                                {msg.texto?.startsWith('[imagen:') ? (
+                                                    <div style={{ 
+                                                        padding: '8px', 
+                                                        background: s.surfaceLow, 
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px'
+                                                    }}>
+                                                        <span style={{ fontSize: '24px' }}>🖼️</span>
+                                                        <span style={{ fontSize: '12px', color: s.textMuted }}>
+                                                            Imagen enviada por el cliente
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <p style={{ whiteSpace: 'pre-wrap' }}>{msg.texto}</p>
+                                                )}
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '4px' }}>
                                                     <span style={{ fontSize: '10px', opacity: 0.5 }}>{formatearHora(msg.created_at)}</span>
                                                     {!esCliente && <span style={{ fontSize: '10px', opacity: 0.6 }}>✓✓</span>}
