@@ -300,6 +300,7 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             cantidad,
             precio,
             metodo_pago,
+            subtipo_pago,
             quiere_factura,
             ruc_factura,
             razon_social,
@@ -329,12 +330,12 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
         const canalFinal = canal || 'en_tienda'
 
         const venta = await client.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, quiere_factura, ruc_factura, razon_social, agente_id)
-             VALUES ($1, $2, $3, $4, $5, 'pagado', $6, $7, $8, $9, $10)
-             RETURNING *`,
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id)
+            VALUES ($1, $2, $3, $4, $5, 'pagado', $6, $7, $8, $9, $10, $11)
+            RETURNING *`,
             [cliente_id || null, presentacion_id, cantidad, precio, canalFinal,
-             metodo_pago, quiere_factura || false, ruc_factura || null,
-             razon_social || null, agente_id || null]
+            metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
+            razon_social || null, agente_id || null]
         )
 
         await client.query(
