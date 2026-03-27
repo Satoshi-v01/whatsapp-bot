@@ -43,6 +43,9 @@ function Reportes() {
     const [ventasPorCanal, setVentasPorCanal] = useState([])
     const [rankingProductos, setRankingProductos] = useState({ top: [], bottom: [] })
     const [topClientes, setTopClientes] = useState([])
+    const [statsDesde, setStatsDesde] = useState('')
+    const [statsHasta, setStatsHasta] = useState('')
+    const [exportandoStats, setExportandoStats] = useState(false)
     const [deliveryZonas, setDeliveryZonas] = useState({ por_zona: [], clientes_por_zona: [], total_delivery_periodo: 0 })
 
     useEffect(() => { cargarFiltros() }, [])
@@ -76,7 +79,118 @@ function Reportes() {
         } finally { setCargando(false) }
     }
 
-    async function handleExportarExcel() {
+        async function handleExportarEstadisticas() {
+        if (!statsDesde || !statsHasta) {
+            setModalConfirmar({ titulo: 'Falta el período', mensaje: 'Seleccioná la fecha desde y hasta.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            return
+        }
+        try {
+            setExportandoStats(true)
+
+            const params = { periodo: 'personalizado', fecha_desde: statsDesde, fecha_hasta: statsHasta }
+            const [met, comp, ranking, clientes, canales, delZonas] = await Promise.all([
+                getMetricas({ ...params }),
+                getComparativas({ periodo: 'mes' }),
+                getRankingProductos({ ...params }),
+                getTopClientes({ ...params }),
+                getVentasPorCanal({ ...params }),
+                getDeliveryZonas({ ...params })
+            ])
+
+            const wb = XLSX.utils.book_new()
+
+            // Hoja 1 — Resumen general
+            const wsResumen = XLSX.utils.json_to_sheet([
+                { 'Métrica': 'Total vendido (Gs.)', 'Valor': parseInt(met.total || 0) },
+                { 'Métrica': 'Cantidad de ventas', 'Valor': parseInt(met.cantidad || 0) },
+                { 'Métrica': 'Ganancia neta (Gs.)', 'Valor': parseInt(met.ganancia || 0) },
+                { 'Métrica': 'IVA generado (Gs.)', 'Valor': parseInt(met.iva_total || 0) },
+                { 'Métrica': 'Ticket promedio (Gs.)', 'Valor': parseInt(met.ticket_promedio || 0) },
+            ])
+            wsResumen['!cols'] = [{ wch: 30 }, { wch: 20 }]
+            XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen')
+
+            // Hoja 2 — Comparativas
+            const wsComp = XLSX.utils.json_to_sheet([
+                { 'Comparativa': 'Ventas período actual (Gs.)', 'Actual': parseInt(comp.ventas.actual.total), 'Anterior': parseInt(comp.ventas.anterior.total), 'Variación %': comp.ventas.pct_total },
+                { 'Comparativa': 'Cantidad ventas', 'Actual': comp.ventas.actual.cantidad, 'Anterior': comp.ventas.anterior.cantidad, 'Variación %': comp.ventas.pct_cantidad },
+                { 'Comparativa': 'Nuevos clientes (primera compra)', 'Actual': comp.nuevos_clientes.actual, 'Anterior': comp.nuevos_clientes.anterior, 'Variación %': comp.nuevos_clientes.pct },
+                { 'Comparativa': 'Ventas hoy (Gs.)', 'Actual': parseInt(comp.dia_vs_promedio.hoy), 'Anterior': parseInt(comp.dia_vs_promedio.promedio_diario), 'Variación %': comp.dia_vs_promedio.pct },
+            ])
+            wsComp['!cols'] = [{ wch: 35 }, { wch: 18 }, { wch: 18 }, { wch: 14 }]
+            XLSX.utils.book_append_sheet(wb, wsComp, 'Comparativas')
+
+            // Hoja 3 — Top productos
+            const wsTop = XLSX.utils.json_to_sheet(
+                ranking.top.map((p, i) => ({
+                    '#': i + 1,
+                    'Producto': p.nombre,
+                    'Presentación': p.presentacion,
+                    'Unidades vendidas': parseInt(p.cantidad_vendida),
+                    'Total (Gs.)': parseInt(p.total_ventas),
+                    'Ganancia (Gs.)': parseInt(p.ganancia || 0)
+                }))
+            )
+            wsTop['!cols'] = [{ wch: 4 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }]
+            XLSX.utils.book_append_sheet(wb, wsTop, 'Top Productos')
+
+            // Hoja 4 — Menos vendidos
+            const wsBottom = XLSX.utils.json_to_sheet(
+                ranking.bottom.map((p, i) => ({
+                    '#': i + 1,
+                    'Producto': p.nombre,
+                    'Presentación': p.presentacion,
+                    'Unidades vendidas': parseInt(p.cantidad_vendida),
+                    'Total (Gs.)': parseInt(p.total_ventas),
+                }))
+            )
+            wsBottom['!cols'] = [{ wch: 4 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 16 }]
+            XLSX.utils.book_append_sheet(wb, wsBottom, 'Menos Vendidos')
+
+            // Hoja 5 — Top clientes
+            const wsClientes = XLSX.utils.json_to_sheet(
+                clientes.map((c, i) => ({
+                    '#': i + 1,
+                    'Cliente': c.cliente,
+                    'Compras': parseInt(c.cantidad_compras),
+                    'Total comprado (Gs.)': parseInt(c.total_comprado)
+                }))
+            )
+            wsClientes['!cols'] = [{ wch: 4 }, { wch: 30 }, { wch: 10 }, { wch: 22 }]
+            XLSX.utils.book_append_sheet(wb, wsClientes, 'Top Clientes')
+
+            // Hoja 6 — Ventas por canal
+            const wsCanales = XLSX.utils.json_to_sheet(
+                canales.map(c => ({
+                    'Canal': labelCanal(c.canal),
+                    'Ventas': parseInt(c.cantidad),
+                    'Total (Gs.)': parseInt(c.total)
+                }))
+            )
+            wsCanales['!cols'] = [{ wch: 25 }, { wch: 10 }, { wch: 18 }]
+            XLSX.utils.book_append_sheet(wb, wsCanales, 'Por Canal')
+
+            // Hoja 7 — Delivery por zonas
+            if (delZonas.por_zona?.length > 0) {
+                const wsZonas = XLSX.utils.json_to_sheet(
+                    delZonas.por_zona.map(z => ({
+                        'Zona': z.zona,
+                        'Pedidos': parseInt(z.cantidad_pedidos),
+                        'Costo delivery (Gs.)': parseInt(z.total_delivery),
+                        'Total ventas (Gs.)': parseInt(z.total_ventas)
+                    }))
+                )
+                wsZonas['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 22 }, { wch: 20 }]
+                XLSX.utils.book_append_sheet(wb, wsZonas, 'Delivery por Zonas')
+            }
+
+            XLSX.writeFile(wb, `estadisticas_${statsDesde}_${statsHasta}.xlsx`)
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo generar el reporte de estadísticas.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally { setExportandoStats(false) }
+    }
+
+        async function handleExportarExcel() {
         if (!exportDesde || !exportHasta) {
             setModalConfirmar({ titulo: 'Falta el período', mensaje: 'Seleccioná la fecha desde y hasta para exportar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
@@ -540,29 +654,51 @@ function Reportes() {
             </div>
 
             {/* Exportar */}
-            <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '16px' }}>📊 Exportar reporte contable</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
-                    <div><label style={labelStyle}>Desde</label><input type="date" value={exportDesde} onChange={e => setExportDesde(e.target.value)} style={inputStyle} /></div>
-                    <div><label style={labelStyle}>Hasta</label><input type="date" value={exportHasta} onChange={e => setExportHasta(e.target.value)} style={inputStyle} /></div>
-                    <div>
-                        <label style={labelStyle}>Canal (opcional)</label>
-                        <select value={canal} onChange={e => setCanal(e.target.value)} style={inputStyle}>
-                            <option value="">Todos los canales</option>
-                            <option value="bot">WhatsApp Bot</option>
-                            <option value="tienda">Tienda / Presencial</option>
-                            <option value="delivery">Delivery</option>
-                            <option value="web">Pagina Web</option>
-                        </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+                {/* Exportar contable */}
+                <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>📊 Exportar reporte contable</h3>
+                    <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '16px' }}>Detalle de ventas por transacción para contabilidad.</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div><label style={labelStyle}>Desde</label><input type="date" value={exportDesde} onChange={e => setExportDesde(e.target.value)} style={inputStyle} /></div>
+                        <div><label style={labelStyle}>Hasta</label><input type="date" value={exportHasta} onChange={e => setExportHasta(e.target.value)} style={inputStyle} /></div>
+                        <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={labelStyle}>Canal (opcional)</label>
+                            <select value={exportCanal} onChange={e => setExportCanal(e.target.value)} style={inputStyle}>
+                                <option value="">Todos los canales</option>
+                                <option value="bot">WhatsApp Bot</option>
+                                <option value="tienda">Tienda / Presencial</option>
+                                <option value="delivery">Delivery</option>
+                                <option value="web">Pagina Web</option>
+                            </select>
+                        </div>
                     </div>
                     <button onClick={handleExportarExcel} disabled={exportando}
-                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: exportando ? '#94a3b8' : '#10b981', color: 'white', cursor: exportando ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                        {exportando ? 'Generando...' : '⬇ Exportar Excel'}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: exportando ? '#94a3b8' : '#10b981', color: 'white', cursor: exportando ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                        {exportando ? 'Generando...' : '⬇ Exportar Excel contable'}
                     </button>
+                    <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '10px' }}>
+                        Incluye: fecha, cliente, RUC, producto, cantidad, monto, IVA 10%, canal y método de pago.
+                    </p>
                 </div>
-                <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '12px' }}>
-                    El reporte incluye: fecha, cliente, RUC, producto, presentación, cantidad, monto, IVA 10%, canal y método de pago.
-                </p>
+
+                {/* Exportar estadísticas */}
+                <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>📈 Exportar estadísticas</h3>
+                    <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '16px' }}>Métricas, comparativas, top productos y canales.</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div><label style={labelStyle}>Desde</label><input type="date" value={statsDesde} onChange={e => setStatsDesde(e.target.value)} style={inputStyle} /></div>
+                        <div><label style={labelStyle}>Hasta</label><input type="date" value={statsHasta} onChange={e => setStatsHasta(e.target.value)} style={inputStyle} /></div>
+                    </div>
+                    <button onClick={handleExportarEstadisticas} disabled={exportandoStats}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: exportandoStats ? '#94a3b8' : '#4f46e5', color: 'white', cursor: exportandoStats ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                        {exportandoStats ? 'Generando...' : '⬇ Exportar estadísticas'}
+                    </button>
+                    <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '10px' }}>
+                        Incluye: resumen general, comparativas, top productos, ventas por canal y delivery por zonas.
+                    </p>
+                </div>
             </div>
 
             {modalConfirmar && (
