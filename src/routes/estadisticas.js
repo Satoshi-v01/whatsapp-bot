@@ -128,7 +128,7 @@ router.get('/notificaciones', async (req, res) => {
 
         const notificaciones = [
             ...chats.rows.map(c => ({
-                tipo: 'chat',
+                tipo: 'agente',
                 mensaje: `${c.cliente_numero} requiere un agente`,
                 tiempo: c.ultimo_mensaje,
                 urgente: true
@@ -141,7 +141,10 @@ router.get('/notificaciones', async (req, res) => {
             }))
         ]
 
-        res.json(notificaciones)
+        res.json({
+            notificaciones,
+            chats_esperando: chats.rows.length
+        })
     } catch (error) {
         manejarError(res, error)
     }

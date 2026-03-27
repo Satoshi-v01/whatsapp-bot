@@ -4,6 +4,7 @@ const db = require('../db/index')
 const { validarVentaPresencial, validarEstado, validarId } = require('../middleware/validar')
 const { recalcularStats } = require('./clientes')
 const { manejarError } = require('../middleware/validar')
+const { descontarStockFEFO } = require('../services/stock')
 
 
 // 1. Ver todas las ventas
@@ -345,10 +346,21 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             razon_social || null, agente_id || null]
         )
 
-        await client.query(
-            `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
-            [cantidad, presentacion_id]
+        
+        // Si hay lotes cargados, descontar por FEFO. Si no, descontar directo.
+        const lotesExisten = await client.query(
+            `SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`,
+            [presentacion_id]
         )
+
+        if (parseInt(lotesExisten.rows[0].total) > 0) {
+            await descontarStockFEFO(client, presentacion_id, cantidad)
+        } else {
+            await client.query(
+                `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
+                [cantidad, presentacion_id]
+            )
+        }
 
         if (es_de_whatsapp && sesion_numero) {
             await client.query(

@@ -195,7 +195,6 @@ function Configuracion() {
         { key: 'notificaciones', label: 'Notificaciones', icono: '🔔' },
         { key: 'tienda', label: 'Tienda', icono: '🏪' },
         { key: 'bot', label: 'Bot', icono: '🤖' },
-        { key: 'apariencia', label: 'Apariencia', icono: '🎨' },
     ]
 
     return (
@@ -540,28 +539,6 @@ function Configuracion() {
                                         <textarea value={config.bot_mensaje_bienvenida || ''} onChange={e => setConfig({ ...config, bot_mensaje_bienvenida: e.target.value })} rows={4} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} placeholder="Ej: Hola! Bienvenido a Sosa Bulls" />
                                         <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', fontStyle: 'italic' }}>Este mensaje se enviará automáticamente al iniciar una conversación.</p>
                                     </div>
-                                    {/* Tiempo de reserva */}
-                                    <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                        <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px' }}>⏱️ Tiempo de reserva de stock</h3>
-                                        <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '20px' }}>
-                                            Cuando el cliente confirma una orden por el bot, el stock queda reservado durante este tiempo mientras un agente procesa el pedido. Si no se confirma, la reserva se libera automáticamente.
-                                        </p>
-                                        <label style={labelStyle}>Duración de la reserva</label>
-                                        <div style={{ position: 'relative', maxWidth: '200px' }}>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="72"
-                                                value={config.op_tiempo_reserva_horas || 2}
-                                                onChange={e => setConfig({ ...config, op_tiempo_reserva_horas: e.target.value })}
-                                                style={{ ...inputStyle, paddingRight: '70px' }}
-                                            />
-                                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>HORAS</span>
-                                        </div>
-                                        <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px', fontStyle: 'italic' }}>
-                                            Recomendado: entre 1 y 4 horas. Máximo 72 horas.
-                                        </p>
-                                    </div>
                                     <div>
                                         <label style={labelStyle}>Mensaje fuera de horario</label>
                                         <textarea value={config.bot_mensaje_fuera_horario || ''} onChange={e => setConfig({ ...config, bot_mensaje_fuera_horario: e.target.value })} rows={4} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} placeholder="Ej: Estamos fuera de horario. Te atenderemos pronto." />
@@ -590,67 +567,31 @@ function Configuracion() {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
-
-                {/* ===== APARIENCIA ===== */}
-                {pestana === 'apariencia' && (
-                    <div>
-                        <div style={{ marginBottom: '28px' }}>
-                            <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>Apariencia</h1>
-                            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Personalizá la experiencia visual del dashboard.</p>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
-                            <div>
-                                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <label style={{ ...labelStyle, marginBottom: '16px' }}>Selección de tema</label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        {[
-                                            { val: 'light', label: 'Modo claro', preview: { bg: '#f8fafc', card: 'white', bar: '#1a1a2e' } },
-                                            { val: 'dark', label: 'Modo oscuro', preview: { bg: '#0f172a', card: '#1e293b', bar: '#4f46e5' } },
-                                        ].map(tema => (
-                                            <div key={tema.val} onClick={() => setConfig({ ...config, tema: tema.val })}
-                                                style={{ border: `2px solid ${config.tema === tema.val ? '#1a1a2e' : '#e2e8f0'}`, borderRadius: '10px', padding: '4px', cursor: 'pointer', background: config.tema === tema.val ? '#f0f4ff' : 'white' }}>
-                                                <div style={{ background: tema.preview.bg, borderRadius: '6px', padding: '10px', marginBottom: '8px', height: '80px' }}>
-                                                    <div style={{ height: '8px', background: tema.preview.bar, borderRadius: '4px', marginBottom: '6px', width: '100%' }} />
-                                                    <div style={{ background: tema.preview.card, borderRadius: '4px', height: '50px' }} />
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px 8px' }}>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600' }}>{tema.label}</span>
-                                                    {config.tema === tema.val && <span style={{ color: '#1a1a2e', fontWeight: '700' }}>✓</span>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                        {/* Tiempo de reserva */}
+                        <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px' }}>⏱️ Tiempo de reserva de stock</h3>
+                            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '20px' }}>
+                                Cuando el cliente confirma una orden por el bot, el stock queda reservado durante este tiempo mientras un agente procesa el pedido. Si no se confirma, la reserva se libera automáticamente.
+                            </p>
+                            <label style={labelStyle}>Duración de la reserva</label>
+                            <div style={{ position: 'relative', maxWidth: '200px' }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="72"
+                                    value={config.op_tiempo_reserva_horas || 2}
+                                    onChange={e => setConfig({ ...config, op_tiempo_reserva_horas: e.target.value })}
+                                    style={{ ...inputStyle, paddingRight: '70px' }}
+                                />
+                                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>HORAS</span>
                             </div>
-                            <div style={{ background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                <div style={{ padding: '12px 16px', background: 'white', borderBottom: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vista previa</span>
-                                </div>
-                                <div style={{ padding: '20px' }}>
-                                    <p style={{ fontSize: '10px', fontWeight: '700', color: '#1a1a2e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Sosa Bulls</p>
-                                    <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>Panel de control</h2>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-                                        <div style={{ background: '#e0e7ff', padding: '12px', borderRadius: '8px' }}>
-                                            <p style={{ fontSize: '9px', color: '#3730a3', fontWeight: '700', marginBottom: '4px' }}>VENTAS HOY</p>
-                                            <p style={{ fontSize: '16px', fontWeight: '800', color: '#1a1a2e' }}>Gs. 0</p>
-                                        </div>
-                                        <div style={{ background: '#f1f5f9', padding: '12px', borderRadius: '8px' }}>
-                                            <p style={{ fontSize: '9px', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>PEDIDOS</p>
-                                            <p style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>0</p>
-                                        </div>
-                                    </div>
-                                    <button style={{ width: '100%', padding: '10px', background: '#1a1a2e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Acción primaria</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
-                            <button onClick={() => cargarDatos()} style={btnSecundario}>Descartar</button>
-                            <button onClick={() => handleGuardarConfig()} disabled={guardando} style={btnPrimario}>{guardando ? 'Guardando...' : 'Guardar configuración'}</button>
+                            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px', fontStyle: 'italic' }}>
+                                Recomendado: entre 1 y 4 horas. Máximo 72 horas.
+                            </p>
                         </div>
                     </div>
                 )}
+   
             </div>
 
             {/* Modal nuevo usuario */}
