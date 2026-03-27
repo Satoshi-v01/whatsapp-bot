@@ -4,7 +4,7 @@ const { obtenerSesion, actualizarSesion, reiniciarSesion } = require('./estados'
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const { calcularPrecioEfectivo } = require('../services/precios')
-const { getCarrito, agregarAlCarrito, quitarDelCarrito, limpiarCarrito, limpiarReservasPostVenta, calcularTotal, formatearCarrito } = require('../services/carrito')
+const { getCarrito, agregarAlCarrito, quitarDelCarrito, limpiarCarrito, calcularTotal, formatearCarrito } = require('../services/carrito')
 const { getZonasActivas, formatearListaZonas } = require('../services/zonas')
 const { verificarStockParaVenta } = require('../services/stock')
 const { esReset, esPedidoAgente, esSaludo, parsearSeleccion, limpiarParaBusqueda, mensajeMenuPrincipal } = require('./helpers')
@@ -12,24 +12,34 @@ const { recalcularStats } = require('../routes/clientes')
 const { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery } = require('../services/horario')
 const db = require('../db/index')
 
+// ─────────────────────────────────────────────
+// HELPERS INTERNOS
+// ─────────────────────────────────────────────
 async function enviarYGuardar(numero, texto) {
     await enviarMensaje(numero, texto)
     await guardarMensaje(numero, texto, 'bot')
 }
 
+// ─────────────────────────────────────────────
+// PROCESADOR PRINCIPAL
+// ─────────────────────────────────────────────
 async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
     const sesion = await obtenerSesion(numero)
 
     if (sesion.modo === 'humano') return
 
     if (sesion.modo === 'esperando_agente') {
-        await enviarYGuardar(numero, 'Un agente te atendera en breve. Por favor aguarda 🙏')
+        await enviarYGuardar(numero, `Un agente te atenderá en breve. Por favor aguardá 🙏`)
         return
     }
 
-    // Verificar horario — solo bloquear si está en inicio o buscando producto
-    // Si ya tiene un pedido en curso, dejarlo continuar
-    const pasosLibres = ['confirmando_pedido', 'datos_delivery', 'eligiendo_zona', 'factura', 'ruc_factura', 'eligiendo_envio', 'eligiendo_cantidad', 'agregando_mas', 'viendo_carrito', 'quitando_producto']
+    // Verificar horario — solo en pasos iniciales
+    const pasosLibres = [
+        'confirmando_pedido', 'datos_delivery', 'eligiendo_zona',
+        'factura', 'ruc_factura', 'eligiendo_envio', 'eligiendo_cantidad',
+        'agregando_mas', 'viendo_carrito', 'quitando_producto',
+        'confirmando_delivery_tarde', 'viendo_zonas_info'
+    ]
 
     if (!pasosLibres.includes(sesion.paso)) {
         const abierto = await estaAbierto()
@@ -37,10 +47,9 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
             const msgFuera = await getMensajeFueraHorario()
             await enviarYGuardar(numero,
                 `${msgFuera}\n\n` +
-                `Igual podes dejarnos tu pedido y lo procesamos cuando abramos 🐾\n\n` +
-                `Escribi el producto que queres pedir.`
+                `Igual podés dejarnos tu pedido y lo procesamos cuando abramos 🐾\n\n` +
+                `Escribí el producto que querés pedir.`
             )
-            // Marcar que ya se envió el aviso para no repetirlo
             await actualizarSesion(numero, {
                 paso: sesion.paso,
                 modo: sesion.modo,
@@ -49,31 +58,32 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
         }
     }
 
+    // Audios, videos, documentos, stickers
     if (['audio', 'video', 'document', 'sticker'].includes(tipoMensaje)) {
-        await enviarYGuardar(numero, `Perdon 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitas.`)
+        await enviarYGuardar(numero, `Perdón 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitás.`)
         return
     }
 
+    // Imágenes — puede ser comprobante de transferencia
     if (tipoMensaje === 'image') {
-        // Si está esperando comprobante de transferencia
         if (sesion.datos.esperando_comprobante) {
             await actualizarSesion(numero, {
                 paso: sesion.paso,
-                modo: sesion.modo,
+                modo: 'esperando_agente',
                 datos: { ...sesion.datos, esperando_comprobante: false, comprobante_recibido: true }
             })
             await enviarYGuardar(numero,
-                `✅ *Comprobante recibido!*\n\n` +
-                `Un agente verificará el pago y confirmará tu pedido en breve. Gracias por tu paciencia 🐾`
+                `✅ *¡Comprobante recibido!*\n\n` +
+                `Un agente verificará el pago y confirmará tu pedido en breve.\n` +
+                `¡Gracias por tu paciencia! 🐾`
             )
-            // Notificar al agente
-            await actualizarSesion(numero, { paso: sesion.paso, modo: 'esperando_agente', datos: { ...sesion.datos, esperando_comprobante: false, comprobante_recibido: true } })
             return
         }
-        await enviarYGuardar(numero, `Perdon 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitas.`)
+        await enviarYGuardar(numero, `Perdón 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitás.`)
         return
     }
 
+    // Reset global
     if (esReset(texto) && sesion.paso !== 'inicio') {
         await limpiarCarrito(numero)
         await reiniciarSesion(numero)
@@ -81,61 +91,32 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
         return
     }
 
+    // Pedido de agente
     if (esPedidoAgente(texto)) {
         await actualizarSesion(numero, { paso: 'esperando_agente', modo: 'esperando_agente', datos: sesion.datos })
-        await enviarYGuardar(numero, `Entendido 👍 Un agente te atendera en breve.\n\nPor favor aguarda, estaremos contigo pronto 🐾`)
+        await enviarYGuardar(numero, `Entendido 👍 Un agente te atenderá en breve.\n\nPor favor aguardá, estaremos con vos pronto 🐾`)
         return
     }
 
     switch (sesion.paso) {
-        case 'inicio':
-            await manejarInicio(numero, texto, sesion)
-            break
-        case 'eligiendo_producto':
-            await manejarEleccionProducto(numero, texto, sesion)
-            break
-        case 'eligiendo_presentacion':
-            await manejarEleccionPresentacion(numero, texto, sesion)
-            break
-        case 'eligiendo_cantidad':
-            await manejarEleccionCantidad(numero, texto, sesion)
-            break
-        case 'viendo_carrito':
-            await manejarViendoCarrito(numero, texto, sesion)
-            break
-        case 'quitando_producto':
-            await manejarQuitandoProducto(numero, texto, sesion)
-            break
-        case 'agregando_mas':
-            await manejarAgregandoMas(numero, texto, sesion)
-            break
-        case 'eligiendo_envio':
-            await manejarEleccionEnvio(numero, texto, sesion)
-            break
-        case 'eligiendo_zona':
-            await manejarEleccionZona(numero, texto, sesion)
-            break
-        case 'confirmando_delivery_tarde':
-            await manejarConfirmandoDeliveryTarde(numero, texto, sesion)
-            break
-        case 'viendo_zonas_info':
-            await manejarViendoZonasInfo(numero, texto, sesion)
-            break
-        case 'confirmando_pedido':
-            await manejarConfirmandoPedido(numero, texto, sesion)
-            break
-        case 'factura':
-            await manejarFactura(numero, texto, sesion)
-            break
-        case 'ruc_factura':
-            await manejarRucFactura(numero, texto, sesion)
-            break
-        case 'datos_delivery':
-            await manejarDatosDelivery(numero, texto, sesion, tipoMensaje)
-            break
-        default:
-            await manejarInicio(numero, texto, sesion)
-        
+        case 'inicio':                      await manejarInicio(numero, texto, sesion); break
+        case 'ofreciendo_repetir':     await manejarOfreciendoRepetir(numero, texto, sesion); break
+        case 'confirmando_ubicacion':  await manejarConfirmandoUbicacion(numero, texto, sesion); break
+        case 'eligiendo_producto':          await manejarEleccionProducto(numero, texto, sesion); break
+        case 'eligiendo_presentacion':      await manejarEleccionPresentacion(numero, texto, sesion); break
+        case 'eligiendo_cantidad':          await manejarEleccionCantidad(numero, texto, sesion); break
+        case 'viendo_carrito':              await manejarViendoCarrito(numero, texto, sesion); break
+        case 'quitando_producto':           await manejarQuitandoProducto(numero, texto, sesion); break
+        case 'agregando_mas':               await manejarAgregandoMas(numero, texto, sesion); break
+        case 'eligiendo_envio':             await manejarEleccionEnvio(numero, texto, sesion); break
+        case 'eligiendo_zona':              await manejarEleccionZona(numero, texto, sesion); break
+        case 'confirmando_delivery_tarde':  await manejarConfirmandoDeliveryTarde(numero, texto, sesion); break
+        case 'viendo_zonas_info':           await manejarViendoZonasInfo(numero, texto, sesion); break
+        case 'confirmando_pedido':          await manejarConfirmandoPedido(numero, texto, sesion); break
+        case 'factura':                     await manejarFactura(numero, texto, sesion); break
+        case 'ruc_factura':                 await manejarRucFactura(numero, texto, sesion); break
+        case 'datos_delivery':              await manejarDatosDelivery(numero, texto, sesion, tipoMensaje); break
+        default:                            await manejarInicio(numero, texto, sesion); break
     }
 }
 
@@ -148,19 +129,159 @@ async function manejarInicio(numero, texto, sesion) {
     if (t === '1') { await manejarOpcionZonas(numero, sesion); return }
     if (t === '2') {
         await actualizarSesion(numero, { paso: 'esperando_agente', modo: 'esperando_agente', datos: {} })
-        await enviarYGuardar(numero, `Entendido 👍 Un agente te atendera en breve.\n\nPor favor aguarda, estaremos contigo pronto 🐾`)
+        await enviarYGuardar(numero, `Entendido 👍 Un agente te atenderá en breve.\n\nPor favor aguardá, estaremos con vos pronto 🐾`)
         return
     }
     if (t === '3') { await mostrarCarrito(numero, sesion); return }
 
     if (esSaludo(texto)) {
-        const cliente = await db.query(`SELECT nombre FROM clientes WHERE telefono = $1`, [numero])
-        const nombre = cliente.rows[0]?.nombre?.startsWith('Cliente ') ? null : cliente.rows[0]?.nombre
-        await enviarYGuardar(numero, mensajeMenuPrincipal(nombre))
+        await manejarSaludoCliente(numero, sesion)
         return
     }
 
     await buscarYMostrarProductos(numero, texto, sesion)
+}
+
+
+async function manejarSaludoCliente(numero, sesion) {
+    // Verificar si el número ya existe — si no, verificar si hay cliente con mismo RUC
+    // (esto se maneja cuando el cliente ingresa datos de factura en manejarRucFactura)
+    // Al guardar factura, si el RUC ya existe en DB, asociar el número al cliente existente
+    // Buscar cliente por número
+    const clienteRes = await db.query(
+        `SELECT c.*, 
+            v.presentacion_id as ultima_presentacion_id,
+            pr.nombre as ultima_presentacion_nombre,
+            p.nombre as ultimo_producto_nombre,
+            m.nombre as ultima_marca_nombre,
+            v.canal as ultimo_canal,
+            v.created_at as ultima_compra_at
+         FROM clientes c
+         LEFT JOIN LATERAL (
+             SELECT v.presentacion_id, v.canal, v.created_at
+             FROM ventas v
+             WHERE v.cliente_id = c.id
+             AND v.estado != 'cancelado'
+             ORDER BY v.created_at DESC
+             LIMIT 1
+         ) v ON true
+         LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+         LEFT JOIN productos p ON pr.producto_id = p.id
+         LEFT JOIN marcas m ON p.marca_id = m.id
+         WHERE c.telefono = $1`,
+        [numero]
+    )
+
+    const cliente = clienteRes.rows[0]
+
+    // Cliente nuevo — flujo normal
+    if (!cliente) {
+        await enviarYGuardar(numero, mensajeMenuPrincipal())
+        return
+    }
+
+    const nombre = cliente.nombre?.startsWith('Cliente ') ? null : cliente.nombre
+
+    // Cliente sin compras previas
+    if (!cliente.ultima_presentacion_id) {
+        await enviarYGuardar(numero, mensajeMenuPrincipal(nombre))
+        return
+    }
+
+    // Verificar stock de última compra
+    const stockRes = await db.query(
+        `SELECT stock_disponible($1, $2) as disponible, 
+                precio_venta, nombre
+         FROM presentaciones WHERE id = $1`,
+        [cliente.ultima_presentacion_id, numero]
+    )
+    const pr = stockRes.rows[0]
+    const conStock = pr && parseInt(pr.disponible) > 0
+
+    const nombreProducto = `${cliente.ultima_marca_nombre ? cliente.ultima_marca_nombre + ' — ' : ''}${cliente.ultimo_producto_nombre} — ${cliente.ultima_presentacion_nombre}`
+
+    if (!conStock) {
+        // Sin stock — ofrecer alternativa
+        await actualizarSesion(numero, {
+            paso: 'inicio',
+            modo: 'bot',
+            datos: { ...sesion.datos }
+        })
+        await enviarYGuardar(numero,
+            `¡Hola${nombre ? ', ' + nombre : ''}! 👋 Qué bueno verte de nuevo 🐾\n\n` +
+            `Tu producto habitual *${nombreProducto}* no tiene stock disponible en este momento 😔\n\n` +
+            `¿Qué querés hacer?\n` +
+            `1. Explorar otros productos\n` +
+            `2. Hablar con un agente`
+        )
+        return
+    }
+
+    // Tiene stock — ofrecer repetir
+    await actualizarSesion(numero, {
+        paso: 'ofreciendo_repetir',
+        modo: 'bot',
+        datos: {
+            ...sesion.datos,
+            ultima_presentacion_id: cliente.ultima_presentacion_id,
+            ultima_presentacion_nombre: cliente.ultima_presentacion_nombre,
+            ultimo_producto_nombre: cliente.ultimo_producto_nombre,
+            ultima_marca_nombre: cliente.ultima_marca_nombre,
+            ultimo_precio: parseInt(pr.precio_venta),
+            ultimo_canal: cliente.ultimo_canal
+        }
+    })
+
+    await enviarYGuardar(numero,
+        `¡Hola${nombre ? ', ' + nombre : ''}! 👋 Bienvenido de nuevo a Sosa Bulls 🐾\n\n` +
+        `La última vez pediste:\n` +
+        `*${nombreProducto}*\n` +
+        `Gs. ${parseInt(pr.precio_venta).toLocaleString('es-PY')}\n\n` +
+        `¿Querés pedirlo de nuevo?\n` +
+        `1. Sí, quiero el mismo\n` +
+        `2. No, quiero ver otros productos`
+    )
+}
+
+async function manejarOfreciendoRepetir(numero, texto, sesion) {
+    const t = texto.trim()
+
+    if (t === '2') {
+        await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
+        await enviarYGuardar(numero, mensajeMenuPrincipal())
+        return
+    }
+
+    if (t !== '1') {
+        // Si escribió algo que no es 1 ni 2, buscar como producto
+        await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
+        await buscarYMostrarProductos(numero, texto, sesion)
+        return
+    }
+
+    // Eligió repetir — preguntar modalidad
+    await actualizarSesion(numero, {
+        paso: 'eligiendo_envio',
+        modo: 'bot',
+        datos: {
+            ...sesion.datos,
+            presentacion_seleccionada: {
+                id: sesion.datos.ultima_presentacion_id,
+                nombre: sesion.datos.ultima_presentacion_nombre,
+                precio: sesion.datos.ultimo_precio,
+                stock: 99
+            },
+            producto_nombre: `${sesion.datos.ultima_marca_nombre ? sesion.datos.ultima_marca_nombre + ' — ' : ''}${sesion.datos.ultimo_producto_nombre}`,
+            cantidad_preseleccionada: 1
+        }
+    })
+
+    await enviarYGuardar(numero,
+        `¡Perfecto! 🎉\n\n` +
+        `🚀 *¿Cómo querés recibir tu pedido?*\n\n` +
+        `1. Retiro en tienda\n` +
+        `2. Delivery a domicilio`
+    )
 }
 
 // ─────────────────────────────────────────────
@@ -170,7 +291,7 @@ async function buscarYMostrarProductos(numero, texto, sesion) {
     const palabras = limpiarParaBusqueda(texto)
 
     if (palabras.length === 0) {
-        await enviarYGuardar(numero, `Que producto estas buscando? Escribi el nombre (ej: "cibau", "premier") 🐾`)
+        await enviarYGuardar(numero, `¿Qué producto estás buscando? Escribí el nombre (ej: "cibau", "premier") 🐾`)
         return
     }
 
@@ -192,11 +313,11 @@ async function buscarYMostrarProductos(numero, texto, sesion) {
 
     if (resultado.rows.length === 0) {
         await enviarYGuardar(numero,
-            `No encontre productos con "${texto}" 😅\n\n` +
-            `Proba con:\n` +
-            `- Escribir el nombre de otra forma (ej: "cibau", "premier")\n` +
-            `- 1 para ver zonas de delivery\n` +
-            `- 2 para hablar con un agente`
+            `No encontré productos con "*${texto}*" 😅\n\n` +
+            `Podés intentar con:\n` +
+            `- Otro nombre (ej: "cibau", "premier")\n` +
+            `1. Ver zonas de delivery\n` +
+            `2. Hablar con un agente`
         )
         return
     }
@@ -214,7 +335,7 @@ async function buscarYMostrarProductos(numero, texto, sesion) {
     }
 
     const lista = resultado.rows.map((p, i) =>
-        `${i + 1}. ${p.marca_nombre ? p.marca_nombre + ' - ' : ''}${p.nombre}`
+        `${i + 1}. ${p.marca_nombre ? p.marca_nombre + ' — ' : ''}${p.nombre}`
     ).join('\n')
 
     await actualizarSesion(numero, {
@@ -223,29 +344,10 @@ async function buscarYMostrarProductos(numero, texto, sesion) {
         datos: { ...sesion.datos, productos: resultado.rows }
     })
 
-    await enviarYGuardar(numero, `Encontre estos productos:\n\n${lista}\n\nCual te interesa? Responde con el numero.`)
-}
-
-// ─────────────────────────────────────────────
-// ELECCION DE PRODUCTO
-// ─────────────────────────────────────────────
-async function manejarEleccionProducto(numero, texto, sesion) {
-    const sel = parsearSeleccion(texto)
-    const productos = sesion.datos.productos
-
-    if (!sel || sel.indice < 0 || sel.indice >= productos.length) {
-        await enviarYGuardar(numero, `Por favor responde con un numero entre 1 y ${productos.length}.`)
-        return
-    }
-
-    const producto = productos[sel.indice]
-    const nombreCompleto = `${producto.marca_nombre ? producto.marca_nombre + ' - ' : ''}${producto.nombre}`
-    await actualizarSesion(numero, {
-        paso: 'eligiendo_presentacion',
-        modo: 'bot',
-        datos: { ...sesion.datos, producto_id: producto.id, producto_nombre: nombreCompleto }
-    })
-    await mostrarPresentaciones(numero, producto.id, nombreCompleto)
+    await enviarYGuardar(numero,
+        `Encontré estos productos:\n\n${lista}\n\n` +
+        `¿Cuál te interesa? Respondé con el número.`
+    )
 }
 
 // ─────────────────────────────────────────────
@@ -271,15 +373,37 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
     const lista = conStock.map((p, i) => {
         const { precio, con_descuento } = calcularPrecioEfectivo(p)
         const precioTexto = con_descuento
-            ? `~~Gs. ${p.precio_venta.toLocaleString('es-PY')}~~ *Gs. ${precio.toLocaleString('es-PY')}* (oferta)`
+            ? `~~Gs. ${p.precio_venta.toLocaleString('es-PY')}~~ *Gs. ${precio.toLocaleString('es-PY')}* 🏷️`
             : `Gs. ${precio.toLocaleString('es-PY')}`
-        return `${i + 1}. ${p.nombre} - ${precioTexto}`
+        return `${i + 1}. ${p.nombre} — ${precioTexto}`
     }).join('\n')
 
     await enviarYGuardar(numero,
         `*${productoNombre}*\n\n${lista}\n\n` +
-        `Cual queres? Responde con el numero.`
+        `¿Cuál querés? Respondé con el número.`
     )
+}
+
+// ─────────────────────────────────────────────
+// ELECCION DE PRODUCTO
+// ─────────────────────────────────────────────
+async function manejarEleccionProducto(numero, texto, sesion) {
+    const sel = parsearSeleccion(texto)
+    const productos = sesion.datos.productos
+
+    if (!sel || sel.indice < 0 || sel.indice >= productos.length) {
+        await enviarYGuardar(numero, `Por favor respondé con un número entre 1 y ${productos.length}.`)
+        return
+    }
+
+    const producto = productos[sel.indice]
+    const nombreCompleto = `${producto.marca_nombre ? producto.marca_nombre + ' — ' : ''}${producto.nombre}`
+    await actualizarSesion(numero, {
+        paso: 'eligiendo_presentacion',
+        modo: 'bot',
+        datos: { ...sesion.datos, producto_id: producto.id, producto_nombre: nombreCompleto }
+    })
+    await mostrarPresentaciones(numero, producto.id, nombreCompleto)
 }
 
 // ─────────────────────────────────────────────
@@ -299,7 +423,7 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
     const sel = parsearSeleccion(texto)
 
     if (!sel || sel.indice < 0 || sel.indice >= conStock.length) {
-        await enviarYGuardar(numero, `Por favor responde con un numero entre 1 y ${conStock.length}.`)
+        await enviarYGuardar(numero, `Por favor respondé con un número entre 1 y ${conStock.length}.`)
         return
     }
 
@@ -322,10 +446,10 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
     })
 
     await enviarYGuardar(numero,
-        `*${sesion.datos.producto_nombre} - ${presentacion.nombre}*\n` +
+        `*${sesion.datos.producto_nombre} — ${presentacion.nombre}*\n` +
         `Precio: Gs. ${precio.toLocaleString('es-PY')}\n\n` +
-        `Cuantas unidades queres?\n` +
-        `_(Responde con un numero, ej: 1, 2, 3...)_`
+        `¿Cuántas unidades querés?\n` +
+        `_(Respondé con un número, ej: 1, 2, 3...)_`
     )
 }
 
@@ -338,17 +462,17 @@ async function manejarEleccionCantidad(numero, texto, sesion) {
 
     if (!pr) {
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
-        await enviarYGuardar(numero, `Algo salio mal. Volvemos al inicio.\n\n${mensajeMenuPrincipal()}`)
+        await enviarYGuardar(numero, `Algo salió mal. Volvemos al inicio.\n\n${mensajeMenuPrincipal()}`)
         return
     }
 
     if (isNaN(cantidad) || cantidad < 1) {
-        await enviarYGuardar(numero, `Por favor responde con un numero. Cuantas unidades queres?`)
+        await enviarYGuardar(numero, `Por favor respondé con un número. ¿Cuántas unidades querés?`)
         return
     }
 
     if (cantidad > pr.stock) {
-        await enviarYGuardar(numero, `Solo hay ${pr.stock} unidades disponibles. Cuantas queres? (maximo ${pr.stock})`)
+        await enviarYGuardar(numero, `Solo hay ${pr.stock} unidades disponibles. ¿Cuántas querés? (máximo ${pr.stock})`)
         return
     }
 
@@ -368,10 +492,10 @@ async function manejarEleccionCantidad(numero, texto, sesion) {
     await actualizarSesion(numero, { paso: 'agregando_mas', modo: 'bot', datos: sesion.datos })
 
     await enviarYGuardar(numero,
-        `Agregado al carrito:\n` +
-        `*${sesion.datos.producto_nombre} - ${pr.nombre}* x${cantidad}\n\n` +
+        `✅ Agregado al carrito:\n` +
+        `*${sesion.datos.producto_nombre} — ${pr.nombre}* x${cantidad}\n\n` +
         `${formatearCarrito(resultado.carrito)}\n\n` +
-        `Que queres hacer?\n` +
+        `¿Qué querés hacer?\n` +
         `1. Agregar otro producto\n` +
         `2. Continuar con el pedido\n` +
         `3. Quitar un producto`
@@ -386,18 +510,22 @@ async function manejarAgregandoMas(numero, texto, sesion) {
 
     if (t === '1') {
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: sesion.datos })
-        await enviarYGuardar(numero, `Que producto queres agregar? Escribi el nombre.`)
+        await enviarYGuardar(numero, `¿Qué producto querés agregar? Escribí el nombre.`)
         return
     }
     if (t === '2') {
         const carrito = await getCarrito(numero)
         if (!carrito.length) {
-            await enviarYGuardar(numero, `Tu carrito esta vacio. Busca un producto primero.`)
+            await enviarYGuardar(numero, `Tu carrito está vacío. Buscá un producto primero.`)
             await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
             return
         }
         await actualizarSesion(numero, { paso: 'eligiendo_envio', modo: 'bot', datos: sesion.datos })
-        await enviarYGuardar(numero, `Como queres recibir tu pedido?\n\n1. Retiro en tienda\n2. Delivery`)
+        await enviarYGuardar(numero,
+            `🚀 *¿Cómo querés recibir tu pedido?*\n\n` +
+            `1. Retiro en tienda\n` +
+            `2. Delivery a domicilio`
+        )
         return
     }
     if (t === '3') {
@@ -417,14 +545,15 @@ async function mostrarCarrito(numero, sesion) {
 
     if (!carrito.length) {
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
-        await enviarYGuardar(numero, `Tu carrito esta vacio.\n\nEscribi un producto para comenzar.`)
+        await enviarYGuardar(numero, `Tu carrito está vacío.\n\nEscribí un producto para comenzar 🛒`)
         return
     }
 
     await actualizarSesion(numero, { paso: 'viendo_carrito', modo: 'bot', datos: sesion.datos })
     await enviarYGuardar(numero,
+        `🛒 *Tu carrito*\n\n` +
         `${formatearCarrito(carrito)}\n\n` +
-        `Que queres hacer?\n` +
+        `¿Qué querés hacer?\n` +
         `1. Continuar con el pedido\n` +
         `2. Agregar producto\n` +
         `3. Quitar producto\n` +
@@ -437,12 +566,16 @@ async function manejarViendoCarrito(numero, texto, sesion) {
 
     if (t === '1') {
         await actualizarSesion(numero, { paso: 'eligiendo_envio', modo: 'bot', datos: sesion.datos })
-        await enviarYGuardar(numero, `Como queres recibir tu pedido?\n\n1. Retiro en tienda\n2. Delivery`)
+        await enviarYGuardar(numero,
+            `🚀 *¿Cómo querés recibir tu pedido?*\n\n` +
+            `1. Retiro en tienda\n` +
+            `2. Delivery a domicilio`
+        )
         return
     }
     if (t === '2') {
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: sesion.datos })
-        await enviarYGuardar(numero, `Que producto queres agregar? Escribi el nombre.`)
+        await enviarYGuardar(numero, `¿Qué producto querés agregar? Escribí el nombre.`)
         return
     }
     if (t === '3') {
@@ -452,22 +585,22 @@ async function manejarViendoCarrito(numero, texto, sesion) {
     if (t === '4') {
         await limpiarCarrito(numero)
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
-        await enviarYGuardar(numero, `Carrito vaciado.\n\nEscribi un producto para comenzar.`)
+        await enviarYGuardar(numero, `Carrito vaciado. Escribí un producto para comenzar 🛒`)
         return
     }
 
-    await enviarYGuardar(numero, `Responde con 1, 2, 3 o 4 por favor.`)
+    await enviarYGuardar(numero, `Respondé con 1, 2, 3 o 4 por favor.`)
 }
 
 async function mostrarCarritoParaQuitar(numero, sesion) {
     const carrito = await getCarrito(numero)
     if (!carrito.length) {
-        await enviarYGuardar(numero, `Tu carrito esta vacio.`)
+        await enviarYGuardar(numero, `Tu carrito está vacío.`)
         return
     }
 
     const lista = carrito.map((item, i) =>
-        `${i + 1}. ${item.producto_nombre} - ${item.presentacion_nombre} x${item.cantidad}`
+        `${i + 1}. ${item.producto_nombre} — ${item.presentacion_nombre} x${item.cantidad}`
     ).join('\n')
 
     await actualizarSesion(numero, {
@@ -476,7 +609,9 @@ async function mostrarCarritoParaQuitar(numero, sesion) {
         datos: { ...sesion.datos, carrito_snapshot: carrito }
     })
 
-    await enviarYGuardar(numero, `Cual queres quitar?\n\n${lista}\n\nResponde con el numero.`)
+    await enviarYGuardar(numero,
+        `¿Cuál querés quitar?\n\n${lista}\n\nRespondé con el número.`
+    )
 }
 
 async function manejarQuitandoProducto(numero, texto, sesion) {
@@ -484,7 +619,7 @@ async function manejarQuitandoProducto(numero, texto, sesion) {
     const sel = parsearSeleccion(texto)
 
     if (!sel || sel.indice < 0 || sel.indice >= carrito.length) {
-        await enviarYGuardar(numero, `Por favor responde con un numero entre 1 y ${carrito.length}.`)
+        await enviarYGuardar(numero, `Por favor respondé con un número entre 1 y ${carrito.length}.`)
         return
     }
 
@@ -493,15 +628,15 @@ async function manejarQuitandoProducto(numero, texto, sesion) {
 
     if (!nuevoCarrito.length) {
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: {} })
-        await enviarYGuardar(numero, `Producto quitado. Tu carrito quedo vacio.\n\nEscribi un producto para comenzar.`)
+        await enviarYGuardar(numero, `Producto quitado. Tu carrito quedó vacío.\n\nEscribí un producto para comenzar 🛒`)
         return
     }
 
     await actualizarSesion(numero, { paso: 'agregando_mas', modo: 'bot', datos: sesion.datos })
     await enviarYGuardar(numero,
-        `Producto quitado.\n\n` +
+        `✅ Producto quitado.\n\n` +
         `${formatearCarrito(nuevoCarrito)}\n\n` +
-        `Que queres hacer?\n` +
+        `¿Qué querés hacer?\n` +
         `1. Agregar otro producto\n` +
         `2. Continuar con el pedido\n` +
         `3. Quitar un producto`
@@ -515,32 +650,77 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
     const t = texto.trim()
 
     if (t === '1') {
+        // Si viene de repetir pedido, precargar producto al carrito
+        if (sesion.datos.cantidad_preseleccionada) {
+            await agregarAlCarrito(numero, {
+                presentacion_id: sesion.datos.presentacion_seleccionada.id,
+                presentacion_nombre: sesion.datos.presentacion_seleccionada.nombre,
+                producto_nombre: sesion.datos.producto_nombre,
+                precio: sesion.datos.presentacion_seleccionada.precio,
+                cantidad: sesion.datos.cantidad_preseleccionada
+            })
+        }
         await actualizarSesion(numero, { paso: 'factura', modo: 'bot', datos: { ...sesion.datos, modalidad: 'retiro' } })
-        await enviarYGuardar(numero, `Necesitas factura?\n\n1. Si, con factura\n2. No, sin factura`)
+        await enviarYGuardar(numero,
+            `🧾 *¿Necesitás factura?*\n\n` +
+            `1. Sí, con factura\n` +
+            `2. No, sin factura`
+        )
         return
     }
 
     if (t === '2') {
-        // Chequear horario de delivery PRIMERO
+        // Si viene de repetir pedido, precargar producto al carrito
+        if (sesion.datos.cantidad_preseleccionada) {
+            await agregarAlCarrito(numero, {
+                presentacion_id: sesion.datos.presentacion_seleccionada.id,
+                presentacion_nombre: sesion.datos.presentacion_seleccionada.nombre,
+                producto_nombre: sesion.datos.producto_nombre,
+                precio: sesion.datos.presentacion_seleccionada.precio,
+                cantidad: sesion.datos.cantidad_preseleccionada
+            })
+        }
+
         const deliveryDisponible = await estaAbiertoParaDelivery()
         if (!deliveryDisponible) {
-            await actualizarSesion(numero, {
-                paso: 'confirmando_delivery_tarde',
-                modo: 'bot',
-                datos: { ...sesion.datos }
-            })
+            await actualizarSesion(numero, { paso: 'confirmando_delivery_tarde', modo: 'bot', datos: sesion.datos })
             await enviarYGuardar(numero,
-                `Los deliveries despues de las 16:00 se envian al dia siguiente.\n\n` +
-                `Igual podes hacer tu pedido ahora y lo enviamos manana 🐾\n\n` +
-                `1. Continuar con delivery (manana)\n` +
+                `⏰ Los deliveries después de las 16:00 se envían al día siguiente.\n\n` +
+                `Igual podés hacer tu pedido ahora y lo enviamos mañana 🐾\n\n` +
+                `1. Continuar con delivery (mañana)\n` +
                 `2. Retirar en tienda hoy`
             )
             return
         }
 
+        // Si tiene ubicación anterior, ofrecerla
+        const clienteRes = await db.query(
+            `SELECT direccion, referencia_delivery, ciudad FROM clientes WHERE telefono = $1`,
+            [numero]
+        )
+        const cliente = clienteRes.rows[0]
+
+        if (cliente?.direccion) {
+            await actualizarSesion(numero, {
+                paso: 'confirmando_ubicacion',
+                modo: 'bot',
+                datos: { ...sesion.datos, modalidad: 'delivery' }
+            })
+            await enviarYGuardar(numero,
+                `📍 Tu última ubicación registrada:\n` +
+                `*${cliente.direccion}*` +
+                `${cliente.referencia_delivery ? `\nReferencia: ${cliente.referencia_delivery}` : ''}\n\n` +
+                `¿Querés entregar en la misma dirección?\n` +
+                `1. Sí, misma dirección\n` +
+                `2. No, quiero poner una nueva`
+            )
+            return
+        }
+
+        // Sin ubicación anterior — flujo normal de zonas
         const zonas = await getZonasActivas()
         if (!zonas.length) {
-            await enviarYGuardar(numero, `Lo sentimos, por ahora no contamos con delivery disponible.\n\nQueres retirar en tienda? Responde 1.`)
+            await enviarYGuardar(numero, `Lo sentimos, por ahora no contamos con delivery disponible.\n\n¿Querés retirar en tienda? Respondé *1*.`)
             return
         }
         const lista = await formatearListaZonas(zonas)
@@ -549,42 +729,15 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
             modo: 'bot',
             datos: { ...sesion.datos, modalidad: 'delivery', zonas }
         })
-        await enviarYGuardar(numero, `Zonas de delivery disponibles:\n\n${lista}\n\nResponde con el numero de tu zona.`)
+        await enviarYGuardar(numero,
+            `🚚 *Zonas de delivery disponibles:*\n\n${lista}\n\n` +
+            `Respondé con el número de tu zona.`
+        )
         return
     }
 
-    await enviarYGuardar(numero, `Responde *1* para retiro en tienda o *2* para delivery.`)
+    await enviarYGuardar(numero, `Respondé *1* para retiro en tienda o *2* para delivery.`)
 }
-async function manejarConfirmandoDeliveryTarde(numero, texto, sesion) {
-    const t = texto.trim()
-
-    if (t === '1') {
-        // Continuar con delivery igual
-        const zonas = await getZonasActivas()
-        if (!zonas.length) {
-            await enviarYGuardar(numero, `Lo sentimos, no contamos con delivery disponible.\n\nQueres retirar en tienda? Responde 1.`)
-            return
-        }
-        const lista = await formatearListaZonas(zonas)
-        await actualizarSesion(numero, {
-            paso: 'eligiendo_zona',
-            modo: 'bot',
-            datos: { ...sesion.datos, modalidad: 'delivery', zonas, delivery_dia_siguiente: true }
-        })
-        await enviarYGuardar(numero, `Zonas de delivery disponibles:\n\n${lista}\n\nResponde con el numero de tu zona.`)
-        return
-    }
-
-    if (t === '2') {
-        // Cambiar a retiro
-        await actualizarSesion(numero, { paso: 'factura', modo: 'bot', datos: { ...sesion.datos, modalidad: 'retiro' } })
-        await enviarYGuardar(numero, `Necesitas factura?\n\n1. Si, con factura\n2. No, sin factura`)
-        return
-    }
-
-    await enviarYGuardar(numero, `Responde *1* para delivery (manana) o *2* para retirar en tienda hoy.`)
-}
-
 
 // ─────────────────────────────────────────────
 // ELECCION DE ZONA
@@ -594,7 +747,7 @@ async function manejarEleccionZona(numero, texto, sesion) {
     const sel = parsearSeleccion(texto)
 
     if (!sel || sel.indice < 0 || sel.indice >= zonas.length) {
-        await enviarYGuardar(numero, `Por favor responde con un numero entre 1 y ${zonas.length}.`)
+        await enviarYGuardar(numero, `Por favor respondé con un número entre 1 y ${zonas.length}.`)
         return
     }
 
@@ -608,23 +761,84 @@ async function manejarEleccionZona(numero, texto, sesion) {
     })
 
     await enviarYGuardar(numero,
-        `Zona: ${zona.nombre}\n` +
-        `Costo delivery: Gs. ${zona.costo.toLocaleString('es-PY')}\n\n` +
+        `📍 Zona: *${zona.nombre}*\n` +
+        `🚚 Costo delivery: *Gs. ${zona.costo.toLocaleString('es-PY')}*\n\n` +
         `${formatearCarrito(carrito, zona.nombre, zona.costo)}\n\n` +
-        `Necesitas factura?\n\n` +
-        `1. Si, con factura\n` +
+        `🧾 *¿Necesitás factura?*\n\n` +
+        `1. Sí, con factura\n` +
         `2. No, sin factura`
     )
 }
 
+async function manejarConfirmandoUbicacion(numero, texto, sesion) {
+    const t = texto.trim()
+
+    if (t === '1') {
+        // Usar ubicación anterior
+        const clienteRes = await db.query(
+            `SELECT direccion, referencia_delivery, ciudad FROM clientes WHERE telefono = $1`,
+            [numero]
+        )
+        const cliente = clienteRes.rows[0]
+
+        // Buscar zona por ciudad
+        const zonas = await getZonasActivas()
+        const normalizar = str => str?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() || ''
+        const zonaMatch = zonas.find(z => normalizar(z.nombre) === normalizar(cliente?.ciudad))
+
+        const datos = {
+            ...sesion.datos,
+            modalidad: 'delivery',
+            ubicacion: cliente.direccion,
+            referencia: cliente.referencia_delivery || '',
+            zona_id: zonaMatch?.id || null,
+            zona_nombre: zonaMatch?.nombre || cliente?.ciudad || '',
+            costo_delivery: zonaMatch?.costo || 0,
+            zonas,
+            paso_delivery: 'horario'
+        }
+
+        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos })
+        await enviarYGuardar(numero,
+            `🕐 *¿En qué horario podés recibir la entrega?*`
+        )
+        return
+    }
+
+    if (t === '2') {
+        // Nueva ubicación — flujo normal de zonas
+        const zonas = await getZonasActivas()
+        if (!zonas.length) {
+            await enviarYGuardar(numero, `Lo sentimos, por ahora no contamos con delivery disponible.`)
+            return
+        }
+        const lista = await formatearListaZonas(zonas)
+        await actualizarSesion(numero, {
+            paso: 'eligiendo_zona',
+            modo: 'bot',
+            datos: { ...sesion.datos, modalidad: 'delivery', zonas }
+        })
+        await enviarYGuardar(numero,
+            `🚚 *Zonas de delivery disponibles:*\n\n${lista}\n\n` +
+            `Respondé con el número de tu zona.`
+        )
+        return
+    }
+
+    await enviarYGuardar(numero, `Respondé *1* para usar la misma dirección o *2* para ingresar una nueva.`)
+}
+
 // ─────────────────────────────────────────────
-// ZONAS - VISTA INFORMATIVA
+// ZONAS — VISTA INFORMATIVA
 // ─────────────────────────────────────────────
 async function manejarOpcionZonas(numero, sesion) {
     const zonas = await getZonasActivas()
 
     if (!zonas.length) {
-        await enviarYGuardar(numero, `Por ahora no tenemos zonas de delivery configuradas.\n\nEscribi un producto para comenzar o habla con un agente.`)
+        await enviarYGuardar(numero,
+            `Por ahora no tenemos zonas de delivery configuradas.\n\n` +
+            `Escribí un producto para comenzar o hablá con un agente.`
+        )
         return
     }
 
@@ -632,8 +846,8 @@ async function manejarOpcionZonas(numero, sesion) {
     await actualizarSesion(numero, { paso: 'viendo_zonas_info', modo: 'bot', datos: { ...sesion.datos, zonas } })
 
     await enviarYGuardar(numero,
-        `Zonas y costos de delivery:\n\n${lista}\n\n` +
-        `Que queres hacer?\n` +
+        `🗺️ *Zonas y costos de delivery:*\n\n${lista}\n\n` +
+        `¿Qué querés hacer?\n` +
         `1. Hacer un pedido con delivery\n` +
         `2. Volver al inicio\n` +
         `3. Hablar con un agente`
@@ -645,7 +859,7 @@ async function manejarViendoZonasInfo(numero, texto, sesion) {
 
     if (t === '1') {
         await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: { ...sesion.datos, modalidad_preseleccionada: 'delivery' } })
-        await enviarYGuardar(numero, `Que producto queres pedir? Escribi el nombre.`)
+        await enviarYGuardar(numero, `¿Qué producto querés pedir? Escribí el nombre.`)
         return
     }
     if (t === '2') {
@@ -655,11 +869,11 @@ async function manejarViendoZonasInfo(numero, texto, sesion) {
     }
     if (t === '3') {
         await actualizarSesion(numero, { paso: 'esperando_agente', modo: 'esperando_agente', datos: {} })
-        await enviarYGuardar(numero, `Entendido 👍 Un agente te atendera en breve 🐾`)
+        await enviarYGuardar(numero, `Entendido 👍 Un agente te atenderá en breve 🐾`)
         return
     }
 
-    await enviarYGuardar(numero, `Responde 1, 2 o 3 por favor.`)
+    await enviarYGuardar(numero, `Respondé 1, 2 o 3 por favor.`)
 }
 
 // ─────────────────────────────────────────────
@@ -670,7 +884,11 @@ async function manejarFactura(numero, texto, sesion) {
 
     if (t === '1') {
         await actualizarSesion(numero, { paso: 'ruc_factura', modo: 'bot', datos: { ...sesion.datos, quiere_factura: true } })
-        await enviarYGuardar(numero, `Ingresa tu NOMBRE o RAZON SOCIAL seguido de tu RUC o cedula para la factura.\nEjemplo: Juan Perez *4.178.154-4*`)
+        await enviarYGuardar(numero,
+            `🧾 *Datos para la factura*\n\n` +
+            `Ingresá tu nombre o razón social seguido de tu RUC o cédula.\n\n` +
+            `Ejemplo: _Juan Pérez 4.178.154-4_`
+        )
         return
     }
     if (t === '2') {
@@ -678,16 +896,32 @@ async function manejarFactura(numero, texto, sesion) {
         return
     }
 
-    await enviarYGuardar(numero, `Responde *1* para con factura o *2* para sin factura.`)
+    await enviarYGuardar(numero, `Respondé *1* para con factura o *2* para sin factura.`)
 }
 
 async function manejarRucFactura(numero, texto, sesion) {
-    // Parsear: "Lucas Sosa 4154264-9" → nombre = "Lucas Sosa", ruc = "4154264-9"
     const partes = texto.trim().split(' ')
     let ruc = ''
     let razonSocial = ''
 
-    // El RUC/CI suele ser el último elemento (contiene números y guiones)
+    // Si el RUC ya existe en otro cliente, asociar este número
+    const clienteConRuc = await db.query(
+        `SELECT id, nombre FROM clientes WHERE ruc = $1 AND telefono != $2`,
+        [ruc, numero]
+    )
+    if (clienteConRuc.rows.length > 0) {
+        const clienteExistente = clienteConRuc.rows[0]
+        await db.query(
+            `UPDATE clientes SET telefono = $1, updated_at = NOW() WHERE id = $2`,
+            [numero, clienteExistente.id]
+        )
+        // Actualizar nombre si el cliente se llama "Cliente {numero}"
+        const clienteActual = await db.query(`SELECT nombre FROM clientes WHERE telefono = $1`, [numero])
+        if (clienteActual.rows[0]?.nombre?.startsWith('Cliente ')) {
+            await db.query(`DELETE FROM clientes WHERE telefono = $1 AND nombre LIKE 'Cliente %'`, [numero])
+        }
+    }
+
     const ultimaParte = partes[partes.length - 1]
     const esRuc = /^[\d\.\-]+$/.test(ultimaParte)
 
@@ -695,7 +929,6 @@ async function manejarRucFactura(numero, texto, sesion) {
         ruc = ultimaParte
         razonSocial = partes.slice(0, -1).join(' ')
     } else {
-        // Si no detecta RUC, tomar todo como razón social
         razonSocial = texto.trim()
         ruc = texto.trim()
     }
@@ -707,7 +940,6 @@ async function manejarRucFactura(numero, texto, sesion) {
         razon_social: razonSocial
     }
 
-    // Actualizar nombre del cliente en DB si tiene nombre real
     if (razonSocial && !razonSocial.startsWith('Cliente ')) {
         db.query(
             `UPDATE clientes SET nombre = $1 WHERE telefono = $2`,
@@ -725,9 +957,10 @@ async function manejarRucFactura(numero, texto, sesion) {
             datos: { ...datos, paso_delivery: 'ubicacion' }
         })
         await enviarYGuardar(numero,
-            `Registrado: *${razonSocial}* — RUC/CI: *${ruc}*\n\n` +
-            `Paso 1 de 5 - Datos de entrega\n\n` +
-            `Cual es tu ubicacion o barrio? Podes escribirla o compartir tu ubicacion por WhatsApp.`
+            `✅ Registrado: *${razonSocial}* — RUC/CI: *${ruc}*\n\n` +
+            `🏠 *Paso 1 de 5 — Datos de entrega*\n\n` +
+            `¿Cuál es tu ubicación o barrio?\n` +
+            `_Podés escribirla o compartir tu ubicación por WhatsApp._`
         )
     }
 }
@@ -739,10 +972,15 @@ async function continuar(numero, sesion, quiere_factura) {
         await actualizarSesion(numero, { paso: 'confirmando_pedido', modo: 'bot', datos })
         await mostrarResumenFinal(numero, datos)
     } else {
-        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...datos, paso_delivery: 'ubicacion' } })
+        await actualizarSesion(numero, {
+            paso: 'datos_delivery',
+            modo: 'bot',
+            datos: { ...datos, paso_delivery: 'ubicacion' }
+        })
         await enviarYGuardar(numero,
-            `Paso 1 de 5 - Datos de entrega\n\n` +
-            `Cual es tu ubicacion o barrio? Podes escribirla o compartir tu ubicacion por WhatsApp.`
+            `🏠 *Paso 1 de 5 — Datos de entrega*\n\n` +
+            `¿Cuál es tu ubicación o barrio?\n` +
+            `_Podés escribirla o compartir tu ubicación por WhatsApp._`
         )
     }
 }
@@ -754,62 +992,73 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
     const paso = sesion.datos.paso_delivery
 
     if (paso === 'ubicacion') {
-        const ubicacion = tipoMensaje === 'location' ? `${texto}` : texto
-        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, ubicacion, paso_delivery: 'referencia' } })
+        const ubicacion = tipoMensaje === 'location' ? texto : texto
+        await actualizarSesion(numero, {
+            paso: 'datos_delivery', modo: 'bot',
+            datos: { ...sesion.datos, ubicacion, paso_delivery: 'referencia' }
+        })
         await enviarYGuardar(numero,
-            `📍 *Paso 2 de 5*\n\n` +
-            `Numero de casa o referencia para encontrarte?`
+            `📍 *Paso 2 de 5 — Referencia*\n\n` +
+            `¿Número de casa o referencia para encontrarte?`
         )
         return
     }
     if (paso === 'referencia') {
-        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, referencia: texto, paso_delivery: 'horario' } })
+        await actualizarSesion(numero, {
+            paso: 'datos_delivery', modo: 'bot',
+            datos: { ...sesion.datos, referencia: texto, paso_delivery: 'horario' }
+        })
         await enviarYGuardar(numero,
-            `🕐 *Paso 3 de 5*\n\n` +
-            `En que horario podes recibir la entrega?`
+            `🕐 *Paso 3 de 5 — Horario*\n\n` +
+            `¿En qué horario podés recibir la entrega?`
         )
         return
     }
     if (paso === 'horario') {
-        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, horario: texto, paso_delivery: 'contacto' } })
+        await actualizarSesion(numero, {
+            paso: 'datos_delivery', modo: 'bot',
+            datos: { ...sesion.datos, horario: texto, paso_delivery: 'contacto' }
+        })
         await enviarYGuardar(numero,
-            `👤 *Paso 4 de 5*\n\n` +
-            `Nombre y numero de quien recibe el pedido?`
+            `👤 *Paso 4 de 5 — Contacto*\n\n` +
+            `¿Nombre y número de quien recibe el pedido?`
         )
         return
     }
     if (paso === 'contacto') {
-        await actualizarSesion(numero, { paso: 'datos_delivery', modo: 'bot', datos: { ...sesion.datos, contacto_entrega: texto, paso_delivery: 'pago' } })
+        await actualizarSesion(numero, {
+            paso: 'datos_delivery', modo: 'bot',
+            datos: { ...sesion.datos, contacto_entrega: texto, paso_delivery: 'pago' }
+        })
         await enviarYGuardar(numero,
-            `💳 *Paso 5 de 5*\n\n` +
-            `Cual es tu metodo de pago?\n\n` +
+            `💳 *Paso 5 de 5 — Método de pago*\n\n` +
             `1. Efectivo\n` +
             `2. Transferencia bancaria\n\n` +
-            `_Por el momento no aceptamos tarjeta para envios a domicilio._`
+            `_Por el momento no aceptamos tarjeta para envíos a domicilio._`
         )
         return
     }
     if (paso === 'pago') {
         const t = texto.trim()
         if (t !== '1' && t !== '2') {
-            await enviarYGuardar(numero, `Por favor responde *1* para efectivo o *2* para transferencia.`)
+            await enviarYGuardar(numero, `Por favor respondé *1* para efectivo o *2* para transferencia.`)
             return
         }
         const metodoPago = t === '1' ? 'efectivo' : 'transferencia'
         const datos = { ...sesion.datos, metodo_pago: metodoPago, paso_delivery: null }
 
         if (t === '2') {
+            datos.esperando_comprobante = true
+            await actualizarSesion(numero, { paso: 'confirmando_pedido', modo: 'bot', datos })
             await enviarYGuardar(numero,
                 `🏦 *Datos para la transferencia*\n\n` +
-                `Banco: Itau\n` +
+                `Banco: Itaú\n` +
                 `Beneficiario: Osvaldo Sosa CI 1676634\n` +
                 `Cuenta: 025618408\n` +
                 `Alias: CI 1676634\n\n` +
-                `📸 *Envia el comprobante por aqui una vez realizada la transferencia.*\n\n` +
-                `Un agente verificara el pago y confirmara tu pedido en breve!`
+                `📸 *Enviá el comprobante por aquí una vez realizada la transferencia.*\n\n` +
+                `Un agente verificará el pago y confirmará tu pedido en breve.`
             )
-            datos.esperando_comprobante = true
-            await actualizarSesion(numero, { paso: 'confirmando_pedido', modo: 'bot', datos })
             await mostrarResumenFinal(numero, datos)
             return
         }
@@ -821,14 +1070,76 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
 }
 
 // ─────────────────────────────────────────────
-// REGISTRAR PEDIDO
+// RESUMEN FINAL
+// ─────────────────────────────────────────────
+async function mostrarResumenFinal(numero, datos) {
+    const carrito = await getCarrito(numero)
+    const { total } = calcularTotal(carrito, datos.costo_delivery || 0)
+
+    const modalidadTexto = datos.modalidad === 'delivery'
+        ? `🚚 Delivery a *${datos.zona_nombre}*`
+        : `🏪 Retiro en tienda`
+
+    const facturaTexto = datos.quiere_factura
+        ? `\n🧾 Factura: *${datos.razon_social}* — RUC/CI: ${datos.ruc_factura}`
+        : ''
+
+    const deliveryTexto = datos.modalidad === 'delivery'
+        ? `\n📍 Dirección: ${datos.ubicacion}` +
+          `\n🏠 Referencia: ${datos.referencia || '—'}` +
+          `\n🕐 Horario: ${datos.horario || '—'}` +
+          `\n👤 Contacto: ${datos.contacto_entrega || '—'}` +
+          `\n💳 Pago: *${datos.metodo_pago === 'transferencia' ? 'Transferencia' : 'Efectivo'}*`
+        : ''
+
+    const comprobanteTexto = datos.esperando_comprobante
+        ? `\n\n⚠️ *Recordá enviar el comprobante de transferencia para confirmar tu pedido.*`
+        : ''
+
+    await enviarYGuardar(numero,
+        `📋 *Resumen de tu pedido*\n\n` +
+        `${formatearCarrito(carrito, datos.zona_nombre, datos.costo_delivery)}\n\n` +
+        `${modalidadTexto}${deliveryTexto}${facturaTexto}\n\n` +
+        `💰 *Total: Gs. ${total.toLocaleString('es-PY')}*` +
+        comprobanteTexto +
+        `\n\n¿Confirmás tu pedido?\n\n` +
+        `1. Sí, confirmar\n` +
+        `2. No, cancelar`
+    )
+}
+
+// ─────────────────────────────────────────────
+// CONFIRMAR PEDIDO
+// ─────────────────────────────────────────────
+async function manejarConfirmandoPedido(numero, texto, sesion) {
+    const t = texto.trim()
+
+    if (t === '1') {
+        await registrarPedido(numero, sesion)
+        return
+    }
+    if (t === '2') {
+        await limpiarCarrito(numero)
+        await reiniciarSesion(numero)
+        await enviarYGuardar(numero,
+            `❌ Pedido cancelado.\n\n` +
+            `Si querés hacer un nuevo pedido, escribí el producto que buscás 🐾`
+        )
+        return
+    }
+
+    await enviarYGuardar(numero, `Respondé *1* para confirmar o *2* para cancelar.`)
+}
+
+// ─────────────────────────────────────────────
+// REGISTRAR PEDIDO (OP)
 // ─────────────────────────────────────────────
 async function registrarPedido(numero, sesion) {
     const client = await db.pool.connect()
     try {
         const carrito = await getCarrito(numero)
         if (!carrito.length) {
-            await enviarYGuardar(numero, `Tu carrito esta vacio. Empieza de nuevo escribiendo un producto.`)
+            await enviarYGuardar(numero, `Tu carrito está vacío. Empezá de nuevo escribiendo un producto.`)
             return
         }
 
@@ -839,11 +1150,11 @@ async function registrarPedido(numero, sesion) {
 
         if (!stockCheck.ok) {
             const errMsg = stockCheck.errores.map(e =>
-                `- *${e.nombre}*: pediste ${e.pedido}, solo hay ${e.disponible} disponibles`
+                `— *${e.nombre}*: pediste ${e.pedido}, solo hay ${e.disponible} disponibles`
             ).join('\n')
             await enviarYGuardar(numero,
-                `Hay un problema con el stock:\n\n${errMsg}\n\n` +
-                `Por favor modifica tu carrito:\n` +
+                `⚠️ Hay un problema con el stock:\n\n${errMsg}\n\n` +
+                `Por favor modificá tu carrito:\n` +
                 `1. Ver carrito\n` +
                 `2. Hablar con un agente`
             )
@@ -870,21 +1181,19 @@ async function registrarPedido(numero, sesion) {
             const nuevo = await client.query(
                 `INSERT INTO clientes (nombre, telefono, origen, direccion, ciudad)
                  VALUES ($1, $2, 'bot', $3, $4) RETURNING id`,
-                [`Cliente ${numero}`, numero,
-                 sesion.datos.ubicacion || null,
-                 sesion.datos.zona_nombre || null]
+                [`Cliente ${numero}`, numero, sesion.datos.ubicacion || null, sesion.datos.zona_nombre || null]
             )
             clienteId = nuevo.rows[0].id
         }
 
-        // Obtener tiempo de reserva
+        // Tiempo de reserva desde configuración
         const configRes = await client.query(
             `SELECT valor FROM configuracion WHERE clave = 'op_tiempo_reserva_horas'`
         )
         const horas = parseInt(configRes.rows[0]?.valor || '2')
         const expira_at = new Date(Date.now() + horas * 60 * 60 * 1000)
 
-        // Crear orden de pedido
+        // Crear OP
         const orden = await client.query(
             `INSERT INTO ordenes_pedido (
                 canal, cliente_id, cliente_numero,
@@ -916,7 +1225,7 @@ async function registrarPedido(numero, sesion) {
         const ordenId = orden.rows[0].id
         const numeroOrden = orden.rows[0].numero
 
-        // Insertar items
+        // Items
         for (const item of carrito) {
             await client.query(
                 `INSERT INTO ordenes_pedido_items (orden_id, presentacion_id, cantidad, precio_unitario, precio_total)
@@ -926,10 +1235,19 @@ async function registrarPedido(numero, sesion) {
         }
 
         await client.query('COMMIT')
+        
+        await limpiarCarrito(numero)
 
-        // Limpiar carrito y sesión — las reservas se mantienen hasta que expire la OP
-        await limpiarCarrito(numero)  // solo limpia el carrito de la sesión
-        await reiniciarSesion(numero) // reinicia la sesión pero NO toca las reservas
+        if (sesion.datos.esperando_comprobante) {
+            // No reiniciar — mantener sesión esperando comprobante
+            await actualizarSesion(numero, {
+                paso: 'inicio',
+                modo: 'bot',
+                datos: { esperando_comprobante: true }
+            })
+        } else {
+            await reiniciarSesion(numero)
+        }
 
         if (clienteId) recalcularStats(clienteId).catch(() => {})
 
@@ -940,20 +1258,29 @@ async function registrarPedido(numero, sesion) {
 
         const abierto = await estaAbierto()
         const mensajeCierre = !abierto
-            ? `\n\nRecorda que estamos fuera de horario. Tu orden sera procesada cuando abramos 🐾`
+            ? `\n\n⏰ _Estamos fuera de horario. Tu orden será procesada cuando abramos._`
+            : ''
+
+        const mensajeComprobante = sesion.datos.esperando_comprobante
+            ? `\n\n📸 _No olvides enviar el comprobante de transferencia para confirmar tu pedido._`
             : ''
 
         await enviarYGuardar(numero,
-            `Tu orden fue registrada! 🐾\n\n` +
-            `*Numero de orden: ${numeroOrden}*\n` +
+            `✅ *¡Tu orden fue registrada!* 🐾\n\n` +
+            `📋 *Número de orden: ${numeroOrden}*\n` +
             `${modalidadTexto}\n` +
-            `Total: Gs. ${total.toLocaleString('es-PY')}\n\n` +
-            `Un agente confirmara tu pedido pronto. Gracias por elegirnos! 😊${mensajeCierre}`
+            `💰 Total: Gs. ${total.toLocaleString('es-PY')}` +
+            mensajeComprobante +
+            `\n\nUn agente confirmará tu pedido pronto. ¡Gracias por elegirnos! 😊` +
+            mensajeCierre
         )
 
     } catch (error) {
         await client.query('ROLLBACK')
-        await enviarYGuardar(numero, `Hubo un error al registrar tu pedido 😔\nPor favor escribi *agente* para que te ayudemos.`)
+        await enviarYGuardar(numero,
+            `😔 Hubo un error al registrar tu pedido.\n` +
+            `Por favor escribí *agente* para que te ayudemos.`
+        )
         throw error
     } finally {
         client.release()

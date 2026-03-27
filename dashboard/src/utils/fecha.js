@@ -29,3 +29,12 @@ export function formatearSoloHora(fecha) {
         minute: '2-digit'
     })
 }
+
+export function formatearHora(fecha) {
+    if (!fecha) return '—'
+    return new Date(fecha).toLocaleTimeString('es-PY', {
+        timeZone: 'America/Asuncion',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
