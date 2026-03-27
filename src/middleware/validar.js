@@ -13,7 +13,7 @@ function validarVentaPresencial(req, res, next) {
     if (!['efectivo', 'transferencia', 'tarjeta'].includes(metodo_pago)) {
         return res.status(400).json({ error: 'Método de pago inválido' })
     }
-    const canalesValidos = ['en_tienda', 'whatsapp_bot', 'whatsapp', 'whatsapp_delivery', 'pagina_web', 'presencial', 'agente_delivery' ,'otro']
+    const canalesValidos = ['en_tienda', 'whatsapp_bot', 'whatsapp', 'whatsapp_delivery', 'pagina_web', 'presencial', 'agente_delivery', 'agente_presencial', 'otro']
     if (canal && !canalesValidos.includes(canal)) {
         return res.status(400).json({ error: 'Canal inválido' })
     }
