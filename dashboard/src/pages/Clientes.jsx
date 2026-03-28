@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getClientes, getCliente, crearCliente, editarCliente } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import api from '../services/api'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 // ANTES del function Clientes() — componente separado
@@ -69,8 +70,15 @@ function Clientes() {
     const [modalNuevo, setModalNuevo] = useState(false)
     const [modalEditar, setModalEditar] = useState(false)
     const [modalConfirmar, setModalConfirmar] = useState(null)
+    const [cuentaCorriente, setCuentaCorriente] = useState(null)
+    const [cargandoCC, setCargandoCC] = useState(false)
+    const [modalPagoCC, setModalPagoCC] = useState(null)
+    const [formPago, setFormPago] = useState({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', tipo_pago: 'parcial', notas: '' })
     const [form, setForm] = useState({ tipo: 'persona', nombre: '', ruc: '', telefono: '', email: '', direccion: '', ciudad: '', notas: '' })
     const { darkMode } = useApp()
+    const [pestanaHistorial, setPestanaHistorial] = useState('historial') // 'historial' | 'cuenta_corriente'
+    const [paginaHistorial, setPaginaHistorial] = useState(1)
+    const POR_PAGINA_HISTORIAL = 10
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -116,10 +124,39 @@ function Clientes() {
             setCargandoPerfil(true)
             const datos = await getCliente(id)
             setClienteSeleccionado(datos)
+            cargarCuentaCorriente(id)
+            setPaginaHistorial(1)
+            setPestanaHistorial('historial')
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo cargar el perfil.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargandoPerfil(false) }
     }
+
+    async function cargarCuentaCorriente(clienteId) {
+            try {
+                setCargandoCC(true)
+                const res = await api.get(`/clientes/${clienteId}/cuenta-corriente`)
+                setCuentaCorriente(res.data)
+            } catch (err) {
+                setCuentaCorriente(null)
+            } finally { setCargandoCC(false) }
+        }
+
+        async function handleRegistrarPago() {
+            if (!formPago.monto || !modalPagoCC) return
+            try {
+                await api.post(`/clientes/${clienteSeleccionado.id}/cuenta-corriente/pagos`, {
+                    venta_id: modalPagoCC.id,
+                    ...formPago,
+                    monto: parseInt(formPago.monto)
+                })
+                setModalPagoCC(null)
+                setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', tipo_pago: 'parcial', notas: '' })
+                await cargarCuentaCorriente(clienteSeleccionado.id)
+            } catch (err) {
+                setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar el pago.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            }
+        }
 
     async function handleCrearCliente() {
         if (!form.nombre.trim()) return
@@ -438,38 +475,138 @@ function Clientes() {
                                             </div>
                                         )}
 
-                                        {/* Historial */}
+                                        {/* Historial + Cuenta corriente */}
                                         <div style={{ background: s.surface, borderRadius: '14px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                            <div style={{ padding: '14px 18px', borderBottom: `1px solid ${s.borderLight}`, background: s.surfaceLow }}>
-                                                <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Historial de compras</p>
+                                            
+                                            {/* Pestañas */}
+                                            <div style={{ display: 'flex', borderBottom: `1px solid ${s.borderLight}`, background: s.surfaceLow }}>
+                                                <button onClick={() => setPestanaHistorial('historial')}
+                                                    style={{ padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: pestanaHistorial === 'historial' ? '700' : '500', color: pestanaHistorial === 'historial' ? s.text : s.textMuted, borderBottom: `2px solid ${pestanaHistorial === 'historial' ? '#1a1a2e' : 'transparent'}`, transition: 'all 0.15s' }}>
+                                                    🛒 Historial de compras
+                                                </button>
+                                                <button onClick={() => setPestanaHistorial('cuenta_corriente')}
+                                                    style={{ padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: pestanaHistorial === 'cuenta_corriente' ? '700' : '500', color: pestanaHistorial === 'cuenta_corriente' ? s.text : s.textMuted, borderBottom: `2px solid ${pestanaHistorial === 'cuenta_corriente' ? '#f59e0b' : 'transparent'}`, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    📋 Cuenta corriente
+                                                    {cuentaCorriente?.resumen?.deuda_total > 0 && (
+                                                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '20px', background: '#fef3c7', color: '#92400e' }}>
+                                                            {formatearGs(cuentaCorriente.resumen.deuda_total)}
+                                                        </span>
+                                                    )}
+                                                </button>
                                             </div>
-                                            {!clienteSeleccionado.ventas?.length ? (
-                                                <p style={{ padding: '20px', textAlign: 'center', color: s.textMuted, fontSize: '13px' }}>Sin compras registradas.</p>
-                                            ) : (
-                                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                    <thead>
-                                                        <tr style={{ background: s.tableTh }}>
-                                                            {['Fecha', 'Producto', 'Precio', 'Canal', 'Estado'].map((h, i) => (
-                                                                <th key={i} style={{ padding: '9px 14px', textAlign: 'left', fontSize: '9px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                                                            ))}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {clienteSeleccionado.ventas.map(v => (
-                                                            <tr key={v.id} style={{ borderTop: `1px solid ${s.borderLight}` }}
-                                                                onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{formatearFecha(v.created_at)}</td>
-                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{v.marca_nombre && `${v.marca_nombre} — `}{v.producto_nombre} {v.presentacion_nombre}</td>
-                                                                <td style={{ padding: '10px 14px', fontSize: '11px', fontWeight: '600', color: s.text }}>Gs. {parseInt(v.precio).toLocaleString()}</td>
-                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.textMuted }}>{v.canal}</td>
-                                                                <td style={{ padding: '10px 14px' }}>
-                                                                    <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '9px', fontWeight: '700', color: 'white', background: colorEstado(v.estado) }}>{v.estado}</span>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+
+                                            {/* Pestaña Historial */}
+                                            {pestanaHistorial === 'historial' && (
+                                                <>
+                                                    {!clienteSeleccionado.ventas?.length ? (
+                                                        <p style={{ padding: '20px', textAlign: 'center', color: s.textMuted, fontSize: '13px' }}>Sin compras registradas.</p>
+                                                    ) : (
+                                                        <>
+                                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                                <thead>
+                                                                    <tr style={{ background: s.tableTh }}>
+                                                                        {['Fecha', 'Producto', 'Precio', 'Canal', 'Estado'].map((h, i) => (
+                                                                            <th key={i} style={{ padding: '9px 14px', textAlign: 'left', fontSize: '9px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                                                        ))}
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {clienteSeleccionado.ventas
+                                                                        .slice((paginaHistorial - 1) * POR_PAGINA_HISTORIAL, paginaHistorial * POR_PAGINA_HISTORIAL)
+                                                                        .map(v => (
+                                                                        <tr key={v.id} style={{ borderTop: `1px solid ${s.borderLight}` }}
+                                                                            onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
+                                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{formatearFecha(v.created_at)}</td>
+                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{v.marca_nombre && `${v.marca_nombre} — `}{v.producto_nombre} {v.presentacion_nombre}</td>
+                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', fontWeight: '600', color: s.text }}>Gs. {parseInt(v.precio).toLocaleString()}</td>
+                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', color: s.textMuted }}>{v.canal}</td>
+                                                                            <td style={{ padding: '10px 14px' }}>
+                                                                                <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '9px', fontWeight: '700', color: 'white', background: colorEstado(v.estado) }}>{v.estado}</span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                            {/* Paginación historial */}
+                                                            {clienteSeleccionado.ventas.length > POR_PAGINA_HISTORIAL && (
+                                                                <div style={{ padding: '12px 16px', borderTop: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: s.surfaceLow }}>
+                                                                    <p style={{ fontSize: '11px', color: s.textFaint }}>
+                                                                        {(paginaHistorial - 1) * POR_PAGINA_HISTORIAL + 1}–{Math.min(paginaHistorial * POR_PAGINA_HISTORIAL, clienteSeleccionado.ventas.length)} de {clienteSeleccionado.ventas.length}
+                                                                    </p>
+                                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                                        <button onClick={() => setPaginaHistorial(p => Math.max(1, p - 1))} disabled={paginaHistorial === 1}
+                                                                            style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${s.border}`, background: 'transparent', color: paginaHistorial === 1 ? s.textFaint : s.text, cursor: paginaHistorial === 1 ? 'not-allowed' : 'pointer', fontSize: '12px' }}>
+                                                                            ← Ant
+                                                                        </button>
+                                                                        <button onClick={() => setPaginaHistorial(p => Math.min(Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL), p + 1))}
+                                                                            disabled={paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL)}
+                                                                            style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${s.border}`, background: 'transparent', color: paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL) ? s.textFaint : s.text, cursor: paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL) ? 'not-allowed' : 'pointer', fontSize: '12px' }}>
+                                                                            Sig →
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* Pestaña Cuenta corriente */}
+                                            {pestanaHistorial === 'cuenta_corriente' && (
+                                                <>
+                                                    {cargandoCC ? (
+                                                        <p style={{ padding: '20px', textAlign: 'center', color: s.textMuted }}>Cargando...</p>
+                                                    ) : !cuentaCorriente?.ventas?.filter(v => v.saldo > 0).length ? (
+                                                        <div style={{ padding: '32px', textAlign: 'center', color: s.textMuted }}>
+                                                            <p style={{ fontSize: '24px', marginBottom: '8px' }}>✅</p>
+                                                            <p style={{ fontSize: '13px' }}>No hay deudas pendientes.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div style={{ padding: '12px 16px', background: darkMode ? 'rgba(245,158,11,0.08)' : '#fffbeb', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <span style={{ fontSize: '11px', color: '#92400e', fontWeight: '600' }}>{cuentaCorriente.ventas.filter(v => v.saldo > 0).length} créditos pendientes</span>
+                                                                <span style={{ fontSize: '14px', fontWeight: '800', color: '#f59e0b' }}>Deuda total: {formatearGs(cuentaCorriente.resumen?.deuda_total)}</span>
+                                                            </div>
+                                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                                <thead>
+                                                                    <tr style={{ background: s.surfaceLow }}>
+                                                                        {['Fecha', 'Producto', 'Total', 'Saldo', 'Vence', ''].map(h => (
+                                                                            <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: '9px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                                                        ))}
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {cuentaCorriente.ventas.filter(v => v.saldo > 0).map(v => {
+                                                                        const vencido = v.fecha_vencimiento_credito && new Date(v.fecha_vencimiento_credito) < new Date()
+                                                                        return (
+                                                                            <tr key={v.id} style={{ borderTop: `1px solid ${s.borderLight}` }}
+                                                                                onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
+                                                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.textMuted }}>{formatearFecha(v.created_at)}</td>
+                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{v.producto_nombre} {v.presentacion_nombre}</td>
+                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{formatearGs(v.precio)}</td>
+                                                                                <td style={{ padding: '10px 14px' }}>
+                                                                                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#f59e0b' }}>{formatearGs(v.saldo)}</span>
+                                                                                </td>
+                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: vencido ? '#ef4444' : s.textMuted }}>
+                                                                                    {v.fecha_vencimiento_credito ? new Date(v.fecha_vencimiento_credito).toLocaleDateString('es-PY') : '—'}
+                                                                                    {vencido && <span style={{ marginLeft: '4px' }}>⚠️</span>}
+                                                                                </td>
+                                                                                <td style={{ padding: '10px 14px' }}>
+                                                                                    <button onClick={() => setModalPagoCC(v)}
+                                                                                        style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>
+                                                                                        Pagar
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        )
+                                                                    })}
+                                                                </tbody>
+                                                            </table>
+                                                        </>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -603,6 +740,47 @@ function Clientes() {
                                 {filtroActividad !== 'todos' && ` · filtro: ${filtroActividad}`}
                                 {buscar && ` · búsqueda: "${buscar}"`}
                             </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modalPagoCC && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Registrar pago</h3>
+                            <button onClick={() => setModalPagoCC(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                        </div>
+                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                            <p style={{ fontSize: '12px', color: s.textMuted }}>Venta #{modalPagoCC.id} — {modalPagoCC.producto_nombre}</p>
+                            <p style={{ fontSize: '14px', fontWeight: '800', color: '#f59e0b', marginTop: '4px' }}>Saldo: {formatearGs(modalPagoCC.saldo)}</p>
+                        </div>
+                        <label style={labelStyle}>N° de recibo</label>
+                        <input value={formPago.numero_recibo} onChange={e => setFormPago({ ...formPago, numero_recibo: e.target.value })} placeholder="Opcional" style={inputStyle} />
+                        <label style={labelStyle}>Monto *</label>
+                        <input type="number" value={formPago.monto} onChange={e => setFormPago({ ...formPago, monto: e.target.value })} placeholder="Gs." style={inputStyle} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                            <div>
+                                <label style={labelStyle}>Método de pago</label>
+                                <select value={formPago.metodo_pago} onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="transferencia">Transferencia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Tipo de pago</label>
+                                <select value={formPago.tipo_pago} onChange={e => setFormPago({ ...formPago, tipo_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                    <option value="parcial">Parcial</option>
+                                    <option value="total">Total</option>
+                                </select>
+                            </div>
+                        </div>
+                        <label style={labelStyle}>Notas</label>
+                        <input value={formPago.notas} onChange={e => setFormPago({ ...formPago, notas: e.target.value })} placeholder="Opcional" style={inputStyle} />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setModalPagoCC(null)} style={btnSecundario}>Cancelar</button>
+                            <button onClick={handleRegistrarPago} style={btnPrimario}>Registrar pago</button>
                         </div>
                     </div>
                 </div>

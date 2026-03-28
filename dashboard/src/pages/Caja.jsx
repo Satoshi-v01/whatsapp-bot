@@ -8,6 +8,7 @@ import { getZonas } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import api from '../services/api'
+
 import { formatearFecha } from '../utils/fecha'
 
 function Caja() {
@@ -15,6 +16,8 @@ function Caja() {
     const busquedaProductoRef = useRef(null)
     const { darkMode } = useApp()
     const [pestana, setPestana] = useState('venta') // 'venta' | 'cierre'
+    const [tipoVenta, setTipoVenta] = useState('contado') // 'contado' | 'credito'
+    const [plazoDias, setPlazoDias] = useState(30)
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -314,6 +317,8 @@ function Caja() {
         setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial('')
         setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setOpOrigen(null)
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
+        setTipoVenta('contado')
+        setPlazoDias(30)
     }
 
     async function handleConfirmarVenta() {
@@ -327,6 +332,11 @@ function Caja() {
         }
         if (metodoPago === 'tarjeta' && !subtipoPago) {
             setModalConfirmar({ titulo: 'Falta el tipo de tarjeta', mensaje: 'Selecciona si es débito o crédito.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            return
+        }
+
+        if (tipoVenta === 'credito' && !clienteSeleccionado) {
+            setModalConfirmar({ titulo: 'Cliente requerido', mensaje: 'Para venta a crédito debes seleccionar un cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
 
@@ -359,6 +369,8 @@ function Caja() {
                             ruc_factura: rucFactura || null,
                             razon_social: razonSocial || null,
                             canal: canalFinal,
+                            tipo_venta: tipoVenta,
+                            plazo_dias: tipoVenta === 'credito' ? plazoDias : null,
                             costo_delivery: i === 0 ? costoDelivery : 0,
                             zona_delivery: i === 0 ? (formDelivery.zona_nombre || null) : null
                         })
@@ -696,6 +708,47 @@ function Caja() {
                             )}
                         </section>
 
+                        {/* Condición de venta */}
+                            <section style={{ marginBottom: '24px' }}>
+                                <h3 style={{ fontSize: '13px', fontWeight: '700', color: s.text, marginBottom: '12px' }}>Condición de venta</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: tipoVenta === 'credito' ? '12px' : '0' }}>
+                                    {[{ val: 'contado', label: 'Contado', icono: '💵' }, { val: 'credito', label: 'Crédito', icono: '📋' }].map(t => (
+                                        <button key={t.val} onClick={() => setTipoVenta(t.val)}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '12px', border: `${tipoVenta === t.val ? 2 : 1}px solid ${tipoVenta === t.val ? '#1a1a2e' : s.border}`, background: tipoVenta === t.val ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: tipoVenta === t.val ? '700' : '500', color: tipoVenta === t.val ? s.text : s.textMuted, transition: 'all 0.15s' }}>
+                                            <span>{t.icono}</span> {t.label}
+                                            {tipoVenta === t.val && <span style={{ fontSize: '11px' }}>✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {tipoVenta === 'credito' && (
+                                    <div>
+                                        <label style={labelStyle}>Plazo en días</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '8px' }}>
+                                            {[15, 30, 60, 90].map(d => (
+                                                <button key={d} onClick={() => setPlazoDias(d)}
+                                                    style={{ padding: '8px', borderRadius: '8px', border: `1px solid ${plazoDias === d ? '#3b82f6' : s.border}`, background: plazoDias === d ? (darkMode ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent', color: plazoDias === d ? '#3b82f6' : s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: plazoDias === d ? '700' : '500' }}>
+                                                    {d}d
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <input type="number" placeholder="O ingresá los días manualmente" value={plazoDias}
+                                            onChange={e => setPlazoDias(parseInt(e.target.value) || 0)}
+                                            style={{ ...inputStyle, marginBottom: 0 }} />
+                                        {clienteSeleccionado && (
+                                            <p style={{ fontSize: '11px', color: '#f59e0b', marginTop: '6px' }}>
+                                                ⚠️ Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
+                                            </p>
+                                        )}
+                                        {!clienteSeleccionado && (
+                                            <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>
+                                                ⚠️ Debes seleccionar un cliente para venta a crédito
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </section>
+
                         {/* Resumen */}
                         <section style={{ marginTop: 'auto', background: '#0f172a', borderRadius: '16px', padding: '24px', color: 'white', boxShadow: '0 8px 32px rgba(15,23,42,0.4)' }}>
                             <p style={{ fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Resumen</p>
@@ -743,6 +796,12 @@ function Caja() {
                                     {metodoPago === 'tarjeta' && subtipoPago && (
                                         <div style={{ background: '#1e293b', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#93c5fd' }}>
                                             💳 Tarjeta {subtipoPago === 'debito' ? 'Débito' : 'Crédito'}
+                                        </div>
+                                    )}
+
+                                    {tipoVenta === 'credito' && (
+                                        <div style={{ background: '#1e293b', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#fbbf24' }}>
+                                            📋 Crédito — {plazoDias} días · Vence: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
                                         </div>
                                     )}
                                     <button onClick={handleConfirmarVenta}

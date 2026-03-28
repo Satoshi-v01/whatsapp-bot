@@ -270,6 +270,16 @@ function Ventas() {
                                                         {venta.metodo_pago || '—'}
                                                     </span>
                                                 </td>
+                                                <td style={{ padding: '16px', textAlign: 'center' }}>
+                                                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colMetodo.bg, color: colMetodo.color, textTransform: 'uppercase' }}>
+                                                        {venta.metodo_pago || '—'}
+                                                    </span>
+                                                    {venta.tipo_venta === 'credito' && (
+                                                        <span style={{ display: 'block', marginTop: '4px', padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: '#fef3c7', color: '#92400e' }}>
+                                                            📋 Crédito
+                                                        </span>
+                                                    )}
+                                                </td>
                                                 <td style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: s.textMuted }}>{labelCanal(venta.canal)}</td>
                                                 <td style={{ padding: '16px', textAlign: 'center' }}>
                                                     <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
@@ -381,6 +391,20 @@ function Ventas() {
                                     <span style={{ fontSize: '13px', color: s.textMuted }}>Método de pago</span>
                                     <span style={{ fontSize: '13px', fontWeight: '500', color: s.text, textTransform: 'capitalize' }}>{ventaDetalle.metodo_pago || '—'}</span>
                                 </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '13px', color: s.textMuted }}>Condición</span>
+                                    <span style={{ fontSize: '13px', fontWeight: '600', color: venta.tipo_venta === 'credito' ? '#f59e0b' : '#10b981' }}>
+                                        {ventaDetalle.tipo_venta === 'credito' ? `📋 Crédito (${ventaDetalle.plazo_dias}d)` : '💵 Contado'}
+                                    </span>
+                                </div>
+                                {ventaDetalle.tipo_venta === 'credito' && ventaDetalle.fecha_vencimiento_credito && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ fontSize: '13px', color: s.textMuted }}>Vence</span>
+                                        <span style={{ fontSize: '13px', fontWeight: '600', color: new Date(ventaDetalle.fecha_vencimiento_credito) < new Date() ? '#ef4444' : '#f59e0b' }}>
+                                            {new Date(ventaDetalle.fecha_vencimiento_credito).toLocaleDateString('es-PY')}
+                                        </span>
+                                    </div>
+                                )}
                                 {ventaDetalle.quiere_factura && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span style={{ fontSize: '13px', color: s.textMuted }}>RUC factura</span>
