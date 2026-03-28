@@ -15,6 +15,7 @@ import Proveedores from './pages/Proveedores'
 import Caja from './pages/Caja'
 import Configuracion from './pages/Configuracion'
 import Repartidor from './pages/Repartidor'
+import Auditoria from './pages/Auditoria'
 import './App.css'
 
 export const AppContext = createContext({})
@@ -140,6 +141,9 @@ function App() {
                                     } />
                                     <Route path="/ordenes" element={
                                         <RutaProtegida modulo="ordenes" accion="ver"><Ordenes /></RutaProtegida>
+                                    } />
+                                    <Route path="/auditoria" element={
+                                        usuario.rol === 'admin' ? <Auditoria /> : <Navigate to="/" replace />
                                     } />
                                 </>
                             )}
