@@ -32,8 +32,9 @@ function Sidebar() {
     { to: '/proveedores', icono: '🏭', label: 'Proveedores', modulo: 'proveedores' },
     { to: '/clientes', icono: '👥', label: 'Clientes', modulo: 'clientes' },
     { to: '/reportes', icono: '📊', label: 'Reportes', modulo: 'reportes' },
-    { to: '/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
     { to: '/auditoria', icono: '📋', label: 'Auditoría', modulo: 'auditoria', soloAdmin: true },
+    { to: '/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
+    
     
 ]
 

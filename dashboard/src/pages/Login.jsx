@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
+import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Login({ onLogin }) {
     const [email, setEmail] = useState('')
@@ -36,7 +37,7 @@ function Login({ onLogin }) {
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            placeholder="admin@sosabulls.com"
+                            placeholder="usuario@sosabulls.com"
                             required
                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', boxSizing: 'border-box' }}
                         />

@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { registrarLog } = require('../middleware/auditoria')
 
 router.post('/login', async (req, res) => {
     try {
@@ -37,19 +38,7 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         )
-
-          // deberia estar?
-        registrarLog({
-            usuario_id: usuario.id,
-            usuario_nombre: usuario.nombre,
-            accion: 'login',
-            modulo: 'sistema',
-            entidad: 'usuario',
-            entidad_id: usuario.id,
-            descripcion: `Inicio de sesión: ${usuario.email}`,
-            ip: req.ip
-        }).catch(() => {})
-
+     
         res.json({
             token,
             usuario: {
@@ -61,6 +50,18 @@ router.post('/login', async (req, res) => {
                 permisos: usuario.rol_permisos || {}
             }
         })
+
+        
+        registrarLog({
+            usuario_id: usuario.id,
+            usuario_nombre: usuario.nombre,
+            accion: 'login',
+            modulo: 'sistema',
+            entidad: 'usuario',
+            entidad_id: usuario.id,
+            descripcion: `Inicio de sesión: ${usuario.email}`,
+            ip: req.ip
+        }).catch(() => {})
 
     } catch (error) {
         manejarError(res, error)

@@ -2,7 +2,6 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
-const XLSX = require('xlsx')
 
 router.get('/', async (req, res) => {
     try {
