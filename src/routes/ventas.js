@@ -329,7 +329,9 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             agente_id,
             canal,
             es_de_whatsapp,
-            sesion_numero
+            sesion_numero,
+            tipo_venta,
+            plazo_dias,
         } = req.body
 
         await client.query('BEGIN')
@@ -338,6 +340,11 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             `SELECT stock, nombre FROM presentaciones WHERE id = $1 FOR UPDATE`,
             [presentacion_id]
         )
+
+        const fecha_vencimiento_credito = tipo_venta === 'credito' && plazo_dias
+            ? new Date(Date.now() + parseInt(plazo_dias) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+            : null
+
 
         if (stock.rows.length === 0) {
             await client.query('ROLLBACK')
@@ -350,14 +357,18 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
         }
 
         const canalFinal = canal || 'en_tienda'
+        const estadoVenta = (tipo_venta === 'credito' || canalFinal === 'agente_delivery' || canalFinal === 'whatsapp_delivery')
+            ? 'pendiente_pago'
+            : 'pagado'
 
         const venta = await client.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id)
-            VALUES ($1, $2, $3, $4, $5, 'pagado', $6, $7, $8, $9, $10, $11)
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING *`,
-            [cliente_id || null, presentacion_id, cantidad, precio, canalFinal,
+            [cliente_id || null, presentacion_id, cantidad, precio, canalFinal, estadoVenta,
             metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
-            razon_social || null, agente_id || null]
+            razon_social || null, agente_id || null,
+            tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito]
         )
 
         

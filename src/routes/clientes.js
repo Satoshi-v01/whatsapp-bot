@@ -190,5 +190,110 @@ router.get('/buscar/autocomplete', async (req, res) => {
     }
 })
 
+// Cuenta corriente — ventas a crédito pendientes de un cliente
+router.get('/:id/cuenta-corriente', async (req, res) => {
+    try {
+        const { id } = req.params
+
+        const ventas = await db.query(
+            `SELECT v.*,
+                pr.nombre as presentacion_nombre,
+                p.nombre as producto_nombre,
+                m.nombre as marca_nombre,
+                COALESCE(
+                    json_agg(pcc ORDER BY pcc.created_at DESC) FILTER (WHERE pcc.id IS NOT NULL),
+                    '[]'
+                ) as pagos,
+                v.precio - COALESCE(SUM(pcc.monto), 0) as saldo
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             LEFT JOIN pagos_cuenta_corriente pcc ON pcc.venta_id = v.id
+             WHERE v.cliente_id = $1
+             AND v.tipo_venta = 'credito'
+             AND v.estado != 'cancelado'
+             GROUP BY v.id, pr.nombre, p.nombre, m.nombre
+             ORDER BY v.created_at DESC`,
+            [id]
+        )
+
+        const resumen = await db.query(
+            `SELECT
+                COUNT(*) as total_creditos,
+                COALESCE(SUM(v.precio), 0) as total_facturado,
+                COALESCE(SUM(v.precio) - COALESCE(SUM(pcc.monto), 0), 0) as deuda_total
+             FROM ventas v
+             LEFT JOIN pagos_cuenta_corriente pcc ON pcc.venta_id = v.id
+             WHERE v.cliente_id = $1
+             AND v.tipo_venta = 'credito'
+             AND v.estado != 'cancelado'`,
+            [id]
+        )
+
+        res.json({ ventas: ventas.rows, resumen: resumen.rows[0] })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Registrar pago cuenta corriente
+router.post('/:id/cuenta-corriente/pagos', async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { id } = req.params
+        const { venta_id, numero_recibo, monto, metodo_pago, fecha_pago, tipo_pago, notas } = req.body
+
+        if (!venta_id) return res.status(400).json({ error: 'venta_id requerido' })
+        if (!monto || monto <= 0) return res.status(400).json({ error: 'Monto inválido' })
+        if (!['efectivo', 'transferencia'].includes(metodo_pago)) return res.status(400).json({ error: 'Método de pago inválido' })
+        if (!['parcial', 'total'].includes(tipo_pago)) return res.status(400).json({ error: 'Tipo de pago inválido' })
+
+        await client.query('BEGIN')
+
+        // Verificar saldo disponible
+        const saldoRes = await client.query(
+            `SELECT v.precio - COALESCE(SUM(pcc.monto), 0) as saldo
+             FROM ventas v
+             LEFT JOIN pagos_cuenta_corriente pcc ON pcc.venta_id = v.id
+             WHERE v.id = $1
+             GROUP BY v.precio`,
+            [venta_id]
+        )
+
+        const saldo = parseInt(saldoRes.rows[0]?.saldo || 0)
+        if (monto > saldo) {
+            await client.query('ROLLBACK')
+            return res.status(400).json({ error: `Monto supera el saldo. Saldo: Gs. ${saldo.toLocaleString()}` })
+        }
+
+        const pago = await client.query(
+            `INSERT INTO pagos_cuenta_corriente (venta_id, cliente_id, numero_recibo, monto, metodo_pago, fecha_pago, tipo_pago, notas)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [venta_id, id, numero_recibo || null, monto, metodo_pago, fecha_pago || new Date().toISOString().slice(0, 10), tipo_pago, notas || null]
+        )
+
+        // Si es pago total o saldo queda en 0, marcar venta como pagada
+        const nuevoSaldo = saldo - monto
+        if (nuevoSaldo <= 0) {
+            await client.query(
+                `UPDATE ventas SET estado = 'pagado' WHERE id = $1`,
+                [venta_id]
+            )
+        }
+
+        await client.query('COMMIT')
+
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'clientes', entidad: 'pago_credito', entidad_id: pago.rows[0].id, descripcion: `Pago cuenta corriente: cliente #${id} — Gs. ${monto.toLocaleString()} — Saldo restante: Gs. ${nuevoSaldo.toLocaleString()}`, dato_nuevo: pago.rows[0], ip: req.ip }).catch(() => {})
+
+        res.status(201).json({ ok: true, pago: pago.rows[0], nuevo_saldo: nuevoSaldo })
+    } catch (error) {
+        await client.query('ROLLBACK')
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
 module.exports = router
 module.exports.recalcularStats = recalcularStats
