@@ -5,6 +5,7 @@ const { validarVentaPresencial, validarEstado, validarId } = require('../middlew
 const { recalcularStats } = require('./clientes')
 const { manejarError } = require('../middleware/validar')
 const { descontarStockFEFO } = require('../services/stock')
+const { registrarLog } = require('../middleware/auditoria')
 
 
 // 1. Ver todas las ventas
@@ -292,6 +293,19 @@ router.patch('/:id/estado', validarId, validarEstado, async (req, res) => {
             return res.status(404).json({ error: 'Venta no encontrada' })
         }
 
+        registrarLog({
+            usuario_id: req.usuario?.id || null,
+            usuario_nombre: req.usuario?.nombre || 'Sistema',
+            accion: 'editar',
+            modulo: 'ventas',
+            entidad: 'venta',
+            entidad_id: parseInt(id),
+            descripcion: `Estado de venta cambiado a ${estado}`,
+            dato_anterior: { estado: resultado.rows[0].estado },
+            dato_nuevo: { estado },
+            ip: req.ip
+        }).catch(() => {})
+
         res.json({ ok: true, venta: resultado.rows[0] })
     } catch (error) {
     manejarError(res, error)
@@ -379,6 +393,18 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             if (cliente_id) {
                 recalcularStats(cliente_id).catch(() => {})
             }
+
+            registrarLog({
+                usuario_id: req.usuario?.id || null,
+                usuario_nombre: req.usuario?.nombre || 'Sistema',
+                accion: 'crear',
+                modulo: 'ventas',
+                entidad: 'venta',
+                entidad_id: venta.rows[0].id,
+                descripcion: `Venta registrada — ${stock.rows[0].nombre} x${cantidad} — Gs. ${precio.toLocaleString()}`,
+                dato_nuevo: venta.rows[0],
+                ip: req.ip
+            }).catch(() => {})
 
             res.status(201).json({ ok: true, venta: venta.rows[0] })
 

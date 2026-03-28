@@ -33,10 +33,22 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: usuario.id, email: usuario.email, rol: usuario.rol },
+            { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol },
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         )
+
+          // deberia estar?
+        registrarLog({
+            usuario_id: usuario.id,
+            usuario_nombre: usuario.nombre,
+            accion: 'login',
+            modulo: 'sistema',
+            entidad: 'usuario',
+            entidad_id: usuario.id,
+            descripcion: `Inicio de sesión: ${usuario.email}`,
+            ip: req.ip
+        }).catch(() => {})
 
         res.json({
             token,
