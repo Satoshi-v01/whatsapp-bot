@@ -192,6 +192,40 @@ router.get('/historial', async (req, res) => {
 }
 })
 
+// Libro de ventas (SET)
+router.get('/libro-ventas', async (req, res) => {
+    try {
+        const { fecha_desde, fecha_hasta } = req.query
+
+        if (!fecha_desde || !fecha_hasta) {
+            return res.status(400).json({ error: 'Fecha desde y hasta son requeridas' })
+        }
+
+        const resultado = await db.query(
+            `SELECT
+                DATE(v.created_at AT TIME ZONE 'America/Asuncion') as fecha,
+                v.id,
+                v.tipo_iva,
+                v.precio as total,
+                v.ruc_factura,
+                v.razon_social,
+                c.nombre as cliente_nombre,
+                c.ruc as cliente_ruc
+             FROM ventas v
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE v.created_at >= $1
+             AND v.created_at <= $2
+             AND v.estado != 'cancelado'
+             ORDER BY v.created_at ASC`,
+            [fecha_desde, fecha_hasta + 'T23:59:59']
+        )
+
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // 4. Reporte para exportar — ANTES de /:id
 router.get('/reporte/exportar', async (req, res) => {
     try {
@@ -332,6 +366,7 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             sesion_numero,
             tipo_venta,
             plazo_dias,
+            tipo_iva,
         } = req.body
 
         await client.query('BEGIN')
@@ -362,13 +397,13 @@ router.post('/presencial', validarVentaPresencial, async (req, res) => {
             : 'pagado'
 
         const venta = await client.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING *`,
             [cliente_id || null, presentacion_id, cantidad, precio, canalFinal, estadoVenta,
             metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
             razon_social || null, agente_id || null,
-            tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito]
+            tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, tipo_iva || '10']
         )
 
         

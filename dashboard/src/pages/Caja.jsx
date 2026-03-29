@@ -6,18 +6,21 @@ import { registrarVentaPresencial } from '../services/ventas'
 import { confirmarOrden } from '../services/ordenes'
 import { getZonas } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
+import { imprimirFactura, imprimirCierre } from '../utils/factura'
 import { useApp } from '../App'
 import api from '../services/api'
-
 import { formatearFecha } from '../utils/fecha'
 
 function Caja() {
     const navigate = useNavigate()
     const busquedaProductoRef = useRef(null)
     const { darkMode } = useApp()
-    const [pestana, setPestana] = useState('venta') // 'venta' | 'cierre'
-    const [tipoVenta, setTipoVenta] = useState('contado') // 'contado' | 'credito'
+    const [pestana, setPestana] = useState('venta')
+    const [tipoVenta, setTipoVenta] = useState('contado')
     const [plazoDias, setPlazoDias] = useState(30)
+    const [montoEfectivo, setMontoEfectivo] = useState('')
+    const [configFactura, setConfigFactura] = useState({})
+    const [cajero, setCajero] = useState('')
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -50,7 +53,7 @@ function Caja() {
     const [rucFactura, setRucFactura] = useState('')
     const [canal, setCanal] = useState('presencial')
     const [metodoPago, setMetodoPago] = useState('efectivo')
-    const [subtipoPago, setSubtipoPago] = useState('') // 'debito' | 'credito'
+    const [subtipoPago, setSubtipoPago] = useState('')
     const [opOrigen, setOpOrigen] = useState(null)
     const [formDelivery, setFormDelivery] = useState({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
 
@@ -65,6 +68,8 @@ function Caja() {
         async function init() {
             await cargarDatos()
             await cargarOpPrecargada()
+            const u = JSON.parse(localStorage.getItem('usuario') || '{}')
+            setCajero(u.nombre || '')
         }
         init()
     }, [])
@@ -99,9 +104,10 @@ function Caja() {
 
     async function cargarDatos() {
         try {
-            const [prods, zns] = await Promise.all([getProductos(), getZonas()])
+            const [prods, zns, resFactura] = await Promise.all([getProductos(), getZonas(), api.get('/configuracion/factura')])
             setProductos(prods)
             setZonas(zns)
+            setConfigFactura(resFactura.data)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -113,7 +119,6 @@ function Caja() {
             const res = await api.get(`/ventas/historial?periodo=personalizado&fecha_desde=${fechaCierre}T00:00:00&fecha_hasta=${fechaCierre}T23:59:59&por_pagina=1000`)
             const ventas = res.data.ventas || []
 
-            // Agrupar por método de pago y subtipo
             const resumen = {}
             let totalGeneral = 0
 
@@ -122,14 +127,12 @@ function Caja() {
                 const subtipo = v.subtipo_pago || ''
                 const clave = subtipo ? `${metodo}_${subtipo}` : metodo
                 const monto = parseInt(v.precio) || 0
-
                 if (!resumen[clave]) resumen[clave] = { metodo, subtipo, cantidad: 0, total: 0 }
                 resumen[clave].cantidad++
                 resumen[clave].total += monto
                 totalGeneral += monto
             }
 
-            // Agrupar por canal
             const canales = {}
             for (const v of ventas) {
                 const c = v.canal || 'otro'
@@ -245,55 +248,8 @@ function Caja() {
         setGastos(prev => prev.filter(g => g.id !== id))
     }
 
-    function imprimirCierre() {
-        const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0)
-        const neto = (cierreDatos?.totalGeneral || 0) - totalGastos
-
-        const contenido = `
-            <html><head><title>Cierre de Caja</title>
-            <style>
-                body { font-family: monospace; font-size: 12px; margin: 20px; color: #000; }
-                h1 { font-size: 16px; text-align: center; margin-bottom: 4px; }
-                h2 { font-size: 13px; margin: 16px 0 6px; border-bottom: 1px solid #000; }
-                .row { display: flex; justify-content: space-between; padding: 3px 0; }
-                .total { font-weight: bold; font-size: 14px; border-top: 2px solid #000; padding-top: 6px; margin-top: 6px; }
-                .center { text-align: center; }
-                .muted { color: #555; font-size: 11px; }
-            </style></head>
-            <body>
-                <h1>SOSA BULLS</h1>
-                <p class="center muted">Cierre de Caja — ${fechaCierre}</p>
-                <p class="center muted">Impreso: ${new Date().toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}</p>
-                <h2>VENTAS POR MÉTODO DE PAGO</h2>
-                ${Object.entries(cierreDatos?.resumen || {}).map(([k, v]) => `
-                    <div class="row">
-                        <span>${v.metodo === 'tarjeta' ? `Tarjeta ${v.subtipo === 'debito' ? 'Débito' : 'Crédito'}` : v.metodo === 'transferencia' ? 'Transferencia' : 'Efectivo'} (${v.cantidad})</span>
-                        <span>Gs. ${v.total.toLocaleString('es-PY')}</span>
-                    </div>
-                `).join('')}
-                <div class="row total"><span>Total ventas (${cierreDatos?.cantidadVentas || 0})</span><span>Gs. ${(cierreDatos?.totalGeneral || 0).toLocaleString('es-PY')}</span></div>
-
-                <h2>VENTAS POR CANAL</h2>
-                ${Object.entries(cierreDatos?.canales || {}).map(([k, v]) => `
-                    <div class="row"><span>${k} (${v.cantidad})</span><span>Gs. ${v.total.toLocaleString('es-PY')}</span></div>
-                `).join('')}
-
-                ${gastos.length > 0 ? `
-                <h2>GASTOS Y EGRESOS</h2>
-                ${gastos.map(g => `<div class="row"><span>${g.descripcion}</span><span>Gs. ${g.monto.toLocaleString('es-PY')}</span></div>`).join('')}
-                <div class="row total"><span>Total gastos</span><span>Gs. ${totalGastos.toLocaleString('es-PY')}</span></div>
-                ` : ''}
-
-                <h2>RESUMEN FINAL</h2>
-                <div class="row"><span>Total ventas</span><span>Gs. ${(cierreDatos?.totalGeneral || 0).toLocaleString('es-PY')}</span></div>
-                ${gastos.length > 0 ? `<div class="row"><span>Total gastos</span><span>- Gs. ${totalGastos.toLocaleString('es-PY')}</span></div>` : ''}
-                <div class="row total"><span>NETO DEL DÍA</span><span>Gs. ${neto.toLocaleString('es-PY')}</span></div>
-            </body></html>
-        `
-        const ventana = window.open('', '_blank')
-        ventana.document.write(contenido)
-        ventana.document.close()
-        ventana.print()
+    function handleImprimirCierre() {
+        imprimirCierre({ cierreDatos, gastos, fechaCierre, cajero, config: configFactura })
     }
 
     const lineasValidas = lineas.filter(l => l.presentacionSeleccionada)
@@ -319,6 +275,7 @@ function Caja() {
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
         setTipoVenta('contado')
         setPlazoDias(30)
+        setMontoEfectivo('')
     }
 
     async function handleConfirmarVenta() {
@@ -334,7 +291,6 @@ function Caja() {
             setModalConfirmar({ titulo: 'Falta el tipo de tarjeta', mensaje: 'Selecciona si es débito o crédito.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
-
         if (tipoVenta === 'credito' && !clienteSeleccionado) {
             setModalConfirmar({ titulo: 'Cliente requerido', mensaje: 'Para venta a crédito debes seleccionar un cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
@@ -348,12 +304,19 @@ function Caja() {
             ? (canal === 'delivery' ? 'whatsapp_delivery' : 'whatsapp_bot')
             : (canal === 'delivery' ? 'agente_delivery' : 'agente_presencial')
 
+        const montoEfectivoNum = parseInt(montoEfectivo) || 0
+        const vueltoCalculado = metodoPago === 'efectivo' && montoEfectivoNum > total ? montoEfectivoNum - total : 0
+
         setModalConfirmar({
             titulo: 'Confirmar venta',
             mensaje: `Registrar ${lineasValidas.length} producto(s) por Gs. ${total.toLocaleString()}?`,
             textoBoton: 'Confirmar', colorBoton: '#10b981',
             onConfirmar: async () => {
                 try {
+                    // Obtener número de factura
+                    const resNumero = await api.post('/configuracion/factura/siguiente-numero')
+                    const numeroFactura = resNumero.data.numero_formateado
+
                     const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
                         const linea = lineasValidas[i]
@@ -393,10 +356,38 @@ function Caja() {
                         try { await confirmarOrden(opOrigen.id, { modalidad: canal, metodo_pago: metodoPago }) } catch (e) {}
                     }
 
+                    // Imprimir factura
+                    const metodoImpresion = metodoPago === 'tarjeta'
+                        ? (subtipoPago === 'debito' ? 'tarjeta_debito' : 'tarjeta_credito')
+                        : metodoPago
+
+                    imprimirFactura({
+                        numero_factura: numeroFactura,
+                        cliente_nombre: razonSocial || clienteSeleccionado?.nombre || null,
+                        cliente_ruc: rucFactura || clienteSeleccionado?.ruc || null,
+                        tipo_venta: tipoVenta,
+                        metodo_pago: metodoImpresion,
+                        monto_efectivo: montoEfectivoNum || total,
+                        vuelto: vueltoCalculado,
+                        items: lineasValidas.map(linea => {
+                            const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
+                            return {
+                                descripcion: `${linea.productoSeleccionado.marca_nombre ? linea.productoSeleccionado.marca_nombre + ' ' : ''}${linea.productoSeleccionado.nombre} ${linea.presentacionSeleccionada.nombre}`,
+                                cantidad: linea.cantidad,
+                                precio_unitario: precio,
+                                total: precio * linea.cantidad,
+                                iva: 10
+                            }
+                        }),
+                        total,
+                        cajero,
+                        config: configFactura
+                    })
+
                     resetCaja()
                     setModalConfirmar({
-                        titulo: 'Venta registrada',
-                        mensaje: `Venta registrada por Gs. ${total.toLocaleString()}.${canal === 'delivery' ? ' Delivery creado.' : ''}`,
+                        titulo: 'Venta registrada ✓',
+                        mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
                         textoBoton: 'Nueva venta', colorBoton: '#10b981',
                         onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
                     })
@@ -709,45 +700,45 @@ function Caja() {
                         </section>
 
                         {/* Condición de venta */}
-                            <section style={{ marginBottom: '24px' }}>
-                                <h3 style={{ fontSize: '13px', fontWeight: '700', color: s.text, marginBottom: '12px' }}>Condición de venta</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: tipoVenta === 'credito' ? '12px' : '0' }}>
-                                    {[{ val: 'contado', label: 'Contado', icono: '💵' }, { val: 'credito', label: 'Crédito', icono: '📋' }].map(t => (
-                                        <button key={t.val} onClick={() => setTipoVenta(t.val)}
-                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '12px', border: `${tipoVenta === t.val ? 2 : 1}px solid ${tipoVenta === t.val ? '#1a1a2e' : s.border}`, background: tipoVenta === t.val ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: tipoVenta === t.val ? '700' : '500', color: tipoVenta === t.val ? s.text : s.textMuted, transition: 'all 0.15s' }}>
-                                            <span>{t.icono}</span> {t.label}
-                                            {tipoVenta === t.val && <span style={{ fontSize: '11px' }}>✓</span>}
-                                        </button>
-                                    ))}
-                                </div>
+                        <section style={{ marginBottom: '24px' }}>
+                            <h3 style={{ fontSize: '13px', fontWeight: '700', color: s.text, marginBottom: '12px' }}>Condición de venta</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: tipoVenta === 'credito' ? '12px' : '0' }}>
+                                {[{ val: 'contado', label: 'Contado', icono: '💵' }, { val: 'credito', label: 'Crédito', icono: '📋' }].map(t => (
+                                    <button key={t.val} onClick={() => setTipoVenta(t.val)}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '12px', border: `${tipoVenta === t.val ? 2 : 1}px solid ${tipoVenta === t.val ? '#1a1a2e' : s.border}`, background: tipoVenta === t.val ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: tipoVenta === t.val ? '700' : '500', color: tipoVenta === t.val ? s.text : s.textMuted, transition: 'all 0.15s' }}>
+                                        <span>{t.icono}</span> {t.label}
+                                        {tipoVenta === t.val && <span style={{ fontSize: '11px' }}>✓</span>}
+                                    </button>
+                                ))}
+                            </div>
 
-                                {tipoVenta === 'credito' && (
-                                    <div>
-                                        <label style={labelStyle}>Plazo en días</label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '8px' }}>
-                                            {[15, 30, 60, 90].map(d => (
-                                                <button key={d} onClick={() => setPlazoDias(d)}
-                                                    style={{ padding: '8px', borderRadius: '8px', border: `1px solid ${plazoDias === d ? '#3b82f6' : s.border}`, background: plazoDias === d ? (darkMode ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent', color: plazoDias === d ? '#3b82f6' : s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: plazoDias === d ? '700' : '500' }}>
-                                                    {d}d
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <input type="number" placeholder="O ingresá los días manualmente" value={plazoDias}
-                                            onChange={e => setPlazoDias(parseInt(e.target.value) || 0)}
-                                            style={{ ...inputStyle, marginBottom: 0 }} />
-                                        {clienteSeleccionado && (
-                                            <p style={{ fontSize: '11px', color: '#f59e0b', marginTop: '6px' }}>
-                                                ⚠️ Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
-                                            </p>
-                                        )}
-                                        {!clienteSeleccionado && (
-                                            <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>
-                                                ⚠️ Debes seleccionar un cliente para venta a crédito
-                                            </p>
-                                        )}
+                            {tipoVenta === 'credito' && (
+                                <div>
+                                    <label style={labelStyle}>Plazo en días</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '8px' }}>
+                                        {[15, 30, 60, 90].map(d => (
+                                            <button key={d} onClick={() => setPlazoDias(d)}
+                                                style={{ padding: '8px', borderRadius: '8px', border: `1px solid ${plazoDias === d ? '#3b82f6' : s.border}`, background: plazoDias === d ? (darkMode ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent', color: plazoDias === d ? '#3b82f6' : s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: plazoDias === d ? '700' : '500' }}>
+                                                {d}d
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
-                            </section>
+                                    <input type="number" placeholder="O ingresá los días manualmente" value={plazoDias}
+                                        onChange={e => setPlazoDias(parseInt(e.target.value) || 0)}
+                                        style={{ ...inputStyle, marginBottom: 0 }} />
+                                    {clienteSeleccionado && (
+                                        <p style={{ fontSize: '11px', color: '#f59e0b', marginTop: '6px' }}>
+                                            ⚠️ Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
+                                        </p>
+                                    )}
+                                    {!clienteSeleccionado && (
+                                        <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>
+                                            ⚠️ Debes seleccionar un cliente para venta a crédito
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </section>
 
                         {/* Resumen */}
                         <section style={{ marginTop: 'auto', background: '#0f172a', borderRadius: '16px', padding: '24px', color: 'white', boxShadow: '0 8px 32px rgba(15,23,42,0.4)' }}>
@@ -786,6 +777,7 @@ function Caja() {
                                             <span style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>Gs. {total.toLocaleString()}</span>
                                         </div>
                                     </div>
+
                                     {(razonSocial || rucFactura) && (
                                         <div style={{ background: '#1e293b', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px' }}>
                                             <p style={{ color: '#475569', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Factura a</p>
@@ -793,6 +785,7 @@ function Caja() {
                                             {rucFactura && <p style={{ color: '#64748b', marginTop: '2px' }}>RUC: {rucFactura}</p>}
                                         </div>
                                     )}
+
                                     {metodoPago === 'tarjeta' && subtipoPago && (
                                         <div style={{ background: '#1e293b', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#93c5fd' }}>
                                             💳 Tarjeta {subtipoPago === 'debito' ? 'Débito' : 'Crédito'}
@@ -804,6 +797,35 @@ function Caja() {
                                             📋 Crédito — {plazoDias} días · Vence: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
                                         </div>
                                     )}
+
+                                    {/* Input monto efectivo */}
+                                    {metodoPago === 'efectivo' && (
+                                        <div style={{ background: '#1e293b', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px' }}>
+                                            <label style={{ fontSize: '10px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                                                Monto recibido (Gs.)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={montoEfectivo ? parseInt(montoEfectivo).toLocaleString('es-PY') : ''}
+                                                onChange={e => {
+                                                    const limpio = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+                                                    setMontoEfectivo(limpio)
+                                                }}
+                                                placeholder={total.toLocaleString('es-PY')}
+                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: 'white', fontSize: '14px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
+                                            />
+                                            {montoEfectivo && parseInt(montoEfectivo) >= total && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px' }}>
+                                                    <span style={{ color: '#64748b' }}>Vuelto:</span>
+                                                    <span style={{ fontWeight: '800', color: '#10b981' }}>Gs. {(parseInt(montoEfectivo) - total).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {montoEfectivo && parseInt(montoEfectivo) < total && (
+                                                <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>⚠️ Monto insuficiente</p>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <button onClick={handleConfirmarVenta}
                                         style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: '#10b981', color: '#0f172a', cursor: 'pointer', fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'opacity 0.15s' }}
                                         onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
@@ -831,7 +853,7 @@ function Caja() {
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <input type="date" value={fechaCierre} onChange={e => setFechaCierre(e.target.value)}
                                     style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '13px', outline: 'none' }} />
-                                <button onClick={imprimirCierre} disabled={!cierreDatos}
+                                <button onClick={handleImprimirCierre} disabled={!cierreDatos}
                                     style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: cierreDatos ? '#1a1a2e' : s.surfaceLow, color: cierreDatos ? 'white' : s.textFaint, cursor: cierreDatos ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '700' }}>
                                     🖨️ Imprimir cierre
                                 </button>
@@ -907,7 +929,7 @@ function Caja() {
 
                                 {/* Gastos */}
                                 <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                    <div style={{ padding: '14px 18px', borderBottom: `1px solid ${s.borderLight}`, background: s.surfaceLow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ padding: '14px 18px', borderBottom: `1px solid ${s.borderLight}`, background: s.surfaceLow }}>
                                         <p style={{ fontSize: '12px', fontWeight: '700', color: s.text }}>Gastos y egresos</p>
                                     </div>
                                     <div style={{ padding: '16px 18px' }}>

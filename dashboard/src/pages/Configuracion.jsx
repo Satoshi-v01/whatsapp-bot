@@ -138,6 +138,7 @@ function Configuracion() {
 
     async function handleGuardarFactura() {
         setGuardando(true)
+        setFormFactura({ numero_factura: '', timbrado_proveedor: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
         try {
             const datos = {}
             Object.entries(configFactura).forEach(([k, v]) => {
