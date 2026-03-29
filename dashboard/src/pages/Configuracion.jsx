@@ -3,6 +3,8 @@ import { getUsuarios, getRoles, crearRol, actualizarRol, eliminarRol, crearUsuar
 import { getConfiguracion, guardarConfiguracionBulk } from '../services/configuracion'
 import { getZonas, crearZona, editarZona, eliminarZona } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
+import { imprimirFactura } from '../utils/factura'
+import api from '../services/api'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 const MODULOS = [
@@ -31,6 +33,8 @@ function Configuracion() {
     const [pestana, setPestana] = useState('usuarios')
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [guardando, setGuardando] = useState(false)
+    const [configFactura, setConfigFactura] = useState({})
+    const [reiniciandoFactura, setReiniciandoFactura] = useState(false)
 
     // Usuarios y roles
     const [usuarios, setUsuarios] = useState([])
@@ -64,10 +68,12 @@ function Configuracion() {
     async function cargarDatos() {
         try {
             const [u, r, c, z] = await Promise.all([getUsuarios(), getRoles(), getConfiguracion(), getZonas()])
+            const resFactura = await api.get('/configuracion/factura')
             setUsuarios(u)
             setRoles(r)
             setConfig(c)
             setZonas(z)
+            setConfigFactura(resFactura.data)
             if (r.length > 0) setRolSeleccionado(r[0])
             if (c.tienda_horario) {
                 try { setHorario(JSON.parse(c.tienda_horario)) } catch (e) {}
@@ -128,6 +134,50 @@ function Configuracion() {
     function tienePermiso(modulo, accion) {
         if (!rolSeleccionado?.permisos) return false
         return (rolSeleccionado.permisos[modulo] || []).includes(accion)
+    }
+
+    async function handleGuardarFactura() {
+        setGuardando(true)
+        try {
+            const datos = {}
+            Object.entries(configFactura).forEach(([k, v]) => {
+                datos[`factura_${k}`] = v
+            })
+            await guardarConfiguracionBulk(datos)
+            setModalConfirmar({ titulo: '✅ Guardado', mensaje: 'Configuración de facturación guardada.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo guardar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally { setGuardando(false) }
+    }
+
+    async function handleReiniciarNumero() {
+        setReiniciandoFactura(true)
+        try {
+            await api.post('/configuracion/factura/reiniciar-numero', { numero: 1 })
+            setConfigFactura(prev => ({ ...prev, numero_actual: '1' }))
+            setModalConfirmar({ titulo: '✅ Reiniciado', mensaje: 'El número de factura fue reiniciado a 1.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo reiniciar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally { setReiniciandoFactura(false) }
+    }
+
+    async function handleImprimirFacturaPrueba() {
+        // Genera una factura de prueba sin incrementar el número
+        const numeroFormateado = String(parseInt(configFactura.numero_actual || 1)).padStart(7, '0')
+        const numeroFactura = `${configFactura.numero_prefijo || '001-002'}-${numeroFormateado}`
+        imprimirFactura({
+            numero_factura: numeroFactura,
+            es_prueba: true,
+            cliente_nombre: configFactura.cliente_ocasional || 'CONSUMIDOR FINAL',
+            cliente_ruc: '—',
+            tipo_venta: 'contado',
+            metodo_pago: 'efectivo',
+            monto_efectivo: 50000,
+            items: [{ descripcion: 'PRODUCTO DE PRUEBA', cantidad: 1, precio_unitario: 50000, total: 50000, iva: 10 }],
+            total: 50000,
+            cajero: 'CAJERO PRUEBA',
+            config: configFactura
+        })
     }
 
     async function handleGuardarConfig(extras = {}) {
@@ -195,6 +245,7 @@ function Configuracion() {
         { key: 'notificaciones', label: 'Notificaciones', icono: '🔔' },
         { key: 'tienda', label: 'Tienda', icono: '🏪' },
         { key: 'bot', label: 'Bot', icono: '🤖' },
+        { key: 'facturacion', label: 'Facturación', icono: '🧾' },
     ]
 
     return (
@@ -588,6 +639,100 @@ function Configuracion() {
                             <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px', fontStyle: 'italic' }}>
                                 Recomendado: entre 1 y 4 horas. Máximo 72 horas.
                             </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* ===== FACTURACIÓN ===== */}
+                {pestana === 'facturacion' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
+                            <div>
+                                <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>Facturación</h1>
+                                <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Configurá los datos del timbrado y formato de factura.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleImprimirFacturaPrueba}
+                                    style={{ ...btnSecundario, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    🖨️ Factura de prueba
+                                </button>
+                                <button onClick={handleReiniciarNumero} disabled={reiniciandoFactura}
+                                    style={{ ...btnSecundario, color: '#ef4444', borderColor: '#fca5a5' }}>
+                                    {reiniciandoFactura ? 'Reiniciando...' : '↺ Reiniciar número'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+                            {/* Datos de la empresa */}
+                            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>🏢 Datos de la empresa</h3>
+                                <label style={labelStyle}>Nombre de fantasía (opcional)</label>
+                                <input value={configFactura.nombre_fantasia || ''} onChange={e => setConfigFactura({ ...configFactura, nombre_fantasia: e.target.value })} style={inputStyle} placeholder="Ej: SOSA BULLS" />
+                                <label style={labelStyle}>Razón social *</label>
+                                <input value={configFactura.nombre_empresa || ''} onChange={e => setConfigFactura({ ...configFactura, nombre_empresa: e.target.value })} style={inputStyle} placeholder="Ej: JUAN PEREZ S.A." />
+                                <label style={labelStyle}>RUC de la empresa *</label>
+                                <input value={configFactura.ruc_empresa || ''} onChange={e => setConfigFactura({ ...configFactura, ruc_empresa: e.target.value })} style={inputStyle} placeholder="80012345-6" />
+                                <label style={labelStyle}>Actividad económica</label>
+                                <input value={configFactura.actividad_economica || ''} onChange={e => setConfigFactura({ ...configFactura, actividad_economica: e.target.value })} style={inputStyle} placeholder="Venta de alimentos para mascotas" />
+                                <label style={labelStyle}>Dirección casa matriz</label>
+                                <input value={configFactura.direccion_matriz || ''} onChange={e => setConfigFactura({ ...configFactura, direccion_matriz: e.target.value })} style={inputStyle} placeholder="Av. Principal 123, Asunción" />
+                                <label style={labelStyle}>Dirección sucursal (opcional)</label>
+                                <input value={configFactura.direccion_sucursal || ''} onChange={e => setConfigFactura({ ...configFactura, direccion_sucursal: e.target.value })} style={inputStyle} placeholder="Solo si aplica" />
+                                <label style={labelStyle}>Teléfonos / Email</label>
+                                <input value={configFactura.telefonos || ''} onChange={e => setConfigFactura({ ...configFactura, telefonos: e.target.value })} style={inputStyle} placeholder="0981 123 456 / info@empresa.com" />
+                            </div>
+
+                            {/* Timbrado y numeración */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>📋 Timbrado SET</h3>
+                                    <label style={labelStyle}>Número de timbrado *</label>
+                                    <input value={configFactura.timbrado || ''} onChange={e => setConfigFactura({ ...configFactura, timbrado: e.target.value })} style={inputStyle} placeholder="18138433" />
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        <div>
+                                            <label style={labelStyle}>Vigencia desde</label>
+                                            <input type="date" value={configFactura.timbrado_inicio || ''} onChange={e => setConfigFactura({ ...configFactura, timbrado_inicio: e.target.value })} style={inputStyle} />
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Vigencia hasta</label>
+                                            <input type="date" value={configFactura.timbrado_fin || ''} onChange={e => setConfigFactura({ ...configFactura, timbrado_fin: e.target.value })} style={inputStyle} />
+                                        </div>
+                                    </div>
+                                    <label style={labelStyle}>Prefijo de factura (establecimiento-punto)</label>
+                                    <input value={configFactura.numero_prefijo || '001-002'} onChange={e => setConfigFactura({ ...configFactura, numero_prefijo: e.target.value })} style={inputStyle} placeholder="001-002" />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#f8fafc', borderRadius: '8px', marginTop: '4px' }}>
+                                        <div>
+                                            <p style={{ fontSize: '11px', color: '#64748b' }}>Número actual</p>
+                                            <p style={{ fontSize: '16px', fontWeight: '800', color: '#1a1a2e', fontFamily: 'monospace' }}>
+                                                {configFactura.numero_prefijo || '001-002'}-{String(parseInt(configFactura.numero_actual || 1)).padStart(7, '0')}
+                                            </p>
+                                        </div>
+                                        <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: '#dcfce7', color: '#166534' }}>ACTIVO</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>⚙️ Opciones de impresión</h3>
+                                    <label style={labelStyle}>Ancho de papel</label>
+                                    <select value={configFactura.ancho_papel || '80'} onChange={e => setConfigFactura({ ...configFactura, ancho_papel: e.target.value })} style={inputStyle}>
+                                        <option value="58">58mm (pequeño)</option>
+                                        <option value="80">80mm (estándar)</option>
+                                    </select>
+                                    <label style={labelStyle}>Cliente ocasional (sin datos)</label>
+                                    <input value={configFactura.cliente_ocasional || 'CONSUMIDOR FINAL'} onChange={e => setConfigFactura({ ...configFactura, cliente_ocasional: e.target.value })} style={inputStyle} placeholder="CONSUMIDOR FINAL" />
+                                    <label style={labelStyle}>Mensaje de pie de factura</label>
+                                    <textarea value={configFactura.mensaje_pie || '¡Gracias por su compra!'} onChange={e => setConfigFactura({ ...configFactura, mensaje_pie: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
+                            <button onClick={() => cargarDatos()} style={btnSecundario}>Descartar</button>
+                            <button onClick={handleGuardarFactura} disabled={guardando} style={btnPrimario}>
+                                {guardando ? 'Guardando...' : 'Guardar configuración'}
+                            </button>
                         </div>
                     </div>
                 )}
