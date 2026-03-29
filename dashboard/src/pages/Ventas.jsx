@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getHistorial, actualizarEstadoVenta } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
+import * as XLSX from 'xlsx'
+import { getLibroVentas } from '../services/ventas'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 function Ventas() {
@@ -13,6 +15,10 @@ function Ventas() {
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [ventaDetalle, setVentaDetalle] = useState(null)
     const { darkMode } = useApp()
+    const [modalLibro, setModalLibro] = useState(false)
+    const [libroFechaDesde, setLibroFechaDesde] = useState(new Date().toISOString().slice(0, 7) + '-01')
+    const [libroFechaHasta, setLibroFechaHasta] = useState(new Date().toISOString().slice(0, 10))
+    const [exportandoLibro, setExportandoLibro] = useState(false)
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -41,6 +47,80 @@ function Ventas() {
         const timeout = setTimeout(() => cargarHistorial(), 400)
         return () => clearTimeout(timeout)
     }, [buscar])
+
+    async function handleExportarLibroVentas() {
+        setExportandoLibro(true)
+        try {
+            const datos = await getLibroVentas(libroFechaDesde, libroFechaHasta)
+            
+            const filas = datos.map((v, idx) => {
+                const total = parseInt(v.total || 0)
+                const tipoIva = v.tipo_iva || '10'
+                
+                let grav10 = 0, iva10 = 0, grav5 = 0, iva5 = 0, exenta = 0
+                
+                if (tipoIva === '10') {
+                    iva10 = Math.floor(total / 11)
+                    grav10 = total - iva10
+                } else if (tipoIva === '5') {
+                    iva5 = Math.floor(total / 21)
+                    grav5 = total - iva5
+                } else {
+                    exenta = total
+                }
+
+                const cliente = v.razon_social || v.cliente_nombre || 'CONSUMIDOR FINAL'
+                const ruc = v.ruc_factura || v.cliente_ruc || '—'
+
+                return {
+                    'N°': idx + 1,
+                    'Fecha': new Date(v.fecha).toLocaleDateString('es-PY'),
+                    'Tipo Documento': 'Factura',
+                    'N° Factura': `#${String(v.id).padStart(7, '0')}`,
+                    'Cliente': cliente,
+                    'RUC / CI': ruc,
+                    'Gravada 10%': grav10,
+                    'IVA 10%': iva10,
+                    'Gravada 5%': grav5,
+                    'IVA 5%': iva5,
+                    'Exentas': exenta,
+                    'Total': total
+                }
+            })
+
+            // Fila de totales
+            const totales = {
+                'N°': '',
+                'Fecha': '',
+                'Tipo Documento': '',
+                'N° Factura': '',
+                'Cliente': 'TOTALES',
+                'RUC / CI': '',
+                'Gravada 10%': filas.reduce((s, f) => s + f['Gravada 10%'], 0),
+                'IVA 10%': filas.reduce((s, f) => s + f['IVA 10%'], 0),
+                'Gravada 5%': filas.reduce((s, f) => s + f['Gravada 5%'], 0),
+                'IVA 5%': filas.reduce((s, f) => s + f['IVA 5%'], 0),
+                'Exentas': filas.reduce((s, f) => s + f['Exentas'], 0),
+                'Total': filas.reduce((s, f) => s + f['Total'], 0),
+            }
+
+            const wb = XLSX.utils.book_new()
+            const ws = XLSX.utils.json_to_sheet([...filas, totales])
+
+            // Anchos de columna
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 12 }, { wch: 14 }, { wch: 18 },
+                { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
+                { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }
+            ]
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Libro de Ventas')
+            XLSX.writeFile(wb, `libro_ventas_${libroFechaDesde}_${libroFechaHasta}.xlsx`)
+            setModalLibro(false)
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo exportar el libro de ventas.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally { setExportandoLibro(false) }
+    }
 
     async function cargarHistorial() {
         try {
@@ -138,9 +218,15 @@ function Ventas() {
                     <h1 style={{ fontSize: '28px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>Historial de Ventas</h1>
                     <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px' }}>Gestioná y supervisá todas las transacciones realizadas.</p>
                 </div>
-                <button onClick={() => navigate('/caja')} style={{ background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                    + Nueva venta
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setModalLibro(true)}
+                        style={{ padding: '10px 18px', borderRadius: '10px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                        📊 Libro de Ventas
+                    </button>
+                    <button onClick={() => navigate('/caja')} style={{ background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                        + Nueva venta
+                    </button>
+                </div>
             </div>
 
             {/* Tarjetas resumen */}
@@ -393,7 +479,7 @@ function Ventas() {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ fontSize: '13px', color: s.textMuted }}>Condición</span>
-                                    <span style={{ fontSize: '13px', fontWeight: '600', color: venta.tipo_venta === 'credito' ? '#f59e0b' : '#10b981' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: '600', color: ventaDetalle.tipo_venta === 'credito' ? '#f59e0b' : '#10b981' }}>
                                         {ventaDetalle.tipo_venta === 'credito' ? `📋 Crédito (${ventaDetalle.plazo_dias}d)` : '💵 Contado'}
                                     </span>
                                 </div>
@@ -422,6 +508,36 @@ function Ventas() {
                                 <option value="entregado">Entregado</option>
                                 <option value="cancelado">Cancelado</option>
                             </select>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modalLibro && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Libro de Ventas</h3>
+                            <button onClick={() => setModalLibro(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                        </div>
+                        <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
+                            Exportá el libro de ventas en formato SET con IVA discriminado.
+                        </p>
+                        <label style={labelStyle}>Fecha desde</label>
+                        <input type="date" value={libroFechaDesde} onChange={e => setLibroFechaDesde(e.target.value)}
+                            style={{ ...inputStyle, marginBottom: '12px' }} />
+                        <label style={labelStyle}>Fecha hasta</label>
+                        <input type="date" value={libroFechaHasta} onChange={e => setLibroFechaHasta(e.target.value)}
+                            style={{ ...inputStyle, marginBottom: '20px' }} />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setModalLibro(false)}
+                                style={{ padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px' }}>
+                                Cancelar
+                            </button>
+                            <button onClick={handleExportarLibroVentas} disabled={exportandoLibro}
+                                style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: exportandoLibro ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '700' }}>
+                                {exportandoLibro ? 'Exportando...' : '⬇ Descargar Excel'}
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -115,6 +115,42 @@ router.patch('/facturas/:id', async (req, res) => {
     }
 })
 
+// Libro de compras (SET)
+router.get('/libro-compras', async (req, res) => {
+    try {
+        const { fecha_desde, fecha_hasta } = req.query
+
+        if (!fecha_desde || !fecha_hasta) {
+            return res.status(400).json({ error: 'Fecha desde y hasta son requeridas' })
+        }
+
+        const resultado = await db.query(
+            `SELECT
+                f.fecha_emision as fecha,
+                f.numero_factura,
+                f.timbrado_proveedor,
+                f.monto_total as total,
+                f.iva_10,
+                f.iva_5,
+                f.exentas,
+                f.tipo,
+                p.nombre as proveedor_nombre,
+                p.ruc as proveedor_ruc
+             FROM facturas_compra f
+             JOIN proveedores p ON f.proveedor_id = p.id
+             WHERE f.fecha_emision >= $1
+             AND f.fecha_emision <= $2
+             AND f.activo = true
+             ORDER BY f.fecha_emision ASC`,
+            [fecha_desde, fecha_hasta]
+        )
+
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 router.post('/facturas/:id/pagos', async (req, res) => {
     const client = await db.pool.connect()
     try {

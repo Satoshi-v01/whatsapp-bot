@@ -3,6 +3,8 @@ import { getProveedores, crearProveedor, editarProveedor, getFacturas, crearFact
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import * as XLSX from 'xlsx'
+import api from '../services/api'
 
 function formatearMiles(valor) {
     if (!valor && valor !== 0) return ''
@@ -33,9 +35,13 @@ function Proveedores() {
     const [filtroPeriodo, setFiltroPeriodo] = useState('mes')
     const [fechaDesde, setFechaDesde] = useState('')
     const [fechaHasta, setFechaHasta] = useState('')
+    const [modalLibroCompras, setModalLibroCompras] = useState(false)
+    const [libroComprasFechaDesde, setLibroComprasFechaDesde] = useState(new Date().toISOString().slice(0, 7) + '-01')
+    const [libroComprasFechaHasta, setLibroComprasFechaHasta] = useState(new Date().toISOString().slice(0, 10))
+    const [exportandoLibroCompras, setExportandoLibroCompras] = useState(false)
 
     const [formProveedor, setFormProveedor] = useState({ nombre: '', ruc: '', telefono: '', email: '', banco: '', numero_cuenta: '', direccion: '', notas: '' })
-    const [formFactura, setFormFactura] = useState({ numero_factura: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
+    const [formFactura, setFormFactura] = useState({ numero_factura: '', timbrado_proveedor: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', gravada_10: '', gravada_5: '', notas: '' })
     const [formPago, setFormPago] = useState({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', fecha_pago: new Date().toISOString().slice(0,10), tipo_pago: 'parcial', notas: '' })
 
     const s = {
@@ -89,6 +95,63 @@ function Proveedores() {
         } catch (err) {}
     }
 
+    async function handleExportarLibroCompras() {
+        setExportandoLibroCompras(true)
+        try {
+            const res = await api.get(`/proveedores/libro-compras?fecha_desde=${libroComprasFechaDesde}&fecha_hasta=${libroComprasFechaHasta}`)
+            const datos = res.data
+
+            const filas = datos.map((f, idx) => {
+                const total = parseInt(f.total || 0)
+                const iva10 = parseInt(f.iva_10 || 0)
+                const iva5 = parseInt(f.iva_5 || 0)
+                const exenta = parseInt(f.exentas || 0)
+                const grav10 = iva10 > 0 ? total - iva10 - iva5 - exenta : 0
+                const grav5 = iva5 > 0 ? (total - iva10 - exenta) - iva5 : 0
+
+                return {
+                    'N°': idx + 1,
+                    'Fecha': new Date(f.fecha).toLocaleDateString('es-PY'),
+                    'Tipo Documento': 'Factura',
+                    'N° Factura': f.numero_factura || '—',
+                    'Timbrado': f.timbrado_proveedor || '—',
+                    'Proveedor': f.proveedor_nombre || '—',
+                    'RUC': f.proveedor_ruc || '—',
+                    'Gravada 10%': grav10,
+                    'IVA 10%': iva10,
+                    'Gravada 5%': grav5,
+                    'IVA 5%': iva5,
+                    'Exentas': exenta,
+                    'Total': total
+                }
+            })
+
+            const totales = {
+                'N°': '', 'Fecha': '', 'Tipo Documento': '', 'N° Factura': '', 'Timbrado': '',
+                'Proveedor': 'TOTALES', 'RUC': '',
+                'Gravada 10%': filas.reduce((s, f) => s + f['Gravada 10%'], 0),
+                'IVA 10%': filas.reduce((s, f) => s + f['IVA 10%'], 0),
+                'Gravada 5%': filas.reduce((s, f) => s + f['Gravada 5%'], 0),
+                'IVA 5%': filas.reduce((s, f) => s + f['IVA 5%'], 0),
+                'Exentas': filas.reduce((s, f) => s + f['Exentas'], 0),
+                'Total': filas.reduce((s, f) => s + f['Total'], 0),
+            }
+
+            const wb = XLSX.utils.book_new()
+            const ws = XLSX.utils.json_to_sheet([...filas, totales])
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 12 }, { wch: 14 }, { wch: 20 }, { wch: 14 },
+                { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
+                { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }
+            ]
+            XLSX.utils.book_append_sheet(wb, ws, 'Libro de Compras')
+            XLSX.writeFile(wb, `libro_compras_${libroComprasFechaDesde}_${libroComprasFechaHasta}.xlsx`)
+            setModalLibroCompras(false)
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo exportar el libro de compras.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally { setExportandoLibroCompras(false) }
+    }
+
     async function handleGuardarProveedor() {
         try {
             if (modalProveedor === 'nuevo') {
@@ -107,7 +170,7 @@ function Proveedores() {
         try {
             await crearFactura(modalFactura, formFactura)
             setModalFactura(null)
-            setFormFactura({ numero_factura: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
+            setFormFactura({ numero_factura: '', timbrado_proveedor: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
             await cargarDatos()
             if (pestana === 'facturas') await cargarFacturas()
         } catch (err) {
@@ -144,6 +207,15 @@ function Proveedores() {
         if (!fecha) return null
         const diff = new Date(fecha) - new Date()
         return Math.ceil(diff / (1000 * 60 * 60 * 24))
+    }
+
+    function calcularTotal(form) {
+        const grav10 = parseInt(form.gravada_10 || 0)
+        const iva10 = parseInt(form.iva_10 || 0)
+        const grav5 = parseInt(form.gravada_5 || 0)
+        const iva5 = parseInt(form.iva_5 || 0)
+        const exentas = parseInt(form.exentas || 0)
+        return String(grav10 + iva10 + grav5 + iva5 + exentas)
     }
 
     const facturasFiltradas = facturas.filter(f =>
@@ -259,6 +331,10 @@ function Proveedores() {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h1 style={{ fontSize: '22px', fontWeight: '800', color: s.text }}>Facturas de Compra</h1>
+                        <button onClick={() => setModalLibroCompras(true)}
+                            style={{ padding: '10px 18px', borderRadius: '10px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                            📊 Libro de Compras
+                        </button>
                     </div>
 
                     {/* Filtros */}
@@ -305,12 +381,12 @@ function Proveedores() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {facturas.length === 0 ? (
+                                {facturasFiltradas.length === 0 ? (
                                     <tr><td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: s.textMuted }}>
                                         <p style={{ fontSize: '24px', marginBottom: '8px' }}>🧾</p>
                                         <p>No hay facturas que coincidan.</p>
                                     </td></tr>
-                                ) : facturas.map(f => {
+                                ) : facturasFiltradas.map(f => {
                                     const cfg = estadoConfig(f.estado)
                                     const dias = diasParaVencer(f.fecha_vencimiento)
                                     const proxima = dias !== null && dias >= 0 && dias <= 10
@@ -570,6 +646,10 @@ function Proveedores() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={labelStyle}>Timbrado del proveedor</label>
+                                <input value={formFactura.timbrado_proveedor || ''} onChange={e => setFormFactura({...formFactura, timbrado_proveedor: e.target.value})} placeholder="Ej: 18138433" style={inputStyle} />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
                                 <label style={labelStyle}>Número de factura *</label>
                                 <input value={formFactura.numero_factura} onChange={e => setFormFactura({...formFactura, numero_factura: e.target.value})} placeholder="Ej: 001-001-0000123" style={inputStyle} />
                             </div>
@@ -598,30 +678,90 @@ function Proveedores() {
                                     </select>
                                 </div>
                             )}
+
+                            {/* Montos */}
                             <div style={{ gridColumn: '1 / -1', borderTop: `1px solid ${s.border}`, paddingTop: '12px', marginTop: '4px' }}>
                                 <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Montos</p>
                             </div>
-                            <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={labelStyle}>Monto total *</label>
+
+                            {/* Gravada 10% */}
+                            <div>
+                                <label style={labelStyle}>Gravada 10%</label>
                                 <input
-                                    value={formFactura.monto_total ? parseInt(formFactura.monto_total).toLocaleString('es-PY') : ''}
-                                    onChange={e => setFormFactura({...formFactura, monto_total: parsearMiles(e.target.value)})}
+                                    value={formFactura.gravada_10 ? parseInt(formFactura.gravada_10).toLocaleString('es-PY') : ''}
+                                    onChange={e => {
+                                        const grav10 = parsearMiles(e.target.value)
+                                        const iva10 = grav10 ? String(Math.floor(parseInt(grav10) / 11)) : ''
+                                        setFormFactura(prev => {
+                                            const next = { ...prev, gravada_10: grav10, iva_10: iva10 }
+                                            return { ...next, monto_total: calcularTotal(next) }
+                                        })
+                                    }}
                                     placeholder="Gs. 0"
                                     style={inputStyle}
                                 />
                             </div>
                             <div>
-                                <label style={labelStyle}>IVA 10%</label>
-                                <input type="number" value={formFactura.iva_10} onChange={e => setFormFactura({...formFactura, iva_10: e.target.value})} placeholder="Gs." style={inputStyle} />
+                                <label style={labelStyle}>IVA 10% (auto)</label>
+                                <input
+                                    value={formFactura.iva_10 ? parseInt(formFactura.iva_10).toLocaleString('es-PY') : ''}
+                                    readOnly
+                                    style={{ ...inputStyle, background: s.surfaceLow, color: s.textMuted, cursor: 'not-allowed' }}
+                                />
+                            </div>
+
+                            {/* Gravada 5% */}
+                            <div>
+                                <label style={labelStyle}>Gravada 5%</label>
+                                <input
+                                    value={formFactura.gravada_5 ? parseInt(formFactura.gravada_5).toLocaleString('es-PY') : ''}
+                                    onChange={e => {
+                                        const grav5 = parsearMiles(e.target.value)
+                                        const iva5 = grav5 ? String(Math.floor(parseInt(grav5) / 21)) : ''
+                                        setFormFactura(prev => {
+                                            const next = { ...prev, gravada_5: grav5, iva_5: iva5 }
+                                            return { ...next, monto_total: calcularTotal(next) }
+                                        })
+                                    }}
+                                    placeholder="Gs. 0"
+                                    style={inputStyle}
+                                />
                             </div>
                             <div>
-                                <label style={labelStyle}>IVA 5%</label>
-                                <input type="number" value={formFactura.iva_5} onChange={e => setFormFactura({...formFactura, iva_5: e.target.value})} placeholder="Gs." style={inputStyle} />
+                                <label style={labelStyle}>IVA 5% (auto)</label>
+                                <input
+                                    value={formFactura.iva_5 ? parseInt(formFactura.iva_5).toLocaleString('es-PY') : ''}
+                                    readOnly
+                                    style={{ ...inputStyle, background: s.surfaceLow, color: s.textMuted, cursor: 'not-allowed' }}
+                                />
                             </div>
+
+                            {/* Exentas */}
                             <div style={{ gridColumn: '1 / -1' }}>
                                 <label style={labelStyle}>Exentas</label>
-                                <input type="number" value={formFactura.exentas} onChange={e => setFormFactura({...formFactura, exentas: e.target.value})} placeholder="Gs." style={inputStyle} />
+                                <input
+                                    value={formFactura.exentas ? parseInt(formFactura.exentas).toLocaleString('es-PY') : ''}
+                                    onChange={e => {
+                                        const exentas = parsearMiles(e.target.value)
+                                        setFormFactura(prev => {
+                                            const next = { ...prev, exentas }
+                                            return { ...next, monto_total: calcularTotal(next) }
+                                        })
+                                    }}
+                                    placeholder="Gs. 0"
+                                    style={inputStyle}
+                                />
                             </div>
+
+                            {/* Total calculado */}
+                            <div style={{ gridColumn: '1 / -1', padding: '12px 16px', background: s.surfaceLow, borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+                                <span style={{ fontSize: '20px', fontWeight: '800', color: s.text }}>
+                                    Gs. {formFactura.monto_total ? parseInt(formFactura.monto_total).toLocaleString('es-PY') : '0'}
+                                </span>
+                            </div>
+
+                            {/* Notas */}
                             <div style={{ gridColumn: '1 / -1' }}>
                                 <label style={labelStyle}>Notas</label>
                                 <textarea value={formFactura.notas} onChange={e => setFormFactura({...formFactura, notas: e.target.value})} rows={2} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
@@ -641,7 +781,6 @@ function Proveedores() {
                     </div>
                 </div>
             )}
-
             {/* ── MODAL PAGO ── */}
             {modalPago && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -691,6 +830,34 @@ function Proveedores() {
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalPago(null)} style={btnSecundario}>Cancelar</button>
                             <button onClick={handleRegistrarPago} style={{ ...btnPrimario, background: '#10b981' }}>Registrar pago</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modalLibroCompras && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Libro de Compras</h3>
+                            <button onClick={() => setModalLibroCompras(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                        </div>
+                        <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
+                            Exportá el libro de compras en formato SET con IVA discriminado.
+                        </p>
+                        <label style={labelStyle}>Fecha desde</label>
+                        <input type="date" value={libroComprasFechaDesde} onChange={e => setLibroComprasFechaDesde(e.target.value)} style={{ ...inputStyle, marginBottom: '12px' }} />
+                        <label style={labelStyle}>Fecha hasta</label>
+                        <input type="date" value={libroComprasFechaHasta} onChange={e => setLibroComprasFechaHasta(e.target.value)} style={{ ...inputStyle, marginBottom: '20px' }} />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setModalLibroCompras(false)}
+                                style={{ padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px' }}>
+                                Cancelar
+                            </button>
+                            <button onClick={handleExportarLibroCompras} disabled={exportandoLibroCompras}
+                                style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: exportandoLibroCompras ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '700' }}>
+                                {exportandoLibroCompras ? 'Exportando...' : '⬇ Descargar Excel'}
+                            </button>
                         </div>
                     </div>
                 </div>

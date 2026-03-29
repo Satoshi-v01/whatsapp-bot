@@ -31,3 +31,8 @@ export async function getReporte(params = {}) {
     const res = await api.get(`/ventas/reporte/exportar${query ? `?${query}` : ''}`)
     return res.data
 }
+
+export async function getLibroVentas(fecha_desde, fecha_hasta) {
+    const res = await api.get(`/ventas/libro-ventas?fecha_desde=${fecha_desde}&fecha_hasta=${fecha_hasta}`)
+    return res.data
+}

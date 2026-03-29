@@ -107,11 +107,12 @@ ${es_prueba ? '<div class="prueba">*** FACTURA DE PRUEBA ***</div>' : ''}
 <!-- ENCABEZADO -->
 ${config.nombre_fantasia ? `<div class="center bold" style="font-size:14px; margin-bottom:1px;">${config.nombre_fantasia}</div>` : ''}
 <div class="center bold" style="font-size:${config.nombre_fantasia ? '11' : '13'}px; margin-bottom:2px;">${config.nombre_empresa || 'EMPRESA'}</div>
+<div class="center" style="font-size:10px;">RUC: ${config.ruc_empresa || '—'}</div>
 <div class="center" style="font-size:10px;">${config.actividad_economica || ''}</div>
 ${config.direccion_matriz ? `<div class="center" style="font-size:10px;">${config.direccion_matriz}</div>` : ''}
 ${config.direccion_sucursal ? `<div class="center" style="font-size:10px;">Suc: ${config.direccion_sucursal}</div>` : ''}
 ${config.telefonos ? `<div class="center" style="font-size:10px;">Tel: ${config.telefonos}</div>` : ''}
-<div class="center" style="font-size:10px;">RUC: ${config.ruc_empresa || '—'}</div>
+
 
 <div class="separador-solido"></div>
 
@@ -219,6 +220,69 @@ ${es_prueba ? '<div class="prueba">*** FACTURA DE PRUEBA ***</div>' : ''}
 
 </body>
 </html>`
+
+    const ventana = window.open('', '_blank', 'width=400,height=600')
+    ventana.document.write(html)
+    ventana.document.close()
+    setTimeout(() => ventana.print(), 500)
+}
+
+export function imprimirCierre({ cierreDatos, gastos, fechaCierre, cajero, config }) {
+    const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0)
+    const neto = (cierreDatos?.totalGeneral || 0) - totalGastos
+    const formatGs = n => parseInt(n || 0).toLocaleString('es-PY')
+    const fecha = new Date().toLocaleString('es-PY', { timeZone: 'America/Asuncion' })
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Cierre de Caja</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Courier New', monospace; font-size: 11px; width: 80mm; margin: 0 auto; padding: 4px; color: #000; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .separador { border-top: 1px dashed #000; margin: 6px 0; }
+    .separador-solido { border-top: 1px solid #000; margin: 6px 0; }
+    .fila { display: flex; justify-content: space-between; margin: 3px 0; }
+    .total { font-weight: bold; font-size: 13px; }
+    @media print { body { width: 80mm; } @page { margin: 0; size: 80mm auto; } }
+</style></head>
+<body>
+<div class="center bold" style="font-size:14px;">${config.nombre_fantasia || config.nombre_empresa || 'EMPRESA'}</div>
+${config.nombre_fantasia ? `<div class="center" style="font-size:11px;">de ${config.nombre_empresa || ''}</div>` : ''}
+<div class="center" style="font-size:10px;">RUC: ${config.ruc_empresa || '—'}</div>
+<div class="separador-solido"></div>
+<div class="center bold" style="font-size:13px;">CIERRE DE CAJA</div>
+<div class="center" style="font-size:10px;">Fecha: ${fechaCierre}</div>
+<div class="center" style="font-size:10px;">Impreso: ${fecha}</div>
+${cajero ? `<div class="center" style="font-size:10px;">Cajero: ${cajero}</div>` : ''}
+<div class="separador"></div>
+<div class="bold" style="margin-bottom:4px;">VENTAS POR MÉTODO DE PAGO</div>
+${Object.entries(cierreDatos?.resumen || {}).map(([k, v]) => {
+    const label = v.metodo === 'tarjeta' ? `Tarjeta ${v.subtipo === 'debito' ? 'Débito' : 'Crédito'}` : v.metodo === 'transferencia' ? 'Transferencia' : 'Efectivo'
+    return `<div class="fila"><span>${label} (${v.cantidad})</span><span>Gs. ${formatGs(v.total)}</span></div>`
+}).join('')}
+<div class="separador"></div>
+<div class="fila total"><span>TOTAL VENTAS (${cierreDatos?.cantidadVentas || 0})</span><span>Gs. ${formatGs(cierreDatos?.totalGeneral)}</span></div>
+<div class="separador"></div>
+<div class="bold" style="margin-bottom:4px;">VENTAS POR CANAL</div>
+${Object.entries(cierreDatos?.canales || {}).map(([canal, v]) =>
+    `<div class="fila"><span>${canal} (${v.cantidad})</span><span>Gs. ${formatGs(v.total)}</span></div>`
+).join('')}
+${gastos.length > 0 ? `
+<div class="separador"></div>
+<div class="bold" style="margin-bottom:4px;">GASTOS Y EGRESOS</div>
+${gastos.map(g => `<div class="fila"><span>${g.descripcion}</span><span>Gs. ${formatGs(g.monto)}</span></div>`).join('')}
+<div class="separador"></div>
+<div class="fila total"><span>TOTAL GASTOS</span><span>Gs. ${formatGs(totalGastos)}</span></div>
+` : ''}
+<div class="separador-solido"></div>
+<div class="fila"><span>Total ventas</span><span>Gs. ${formatGs(cierreDatos?.totalGeneral)}</span></div>
+${gastos.length > 0 ? `<div class="fila"><span>Total gastos</span><span>- Gs. ${formatGs(totalGastos)}</span></div>` : ''}
+<div class="separador"></div>
+<div class="fila total" style="font-size:13px;"><span>NETO DEL DÍA</span><span>Gs. ${formatGs(neto)}</span></div>
+<div class="separador-solido"></div>
+<div class="center" style="font-size:10px; margin-top:4px;">— Fin del cierre —</div>
+</body></html>`
 
     const ventana = window.open('', '_blank', 'width=400,height=600')
     ventana.document.write(html)
