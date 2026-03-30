@@ -5,7 +5,7 @@ const { Pool } = require('pg')
 console.log('DATABASE_URL:', process.env.DATABASE_URL?.slice(0, 50))
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres.ohaoerennhbklnmiwvno:Goldensun22.4154264@aws-1-sa-east-1.pooler.supabase.com:6543/postgres',
     ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
