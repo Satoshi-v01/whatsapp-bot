@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getProductos } from '../services/productos'
+import { getProductos, buscarPorCodigoBarras } from '../services/productos'
 import { buscarClientes, crearCliente } from '../services/clientes'
 import { registrarVentaPresencial } from '../services/ventas'
 import { confirmarOrden } from '../services/ordenes'
@@ -9,11 +9,13 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { imprimirFactura, imprimirCierre } from '../utils/factura'
 import { useApp } from '../App'
 import api from '../services/api'
-import { formatearFecha } from '../utils/fecha'
+
 
 function Caja() {
     const navigate = useNavigate()
     const busquedaProductoRef = useRef(null)
+    const codigoBarrasRef = useRef('')
+    const codigoBarrasTimer = useRef(null)
     const { darkMode } = useApp()
     const [pestana, setPestana] = useState('venta')
     const [tipoVenta, setTipoVenta] = useState('contado')
@@ -101,6 +103,32 @@ function Caja() {
             }
         }
     }, [clienteSeleccionado, zonas])
+
+    useEffect(() => {
+        if (pestana !== 'venta') return
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter') {
+                const codigo = codigoBarrasRef.current.trim()
+                if (codigo.length >= 4) {
+                    handleScannerCodigo(codigo)
+                }
+                codigoBarrasRef.current = ''
+                clearTimeout(codigoBarrasTimer.current)
+                return
+            }
+            if (e.key.length === 1) {
+                codigoBarrasRef.current += e.key
+                clearTimeout(codigoBarrasTimer.current)
+                codigoBarrasTimer.current = setTimeout(() => {
+                    codigoBarrasRef.current = ''
+                }, 100)
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [pestana, lineas])
 
     async function cargarDatos() {
         try {
@@ -252,6 +280,61 @@ function Caja() {
         imprimirCierre({ cierreDatos, gastos, fechaCierre, cajero, config: configFactura })
     }
 
+    async function handleScannerCodigo(codigo) {
+        try {
+            const pr = await buscarPorCodigoBarras(codigo)
+
+            const producto = {
+                id: pr.producto_id,
+                nombre: pr.producto_nombre,
+                marca_nombre: pr.marca_nombre,
+                categoria_nombre: pr.categoria_nombre,
+                calidad: pr.calidad,
+                categoria_id: pr.categoria_id,
+                marca_id: pr.marca_id,
+                descripcion: pr.descripcion,
+                sku: pr.sku,
+                presentaciones: [pr]
+            }
+
+            const lineaVacia = lineas.find(l => !l.presentacionSeleccionada)
+
+            if (lineaVacia) {
+                setLineas(prev => prev.map(l =>
+                    l.id === lineaVacia.id
+                        ? {
+                            ...l,
+                            busqueda: `${pr.marca_nombre ? pr.marca_nombre + ' — ' : ''}${pr.producto_nombre}`,
+                            productosFiltrados: [],
+                            productoSeleccionado: producto,
+                            presentacionSeleccionada: pr
+                        }
+                        : l
+                ))
+            } else {
+                const nuevoId = Math.max(...lineas.map(l => l.id)) + 1
+                setLineas(prev => [...prev, {
+                    id: nuevoId,
+                    busqueda: `${pr.marca_nombre ? pr.marca_nombre + ' — ' : ''}${pr.producto_nombre}`,
+                    productosFiltrados: [],
+                    productoSeleccionado: producto,
+                    presentacionSeleccionada: pr,
+                    cantidad: 1
+                }])
+            }
+        } catch (err) {
+            if (err.response?.status === 404) {
+                setModalConfirmar({
+                    titulo: 'Producto no encontrado',
+                    mensaje: `No se encontró ningún producto con el código "${codigo}".`,
+                    textoBoton: 'Cerrar',
+                    colorBoton: '#888',
+                    onConfirmar: () => setModalConfirmar(null)
+                })
+            }
+        }
+    }
+
     const lineasValidas = lineas.filter(l => l.presentacionSeleccionada)
     const subtotal = lineasValidas.reduce((sum, l) => sum + calcularPrecioEfectivo(l.presentacionSeleccionada).precio * l.cantidad, 0)
     const costoDelivery = canal === 'delivery' ? (formDelivery.costo_delivery || 0) : 0
@@ -328,6 +411,7 @@ function Caja() {
                             precio: precio * linea.cantidad,
                             metodo_pago: metodoPago,
                             subtipo_pago: subtipoPago || null,
+                            tipo_iva: '10', 
                             quiere_factura: !!(razonSocial || rucFactura),
                             ruc_factura: rucFactura || null,
                             razon_social: razonSocial || null,
@@ -369,16 +453,25 @@ function Caja() {
                         metodo_pago: metodoImpresion,
                         monto_efectivo: montoEfectivoNum || total,
                         vuelto: vueltoCalculado,
-                        items: lineasValidas.map(linea => {
-                            const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
-                            return {
-                                descripcion: `${linea.productoSeleccionado.marca_nombre ? linea.productoSeleccionado.marca_nombre + ' ' : ''}${linea.productoSeleccionado.nombre} ${linea.presentacionSeleccionada.nombre}`,
-                                cantidad: linea.cantidad,
-                                precio_unitario: precio,
-                                total: precio * linea.cantidad,
+                        items: [
+                            ...lineasValidas.map(linea => {
+                                const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
+                                return {
+                                    descripcion: `${linea.productoSeleccionado.marca_nombre ? linea.productoSeleccionado.marca_nombre + ' ' : ''}${linea.productoSeleccionado.nombre} ${linea.presentacionSeleccionada.nombre}`,
+                                    cantidad: linea.cantidad,
+                                    precio_unitario: precio,
+                                    total: precio * linea.cantidad,
+                                    iva: 10
+                                }
+                            }),
+                            ...(costoDelivery > 0 ? [{
+                                descripcion: `Delivery — ${formDelivery.zona_nombre || 'Zona'}`,
+                                cantidad: 1,
+                                precio_unitario: costoDelivery,
+                                total: costoDelivery,
                                 iva: 10
-                            }
-                        }),
+                            }] : [])
+                        ],
                         total,
                         cajero,
                         config: configFactura

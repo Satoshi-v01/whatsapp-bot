@@ -9,15 +9,46 @@ import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 const MODULOS = [
     { key: 'ventas', label: 'Ventas', icono: '🛒' },
+    { key: 'caja', label: 'Caja', icono: '🧾' },
     { key: 'inventario', label: 'Inventario', icono: '📦' },
     { key: 'clientes', label: 'Clientes', icono: '👥' },
     { key: 'delivery', label: 'Delivery', icono: '🚚' },
+    { key: 'proveedores', label: 'Proveedores', icono: '🏭' },
     { key: 'reportes', label: 'Reportes', icono: '📊' },
+    { key: 'auditoria', label: 'Auditoría', icono: '🔍' },
     { key: 'configuracion', label: 'Configuración', icono: '⚙️' },
     { key: 'usuarios', label: 'Usuarios', icono: '👤' },
 ]
 
-const ACCIONES = ['ver', 'crear', 'editar', 'eliminar']
+const ACCIONES_POR_MODULO = {
+    ventas: ['ver', 'crear', 'editar', 'cancelar', 'exportar'],
+    caja: ['ver', 'operar', 'imprimir', 'cierre'],
+    inventario: ['ver', 'crear', 'editar', 'eliminar', 'gestionar_lotes'],
+    clientes: ['ver', 'crear', 'editar', 'ver_cuenta_corriente', 'registrar_pago'],
+    delivery: ['ver', 'crear', 'editar', 'asignar_repartidor', 'cambiar_estado'],
+    proveedores: ['ver', 'crear', 'editar', 'eliminar', 'registrar_pago', 'exportar'],
+    reportes: ['ver', 'exportar'],
+    auditoria: ['ver'],
+    configuracion: ['ver', 'editar'],
+    usuarios: ['ver', 'crear', 'editar', 'eliminar'],
+}
+
+const LABEL_ACCIONES = {
+    ver: 'Ver',
+    crear: 'Crear',
+    editar: 'Editar',
+    eliminar: 'Eliminar',
+    cancelar: 'Cancelar',
+    exportar: 'Exportar',
+    operar: 'Operar',
+    imprimir: 'Imprimir',
+    cierre: 'Cierre',
+    gestionar_lotes: 'Lotes',
+    ver_cuenta_corriente: 'Cta. Cte.',
+    registrar_pago: 'Pagos',
+    asignar_repartidor: 'Asignar',
+    cambiar_estado: 'Estado',
+}
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 function Toggle({ checked, onChange }) {
@@ -138,7 +169,6 @@ function Configuracion() {
 
     async function handleGuardarFactura() {
         setGuardando(true)
-        setFormFactura({ numero_factura: '', timbrado_proveedor: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
         try {
             const datos = {}
             Object.entries(configFactura).forEach(([k, v]) => {
@@ -334,20 +364,37 @@ function Configuracion() {
                                         {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                                     </select>
                                     <p style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>Permisos por módulo</p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '300px', overflowY: 'auto' }}>
-                                        {MODULOS.map(mod => (
-                                            <div key={mod.key} style={{ padding: '10px 12px', borderRadius: '8px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>{mod.icono} {mod.label}</span>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    {ACCIONES.map(accion => (
-                                                        <label key={accion} style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
-                                                            <input type="checkbox" checked={tienePermiso(mod.key, accion)} onChange={() => togglePermiso(mod.key, accion)} />
-                                                            <span style={{ fontSize: '10px', color: '#64748b' }}>{accion}</span>
-                                                        </label>
-                                                    ))}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '420px', overflowY: 'auto' }}>
+                                        {MODULOS.map(mod => {
+                                            const acciones = ACCIONES_POR_MODULO[mod.key] || ['ver', 'crear', 'editar', 'eliminar']
+                                            return (
+                                                <div key={mod.key} style={{ padding: '10px 12px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                                                        <span style={{ fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '130px' }}>
+                                                            {mod.icono} {mod.label}
+                                                        </span>
+                                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                            {acciones.map(accion => {
+                                                                const activo = tienePermiso(mod.key, accion)
+                                                                return (
+                                                                    <button key={accion} onClick={() => togglePermiso(mod.key, accion)}
+                                                                        style={{
+                                                                            padding: '3px 8px', borderRadius: '20px', border: '1px solid',
+                                                                            fontSize: '10px', fontWeight: '600', cursor: 'pointer',
+                                                                            background: activo ? '#1a1a2e' : 'white',
+                                                                            color: activo ? 'white' : '#64748b',
+                                                                            borderColor: activo ? '#1a1a2e' : '#e2e8f0',
+                                                                            transition: 'all 0.15s'
+                                                                        }}>
+                                                                        {LABEL_ACCIONES[accion] || accion}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
                                         <button onClick={handleGuardarPermisos} style={{ ...btnPrimario, flex: 1 }}>Guardar cambios</button>

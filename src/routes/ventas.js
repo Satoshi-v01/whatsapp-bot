@@ -6,6 +6,8 @@ const { recalcularStats } = require('./clientes')
 const { manejarError } = require('../middleware/validar')
 const { descontarStockFEFO } = require('../services/stock')
 const { registrarLog } = require('../middleware/auditoria')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
+
 
 
 // 1. Ver todas las ventas
@@ -58,7 +60,7 @@ router.get('/estado/:estado', async (req, res) => {
 })
 
 // 3. Historial con filtros y paginación
-router.get('/historial', async (req, res) => {
+router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
     try {
        const {
             periodo = 'recientes',
@@ -283,7 +285,7 @@ router.get('/reporte/exportar', async (req, res) => {
 })
 
 // 5. Ver una venta específica
-router.get('/:id', validarId, async (req, res) => {
+router.patch('/:id/estado', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
         const resultado = await db.query(
@@ -347,7 +349,7 @@ router.patch('/:id/estado', validarId, validarEstado, async (req, res) => {
 })
 
 // 7. Registrar venta presencial
-router.post('/presencial', validarVentaPresencial, async (req, res) => {
+router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const {

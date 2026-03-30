@@ -6,9 +6,11 @@ const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const { descontarStockFEFO } = require('../services/stock')
 const { registrarLog } = require('../middleware/auditoria')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
+
 
 // Ver todos los deliveries
-router.get('/', async (req, res) => {
+router.get('/', autenticar, verificarPermiso('delivery', 'ver'), async (req, res) => {
     try {
         const { fecha } = req.query
         const fechaFiltro = fecha || new Date().toISOString().slice(0, 10)
@@ -131,7 +133,7 @@ router.get('/estado/:estado', async (req, res) => {
 })
 
 // Crear delivery manual
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('delivery', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { cliente_id, cliente_nuevo, lineas, presentacion_id, precio, metodo_pago, estado_pago, quiere_factura, ruc_factura, razon_social, ubicacion, referencia, horario, contacto_entrega, notas } = req.body
@@ -202,7 +204,7 @@ router.post('/', async (req, res) => {
 })
 
 // Actualizar estado del delivery
-router.patch('/:id/estado', async (req, res) => {
+router.patch('/:id/estado', autenticar, verificarPermiso('delivery', 'cambiar_estado'), async (req, res) => {
     try {
         const { id } = req.params
         const { estado, nota } = req.body
@@ -235,18 +237,25 @@ router.patch('/:id/estado', async (req, res) => {
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'delivery', entidad: 'delivery', entidad_id: parseInt(id), descripcion: `Estado delivery: ${anterior.rows[0]?.estado} → ${estado}`, dato_anterior: { estado: anterior.rows[0]?.estado }, dato_nuevo: { estado }, ip: req.ip }).catch(() => {})
 
         if (delivery.cliente_numero) {
-            const mensajes = {
-                confirmado: `Tu pedido ha sido confirmado por el agente. Pronto estara en camino! 🐾`,
-                en_camino: `Tu pedido ya esta en camino. Pronto llegara a tu domicilio! 🐾`,
-                entregado: `Tu pedido ha sido entregado exitosamente. Muchas gracias por elegir Sosa Bulls! 😊🐾`,
-                cancelado: `Tu pedido ha sido cancelado. Si tenes alguna consulta escribinos y te ayudamos 🐾`
-            }
-            if (mensajes[estado]) {
-                try {
-                    await enviarMensaje(delivery.cliente_numero, mensajes[estado])
-                    await guardarMensaje(delivery.cliente_numero, mensajes[estado], 'bot')
-                } catch (err) {
-                    console.error('Error enviando mensaje de estado:', err.message)
+            // Obtener canal de la venta para saber si se originó desde WhatsApp
+            const ventaRes = await db.query(`SELECT canal FROM ventas WHERE id = $1`, [delivery.venta_id])
+            const canalVenta = ventaRes.rows[0]?.canal || ''
+            const esWhatsapp = ['whatsapp_delivery', 'whatsapp_bot', 'whatsapp'].includes(canalVenta)
+
+            if (esWhatsapp) {
+                const mensajes = {
+                    confirmado: `Tu pedido ha sido confirmado por el agente. Pronto estara en camino! 🐾`,
+                    en_camino: `Tu pedido ya esta en camino. Pronto llegara a tu domicilio! 🐾`,
+                    entregado: `Tu pedido ha sido entregado exitosamente. Muchas gracias por elegir Sosa Bulls! 😊🐾`,
+                    cancelado: `Tu pedido ha sido cancelado. Si tenes alguna consulta escribinos y te ayudamos 🐾`
+                }
+                if (mensajes[estado]) {
+                    try {
+                        await enviarMensaje(delivery.cliente_numero, mensajes[estado])
+                        await guardarMensaje(delivery.cliente_numero, mensajes[estado], 'bot')
+                    } catch (err) {
+                        console.error('Error enviando mensaje de estado:', err.message)
+                    }
                 }
             }
         }

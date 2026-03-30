@@ -61,3 +61,15 @@ export async function getComparativas(params = {}) {
     const res = await api.get(`/estadisticas/comparativas?${query}`)
     return res.data
 }
+
+export async function getClientesRetencion(params = {}) {
+    const q = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/clientes-retencion?${q}`)
+    return res.data
+}
+
+export async function getRentabilidad(params = {}) {
+    const q = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/rentabilidad?${q}`)
+    return res.data
+}

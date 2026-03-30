@@ -84,3 +84,8 @@ export async function actualizarCodigoBarras(id, codigo_barras) {
     const res = await api.patch(`/productos/presentaciones/${id}/codigos`, { codigo_barras })
     return res.data
 }
+
+export async function buscarPorCodigoBarras(codigo) {
+    const res = await api.get(`/productos/codigo-barras/${encodeURIComponent(codigo)}`)
+    return res.data
+}

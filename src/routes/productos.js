@@ -132,6 +132,32 @@ router.delete('/marcas/:id/confirmar', async (req, res) => {
     }
 })
 
+// Buscar presentación por código de barras — ANTES de /:id
+router.get('/codigo-barras/:codigo', async (req, res) => {
+    try {
+        const { codigo } = req.params
+        const resultado = await db.query(
+            `SELECT pr.*, p.nombre as producto_nombre, p.id as producto_id,
+                    m.nombre as marca_nombre, c.nombre as categoria_nombre,
+                    p.calidad, p.categoria_id, p.marca_id, p.descripcion, p.sku
+             FROM presentaciones pr
+             JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             LEFT JOIN categorias c ON p.categoria_id = c.id
+             WHERE pr.codigo_barras = $1
+             AND pr.disponible = true
+             AND pr.stock > 0`,
+            [codigo]
+        )
+        if (!resultado.rows.length) {
+            return res.status(404).json({ error: 'Producto no encontrado' })
+        }
+        res.json(resultado.rows[0])
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // 4. Ver un producto específico
 router.get('/:id', async (req, res) => {
     try {
