@@ -110,7 +110,7 @@ const path = require('path')
 
 // Servir dashboard estático
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist')))
-app.get('/dashboard/*', (req, res) => {
+app.get('/dashboard/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard/dist/index.html'))
 })
 
