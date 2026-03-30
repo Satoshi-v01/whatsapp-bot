@@ -1,6 +1,8 @@
 process.env.TZ = 'America/Asuncion'
-require('dotenv').config()
+
 const { Pool } = require('pg')
+
+console.log('DATABASE_URL:', process.env.DATABASE_URL?.slice(0, 50))
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -21,6 +23,5 @@ async function query(text, params) {
         throw err
     }
 }
-console.log('DATABASE_URL:', process.env.DATABASE_URL?.slice(0, 40))
 
 module.exports = { pool, query }
