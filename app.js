@@ -1,3 +1,4 @@
+console.log(Object.keys(process.env))
 require('dotenv').config()
 process.env.TZ = 'America/Asuncion'
 console.log('ENV CHECK:', {
