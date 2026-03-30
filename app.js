@@ -49,16 +49,14 @@ const limiterAuth = rateLimit({
 app.use(express.json())
 
 // Seguridad HTTP headers
-app.use(helmet())
+//app.use(helmet())
 
 // CORS — solo permitir el dashboard
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production'
-        ? [process.env.FRONTEND_URL, `${process.env.FRONTEND_URL}/dashboard`]
-        : ['http://localhost:5173', 'http://localhost:3000'],
+    origin: '*',
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: false
 }))
 
 // Middleware de logs para todas las rutas
