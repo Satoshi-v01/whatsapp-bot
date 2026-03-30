@@ -1,3 +1,4 @@
+require('dotenv').config()
 process.env.TZ = 'America/Asuncion'
 console.log('ENV CHECK:', {
     DATABASE_URL: process.env.DATABASE_URL?.slice(0, 40),
