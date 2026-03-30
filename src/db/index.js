@@ -6,7 +6,8 @@ const pool = new Pool({
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
-    options: '-c timezone=America/Asuncion'
+    options: '-c timezone=America/Asuncion',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 })
 
 pool.on('connect', () => {
