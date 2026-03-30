@@ -1,27 +1,24 @@
-process.env.TZ = 'America/Asuncion'
-
 const { Pool } = require('pg')
 
-console.log('DATABASE_URL:', process.env.DATABASE_URL?.slice(0, 50))
+let pool = null
 
-const pool = new Pool({
-    connectionString: process.env.DB_URL || process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-})
-
-pool.on('connect', () => console.log('Conectado a PostgreSQL'))
-pool.on('error', (err) => console.error('Error en la conexión a PostgreSQL:', err))
-
-async function query(text, params) {
-    try {
-        return await pool.query(text, params)
-    } catch (err) {
-        console.error('Error ejecutando query:', err)
-        throw err
+function getPool() {
+    if (!pool) {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL || process.env.DB_URL,
+            ssl: { rejectUnauthorized: false },
+            max: 10,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 5000,
+        })
+        pool.on('connect', () => console.log('Conectado a PostgreSQL'))
+        pool.on('error', (err) => console.error('Error PostgreSQL:', err))
     }
+    return pool
 }
 
-module.exports = { pool, query }
+async function query(text, params) {
+    return await getPool().query(text, params)
+}
+
+module.exports = { get pool() { return getPool() }, query }
