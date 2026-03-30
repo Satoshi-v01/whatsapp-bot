@@ -1,9 +1,9 @@
 import axios from 'axios'
 
 const baseURL = import.meta.env.PROD 
-    ? 'https://whatsapp-bot-production-3bd2.up.railway.app'
+    ? 'https://whatsapp-bot-0272.onrender.com'
     : '/api'
-
+    
 const api = axios.create({
     baseURL
 })
