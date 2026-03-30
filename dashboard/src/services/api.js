@@ -1,7 +1,11 @@
 import axios from 'axios'
 
+const baseURL = import.meta.env.PROD 
+    ? 'https://whatsapp-bot-production-3bd2.up.railway.app'
+    : '/api'
+
 const api = axios.create({
-    baseURL: '/api'
+    baseURL
 })
 
 api.interceptors.request.use(config => {
