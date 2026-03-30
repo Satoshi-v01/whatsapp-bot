@@ -1,13 +1,5 @@
-console.log(Object.keys(process.env))
 require('dotenv').config()
 process.env.TZ = 'America/Asuncion'
-console.log('ENV CHECK:', {
-    DATABASE_URL: process.env.DATABASE_URL?.slice(0, 40),
-    DB_URL: process.env.DB_URL?.slice(0, 40),
-    SUPABASE_URL: process.env.SUPABASE_URL?.slice(0, 40),
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT
-})
 const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { query } = require('./src/db/index')
@@ -33,8 +25,6 @@ const logger = require('./src/middleware/logger')
 const lotesRoutes = require('./src/routes/lotes')
 const auditoriaRoutes = require('./src/routes/auditoria')
 
-
-
 const app = express()
 
 // Rate limiting general
@@ -58,7 +48,9 @@ const limiterAuth = rateLimit({
 app.use(express.json())
 
 // Seguridad HTTP headers
-app.use(helmet())
+app.use(helmet({
+    contentSecurityPolicy: false
+}))
 
 // CORS
 app.use(cors({
