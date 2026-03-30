@@ -90,8 +90,8 @@ export function imprimirFactura(datos) {
     .fila { display: flex; justify-content: space-between; margin: 2px 0; }
     .fila-3 { display: grid; grid-template-columns: 1fr 2fr 1fr; margin: 2px 0; gap: 2px; }
     table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    th { text-align: left; font-weight: bold; border-bottom: 1px solid #000; padding: 2px 0; }
-    td { padding: 2px 0; vertical-align: top; }
+    th { text-align: left; font-weight: bold; border-bottom: 1px solid #000; padding: 3px 4px; }
+    td { padding: 3px 4px; vertical-align: top; }
     .th-right, .td-right { text-align: right; }
     .prueba { text-align: center; font-size: 14px; font-weight: bold; letter-spacing: 3px; border: 2px dashed #000; padding: 4px; margin: 6px 0; }
     @media print {

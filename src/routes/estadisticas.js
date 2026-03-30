@@ -45,6 +45,13 @@ router.get('/resumen', async (req, res) => {
              ORDER BY pr.stock ASC`
         )
 
+        const creditoPendiente = await db.query(
+            `SELECT COALESCE(SUM(v.precio), 0) as total, COUNT(*) as cantidad
+            FROM ventas v
+            WHERE v.tipo_venta = 'credito'
+            AND v.estado = 'pendiente_pago'`
+        )
+
         res.json({
             ventas_hoy: {
                 cantidad: parseInt(ventasHoy.rows[0].cantidad),
@@ -54,7 +61,11 @@ router.get('/resumen', async (req, res) => {
             pendientes: parseInt(pendientes.rows[0].cantidad),
             deliveries: parseInt(deliveries.rows[0].cantidad),
             esperando_agente: parseInt(esperandoAgente.rows[0].cantidad),
-            stock_bajo: stockBajo.rows
+            stock_bajo: stockBajo.rows,
+            credito_pendiente: {
+            total: parseInt(creditoPendiente.rows[0].total),
+            cantidad: parseInt(creditoPendiente.rows[0].cantidad)
+        }
         })
 
     } catch (error) {
@@ -155,29 +166,33 @@ router.get('/ventas-por-dia', async (req, res) => {
     try {
         const { periodo = 'semana', canal } = req.query
 
-        let intervalo = `7 days`
-        let groupBy = `DATE(v.created_at)`
-        if (periodo === 'mes') intervalo = `30 days`
-        if (periodo === 'anual') intervalo = `365 days`
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '7 days'
 
-        let condiciones = [`v.created_at >= NOW() - INTERVAL '${intervalo}'`, `v.estado != 'cancelado'`]
-        let valores = []
+        let condiciones = [`v.created_at >= NOW() - ($1::interval)`, `v.estado != 'cancelado'`]
+        let valores = [intervalo]
+        let i = 2
 
         if (canal) {
-            condiciones.push(`v.canal = $1`)
-            valores.push(canal)
+            const mapCanal = {
+                bot: `v.canal IN ('whatsapp_bot', 'whatsapp')`,
+                tienda: `v.canal IN ('en_tienda', 'presencial', 'agente_presencial')`,
+                delivery: `v.canal IN ('agente_delivery', 'whatsapp_delivery')`,
+            }
+            if (mapCanal[canal]) condiciones.push(mapCanal[canal])
+            else { condiciones.push(`v.canal = $${i}`); valores.push(canal); i++ }
         }
 
         const resultado = await db.query(
             `SELECT
-                ${groupBy} as fecha,
+                DATE(v.created_at AT TIME ZONE 'America/Asuncion') as fecha,
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
                 COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE ${condiciones.join(' AND ')}
-             GROUP BY ${groupBy}
+             GROUP BY DATE(v.created_at AT TIME ZONE 'America/Asuncion')
              ORDER BY fecha ASC`,
             valores
         )
@@ -191,79 +206,72 @@ router.get('/ventas-por-dia', async (req, res) => {
 router.get('/ventas-por-canal', async (req, res) => {
     try {
         const { periodo = 'mes' } = req.query
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '30 days'
 
-        let intervalo = '30 days'
-        if (periodo === 'semana') intervalo = '7 days'
-        if (periodo === 'anual') intervalo = '365 days'
-
-    const resultado = await db.query(
-        `SELECT
-            CASE
-                WHEN canal IN ('whatsapp_bot', 'whatsapp') THEN 'bot'
-                WHEN canal IN ('en_tienda', 'presencial', 'agente_presencial') THEN 'tienda'
-                WHEN canal IN ('agente_delivery', 'whatsapp_delivery') THEN 'delivery'
-                WHEN canal = 'pagina_web' THEN 'web'
-                ELSE 'otro'
-            END as canal,
-            COUNT(*) as cantidad,
-            COALESCE(SUM(v.precio), 0) as total
-        FROM ventas v
-        WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
-        AND v.estado != 'cancelado'
-        GROUP BY 1
-        ORDER BY total DESC`
-    )
+        const resultado = await db.query(
+            `SELECT
+                CASE
+                    WHEN canal IN ('whatsapp_bot', 'whatsapp') THEN 'bot'
+                    WHEN canal IN ('en_tienda', 'presencial', 'agente_presencial') THEN 'tienda'
+                    WHEN canal IN ('agente_delivery', 'whatsapp_delivery') THEN 'delivery'
+                    WHEN canal = 'pagina_web' THEN 'web'
+                    ELSE 'otro'
+                END as canal,
+                COUNT(*) as cantidad,
+                COALESCE(SUM(v.precio), 0) as total
+             FROM ventas v
+             WHERE v.created_at >= NOW() - ($1::interval)
+             AND v.estado != 'cancelado'
+             GROUP BY 1
+             ORDER BY total DESC`,
+            [intervalo]
+        )
         res.json(resultado.rows)
     } catch (error) {
         manejarError(res, error)
     }
 })
 
-// Top y bottom productos
 router.get('/ranking-productos', async (req, res) => {
     try {
         const { periodo = 'mes', limite = 10 } = req.query
-
-        let intervalo = '30 days'
-        if (periodo === 'semana') intervalo = '7 days'
-        if (periodo === 'anual') intervalo = '365 days'
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
+        const intervalo = intervalos[periodo] || '30 days'
 
         const top = await db.query(
             `SELECT
-                p.nombre as producto,
-                pr.nombre as presentacion,
-                m.nombre as marca,
+                p.nombre as producto, pr.nombre as presentacion, m.nombre as marca,
                 COUNT(*) as cantidad_vendida,
-                COALESCE(SUM(v.precio), 0) as total_generado
+                COALESCE(SUM(v.precio), 0) as total_generado,
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia_generada
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
-             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             WHERE v.created_at >= NOW() - ($1::interval)
              AND v.estado != 'cancelado'
              GROUP BY p.nombre, pr.nombre, m.nombre
              ORDER BY cantidad_vendida DESC
-             LIMIT $1`,
-            [parseInt(limite)]
+             LIMIT $2`,
+            [intervalo, parseInt(limite)]
         )
 
         const bottom = await db.query(
             `SELECT
-                p.nombre as producto,
-                pr.nombre as presentacion,
-                m.nombre as marca,
+                p.nombre as producto, pr.nombre as presentacion, m.nombre as marca,
                 COUNT(*) as cantidad_vendida,
                 COALESCE(SUM(v.precio), 0) as total_generado
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
-             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             WHERE v.created_at >= NOW() - ($1::interval)
              AND v.estado != 'cancelado'
              GROUP BY p.nombre, pr.nombre, m.nombre
              ORDER BY cantidad_vendida ASC
-             LIMIT $1`,
-            [parseInt(limite)]
+             LIMIT $2`,
+            [intervalo, parseInt(limite)]
         )
 
         res.json({ top: top.rows, bottom: bottom.rows })
@@ -272,29 +280,27 @@ router.get('/ranking-productos', async (req, res) => {
     }
 })
 
-// Top clientes
 router.get('/top-clientes', async (req, res) => {
     try {
         const { periodo = 'mes', limite = 10 } = req.query
-
-        let intervalo = '30 days'
-        if (periodo === 'semana') intervalo = '7 days'
-        if (periodo === 'anual') intervalo = '365 days'
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
+        const intervalo = intervalos[periodo] || '30 days'
 
         const resultado = await db.query(
             `SELECT
                 COALESCE(c.nombre, v.razon_social, 'Consumidor final') as cliente,
-                c.ruc,
+                c.id as cliente_id, c.ruc,
                 COUNT(*) as cantidad_compras,
-                COALESCE(SUM(v.precio), 0) as total_comprado
+                COALESCE(SUM(v.precio), 0) as total_comprado,
+                COALESCE(AVG(v.precio), 0) as ticket_promedio
              FROM ventas v
              LEFT JOIN clientes c ON v.cliente_id = c.id
-             WHERE v.created_at >= NOW() - INTERVAL '${intervalo}'
+             WHERE v.created_at >= NOW() - ($1::interval)
              AND v.estado != 'cancelado'
-             GROUP BY c.nombre, v.razon_social, c.ruc
+             GROUP BY c.nombre, v.razon_social, c.ruc, c.id
              ORDER BY total_comprado DESC
-             LIMIT $1`,
-            [parseInt(limite)]
+             LIMIT $2`,
+            [intervalo, parseInt(limite)]
         )
         res.json(resultado.rows)
     } catch (error) {
@@ -302,51 +308,100 @@ router.get('/top-clientes', async (req, res) => {
     }
 })
 
-// Métricas generales del período
+router.get('/rentabilidad', async (req, res) => {
+    try {
+        const { periodo = 'mes', agrupar = 'producto' } = req.query
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '30 days'
+
+        let selectGroup, groupBy
+
+        if (agrupar === 'categoria') {
+            selectGroup = `cat.nombre as nombre, 'categoria' as tipo`
+            groupBy = `cat.nombre`
+        } else if (agrupar === 'marca') {
+            selectGroup = `COALESCE(m.nombre, 'Sin marca') as nombre, 'marca' as tipo`
+            groupBy = `m.nombre`
+        } else {
+            selectGroup = `CONCAT(COALESCE(m.nombre, ''), ' ', p.nombre, ' — ', pr.nombre) as nombre, 'producto' as tipo`
+            groupBy = `m.nombre, p.nombre, pr.nombre`
+        }
+
+        const resultado = await db.query(
+            `SELECT
+                ${selectGroup},
+                COUNT(*) as unidades_vendidas,
+                COALESCE(SUM(v.precio), 0) as ingresos,
+                COALESCE(SUM(COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as costo,
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia,
+                CASE
+                    WHEN SUM(v.precio) > 0
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(v.precio) * 100)::numeric, 1)
+                    ELSE 0
+                END as margen_pct
+             FROM ventas v
+             JOIN presentaciones pr ON v.presentacion_id = pr.id
+             JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             LEFT JOIN categorias cat ON p.categoria_id = cat.id
+             WHERE v.created_at >= NOW() - ($1::interval)
+             AND v.estado != 'cancelado'
+             GROUP BY ${groupBy}
+             ORDER BY ganancia DESC`,
+            [intervalo]
+        )
+
+        // Resumen total
+        const resumen = await db.query(
+            `SELECT
+                COALESCE(SUM(v.precio), 0) as ingresos_total,
+                COALESCE(SUM(COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as costo_total,
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_total,
+                CASE
+                    WHEN SUM(v.precio) > 0
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(v.precio) * 100)::numeric, 1)
+                    ELSE 0
+                END as margen_promedio_pct
+             FROM ventas v
+             JOIN presentaciones pr ON v.presentacion_id = pr.id
+             WHERE v.created_at >= NOW() - ($1::interval)
+             AND v.estado != 'cancelado'`,
+            [intervalo]
+        )
+
+        res.json({
+            detalle: resultado.rows,
+            resumen: resumen.rows[0]
+        })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 router.get('/metricas', async (req, res) => {
     try {
         const { periodo = 'mes', canal, marca_id, categoria_id } = req.query
 
-        let intervalo = '30 days'
-        if (periodo === 'semana') intervalo = '7 days'
-        if (periodo === 'anual') intervalo = '365 days'
-        if (periodo === 'hoy') intervalo = '1 day'
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '30 days'
 
-        let condiciones = [
-            `v.created_at >= NOW() - INTERVAL '${intervalo}'`,
-            `v.estado != 'cancelado'`
-        ]
-        let valores = []
-        let i = 1
+        let condiciones = [`v.created_at >= NOW() - ($1::interval)`, `v.estado != 'cancelado'`]
+        let valores = [intervalo]
+        let i = 2
 
         if (canal) {
-            // Mapear canal unificado a canales reales
             const mapCanal = {
                 bot: `v.canal IN ('whatsapp_bot', 'whatsapp')`,
                 tienda: `v.canal IN ('en_tienda', 'presencial', 'agente_presencial')`,
                 delivery: `v.canal IN ('agente_delivery', 'whatsapp_delivery')`,
                 web: `v.canal = 'pagina_web'`
             }
-            if (mapCanal[canal]) {
-                condiciones.push(mapCanal[canal])
-            } else {
-                condiciones.push(`v.canal = $${i}`)
-                valores.push(canal)
-                i++
-            }
+            if (mapCanal[canal]) condiciones.push(mapCanal[canal])
+            else { condiciones.push(`v.canal = $${i}`); valores.push(canal); i++ }
         }
 
-        if (marca_id) {
-            condiciones.push(`p.marca_id = $${i}`)
-            valores.push(parseInt(marca_id))
-            i++
-        }
-
-        if (categoria_id) {
-            condiciones.push(`p.categoria_id = $${i}`)
-            valores.push(parseInt(categoria_id))
-            i++
-        }
+        if (marca_id) { condiciones.push(`p.marca_id = $${i}`); valores.push(parseInt(marca_id)); i++ }
+        if (categoria_id) { condiciones.push(`p.categoria_id = $${i}`); valores.push(parseInt(categoria_id)); i++ }
 
         const resultado = await db.query(
             `SELECT
@@ -492,11 +547,9 @@ router.get('/comparativas', async (req, res) => {
 // Estadísticas de delivery por zona
 router.get('/delivery-zonas', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-        let intervalo = '30 days'
-        if (periodo === 'semana') intervalo = '7 days'
-        if (periodo === 'anual') intervalo = '365 days'
-        if (periodo === 'hoy') intervalo = '1 day'
+        const { periodo = 'mes' } = req.query 
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '30 days'
 
         // Pedidos y recaudación por zona
         const porZona = await db.query(
@@ -505,34 +558,45 @@ router.get('/delivery-zonas', async (req, res) => {
                 COUNT(DISTINCT d.id) as cantidad_pedidos,
                 COALESCE(SUM(v.costo_delivery), 0) as total_delivery,
                 COALESCE(SUM(v.precio), 0) as total_ventas
-             FROM deliveries d
-             JOIN ventas v ON d.venta_id = v.id
-             WHERE d.created_at >= NOW() - INTERVAL '${intervalo}'
-             AND d.estado != 'cancelado'
-             GROUP BY v.zona_delivery
-             ORDER BY cantidad_pedidos DESC`
+            FROM deliveries d
+            JOIN ventas v ON d.venta_id = v.id
+            WHERE d.created_at >= NOW() - ($1::interval)
+            AND d.estado != 'cancelado'
+            GROUP BY v.zona_delivery
+            ORDER BY cantidad_pedidos DESC`,
+            [intervalo]
         )
 
         // Clientes por zona (ciudad)
+        // Clientes por zona (ciudad) — normalizado
         const clientesPorZona = await db.query(
             `SELECT
-                COALESCE(ciudad, 'Sin ciudad') as zona,
+                INITCAP(TRIM(LOWER(
+                    TRANSLATE(MIN(ciudad),
+                        'áéíóúÁÉÍÓÚàèìòùÀÈÌÒÙäëïöüÄËÏÖÜâêîôûÂÊÎÔÛñÑ',
+                        'aeiouAEIOUaeiouAEIOUaeiouAEIOUaeiouAEIOUnN'
+                    )
+                ))) as zona,
                 COUNT(*) as total_clientes,
                 COUNT(*) FILTER (WHERE activo = true) as clientes_activos,
                 COUNT(*) FILTER (WHERE activo = false OR activo IS NULL) as clientes_inactivos
-             FROM clientes
-             WHERE ciudad IS NOT NULL AND ciudad != ''
-             GROUP BY ciudad
-             ORDER BY total_clientes DESC`
+            FROM clientes
+            WHERE ciudad IS NOT NULL AND ciudad != ''
+            GROUP BY LOWER(TRIM(TRANSLATE(ciudad,
+                'áéíóúÁÉÍÓÚàèìòùÀÈÌÒÙäëïöüÄËÏÖÜâêîôûÂÊÎÔÛñÑ',
+                'aeiouAEIOUaeiouAEIOUaeiouAEIOUaeiouAEIOUnN'
+            )))
+            ORDER BY total_clientes DESC`
         )
 
         // Total recaudado por delivery en el período
         const totalDelivery = await db.query(
             `SELECT COALESCE(SUM(v.costo_delivery), 0) as total
-             FROM ventas v
-             JOIN deliveries d ON v.id = d.venta_id
-             WHERE d.created_at >= NOW() - INTERVAL '${intervalo}'
-             AND d.estado != 'cancelado'`
+            FROM ventas v
+            JOIN deliveries d ON v.id = d.venta_id
+            WHERE d.created_at >= NOW() - ($1::interval)
+            AND d.estado != 'cancelado'`,
+            [intervalo]
         )
 
         res.json({
@@ -542,6 +606,76 @@ router.get('/delivery-zonas', async (req, res) => {
         })
     } catch (error) {
         res.status(500).json({ error: error.message })
+    }
+})
+
+router.get('/clientes-retencion', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
+        const intervalo = intervalos[periodo] || '30 days'
+        const intervaloAnterior = intervalo === '7 days' ? '14 days' : intervalo === '30 days' ? '60 days' : '730 days'
+
+        const activos = await db.query(
+            `SELECT COUNT(DISTINCT cliente_id) as cantidad FROM ventas
+             WHERE created_at >= NOW() - ($1::interval)
+             AND cliente_id IS NOT NULL AND estado != 'cancelado'`,
+            [intervalo]
+        )
+
+        const retenidos = await db.query(
+            `SELECT COUNT(DISTINCT v1.cliente_id) as cantidad FROM ventas v1
+             WHERE v1.created_at >= NOW() - ($1::interval)
+             AND v1.cliente_id IS NOT NULL AND v1.estado != 'cancelado'
+             AND EXISTS (
+                 SELECT 1 FROM ventas v2
+                 WHERE v2.cliente_id = v1.cliente_id
+                 AND v2.created_at >= NOW() - ($2::interval)
+                 AND v2.created_at < NOW() - ($1::interval)
+                 AND v2.estado != 'cancelado'
+             )`,
+            [intervalo, intervaloAnterior]
+        )
+
+        const nuevos = await db.query(
+            `SELECT COUNT(DISTINCT v.cliente_id) as cantidad FROM ventas v
+             WHERE v.created_at >= NOW() - ($1::interval)
+             AND v.cliente_id IS NOT NULL AND v.estado != 'cancelado'
+             AND NOT EXISTS (
+                 SELECT 1 FROM ventas v2
+                 WHERE v2.cliente_id = v.cliente_id
+                 AND v2.created_at < NOW() - ($1::interval)
+                 AND v2.estado != 'cancelado'
+             )`,
+            [intervalo]
+        )
+
+        const perdidos = await db.query(
+            `SELECT COUNT(DISTINCT v.cliente_id) as cantidad FROM ventas v
+             WHERE v.created_at >= NOW() - ($2::interval)
+             AND v.created_at < NOW() - ($1::interval)
+             AND v.cliente_id IS NOT NULL AND v.estado != 'cancelado'
+             AND NOT EXISTS (
+                 SELECT 1 FROM ventas v2
+                 WHERE v2.cliente_id = v.cliente_id
+                 AND v2.created_at >= NOW() - ($1::interval)
+                 AND v2.estado != 'cancelado'
+             )`,
+            [intervalo, intervaloAnterior]
+        )
+
+        const totalActivos = parseInt(activos.rows[0].cantidad)
+        const totalRetenidos = parseInt(retenidos.rows[0].cantidad)
+
+        res.json({
+            activos: totalActivos,
+            retenidos: totalRetenidos,
+            nuevos: parseInt(nuevos.rows[0].cantidad),
+            perdidos: parseInt(perdidos.rows[0].cantidad),
+            tasa_retencion: totalActivos > 0 ? Math.round((totalRetenidos / totalActivos) * 100) : 0
+        })
+    } catch (error) {
+        manejarError(res, error)
     }
 })
 

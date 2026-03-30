@@ -5,13 +5,16 @@ import { getReporte } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
-import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas } from '../services/estadisticas'
+import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas, getClientesRetencion, getRentabilidad } from '../services/estadisticas'
 
 function Reportes() {
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const { darkMode } = useApp()
     const [comparativas, setComparativas] = useState(null)
+    const [retencion, setRetencion] = useState(null)
+    const [rentabilidad, setRentabilidad] = useState(null)
+    const [agruparRentabilidad, setAgruparRentabilidad] = useState('producto')
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -50,6 +53,11 @@ function Reportes() {
 
     useEffect(() => { cargarFiltros() }, [])
     useEffect(() => { cargarDatos() }, [periodo, canal, marcaId, categoriaId])
+    useEffect(() => {
+        if (rentabilidad) {
+            getRentabilidad({ periodo, agrupar: agruparRentabilidad }).then(setRentabilidad).catch(() => {})
+        }
+    }, [agruparRentabilidad])
 
     async function cargarFiltros() {
         try {
@@ -65,15 +73,16 @@ function Reportes() {
             if (canal) params.canal = canal
             if (marcaId) params.marca_id = marcaId
             if (categoriaId) params.categoria_id = categoriaId
-            const [met, dias, canales, ranking, clientes, delZonas, comp] = await Promise.all([
+            const [met, dias, canales, ranking, clientes, delZonas, comp, ret, rent] = await Promise.all([
                 getMetricas(params), getVentasPorDia({ periodo, canal }),
                 getVentasPorCanal({ periodo }), getRankingProductos({ periodo }),
                 getTopClientes({ periodo }), getDeliveryZonas({ periodo }),
-                getComparativas({ periodo })
+                getComparativas({ periodo }), getClientesRetencion({ periodo }),
+                getRentabilidad({ periodo, agrupar: agruparRentabilidad })
             ])
             setMetricas(met); setVentasPorDia(dias); setVentasPorCanal(canales)
             setRankingProductos(ranking); setTopClientes(clientes); setDeliveryZonas(delZonas)
-            setComparativas(comp)
+            setComparativas(comp); setRetencion(ret); setRentabilidad(rent)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -652,6 +661,111 @@ function Reportes() {
                     </div>
                 </div>
             </div>
+
+            {/* Retención de clientes */}
+            {retencion && (
+                <div style={{ marginBottom: '24px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text, marginBottom: '16px' }}>Retención de clientes</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) 1.5fr', gap: '16px' }}>
+                        {[
+                            { label: 'Clientes activos', valor: retencion.activos, color: '#3b82f6', icono: '👤', desc: 'compraron este período' },
+                            { label: 'Clientes retenidos', valor: retencion.retenidos, color: '#10b981', icono: '🔄', desc: 'volvieron a comprar' },
+                            { label: 'Clientes nuevos', valor: retencion.nuevos, color: '#8b5cf6', icono: '✨', desc: 'primera compra' },
+                            { label: 'Clientes perdidos', valor: retencion.perdidos, color: '#ef4444', icono: '📉', desc: 'no volvieron' },
+                        ].map((m, i) => (
+                            <div key={i} style={{ background: s.surface, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</p>
+                                    <span style={{ fontSize: '18px' }}>{m.icono}</span>
+                                </div>
+                                <p style={{ fontSize: '36px', fontWeight: '800', color: m.color, lineHeight: 1 }}>{m.valor}</p>
+                                <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '6px' }}>{m.desc}</p>
+                            </div>
+                        ))}
+
+                        {/* Tasa de retención */}
+                        <div style={{ background: '#0f172a', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                            <p style={{ fontSize: '10px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Tasa de retención</p>
+                            <p style={{ fontSize: '52px', fontWeight: '800', color: retencion.tasa_retencion >= 50 ? '#10b981' : retencion.tasa_retencion >= 25 ? '#f59e0b' : '#ef4444', lineHeight: 1 }}>
+                                {retencion.tasa_retencion}%
+                            </p>
+                            <div style={{ width: '100%', height: '6px', background: '#1e293b', borderRadius: '3px', overflow: 'hidden', marginTop: '12px' }}>
+                                <div style={{ height: '100%', width: `${retencion.tasa_retencion}%`, background: retencion.tasa_retencion >= 50 ? '#10b981' : retencion.tasa_retencion >= 25 ? '#f59e0b' : '#ef4444', borderRadius: '3px', transition: 'width 0.5s' }} />
+                            </div>
+                            <p style={{ fontSize: '11px', color: '#475569', marginTop: '8px', textAlign: 'center' }}>
+                                {retencion.tasa_retencion >= 50 ? '✅ Buena retención' : retencion.tasa_retencion >= 25 ? '⚠️ Retención moderada' : '🔴 Retención baja'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rentabilidad */}
+            {rentabilidad && (
+                <div style={{ marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div>
+                            <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text }}>Rentabilidad</h2>
+                            <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>
+                                Margen promedio: <strong style={{ color: s.text }}>{rentabilidad.resumen?.margen_promedio_pct}%</strong> —
+                                Ganancia total: <strong style={{ color: '#10b981' }}>{formatearGs(rentabilidad.resumen?.ganancia_total)}</strong>
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            {[
+                                { val: 'producto', label: 'Por producto' },
+                                { val: 'marca', label: 'Por marca' },
+                                { val: 'categoria', label: 'Por categoría' },
+                            ].map(o => (
+                                <button key={o.val} onClick={() => setAgruparRentabilidad(o.val)}
+                                    style={{ padding: '7px 14px', borderRadius: '20px', border: '1px solid', fontSize: '12px', fontWeight: '600', cursor: 'pointer', background: agruparRentabilidad === o.val ? '#1a1a2e' : s.surfaceLow, color: agruparRentabilidad === o.val ? 'white' : s.textMuted, borderColor: agruparRentabilidad === o.val ? '#1a1a2e' : s.border }}>
+                                    {o.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.borderLight}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: s.surfaceLow }}>
+                                    {['#', 'Nombre', 'Unidades', 'Ingresos', 'Costo', 'Ganancia', 'Margen'].map(h => (
+                                        <th key={h} style={{ padding: '10px 16px', textAlign: h === '#' ? 'center' : 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rentabilidad.detalle?.length === 0 ? (
+                                    <tr><td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: s.textFaint }}>Sin datos</td></tr>
+                                ) : rentabilidad.detalle?.slice(0, 15).map((r, i) => {
+                                    const margen = parseFloat(r.margen_pct || 0)
+                                    const colorMargen = margen >= 30 ? '#10b981' : margen >= 10 ? '#f59e0b' : '#ef4444'
+                                    return (
+                                        <tr key={i} style={{ borderTop: `1px solid ${s.borderLight}` }}
+                                            onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
+                                            onMouseLeave={e => e.currentTarget.style.background = s.surface}>
+                                            <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '11px', color: s.textFaint }}>{i + 1}</td>
+                                            <td style={{ padding: '10px 16px', fontSize: '12px', fontWeight: '600', color: s.text, maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</td>
+                                            <td style={{ padding: '10px 16px', fontSize: '12px', color: s.textMuted }}>{r.unidades_vendidas}</td>
+                                            <td style={{ padding: '10px 16px', fontSize: '12px', fontWeight: '600', color: s.text }}>{formatearGs(r.ingresos)}</td>
+                                            <td style={{ padding: '10px 16px', fontSize: '12px', color: '#ef4444' }}>{formatearGs(r.costo)}</td>
+                                            <td style={{ padding: '10px 16px', fontSize: '13px', fontWeight: '800', color: '#10b981' }}>{formatearGs(r.ganancia)}</td>
+                                            <td style={{ padding: '10px 16px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ flex: 1, height: '6px', background: s.barTrack, borderRadius: '3px', overflow: 'hidden', minWidth: '60px' }}>
+                                                        <div style={{ height: '100%', width: `${Math.min(margen, 100)}%`, background: colorMargen, borderRadius: '3px' }} />
+                                                    </div>
+                                                    <span style={{ fontSize: '12px', fontWeight: '700', color: colorMargen, minWidth: '40px' }}>{margen}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Exportar */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>

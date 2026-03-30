@@ -3,12 +3,9 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { registrarLog } = require('../middleware/auditoria')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
-// ─────────────────────────────────────────────
-// PROVEEDORES
-// ─────────────────────────────────────────────
-
-router.get('/', async (req, res) => {
+router.get('/', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const { buscar } = req.query
         let condiciones = ['p.activo = true']
@@ -39,7 +36,7 @@ router.get('/', async (req, res) => {
     }
 })
 
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('proveedores', 'crear'), async (req, res) => {
     try {
         const { nombre, ruc, telefono, email, banco, numero_cuenta, direccion, notas } = req.body
         if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
@@ -306,7 +303,7 @@ router.get('/:id', async (req, res) => {
     }
 })
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', autenticar, verificarPermiso('proveedores', 'editar'), async (req, res) => {
     try {
         const { nombre, ruc, telefono, email, banco, numero_cuenta, direccion, notas, activo } = req.body
         const anterior = await db.query(`SELECT * FROM proveedores WHERE id = $1`, [req.params.id])
