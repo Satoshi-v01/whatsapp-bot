@@ -97,6 +97,23 @@ app.use((req, res, next) => {
     next()
 })
 
+// Alias /api para compatibilidad con frontend
+app.use('/api/auth', limiterAuth, authRoutes)
+app.use('/api/usuarios', limiterGeneral, autenticar, usuariosRoutes)
+app.use('/api/configuracion', limiterGeneral, autenticar, configuracionRoutes)
+app.use('/api/sesiones', limiterGeneral, autenticar, sesionesRoutes)
+app.use('/api/ventas', limiterGeneral, autenticar, ventasRoutes)
+app.use('/api/ordenes', limiterGeneral, autenticar, ordenesRoutes)
+app.use('/api/productos', limiterGeneral, autenticar, productosRoutes)
+app.use('/api/deliveries', limiterGeneral, autenticar, deliveriesRoutes)
+app.use('/api/proveedores', limiterGeneral, autenticar, proveedoresRoutes)
+app.use('/api/estadisticas', limiterGeneral, autenticar, estadisticasRoutes)
+app.use('/api/clientes', limiterGeneral, autenticar, clientesRoutes)
+app.use('/api/zonas', limiterGeneral, autenticar, zonasRoutes)
+app.use('/api/carrito', limiterGeneral, autenticar, carritoRoutes)
+app.use('/api/lotes', limiterGeneral, autenticar, lotesRoutes)
+app.use('/api/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
+
 // Rutas
 app.use('/webhook', webhookRoutes)
 app.use('/auth', limiterAuth, authRoutes)
