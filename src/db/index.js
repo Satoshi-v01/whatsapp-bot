@@ -5,7 +5,7 @@ let pool = null
 function getPool() {
     if (!pool) {
         pool = new Pool({
-            connectionString: process.env.SUPABASE_URL || process.env.DB_URL,
+            connectionString: process.env.SUPABASE_URL,
             ssl: { rejectUnauthorized: false },
             max: 10,
             idleTimeoutMillis: 30000,
