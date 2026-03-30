@@ -2,7 +2,7 @@ process.env.TZ = 'America/Asuncion'
 require('dotenv').config()
 const express = require('express')
 const rateLimit = require('express-rate-limit')
-const { pool } = require('./src/db/index')
+const { query } = require('./src/db/index')
 const webhookRoutes = require('./src/routes/webhook')
 const sesionesRoutes = require('./src/routes/sesiones')
 const ventasRoutes = require('./src/routes/ventas')
@@ -119,17 +119,13 @@ app.get('/', (req, res) => {
 })
 
 app.get('/test-db', async (req, res) => {
-    try {
-        const resultado = await pool.query('SELECT NOW()')
-        res.json({
-            mensaje: 'Base de datos conectada',
-            hora: resultado.rows[0].now
-        })
-    } catch (error) {
-        logger.error('Error conectando a la base de datos:', error)
-        res.status(500).json({ error: error.message })
-    }
-})
+  try {
+    const result = await query('SELECT NOW()');
+    res.json({ dbTime: result.rows[0].now });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
@@ -152,7 +148,7 @@ process.on('uncaughtException', (error) => {
     process.exit(1)
 })
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 8080
 
 
 let corriendo = false
