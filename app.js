@@ -2,6 +2,7 @@ process.env.TZ = 'America/Asuncion'
 console.log('ENV CHECK:', {
     DATABASE_URL: process.env.DATABASE_URL?.slice(0, 40),
     DB_URL: process.env.DB_URL?.slice(0, 40),
+    SUPABASE_URL: process.env.SUPABASE_URL?.slice(0, 40),
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT
 })
