@@ -60,7 +60,11 @@ app.use(helmet())
 // CORS
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? [process.env.FRONTEND_URL, `${process.env.FRONTEND_URL}/dashboard`]
+        ? [
+            process.env.FRONTEND_URL,
+            `${process.env.FRONTEND_URL}/dashboard`,
+            'https://whatsapp-bot-production-3bd2.up.railway.app',
+          ]
         : ['http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
