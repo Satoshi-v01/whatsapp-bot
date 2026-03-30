@@ -1,5 +1,10 @@
-process.env.TZ = 'America/Asuncion'
 require('dotenv').config()
+process.env.TZ = 'America/Asuncion'
+console.log('ENV CHECK:', {
+    DATABASE_URL: process.env.DATABASE_URL?.slice(0, 40),
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT
+})
 const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { query } = require('./src/db/index')
@@ -24,6 +29,7 @@ const cors = require('cors')
 const logger = require('./src/middleware/logger')
 const lotesRoutes = require('./src/routes/lotes')
 const auditoriaRoutes = require('./src/routes/auditoria')
+
 
 
 const app = express()
