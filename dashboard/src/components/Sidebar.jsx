@@ -22,18 +22,18 @@ function Sidebar() {
     }
 
     const links = [
-    { to: '/', icono: '🏠', label: 'Inicio', modulo: 'home' },      
-    { to: '/caja', icono: '🧾', label: 'Caja', modulo: 'ventas' },
-    { to: '/ordenes', icono: '📋', label: 'Ordenes', modulo: 'ordenes' },
-    { to: '/chat', icono: '💬', label: 'Chat', modulo: 'chat' },
-    { to: '/delivery', icono: '🚚', label: 'Delivery', modulo: 'delivery' },
-    { to: '/ventas', icono: '🛒', label: 'Ventas', modulo: 'ventas' },
-    { to: '/inventario', icono: '📦', label: 'Inventario', modulo: 'inventario' },
-    { to: '/proveedores', icono: '🏭', label: 'Proveedores', modulo: 'proveedores' },
-    { to: '/clientes', icono: '👥', label: 'Clientes', modulo: 'clientes' },
-    { to: '/reportes', icono: '📊', label: 'Reportes', modulo: 'reportes' },
-    { to: '/auditoria', icono: '📋', label: 'Auditoría', modulo: 'auditoria', soloAdmin: true },
-    { to: '/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
+    { to: '/dashboard/inicio', icono: '🏠', label: 'Inicio', modulo: 'home' },      
+    { to: '/dashboard/caja', icono: '🧾', label: 'Caja', modulo: 'ventas' },
+    { to: '/dashboard/ordenes', icono: '📋', label: 'Ordenes', modulo: 'ordenes' },
+    { to: '/dashboard/chat', icono: '💬', label: 'Chat', modulo: 'chat' },
+    { to: '/dashboard/delivery', icono: '🚚', label: 'Delivery', modulo: 'delivery' },
+    { to: '/dashboard/ventas', icono: '🛒', label: 'Ventas', modulo: 'ventas' },
+    { to: '/dashboard/inventario', icono: '📦', label: 'Inventario', modulo: 'inventario' },
+    { to: '/dashboard/proveedores', icono: '🏭', label: 'Proveedores', modulo: 'proveedores' },
+    { to: '/dashboard/clientes', icono: '👥', label: 'Clientes', modulo: 'clientes' },
+    { to: '/dashboard/reportes', icono: '📊', label: 'Reportes', modulo: 'reportes' },
+    { to: '/dashboard/auditoria', icono: '📋', label: 'Auditoría', modulo: 'auditoria', soloAdmin: true },
+    { to: '/dashboard/configuracion', icono: '⚙️', label: 'Configuración', modulo: 'configuracion' },
     
     
 ]

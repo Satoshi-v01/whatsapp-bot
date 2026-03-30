@@ -109,42 +109,45 @@ function App() {
                                 </>
                             ) : (
                                 <>
-                                    <Route path="/" element={
-                                        puedo('home', 'ver') ? <Home /> : <Navigate to="/delivery" replace />
+                                    <Route path="/dashboard" element={<Navigate to="/dashboard/inicio" replace />} />
+                                    <Route path="/dashboard/" element={<Navigate to="/dashboard/inicio" replace />} />
+                                    <Route path="/dashboard/inicio" element={
+                                        puedo('home', 'ver') ? <Home /> : <Navigate to="/dashboard/delivery" replace />
                                     } />
-                                    <Route path="/chat" element={
+                                    <Route path="/dashboard/chat" element={
                                         <RutaProtegida modulo="chat"><Chat /></RutaProtegida>
                                     } />
-                                    <Route path="/ventas" element={
+                                    <Route path="/dashboard/ventas" element={
                                         <RutaProtegida modulo="ventas"><Ventas /></RutaProtegida>
                                     } />
-                                    <Route path="/inventario" element={
+                                    <Route path="/dashboard/inventario" element={
                                         <RutaProtegida modulo="inventario"><Inventario /></RutaProtegida>
                                     } />
-                                    <Route path="/proveedores" element={
-                                        <RutaProtegida modulo="proveedores" accion="ver"><Proveedores /></RutaProtegida>
+                                    <Route path="/dashboard/proveedores" element={
+                                        <RutaProtegida modulo="proveedores"><Proveedores /></RutaProtegida>
                                     } />
-                                    <Route path="/clientes" element={
+                                    <Route path="/dashboard/clientes" element={
                                         <RutaProtegida modulo="clientes"><Clientes /></RutaProtegida>
                                     } />
-                                    <Route path="/caja" element={
+                                    <Route path="/dashboard/caja" element={
                                         <RutaProtegida modulo="ventas"><Caja /></RutaProtegida>
                                     } />
-                                    <Route path="/delivery" element={
+                                    <Route path="/dashboard/delivery" element={
                                         <RutaProtegida modulo="delivery"><Delivery /></RutaProtegida>
                                     } />
-                                    <Route path="/reportes" element={
+                                    <Route path="/dashboard/reportes" element={
                                         <RutaProtegida modulo="reportes"><Reportes /></RutaProtegida>
                                     } />
-                                    <Route path="/configuracion" element={
+                                    <Route path="/dashboard/configuracion" element={
                                         <RutaProtegida modulo="configuracion"><Configuracion /></RutaProtegida>
                                     } />
-                                    <Route path="/ordenes" element={
-                                        <RutaProtegida modulo="ordenes" accion="ver"><Ordenes /></RutaProtegida>
+                                    <Route path="/dashboard/ordenes" element={
+                                        <RutaProtegida modulo="ordenes"><Ordenes /></RutaProtegida>
                                     } />
-                                    <Route path="/auditoria" element={
-                                        usuario.rol === 'admin' ? <Auditoria /> : <Navigate to="/" replace />
+                                    <Route path="/dashboard/auditoria" element={
+                                        usuario.rol === 'admin' ? <Auditoria /> : <Navigate to="/dashboard" replace />
                                     } />
+                                    <Route path="*" element={<Navigate to="/dashboard/inicio" replace />} />
                                 </>
                             )}
                         </Routes>
