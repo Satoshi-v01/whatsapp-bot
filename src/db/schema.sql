@@ -1,5 +1,5 @@
 -- categorias
-CREATE TABLE caterogias (
+CREATE TABLE categorias (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
@@ -54,7 +54,7 @@ CREATE TABLE ventas (
     cliente_numero VARCHAR(20) NOT NULL,
     presentacion_id INTEGER REFERENCES presentaciones(id),
     cantidad INTEGER DEFAULT 1,
-    precio DECIMAL(10,2) NOT NULL,
+    precio INTEGER NOT NULL,
     canal VARCHAR(20) DEFAULT 'whatsapp',
     estado VARCHAR(30) DEFAULT 'pendiente_pago',
     agente_id INTEGER REFERENCES usuarios(id),
