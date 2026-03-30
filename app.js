@@ -54,7 +54,7 @@ app.use(helmet())
 // CORS — solo permitir el dashboard
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL
+        ? [process.env.FRONTEND_URL, `${process.env.FRONTEND_URL}/dashboard`]
         : ['http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -106,6 +106,13 @@ app.use('/carrito', limiterGeneral, autenticar, carritoRoutes)
 app.use('/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 
+const path = require('path')
+
+// Servir dashboard estático
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist')))
+app.get('/dashboard/*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard/dist/index.html'))
+})
 
 app.get('/', (req, res) => {
     res.json({ mensaje: 'Servidor funcionando' })
