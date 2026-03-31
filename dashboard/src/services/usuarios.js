@@ -34,3 +34,8 @@ export async function eliminarUsuario(id) {
     const res = await api.delete(`/usuarios/${id}`)
     return res.data
 }
+
+export async function cambiarPassword(id, password_actual, password_nueva) {
+    const res = await api.patch(`/usuarios/${id}/password`, { password_actual, password_nueva })
+    return res.data
+}
