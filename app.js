@@ -56,9 +56,9 @@ app.use(helmet({
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
         ? [
-            process.env.FRONTEND_URL,
-            `${process.env.FRONTEND_URL}/dashboard`,
-            'https://whatsapp-bot-production-3bd2.up.railway.app',
+            'https://sosabulls.com.py',
+            'https://www.sosabulls.com.py',
+            'https://whatsapp-bot-0272.onrender.com',
           ]
         : ['http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
