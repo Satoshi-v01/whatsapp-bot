@@ -205,7 +205,7 @@ function Auditoria() {
                             <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: s.textMuted }}>Cargando...</td></tr>
                         ) : logs.length === 0 ? (
                             <tr><td colSpan={7} style={{ padding: '48px', textAlign: 'center', color: s.textMuted }}>
-                                <p style={{ fontSize: '28px', marginBottom: '8px' }}>🔍</p>
+                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.4 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                                 <p>No hay registros para los filtros seleccionados.</p>
                             </td></tr>
                         ) : logs.map(log => {
@@ -317,10 +317,10 @@ function Auditoria() {
                             )}
                         </div>
 
-                        <div style={{ marginTop: '16px', padding: '10px 14px', background: s.surfaceLow, borderRadius: '8px', fontSize: '11px', color: s.textMuted, display: 'flex', gap: '16px' }}>
-                            <span>👤 {modalDetalle.usuario_nombre || 'Sistema'}</span>
-                            <span>🕐 {new Date(modalDetalle.created_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}</span>
-                            <span>🌐 {modalDetalle.ip || '—'}</span>
+                        <div style={{ marginTop: '16px', padding: '10px 14px', background: s.surfaceLow, borderRadius: '8px', fontSize: '11px', color: s.textMuted, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{modalDetalle.usuario_nombre || 'Sistema'}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{new Date(modalDetalle.created_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>{modalDetalle.ip || '—'}</span>
                         </div>
                     </div>
                 </div>

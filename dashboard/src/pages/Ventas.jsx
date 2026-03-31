@@ -193,11 +193,11 @@ function Ventas() {
 
     function labelCanal(canal) {
         const labels = {
-            en_tienda: '🏪 En tienda', whatsapp_bot: '🤖 Bot',
-            whatsapp: '💬 WhatsApp', whatsapp_delivery: '🚚 Delivery',
-            pagina_web: '🌐 Web', presencial: '🏪 Presencial', otro: '📋 Otro'
+            en_tienda: 'En tienda', whatsapp_bot: 'Bot',
+            whatsapp: 'WhatsApp', whatsapp_delivery: 'Delivery',
+            pagina_web: 'Web', presencial: 'Presencial', otro: 'Otro'
         }
-        return labels[canal] || canal
+        return labels[canal] || (canal ? canal.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '—')
     }
 
     const tabs = [
@@ -221,7 +221,7 @@ function Ventas() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setModalLibro(true)}
                         style={{ padding: '10px 18px', borderRadius: '10px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                        📊 Libro de Ventas
+                        Libro de Ventas
                     </button>
                     <button onClick={() => navigate('/caja')} style={{ background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
                         + Nueva venta
@@ -296,10 +296,10 @@ function Ventas() {
                         <label style={labelStyle}>Estado</label>
                         <select value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPagina(1) }} style={inputStyle}>
                             <option value="">Todos</option>
-                            <option value="pendiente_pago">⏳ Pendiente de pago</option>
-                            <option value="pagado">✅ Pagado</option>
-                            <option value="entregado">📦 Entregado</option>
-                            <option value="cancelado">❌ Cancelado</option>
+                            <option value="pendiente_pago">Pendiente de pago</option>
+                            <option value="pagado">Pagado</option>
+                            <option value="entregado">Entregado</option>
+                            <option value="cancelado">Cancelado</option>
                         </select>
                     </div>
                     <div>
@@ -362,7 +362,7 @@ function Ventas() {
                                                     </span>
                                                     {venta.tipo_venta === 'credito' && (
                                                         <span style={{ display: 'block', marginTop: '4px', padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: '#fef3c7', color: '#92400e' }}>
-                                                            📋 Crédito
+                                                            Crédito
                                                         </span>
                                                     )}
                                                 </td>
@@ -379,10 +379,10 @@ function Ventas() {
                                                 <td style={{ padding: '16px', textAlign: 'right', fontWeight: '700', color: s.text, fontSize: '14px' }}>{formatearGs(venta.precio)}</td>
                                                 <td style={{ padding: '16px 24px', textAlign: 'center' }}>
                                                     <button onClick={() => setVentaDetalle(venta)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, fontSize: '18px', padding: '4px', borderRadius: '6px' }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
                                                         onMouseEnter={e => e.currentTarget.style.color = s.text}
                                                         onMouseLeave={e => e.currentTarget.style.color = s.textMuted}>
-                                                        👁
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -443,7 +443,7 @@ function Ventas() {
                                 <div>
                                     <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Cliente'}</p>
                                     {ventaDetalle.cliente_ruc && <p style={{ fontSize: '12px', color: s.textMuted }}>RUC: {ventaDetalle.cliente_ruc}</p>}
-                                    {ventaDetalle.cliente_numero && <p style={{ fontSize: '12px', color: s.textMuted }}>📱 {ventaDetalle.cliente_numero}</p>}
+                                    {ventaDetalle.cliente_numero && <p style={{ fontSize: '12px', color: s.textMuted }}>{ventaDetalle.cliente_numero}</p>}
                                 </div>
                             </div>
                         </div>
@@ -480,7 +480,7 @@ function Ventas() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ fontSize: '13px', color: s.textMuted }}>Condición</span>
                                     <span style={{ fontSize: '13px', fontWeight: '600', color: ventaDetalle.tipo_venta === 'credito' ? '#f59e0b' : '#10b981' }}>
-                                        {ventaDetalle.tipo_venta === 'credito' ? `📋 Crédito (${ventaDetalle.plazo_dias}d)` : '💵 Contado'}
+                                        {ventaDetalle.tipo_venta === 'credito' ? `Crédito (${ventaDetalle.plazo_dias}d)` : 'Contado'}
                                     </span>
                                 </div>
                                 {ventaDetalle.tipo_venta === 'credito' && ventaDetalle.fecha_vencimiento_credito && (

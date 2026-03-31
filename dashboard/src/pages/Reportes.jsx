@@ -523,13 +523,13 @@ function Reportes() {
 
             {/* Rankings */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '24px' }}>
-                <RankingTable titulo="⭐ Top 10 Productos" datos={rankingProductos.top} />
-                <RankingTable titulo="📉 Menos vendidos" datos={rankingProductos.bottom} colorVentas="#ef4444" />
+                <RankingTable titulo="Top 10 Productos" datos={rankingProductos.top} />
+                <RankingTable titulo="Menos vendidos" datos={rankingProductos.bottom} colorVentas="#ef4444" />
 
                 {/* Top clientes */}
                 <div style={{ background: s.surface, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '20px 24px', borderBottom: `1px solid ${s.borderLight}` }}>
-                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: s.text }}>👤 Top Clientes</h3>
+                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: s.text }}>Top Clientes</h3>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -668,15 +668,14 @@ function Reportes() {
                     <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text, marginBottom: '16px' }}>Retención de clientes</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) 1.5fr', gap: '16px' }}>
                         {[
-                            { label: 'Clientes activos', valor: retencion.activos, color: '#3b82f6', icono: '👤', desc: 'compraron este período' },
-                            { label: 'Clientes retenidos', valor: retencion.retenidos, color: '#10b981', icono: '🔄', desc: 'volvieron a comprar' },
-                            { label: 'Clientes nuevos', valor: retencion.nuevos, color: '#8b5cf6', icono: '✨', desc: 'primera compra' },
-                            { label: 'Clientes perdidos', valor: retencion.perdidos, color: '#ef4444', icono: '📉', desc: 'no volvieron' },
+                            { label: 'Clientes activos', valor: retencion.activos, color: '#3b82f6', desc: 'compraron este período' },
+                            { label: 'Clientes retenidos', valor: retencion.retenidos, color: '#10b981', desc: 'volvieron a comprar' },
+                            { label: 'Clientes nuevos', valor: retencion.nuevos, color: '#8b5cf6', desc: 'primera compra' },
+                            { label: 'Clientes perdidos', valor: retencion.perdidos, color: '#ef4444', desc: 'no volvieron' },
                         ].map((m, i) => (
                             <div key={i} style={{ background: s.surface, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div style={{ marginBottom: '12px' }}>
                                     <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</p>
-                                    <span style={{ fontSize: '18px' }}>{m.icono}</span>
                                 </div>
                                 <p style={{ fontSize: '36px', fontWeight: '800', color: m.color, lineHeight: 1 }}>{m.valor}</p>
                                 <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '6px' }}>{m.desc}</p>
@@ -693,7 +692,7 @@ function Reportes() {
                                 <div style={{ height: '100%', width: `${retencion.tasa_retencion}%`, background: retencion.tasa_retencion >= 50 ? '#10b981' : retencion.tasa_retencion >= 25 ? '#f59e0b' : '#ef4444', borderRadius: '3px', transition: 'width 0.5s' }} />
                             </div>
                             <p style={{ fontSize: '11px', color: '#475569', marginTop: '8px', textAlign: 'center' }}>
-                                {retencion.tasa_retencion >= 50 ? '✅ Buena retención' : retencion.tasa_retencion >= 25 ? '⚠️ Retención moderada' : '🔴 Retención baja'}
+                                {retencion.tasa_retencion >= 50 ? 'Buena retención' : retencion.tasa_retencion >= 25 ? 'Retención moderada' : 'Retención baja'}
                             </p>
                         </div>
                     </div>
@@ -772,7 +771,7 @@ function Reportes() {
 
                 {/* Exportar contable */}
                 <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>📊 Exportar reporte contable</h3>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>Exportar reporte contable</h3>
                     <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '16px' }}>Detalle de ventas por transacción para contabilidad.</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                         <div><label style={labelStyle}>Desde</label><input type="date" value={exportDesde} onChange={e => setExportDesde(e.target.value)} style={inputStyle} /></div>
@@ -790,7 +789,7 @@ function Reportes() {
                     </div>
                     <button onClick={handleExportarExcel} disabled={exportando}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: exportando ? '#94a3b8' : '#10b981', color: 'white', cursor: exportando ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                        {exportando ? 'Generando...' : '⬇ Exportar Excel contable'}
+                        {exportando ? 'Generando...' : 'Exportar Excel contable'}
                     </button>
                     <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '10px' }}>
                         Incluye: fecha, cliente, RUC, producto, cantidad, monto, IVA 10%, canal y método de pago.
@@ -799,7 +798,7 @@ function Reportes() {
 
                 {/* Exportar estadísticas */}
                 <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.borderLight}` }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>📈 Exportar estadísticas</h3>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>Exportar estadísticas</h3>
                     <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '16px' }}>Métricas, comparativas, top productos y canales.</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                         <div><label style={labelStyle}>Desde</label><input type="date" value={statsDesde} onChange={e => setStatsDesde(e.target.value)} style={inputStyle} /></div>
@@ -807,7 +806,7 @@ function Reportes() {
                     </div>
                     <button onClick={handleExportarEstadisticas} disabled={exportandoStats}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: exportandoStats ? '#94a3b8' : '#4f46e5', color: 'white', cursor: exportandoStats ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                        {exportandoStats ? 'Generando...' : '⬇ Exportar estadísticas'}
+                        {exportandoStats ? 'Generando...' : 'Exportar estadísticas'}
                     </button>
                     <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '10px' }}>
                         Incluye: resumen general, comparativas, top productos, ventas por canal y delivery por zonas.

@@ -237,8 +237,8 @@ function Clientes() {
                     <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Estado de actividad</p>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: activo ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? '#334155' : '#f1f5f9'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-                            {activo ? '🟢' : '⚫'}
+                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: activo ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? '#334155' : '#f1f5f9'), display: 'flex', alignItems: 'center', justifyContent: 'center', color: activo ? '#10b981' : s.textFaint }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{activo ? <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></> : <><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></>}</svg>
                         </div>
                         <div>
                             <p style={{ fontSize: '16px', fontWeight: '800', color: activo ? '#10b981' : s.textMuted }}>
@@ -300,7 +300,7 @@ function Clientes() {
                         </div>
                     ) : (
                         <div style={{ padding: '20px', textAlign: 'center', color: s.textFaint }}>
-                            <p style={{ fontSize: '24px', marginBottom: '8px' }}>📊</p>
+                            <span style={{ color: s.textFaint, display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
                             <p style={{ fontSize: '12px' }}>Se necesitan al menos 2 compras para calcular la frecuencia.</p>
                         </div>
                     )}
@@ -345,7 +345,7 @@ function Clientes() {
                     <div style={{ width: '320px', flexShrink: 0, borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface }}>
                         <div style={{ padding: '12px', borderBottom: `1px solid ${s.border}` }}>
                             <div style={{ position: 'relative' }}>
-                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: s.textFaint }}>🔍</span>
+                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                                 <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)}
                                     style={{ ...inputStyle, paddingLeft: '34px', marginBottom: 0 }} />
                             </div>
@@ -482,11 +482,11 @@ function Clientes() {
                                             <div style={{ display: 'flex', borderBottom: `1px solid ${s.borderLight}`, background: s.surfaceLow }}>
                                                 <button onClick={() => setPestanaHistorial('historial')}
                                                     style={{ padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: pestanaHistorial === 'historial' ? '700' : '500', color: pestanaHistorial === 'historial' ? s.text : s.textMuted, borderBottom: `2px solid ${pestanaHistorial === 'historial' ? '#1a1a2e' : 'transparent'}`, transition: 'all 0.15s' }}>
-                                                    🛒 Historial de compras
+                                                    Historial de compras
                                                 </button>
                                                 <button onClick={() => setPestanaHistorial('cuenta_corriente')}
                                                     style={{ padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: pestanaHistorial === 'cuenta_corriente' ? '700' : '500', color: pestanaHistorial === 'cuenta_corriente' ? s.text : s.textMuted, borderBottom: `2px solid ${pestanaHistorial === 'cuenta_corriente' ? '#f59e0b' : 'transparent'}`, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    📋 Cuenta corriente
+                                                    Cuenta corriente
                                                     {cuentaCorriente?.resumen?.deuda_total > 0 && (
                                                         <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '20px', background: '#fef3c7', color: '#92400e' }}>
                                                             {formatearGs(cuentaCorriente.resumen.deuda_total)}
@@ -655,7 +655,7 @@ function Clientes() {
                         {/* Buscador + filtros */}
                         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: s.textFaint }}>🔍</span>
+                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                                 <input placeholder="Buscar por nombre, RUC o teléfono..." value={buscar} onChange={e => setBuscar(e.target.value)}
                                     style={{ ...inputStyle, paddingLeft: '34px', marginBottom: 0, background: s.surfaceLow }} />
                             </div>

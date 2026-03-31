@@ -341,7 +341,7 @@ function Configuracion() {
                                                     <button onClick={() => handleEliminarUsuario(u)}
                                                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '13px', padding: '4px 8px', borderRadius: '6px' }}
                                                         onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}>🗑️</button>
+                                                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -416,7 +416,7 @@ function Configuracion() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                                    <div style={{ padding: '8px', background: '#e0e7ff', borderRadius: '8px', fontSize: '18px' }}>📦</div>
+                                    <div style={{ padding: '8px', background: '#e0e7ff', borderRadius: '8px', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
                                     <h3 style={{ fontSize: '15px', fontWeight: '700' }}>Stock bajo</h3>
                                 </div>
                                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Recibí una alerta cuando un producto alcance el umbral mínimo definido.</p>
@@ -428,7 +428,7 @@ function Configuracion() {
                             </div>
                             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                                    <div style={{ padding: '8px', background: '#e0e7ff', borderRadius: '8px', fontSize: '18px' }}>💬</div>
+                                    <div style={{ padding: '8px', background: '#e0e7ff', borderRadius: '8px', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                                     <h3 style={{ fontSize: '15px', fontWeight: '700' }}>Chats esperando agente</h3>
                                 </div>
                                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Alerta de tiempo de espera excesivo para clientes en cola.</p>
@@ -503,7 +503,7 @@ function Configuracion() {
                                 {/* Horario */}
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e' }}>🕐 Horario de atención</h3>
+                                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e' }}>Horario de atención</h3>
                                         <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: abiertaHoy ? '#dcfce7' : '#fee2e2', color: abiertaHoy ? '#166534' : '#991b1b' }}>
                                             {abiertaHoy ? `Abierto hoy ${horarioHoy.desde} - ${horarioHoy.hasta}` : 'Cerrado hoy'}
                                         </span>
@@ -536,7 +536,7 @@ function Configuracion() {
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                         <div>
-                                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e' }}>🚚 Zonas de delivery</h3>
+                                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a2e' }}>Zonas de delivery</h3>
                                             <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>El bot mostrará estas zonas y costos al cliente al elegir delivery.</p>
                                         </div>
                                         <button onClick={() => abrirModalZona()}
@@ -575,7 +575,7 @@ function Configuracion() {
                                                         <button onClick={() => abrirModalZona(zona)}
                                                             style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '11px' }}>✏️</button>
                                                         <button onClick={() => handleEliminarZona(zona)}
-                                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: '11px' }}>🗑️</button>
+                                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -589,14 +589,14 @@ function Configuracion() {
                                 <div style={{ background: '#1a1a2e', borderRadius: '12px', padding: '24px', color: 'white', marginBottom: '16px' }}>
                                     <p style={{ fontSize: '10px', fontWeight: '700', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Vista previa</p>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                        <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🏪</div>
+                                        <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.8)' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
                                         <div>
                                             <p style={{ fontWeight: '700', fontSize: '14px' }}>{config.tienda_nombre || 'Nombre de la tienda'}</p>
                                             <p style={{ fontSize: '11px', opacity: 0.6 }}>{abiertaHoy ? `Abierto hoy ${horarioHoy.desde} - ${horarioHoy.hasta}` : 'Cerrado hoy'}</p>
                                         </div>
                                     </div>
-                                    {config.tienda_telefono && <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>📞 {config.tienda_telefono}</p>}
-                                    {config.tienda_email && <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>✉️ {config.tienda_email}</p>}
+                                    {config.tienda_telefono && <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>{config.tienda_telefono}</p>}
+                                    {config.tienda_email && <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>{config.tienda_email}</p>}
                                     {zonas.filter(z => z.activa).length > 0 && (
                                         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', marginTop: '8px' }}>
                                             <p style={{ fontSize: '10px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Delivery disponible</p>
@@ -635,7 +635,7 @@ function Configuracion() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>💬 Mensajes predeterminados</h3>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>Mensajes predeterminados</h3>
                                     <div style={{ marginBottom: '16px' }}>
                                         <label style={labelStyle}>Mensaje de bienvenida</label>
                                         <textarea value={config.bot_mensaje_bienvenida || ''} onChange={e => setConfig({ ...config, bot_mensaje_bienvenida: e.target.value })} rows={4} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} placeholder="Ej: Hola! Bienvenido a Sosa Bulls" />
@@ -705,7 +705,7 @@ function Configuracion() {
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleImprimirFacturaPrueba}
                                     style={{ ...btnSecundario, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    🖨️ Factura de prueba
+                                    Factura de prueba
                                 </button>
                                 <button onClick={handleReiniciarNumero} disabled={reiniciandoFactura}
                                     style={{ ...btnSecundario, color: '#ef4444', borderColor: '#fca5a5' }}>
@@ -718,7 +718,7 @@ function Configuracion() {
 
                             {/* Datos de la empresa */}
                             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>🏢 Datos de la empresa</h3>
+                                <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>Datos de la empresa</h3>
                                 <label style={labelStyle}>Nombre de fantasía (opcional)</label>
                                 <input value={configFactura.nombre_fantasia || ''} onChange={e => setConfigFactura({ ...configFactura, nombre_fantasia: e.target.value })} style={inputStyle} placeholder="Ej: SOSA BULLS" />
                                 <label style={labelStyle}>Razón social *</label>
@@ -738,7 +738,7 @@ function Configuracion() {
                             {/* Timbrado y numeración */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>📋 Timbrado SET</h3>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>Timbrado SET</h3>
                                     <label style={labelStyle}>Número de timbrado *</label>
                                     <input value={configFactura.timbrado || ''} onChange={e => setConfigFactura({ ...configFactura, timbrado: e.target.value })} style={inputStyle} placeholder="18138433" />
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
