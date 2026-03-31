@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getUsuarios, getRoles, crearRol, actualizarRol, eliminarRol, crearUsuario, eliminarUsuario } from '../services/usuarios'
+import { useApp } from '../App'
+import { getUsuarios, getRoles, crearRol, actualizarRol, eliminarRol, crearUsuario, eliminarUsuario, cambiarPassword } from '../services/usuarios'
 import { getConfiguracion, guardarConfiguracionBulk } from '../services/configuracion'
 import { getZonas, crearZona, editarZona, eliminarZona } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
@@ -61,9 +62,33 @@ function Toggle({ checked, onChange }) {
 }
 
 function Configuracion() {
+    const { usuario } = useApp()
     const [pestana, setPestana] = useState('usuarios')
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [guardando, setGuardando] = useState(false)
+
+    // Cambio de contraseña
+    const [formPassword, setFormPassword] = useState({ actual: '', nueva: '', confirmar: '' })
+    const [errorPassword, setErrorPassword] = useState('')
+    const [okPassword, setOkPassword] = useState(false)
+    const [guardandoPassword, setGuardandoPassword] = useState(false)
+
+    async function handleCambiarPassword() {
+        setErrorPassword('')
+        setOkPassword(false)
+        const { actual, nueva, confirmar } = formPassword
+        if (!actual || !nueva || !confirmar) { setErrorPassword('Completá todos los campos.'); return }
+        if (nueva.length < 8) { setErrorPassword('La contraseña nueva debe tener al menos 8 caracteres.'); return }
+        if (nueva !== confirmar) { setErrorPassword('Las contraseñas nuevas no coinciden.'); return }
+        try {
+            setGuardandoPassword(true)
+            await cambiarPassword(usuario.id, actual, nueva)
+            setFormPassword({ actual: '', nueva: '', confirmar: '' })
+            setOkPassword(true)
+        } catch (err) {
+            setErrorPassword(err.response?.data?.error || 'No se pudo cambiar la contraseña.')
+        } finally { setGuardandoPassword(false) }
+    }
     const [configFactura, setConfigFactura] = useState({})
     const [reiniciandoFactura, setReiniciandoFactura] = useState(false)
 
@@ -277,6 +302,7 @@ function Configuracion() {
         { key: 'tienda', label: 'Tienda', icono: '🏪' },
         { key: 'bot', label: 'Bot', icono: '🤖' },
         { key: 'facturacion', label: 'Facturación', icono: '🧾' },
+        { key: 'mi_cuenta', label: 'Mi cuenta', icono: '🔑' },
     ]
 
     return (
@@ -787,7 +813,78 @@ function Configuracion() {
                         </div>
                     </div>
                 )}
-   
+
+                {/* ===== MI CUENTA ===== */}
+                {pestana === 'mi_cuenta' && (
+                    <div style={{ maxWidth: '480px' }}>
+                        <div style={{ marginBottom: '28px' }}>
+                            <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>Mi cuenta</h1>
+                            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Cambiá tu contraseña de acceso al sistema.</p>
+                        </div>
+
+                        <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                            <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <p style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Usuario</p>
+                                <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{usuario?.nombre}</p>
+                                <p style={{ fontSize: '12px', color: '#64748b' }}>{usuario?.email}</p>
+                            </div>
+
+                            <label style={labelStyle}>Contraseña actual</label>
+                            <input
+                                type="password"
+                                value={formPassword.actual}
+                                onChange={e => { setFormPassword({ ...formPassword, actual: e.target.value }); setErrorPassword(''); setOkPassword(false) }}
+                                style={inputStyle}
+                                placeholder="Tu contraseña actual"
+                            />
+
+                            <label style={{ ...labelStyle, marginTop: '12px' }}>Contraseña nueva</label>
+                            <input
+                                type="password"
+                                value={formPassword.nueva}
+                                onChange={e => { setFormPassword({ ...formPassword, nueva: e.target.value }); setErrorPassword(''); setOkPassword(false) }}
+                                style={inputStyle}
+                                placeholder="Mínimo 8 caracteres"
+                            />
+
+                            <label style={{ ...labelStyle, marginTop: '12px' }}>Confirmar contraseña nueva</label>
+                            <input
+                                type="password"
+                                value={formPassword.confirmar}
+                                onChange={e => { setFormPassword({ ...formPassword, confirmar: e.target.value }); setErrorPassword(''); setOkPassword(false) }}
+                                style={inputStyle}
+                                placeholder="Repetí la contraseña nueva"
+                            />
+
+                            {/* Indicador de coincidencia */}
+                            {formPassword.confirmar.length > 0 && (
+                                <p style={{ fontSize: '12px', marginTop: '6px', fontWeight: '600', color: formPassword.nueva === formPassword.confirmar ? '#10b981' : '#ef4444' }}>
+                                    {formPassword.nueva === formPassword.confirmar ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
+                                </p>
+                            )}
+
+                            {errorPassword && (
+                                <div style={{ marginTop: '14px', padding: '10px 14px', background: '#fee2e2', borderRadius: '8px', border: '1px solid #fca5a5' }}>
+                                    <p style={{ fontSize: '13px', color: '#991b1b', fontWeight: '500' }}>{errorPassword}</p>
+                                </div>
+                            )}
+
+                            {okPassword && (
+                                <div style={{ marginTop: '14px', padding: '10px 14px', background: '#dcfce7', borderRadius: '8px', border: '1px solid #86efac' }}>
+                                    <p style={{ fontSize: '13px', color: '#166534', fontWeight: '600' }}>Contraseña cambiada correctamente.</p>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleCambiarPassword}
+                                disabled={guardandoPassword}
+                                style={{ ...btnPrimario, marginTop: '20px', width: '100%', opacity: guardandoPassword ? 0.6 : 1 }}>
+                                {guardandoPassword ? 'Guardando...' : 'Cambiar contraseña'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
             </div>
 
             {/* Modal nuevo usuario */}

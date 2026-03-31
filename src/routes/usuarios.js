@@ -104,6 +104,38 @@ router.post('/', async (req, res) => {
     }
 })
 
+// Cambiar contraseña
+router.patch('/:id/password', async (req, res) => {
+    try {
+        const { id } = req.params
+        const { password_actual, password_nueva } = req.body
+
+        if (!password_actual || !password_nueva) {
+            return res.status(400).json({ error: 'Contraseña actual y nueva son requeridas' })
+        }
+        if (password_nueva.length < 8) {
+            return res.status(400).json({ error: 'La contraseña nueva debe tener al menos 8 caracteres' })
+        }
+
+        const resultado = await db.query(`SELECT password_hash FROM usuarios WHERE id = $1 AND disponible = true`, [id])
+        if (resultado.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' })
+        }
+
+        const valida = await bcrypt.compare(password_actual, resultado.rows[0].password_hash)
+        if (!valida) {
+            return res.status(400).json({ error: 'La contraseña actual es incorrecta' })
+        }
+
+        const nuevo_hash = await bcrypt.hash(password_nueva, 10)
+        await db.query(`UPDATE usuarios SET password_hash = $1 WHERE id = $2`, [nuevo_hash, id])
+
+        res.json({ ok: true })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // Eliminar usuario
 router.use('/:id', async (req, res, next) => {
     if (req.method !== 'DELETE') return next()
