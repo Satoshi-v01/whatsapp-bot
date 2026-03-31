@@ -312,7 +312,7 @@ function colorVencimiento(diasParaVencer) {
                         {productosFiltrados.length === 0 ? (
                             <tr>
                                 <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: s.textMuted, fontSize: '14px' }}>
-                                    <p style={{ fontSize: '32px', marginBottom: '8px' }}>📦</p>
+                                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.35 }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
                                     <p>No hay productos que coincidan con la búsqueda.</p>
                                 </td>
                             </tr>
@@ -429,7 +429,7 @@ function colorVencimiento(diasParaVencer) {
                                                                                     <span>
                                                                                         <span style={{ textDecoration: 'line-through', color: s.textFaint, fontSize: '11px' }}>Gs. {pr.precio_venta.toLocaleString()}</span>
                                                                                         <span style={{ marginLeft: '6px', color: '#10b981', fontWeight: '700' }}>Gs. {precio.toLocaleString()}</span>
-                                                                                        <span style={{ marginLeft: '4px', fontSize: '10px', background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '8px' }}>🏷️</span>
+                                                                                        <span style={{ marginLeft: '4px', fontSize: '10px', background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '8px', fontWeight: '700' }}>%</span>
                                                                                     </span>
                                                                                 ) : `Gs. ${(pr.precio_venta || 0).toLocaleString()}`}
                                                                             </td>
@@ -469,11 +469,11 @@ function colorVencimiento(diasParaVencer) {
                                                                                     </button>
                                                                                     <button onClick={() => abrirModalCodigoBarras(pr)}
                                                                                         style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                        🔢 Cod.
+                                                                                        Cod.
                                                                                     </button>
                                                                                     <button onClick={() => abrirModalLotes(pr)}
                                                                                         style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                        📅 Lotes
+                                                                                        Lotes
                                                                                     </button>
                                                                                 </div>
                                                                                 </div>
@@ -521,7 +521,7 @@ function colorVencimiento(diasParaVencer) {
                             {marcas.map(marca => (
                                 <div key={marca.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <p style={{ flex: 1, fontSize: '13px', fontWeight: '500', color: s.text }}>{marca.nombre}</p>
-                                    <button onClick={() => handleEliminarMarca(marca)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>🗑️</button>
+                                    <button onClick={() => handleEliminarMarca(marca)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                 </div>
                             ))}
                         </div>
@@ -719,7 +719,7 @@ function colorVencimiento(diasParaVencer) {
                                                 {cat.descripcion && <p style={{ fontSize: '11px', color: s.textMuted }}>{cat.descripcion}</p>}
                                             </div>
                                             <button onClick={() => setEditandoCategoria(cat.id)} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>✏️</button>
-                                            <button onClick={() => handleEliminarCategoria(cat)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>🗑️</button>
+                                            <button onClick={() => handleEliminarCategoria(cat)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                         </>
                                     )}
                                 </div>
@@ -831,7 +831,7 @@ function colorVencimiento(diasParaVencer) {
                             <p style={{ textAlign: 'center', color: s.textMuted, padding: '20px' }}>Cargando lotes...</p>
                         ) : lotes.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '32px', color: s.textMuted }}>
-                                <p style={{ fontSize: '24px', marginBottom: '8px' }}>📦</p>
+                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.35 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
                                 <p style={{ fontSize: '13px' }}>No hay lotes cargados para esta presentación.</p>
                                 <p style={{ fontSize: '11px', marginTop: '4px', color: s.textFaint }}>El stock se gestiona de forma global hasta que cargues lotes.</p>
                             </div>
@@ -871,7 +871,7 @@ function colorVencimiento(diasParaVencer) {
                                                 <td style={{ padding: '10px 12px' }}>
                                                     <button onClick={() => handleEliminarLote(lote)}
                                                         style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '11px', cursor: 'pointer' }}>
-                                                        🗑️
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                                     </button>
                                                 </td>
                                             </tr>

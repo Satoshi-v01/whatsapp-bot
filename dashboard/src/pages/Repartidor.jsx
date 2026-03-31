@@ -94,7 +94,7 @@ function Repartidor({ usuario, onLogout }) {
                     <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>Cargando...</div>
                 ) : lista.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                        <p style={{ fontSize: '40px', marginBottom: '12px' }}>✅</p>
+                        <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
                         <p style={{ fontSize: '15px', fontWeight: '600' }}>No hay deliveries pendientes</p>
                         <p style={{ fontSize: '13px', marginTop: '4px' }}>Buen trabajo!</p>
                     </div>
@@ -118,7 +118,7 @@ function Repartidor({ usuario, onLogout }) {
                                 {d.cliente_telefono && (
                                     <a href={`tel:${d.cliente_telefono}`}
                                         style={{ fontSize: '14px', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        📞 {d.cliente_telefono}
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.64 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l.81-.81a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> {d.cliente_telefono}
                                     </a>
                                 )}
                             </div>
@@ -128,13 +128,13 @@ function Repartidor({ usuario, onLogout }) {
                                 <p style={{ fontSize: '10px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Dirección</p>
                                 <p style={{ fontSize: '14px', fontWeight: '500', lineHeight: '1.5' }}>{d.ubicacion || '—'}</p>
                                 {d.referencia && <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Ref: {d.referencia}</p>}
-                                {d.horario && <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>🕐 {d.horario}</p>}
-                                {d.contacto_entrega && <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>👤 {d.contacto_entrega}</p>}
+                                {d.horario && <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{d.horario}</p>}
+                                {d.contacto_entrega && <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{d.contacto_entrega}</p>}
                                 {d.ubicacion && (
                                     <a href={d.ubicacion.startsWith('http') ? d.ubicacion : `https://maps.google.com/?q=${encodeURIComponent(d.ubicacion)}`}
                                         target="_blank" rel="noreferrer"
                                         style={{ display: 'inline-block', marginTop: '8px', fontSize: '12px', color: '#34d399', textDecoration: 'none', fontWeight: '600' }}>
-                                        🗺️ Abrir en Maps
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Abrir en Maps
                                     </a>
                                 )}
                             </div>
@@ -150,15 +150,15 @@ function Repartidor({ usuario, onLogout }) {
                                 <div style={{ flex: 1, background: '#0f172a', borderRadius: '10px', padding: '10px 12px' }}>
                                     <p style={{ fontSize: '10px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Método de pago</p>
                                     <p style={{ fontSize: '14px', fontWeight: '700', color: d.metodo_pago === 'efectivo' ? '#fbbf24' : '#60a5fa' }}>
-                                        {d.metodo_pago === 'efectivo' ? '💵 Efectivo' : d.metodo_pago === 'transferencia' ? '🏦 Transferencia' : d.metodo_pago || '—'}
+                                        {d.metodo_pago === 'efectivo' ? 'Efectivo' : d.metodo_pago === 'transferencia' ? 'Transferencia' : d.metodo_pago || '—'}
                                     </p>
                                 </div>
                             </div>
 
                             {/* Producto */}
                             {d.producto_nombre && (
-                                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
-                                    📦 {d.producto_nombre} {d.presentacion_nombre}
+                                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>{d.producto_nombre} {d.presentacion_nombre}
                                 </p>
                             )}
 
@@ -170,14 +170,14 @@ function Repartidor({ usuario, onLogout }) {
                                             onClick={() => handleCambiarEstado(d.id, 'en_camino')}
                                             disabled={actualizando === d.id}
                                             style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: '#4f46e5', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '700', opacity: actualizando === d.id ? 0.6 : 1 }}>
-                                            🚚 En camino
+                                            En camino
                                         </button>
                                     )}
                                     <button
                                         onClick={() => handleCambiarEstado(d.id, 'entregado')}
                                         disabled={actualizando === d.id}
                                         style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: '#10b981', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '700', opacity: actualizando === d.id ? 0.6 : 1 }}>
-                                        ✅ Entregado
+                                        Entregado
                                     </button>
                                 </div>
                             )}
