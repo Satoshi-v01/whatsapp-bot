@@ -6,6 +6,7 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { getUsuarios } from '../services/usuarios'
 import { asignarRepartidor } from '../services/deliveries'
+import { formatearCalidad } from '../utils/formato'
 
 function Delivery() {
     const [deliveries, setDeliveries] = useState([])
@@ -697,7 +698,7 @@ function ModalNuevoDelivery({ s, darkMode, onClose, onCreado, setModalConfirmar 
                                                 onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#334155' : '#f1f5f9'}
                                                 onMouseLeave={e => e.currentTarget.style.background = s.surfaceLow}>
                                                 <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
-                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{p.categoria_nombre} · {p.calidad}</p>
+                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{p.categoria_nombre} · {formatearCalidad(p.calidad)}</p>
                                             </div>
                                         ))}
                                     </div>
