@@ -9,6 +9,7 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { imprimirFactura, imprimirCierre } from '../utils/factura'
 import { useApp } from '../App'
 import api from '../services/api'
+import { formatearCalidad } from '../utils/formato'
 
 
 function Caja() {
@@ -592,7 +593,7 @@ function Caja() {
                                                                 onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
                                                                 onMouseLeave={e => e.currentTarget.style.background = s.surface}>
                                                                 <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
-                                                                <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>{p.calidad} · {p.categoria_nombre}</p>
+                                                                <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
                                                             </div>
                                                         ))}
                                                     </div>

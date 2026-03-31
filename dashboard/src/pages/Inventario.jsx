@@ -11,6 +11,7 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha } from '../utils/fecha'
 import { getLotesPresentacion, crearLote, eliminarLote } from '../services/lotes'
+import { formatearCalidad } from '../utils/formato'
 
 function Modal({ children, zIndex = 1000, s }) {
     return (
@@ -261,15 +262,20 @@ function colorVencimiento(diasParaVencer) {
             {/* Métricas */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
                 {[
-                    { label: 'Total productos', valor: totalProductos, icono: '📦', color: s.text, bg: s.surface },
-                    { label: 'Presentaciones', valor: totalPresentaciones, icono: '🗂️', color: s.text, bg: s.surface },
-                    { label: 'Stock bajo', valor: stockBajo, icono: '⚠️', color: '#f59e0b', bg: darkMode ? '#451a03' : '#fffbeb' },
-                    { label: 'Sin stock', valor: sinStock, icono: '🚫', color: '#ef4444', bg: darkMode ? '#450a0a' : '#fef2f2' },
+                    { label: 'Total productos',  valor: totalProductos,      icono: 'box',     color: s.text,    bg: s.surface },
+                    { label: 'Presentaciones',   valor: totalPresentaciones, icono: 'layers',  color: s.text,    bg: s.surface },
+                    { label: 'Stock bajo',       valor: stockBajo,           icono: 'warning', color: '#f59e0b', bg: darkMode ? '#451a03' : '#fffbeb' },
+                    { label: 'Sin stock',        valor: sinStock,            icono: 'banned',  color: '#ef4444', bg: darkMode ? '#450a0a' : '#fef2f2' },
                 ].map((m, i) => (
                     <div key={i} style={{ background: m.bg, borderRadius: '12px', padding: '20px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</p>
-                            <span style={{ fontSize: '18px' }}>{m.icono}</span>
+                            <span style={{ color: m.color, display: 'flex' }}>
+                                {m.icono === 'box'     && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>}
+                                {m.icono === 'layers'  && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
+                                {m.icono === 'warning' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                                {m.icono === 'banned'  && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>}
+                            </span>
                         </div>
                         <p style={{ fontSize: '28px', fontWeight: '800', color: m.color, letterSpacing: '-1px' }}>{m.valor}</p>
                     </div>
@@ -279,7 +285,9 @@ function colorVencimiento(diasParaVencer) {
             {/* Buscador */}
             <div style={{ background: s.surface, borderRadius: '12px 12px 0 0', border: `1px solid ${s.border}`, borderBottom: 'none', padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', color: s.textFaint }}>🔍</span>
+                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </span>
                     <input
                         placeholder="Buscar por nombre, marca, categoría o SKU..."
                         value={buscar}
@@ -324,7 +332,9 @@ function colorVencimiento(diasParaVencer) {
                                         >
                                             <td style={{ padding: '16px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: s.surfaceLow, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🐾</div>
+                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: s.surfaceLow, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: s.textFaint }}>
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                                                    </div>
                                                     <div>
                                                         <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>
                                                             {producto.marca_nombre && <span style={{ color: s.textMuted }}>{producto.marca_nombre} — </span>}
@@ -332,7 +342,7 @@ function colorVencimiento(diasParaVencer) {
                                                         </p>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                                                             <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {stockTotal}</span>
-                                                            {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>⚠️ {alertas} bajo</span>}
+                                                            {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>{alertas} bajo stock</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -350,7 +360,7 @@ function colorVencimiento(diasParaVencer) {
                                             </td>
                                             <td style={{ padding: '16px' }}>
                                                 <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>
-                                                    {producto.calidad}
+                                                    {formatearCalidad(producto.calidad)}
                                                 </span>
                                             </td>
                                             <td style={{ padding: '16px' }}>
@@ -366,10 +376,16 @@ function colorVencimiento(diasParaVencer) {
                                             <td style={{ padding: '16px', textAlign: 'right' }}>
                                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                                     <button onClick={e => { e.stopPropagation(); abrirModalEditar(producto) }}
-                                                        style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>
-                                                        ✏️ Editar
+                                                        style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                        Editar
                                                     </button>
-                                                    <span style={{ fontSize: '12px', color: s.textFaint }}>{expandido ? '▲' : '▼'}</span>
+                                                    <span style={{ color: s.textFaint, display: 'flex', alignItems: 'center' }}>
+                                                        {expandido
+                                                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                                                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                                        }
+                                                    </span>
                                                 </div>
                                             </td>
                                         </tr>

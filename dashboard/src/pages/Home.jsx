@@ -269,8 +269,11 @@ function Home() {
                                     style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
                                     onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
                                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: item.stock === 0 ? '#fee2e2' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                                        {item.stock === 0 ? '🚫' : '⚠️'}
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: item.stock === 0 ? '#fee2e2' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: item.stock === 0 ? '#ef4444' : '#f59e0b' }}>
+                                        {item.stock === 0
+                                            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                        }
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</p>

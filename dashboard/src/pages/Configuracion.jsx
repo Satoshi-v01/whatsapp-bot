@@ -148,7 +148,7 @@ function Configuracion() {
         if (!rolSeleccionado) return
         try {
             await actualizarRol(rolSeleccionado.id, { permisos: rolSeleccionado.permisos })
-            setModalConfirmar({ titulo: '✅ Guardado', mensaje: 'Permisos actualizados correctamente.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
+            setModalConfirmar({ titulo: 'Permisos guardados', mensaje: 'Los permisos del rol fueron actualizados correctamente.', textoBoton: 'Cerrar', colorBoton: '#10b981', onConfirmar: () => setModalConfirmar(null) })
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron guardar los permisos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         }
@@ -288,7 +288,7 @@ function Configuracion() {
                 {pestanas.map(p => (
                     <button key={p.key} onClick={() => setPestana(p.key)}
                         style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: 'none', background: pestana === p.key ? 'white' : 'transparent', color: pestana === p.key ? '#1a1a2e' : '#64748b', cursor: 'pointer', fontSize: '13px', fontWeight: pestana === p.key ? '700' : '500', marginBottom: '4px', textAlign: 'left', width: '100%', boxShadow: pestana === p.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.15s' }}>
-                        <span>{p.icono}</span>{p.label}
+                        {p.label}
                     </button>
                 ))}
             </div>
@@ -371,7 +371,7 @@ function Configuracion() {
                                                 <div key={mod.key} style={{ padding: '10px 12px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #f1f5f9' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                                                         <span style={{ fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '130px' }}>
-                                                            {mod.icono} {mod.label}
+                                                            {mod.label}
                                                         </span>
                                                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                                             {acciones.map(accion => {
@@ -441,12 +441,15 @@ function Configuracion() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                             {[
-                                { key: 'notif_pedidos_bot', label: 'Nuevos pedidos del bot', desc: 'Notificar cuando el bot finalice una orden con éxito.', icono: '🤖' },
-                                { key: 'notif_sonido', label: 'Activar sonido', desc: 'Reproducir un tono audible para todas las notificaciones.', icono: '🔊' },
+                                { key: 'notif_pedidos_bot', label: 'Nuevos pedidos del bot', desc: 'Notificar cuando el bot finalice una orden con éxito.', icono: 'bot' },
+                                { key: 'notif_sonido', label: 'Activar sonido', desc: 'Reproducir un tono audible para todas las notificaciones.', icono: 'sound' },
                             ].map(item => (
                                 <div key={item.key} style={{ background: 'white', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ padding: '8px', background: '#f1f5f9', borderRadius: '8px', fontSize: '18px' }}>{item.icono}</div>
+                                        <div style={{ padding: '8px', background: '#f1f5f9', borderRadius: '8px', color: '#64748b', display: 'flex' }}>
+                                            {item.icono === 'bot' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="15" x2="8" y2="17"/><line x1="16" y1="15" x2="16" y2="17"/></svg>}
+                                            {item.icono === 'sound' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>}
+                                        </div>
                                         <div>
                                             <p style={{ fontSize: '14px', fontWeight: '600' }}>{item.label}</p>
                                             <p style={{ fontSize: '12px', color: '#64748b' }}>{item.desc}</p>
