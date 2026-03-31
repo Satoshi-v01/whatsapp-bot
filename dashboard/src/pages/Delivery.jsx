@@ -35,17 +35,17 @@ function Delivery() {
     }
 
     const estadoConfig = {
-        pendiente:  { label: 'Pendiente',  color: '#f59e0b', bg: '#fef3c7', textColor: '#92400e', icono: '⏳' },
-        confirmado: { label: 'Confirmado', color: '#3b82f6', bg: '#dbeafe', textColor: '#1d4ed8', icono: '✅' },
-        en_camino:  { label: 'En camino',  color: '#8b5cf6', bg: '#ede9fe', textColor: '#6d28d9', icono: '🚚' },
-        entregado:  { label: 'Entregado',  color: '#10b981', bg: '#d1fae5', textColor: '#065f46', icono: '📦' },
-        cancelado:  { label: 'Cancelado',  color: '#ef4444', bg: '#fee2e2', textColor: '#991b1b', icono: '✕' },
+        pendiente:  { label: 'Pendiente',  color: '#f59e0b', bg: '#fef3c7', textColor: '#92400e', icono: 'clock' },
+        confirmado: { label: 'Confirmado', color: '#3b82f6', bg: '#dbeafe', textColor: '#1d4ed8', icono: 'check' },
+        en_camino:  { label: 'En camino',  color: '#8b5cf6', bg: '#ede9fe', textColor: '#6d28d9', icono: 'truck' },
+        entregado:  { label: 'Entregado',  color: '#10b981', bg: '#d1fae5', textColor: '#065f46', icono: 'package' },
+        cancelado:  { label: 'Cancelado',  color: '#ef4444', bg: '#fee2e2', textColor: '#991b1b', icono: 'x' },
     }
 
     const demoras = [
-        { tipo: 'demora_trafico', label: '🚦 Demora por tráfico' },
-        { tipo: 'demora_tecnica', label: '🔧 Falla técnica' },
-        { tipo: 'no_encontrado', label: '📍 No encontré la dirección' },
+        { tipo: 'demora_trafico', label: 'Demora por tráfico' },
+        { tipo: 'demora_tecnica', label: 'Falla técnica' },
+        { tipo: 'no_encontrado', label: 'No encontré la dirección' },
     ]
 
     useEffect(() => { cargarDeliveries() }, [fechaFiltro])
@@ -143,7 +143,12 @@ function Delivery() {
                 <div style={{ padding: '16px 18px', borderBottom: `1px solid ${s.borderLight}` }}>
                     <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Estado de pago</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderRadius: '10px', background: pagado ? (darkMode ? 'rgba(16,185,129,0.1)' : '#f0fdf4') : (darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb'), border: `1px solid ${pagado ? '#86efac' : '#fde68a'}` }}>
-                        <span style={{ fontSize: '22px' }}>{pagado ? '✅' : '⏳'}</span>
+                        <span style={{ color: pagado ? '#10b981' : '#f59e0b', display: 'flex' }}>
+                            {pagado
+                                ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            }
+                        </span>
                         <div>
                             <p style={{ fontSize: '14px', fontWeight: '800', color: pagado ? '#10b981' : '#f59e0b' }}>
                                 {pagado ? 'Pagado' : 'Pendiente de pago'}
@@ -155,7 +160,7 @@ function Delivery() {
                     </div>
                     {d.quiere_factura && (
                         <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', background: s.surfaceLow, fontSize: '11px', color: s.textMuted }}>
-                            🧾 Factura a: <strong style={{ color: s.text }}>{d.razon_social || 'Sin razón social'}</strong>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Factura a:</span> <strong style={{ color: s.text }}>{d.razon_social || 'Sin razón social'}</strong>
                             {d.ruc_factura && <span> · RUC: {d.ruc_factura}</span>}
                         </div>
                     )}
@@ -185,15 +190,12 @@ function Delivery() {
                     <div style={{ padding: '16px 18px', borderBottom: `1px solid ${s.borderLight}` }}>
                         <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Notas y demoras</p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {historial.map((n, i) => {
-                                const iconos = { demora_trafico: '🚦', demora_tecnica: '🔧', no_encontrado: '📍', nota: '📝', estado: '🔄' }
-                                return (
-                                    <div key={i} style={{ padding: '8px 10px', background: s.surfaceLow, borderRadius: '8px', fontSize: '11px' }}>
-                                        <p style={{ color: s.text, fontWeight: '500' }}>{iconos[n.tipo] || '📝'} {n.texto}</p>
-                                        <p style={{ color: s.textFaint, marginTop: '2px' }}>{formatearFecha(n.timestamp)}</p>
-                                    </div>
-                                )
-                            })}
+                            {historial.map((n, i) => (
+                                <div key={i} style={{ padding: '8px 10px', background: s.surfaceLow, borderRadius: '8px', fontSize: '11px' }}>
+                                    <p style={{ color: s.text, fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ flexShrink: 0, color: s.textFaint }}>{iconoNota(n.tipo)}</span>{n.texto}</p>
+                                    <p style={{ color: s.textFaint, marginTop: '2px' }}>{formatearFecha(n.timestamp)}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
@@ -232,6 +234,27 @@ function Delivery() {
         )
     }
 
+    function iconoEstado(tipo) {
+        const map = {
+            clock:   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            check:   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            truck:   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+            package: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+            x:       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+        }
+        return map[tipo] || null
+    }
+
+    function iconoNota(tipo) {
+        const map = {
+            demora_trafico: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+            demora_tecnica: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+            no_encontrado:  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+            estado:         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-8.36"/></svg>,
+        }
+        return map[tipo] || <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    }
+
     if (cargando) return (
         <div style={{ padding: '32px', background: s.bg, color: s.text, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p style={{ color: s.textMuted }}>Cargando deliveries...</p>
@@ -268,12 +291,12 @@ function Delivery() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                     {[
-                        { label: 'Entregas activas', valor: activos, sub: 'pendientes y en proceso', color: '#3b82f6', bg: darkMode ? '#0c1a3a' : '#eff6ff', icono: '🚚' },
-                        { label: 'En camino ahora', valor: enCamino, sub: 'repartidores en ruta', color: '#8b5cf6', bg: darkMode ? '#2d1b69' : '#f5f3ff', icono: '📍' },
-                        { label: 'Entregados hoy', valor: entregados, sub: 'completados exitosamente', color: '#10b981', bg: darkMode ? '#052e16' : '#f0fdf4', icono: '✅' },
+                        { label: 'Entregas activas', valor: activos, sub: 'pendientes y en proceso', color: '#3b82f6', bg: darkMode ? '#0c1a3a' : '#eff6ff', icono: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
+                        { label: 'En camino ahora', valor: enCamino, sub: 'repartidores en ruta', color: '#8b5cf6', bg: darkMode ? '#2d1b69' : '#f5f3ff', icono: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
+                        { label: 'Entregados hoy', valor: entregados, sub: 'completados exitosamente', color: '#10b981', bg: darkMode ? '#052e16' : '#f0fdf4', icono: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
                     ].map((m, i) => (
                         <div key={i} style={{ background: m.bg, borderRadius: '10px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.color, flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                                 {m.icono}
                             </div>
                             <div>
@@ -310,7 +333,7 @@ function Delivery() {
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                         {deliveriesFiltrados.length === 0 ? (
                             <div style={{ padding: '40px 20px', textAlign: 'center', color: s.textMuted }}>
-                                <p style={{ fontSize: '24px', marginBottom: '8px' }}>📦</p>
+                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.4 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
                                 <p style={{ fontSize: '13px' }}>No hay deliveries en este estado.</p>
                             </div>
                         ) : (
@@ -326,20 +349,21 @@ function Delivery() {
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                                             <span style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{d.cliente_nombre || d.cliente_numero || 'Sin nombre'}</span>
-                                            <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg, flexShrink: 0, marginLeft: '6px' }}>
-                                                {cfg.icono} {cfg.label}
+                                            <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg, flexShrink: 0, marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                {iconoEstado(cfg.icono)} {cfg.label}
                                             </span>
                                         </div>
                                         <p style={{ fontSize: '11px', color: s.textMuted, marginBottom: '4px' }}>{d.marca_nombre && `${d.marca_nombre} — `}{d.producto_nombre} — {d.presentacion_nombre}</p>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <p style={{ fontSize: '11px', fontWeight: '700', color: s.text }}>Gs. {parseInt(d.precio).toLocaleString()}</p>
                                             <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '6px', color: pagado ? '#10b981' : '#f59e0b', background: pagado ? (darkMode ? 'rgba(16,185,129,0.1)' : '#f0fdf4') : (darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb') }}>
-                                                {pagado ? '✓ Pagado' : '⏳ Pendiente'}
+                                                {pagado ? '✓ Pagado' : 'Pendiente'}
                                             </span>
                                         </div>
                                         {d.repartidor_nombre && (    
-                                            <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '3px' }}>
-                                                🚴 {d.repartidor_nombre}
+                                            <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+                                                {d.repartidor_nombre}
                                             </p>
                                         )}
                                     </div>
@@ -353,7 +377,7 @@ function Delivery() {
                 <div style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
                     {!detalle ? (
                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
-                            <span style={{ fontSize: '48px' }}>🚚</span>
+                            <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
                             <p style={{ fontSize: '14px', fontWeight: '500' }}>Seleccioná un delivery para ver los detalles</p>
                         </div>
                     ) : (
@@ -370,8 +394,8 @@ function Delivery() {
                                     {(() => {
                                         const cfg = estadoConfig[detalle.estado] || {}
                                         return (
-                                            <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg }}>
-                                                {cfg.icono} {cfg.label}
+                                            <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                                {iconoEstado(cfg.icono)} {cfg.label}
                                             </span>
                                         )
                                     })()}
@@ -400,7 +424,7 @@ function Delivery() {
                                 {detalle.ubicacion?.includes('maps.google.com') && (
                                     <a href={detalle.ubicacion.replace(/^.*?(https:\/\/)/, 'https://')} target="_blank" rel="noreferrer"
                                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '14px', padding: '9px 14px', borderRadius: '8px', background: '#1a1a2e', color: 'white', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
-                                        📍 Ver en Google Maps
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Ver en Google Maps
                                     </a>
                                 )}
                             </div>
@@ -434,10 +458,10 @@ function Delivery() {
                                         const activo = detalle.estado === estado
                                         return (
                                             <button key={estado} onClick={() => cambiarEstado(detalle.id, estado)} disabled={activo || !puedo('delivery', 'editar')}
-                                                style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${activo ? cfg.color : s.border}`, fontSize: '12px', fontWeight: activo ? '700' : '500', cursor: activo ? 'not-allowed' : 'pointer', background: activo ? cfg.color : s.surfaceLow, color: activo ? 'white' : s.text, transition: 'all 0.15s' }}
+                                                style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${activo ? cfg.color : s.border}`, fontSize: '12px', fontWeight: activo ? '700' : '500', cursor: activo ? 'not-allowed' : 'pointer', background: activo ? cfg.color : s.surfaceLow, color: activo ? 'white' : s.text, transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                                                 onMouseEnter={e => { if (!activo) e.currentTarget.style.borderColor = cfg.color }}
                                                 onMouseLeave={e => { if (!activo) e.currentTarget.style.borderColor = s.border }}>
-                                                {cfg.icono} {cfg.label}
+                                                {iconoEstado(cfg.icono)} {cfg.label}
                                             </button>
                                         )
                                     })}
@@ -607,7 +631,7 @@ function ModalNuevoDelivery({ s, darkMode, onClose, onCreado, setModalConfirmar 
                                             onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
                                             onMouseLeave={e => e.currentTarget.style.background = s.surface}>
                                             <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{c.nombre}</p>
-                                            <p style={{ fontSize: '11px', color: s.textMuted }}>{c.telefono && `📱 ${c.telefono}`}{c.ruc && ` · RUC: ${c.ruc}`}</p>
+                                            <p style={{ fontSize: '11px', color: s.textMuted }}>{c.telefono && c.telefono}{c.ruc && ` · RUC: ${c.ruc}`}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -616,7 +640,7 @@ function ModalNuevoDelivery({ s, darkMode, onClose, onCreado, setModalConfirmar 
                                 <div style={{ padding: '12px 14px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '10px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #86efac' }}>
                                     <div>
                                         <p style={{ fontSize: '13px', fontWeight: '700', color: '#166534' }}>✓ {clienteSeleccionado.nombre}</p>
-                                        {clienteSeleccionado.telefono && <p style={{ fontSize: '11px', color: s.textMuted }}>📱 {clienteSeleccionado.telefono}</p>}
+                                        {clienteSeleccionado.telefono && <p style={{ fontSize: '11px', color: s.textMuted }}>{clienteSeleccionado.telefono}</p>}
                                     </div>
                                     <button onClick={() => { setClienteSeleccionado(null); setBuscarCliente('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, fontSize: '16px' }}>✕</button>
                                 </div>

@@ -169,7 +169,7 @@ function Chat() {
                 {/* Buscador */}
                 <div style={{ padding: '14px 16px', borderBottom: `1px solid ${s.border}` }}>
                     <div style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: s.textFaint }}>🔍</span>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                         <input
                             placeholder="Buscar conversaciones..."
                             value={buscar}
@@ -187,7 +187,7 @@ function Chat() {
 
                         {sesionesFiltradas.length === 0 ? (
                             <div style={{ padding: '32px 16px', textAlign: 'center', color: s.textMuted }}>
-                                <p style={{ fontSize: '24px', marginBottom: '8px' }}>💬</p>
+                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.4 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
                                 <p style={{ fontSize: '13px' }}>No hay conversaciones activas.</p>
                             </div>
                         ) : (
@@ -229,7 +229,7 @@ function Chat() {
             <section style={{ flex: 1, display: 'flex', flexDirection: 'column', background: s.chatBg, minWidth: 0 }}>
                 {!sesionActiva ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
-                        <span style={{ fontSize: '48px' }}>💬</span>
+                        <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
                         <p style={{ fontSize: '15px', fontWeight: '500' }}>Seleccioná una conversación</p>
                         <p style={{ fontSize: '13px', color: s.textFaint }}>para ver los mensajes y gestionar la atención</p>
                     </div>
@@ -252,12 +252,12 @@ function Chat() {
                                 {sesionActiva.modo !== 'humano' ? (
                                     <button onClick={() => handleTomarControl(sesionActiva.cliente_numero)}
                                         style={{ padding: '9px 16px', borderRadius: '10px', border: 'none', background: '#1a1a2e', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        👤 Tomar control
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Tomar control
                                     </button>
                                 ) : (
                                     <button onClick={() => handleDevolverBot(sesionActiva.cliente_numero)}
-                                        style={{ padding: '9px 16px', borderRadius: '10px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                                        🤖 Devolver al bot
+                                        style={{ padding: '9px 16px', borderRadius: '10px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/></svg> Devolver al bot
                                     </button>
                                 )}
                                 <button onClick={() => handleCerrarConversacion(sesionActiva.cliente_numero)}
@@ -295,7 +295,7 @@ function Chat() {
                                                         alignItems: 'center',
                                                         gap: '8px'
                                                     }}>
-                                                        <span style={{ fontSize: '24px' }}>🖼️</span>
+                                                        <span style={{ color: s.textMuted, display: 'flex' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
                                                         <span style={{ fontSize: '12px', color: s.textMuted }}>
                                                             Imagen enviada por el cliente
                                                         </span>
@@ -365,7 +365,7 @@ function Chat() {
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: s.textMuted, fontSize: '13px', padding: '8px 0' }}>
-                                    <span style={{ fontSize: '18px' }}>🤖</span>
+                                    <span style={{ color: s.textFaint, display: 'flex' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/></svg></span>
                                     <span>El bot está manejando esta conversación. Hacé clic en <strong style={{ color: '#4f46e5', cursor: 'pointer' }} onClick={() => handleTomarControl(sesionActiva.cliente_numero)}>Tomar control</strong> para intervenir.</span>
                                 </div>
                             )}

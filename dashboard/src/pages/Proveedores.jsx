@@ -241,9 +241,9 @@ function Proveedores() {
             {/* Pestañas */}
             <div style={{ background: s.surface, borderBottom: `1px solid ${s.border}`, padding: '0 32px', display: 'flex', gap: '0', flexShrink: 0 }}>
                 {[
-                    { id: 'proveedores', label: '🏭 Proveedores' },
-                    { id: 'facturas', label: '🧾 Facturas' },
-                    { id: 'reportes', label: '📊 Reportes' },
+                    { id: 'proveedores', label: 'Proveedores' },
+                    { id: 'facturas', label: 'Facturas' },
+                    { id: 'reportes', label: 'Reportes' },
                 ].map(p => (
                     <button key={p.id} onClick={() => setPestana(p.id)}
                         style={{ padding: '16px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: pestana === p.id ? '700' : '500', color: pestana === p.id ? s.text : s.textMuted, borderBottom: `2px solid ${pestana === p.id ? '#1a1a2e' : 'transparent'}`, transition: 'all 0.15s' }}>
@@ -267,7 +267,7 @@ function Proveedores() {
 
                     {/* Buscador */}
                     <div style={{ position: 'relative', marginBottom: '20px' }}>
-                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint }}>🔍</span>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                         <input placeholder="Buscar por nombre o RUC..." value={buscar} onChange={e => setBuscar(e.target.value)}
                             style={{ ...inputStyle, paddingLeft: '36px', marginBottom: 0, background: s.surface }} />
                     </div>
@@ -276,7 +276,7 @@ function Proveedores() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {proveedoresFiltrados.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '60px', color: s.textMuted }}>
-                                <p style={{ fontSize: '32px', marginBottom: '8px' }}>🏭</p>
+                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.35 }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
                                 <p>No hay proveedores registrados.</p>
                             </div>
                         ) : proveedoresFiltrados.map(p => (
@@ -288,9 +288,9 @@ function Proveedores() {
                                             {p.ruc && <span style={{ fontSize: '11px', color: s.textMuted }}>RUC: {p.ruc}</span>}
                                         </div>
                                         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                                            {p.telefono && <span style={{ fontSize: '12px', color: s.textMuted }}>📱 {p.telefono}</span>}
-                                            {p.email && <span style={{ fontSize: '12px', color: s.textMuted }}>✉️ {p.email}</span>}
-                                            {p.banco && <span style={{ fontSize: '12px', color: s.textMuted }}>🏦 {p.banco}</span>}
+                                            {p.telefono && <span style={{ fontSize: '12px', color: s.textMuted }}>{p.telefono}</span>}
+                                            {p.email && <span style={{ fontSize: '12px', color: s.textMuted }}>{p.email}</span>}
+                                            {p.banco && <span style={{ fontSize: '12px', color: s.textMuted }}>{p.banco}</span>}
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -307,7 +307,7 @@ function Proveedores() {
                                         <div style={{ display: 'flex', gap: '6px' }}>
                                             <button onClick={() => { setPestana('facturas'); setFiltroTipo(''); setFiltroEstado('') }}
                                                 style={{ padding: '7px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px' }}>
-                                                🧾 Facturas
+                                                Facturas
                                             </button>
                                             <button onClick={() => abrirModalEditar(p)}
                                                 style={{ padding: '7px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px' }}>
@@ -333,7 +333,7 @@ function Proveedores() {
                         <h1 style={{ fontSize: '22px', fontWeight: '800', color: s.text }}>Facturas de Compra</h1>
                         <button onClick={() => setModalLibroCompras(true)}
                             style={{ padding: '10px 18px', borderRadius: '10px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                            📊 Libro de Compras
+                            Libro de Compras
                         </button>
                     </div>
 
@@ -341,10 +341,10 @@ function Proveedores() {
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
                         {[
                             { val: '', label: 'Todos los estados' },
-                            { val: 'pendiente', label: '⏳ Pendiente' },
-                            { val: 'pagado_parcial', label: '🔵 Pago parcial' },
-                            { val: 'pagado', label: '✅ Pagado' },
-                            { val: 'vencido', label: '🔴 Vencido' },
+                            { val: 'pendiente', label: 'Pendiente' },
+                            { val: 'pagado_parcial', label: 'Pago parcial' },
+                            { val: 'pagado', label: 'Pagado' },
+                            { val: 'vencido', label: 'Vencido' },
                         ].map(f => (
                             <button key={f.val} onClick={() => setFiltroEstado(f.val)}
                                 style={{ padding: '6px 14px', borderRadius: '20px', border: '1px solid', fontSize: '12px', fontWeight: '600', cursor: 'pointer', background: filtroEstado === f.val ? '#1a1a2e' : s.surfaceLow, color: filtroEstado === f.val ? 'white' : s.textMuted, borderColor: filtroEstado === f.val ? '#1a1a2e' : s.border }}>
@@ -354,8 +354,8 @@ function Proveedores() {
                         <div style={{ borderLeft: `1px solid ${s.border}`, margin: '0 4px' }} />
                         {[
                             { val: '', label: 'Todos' },
-                            { val: 'contado', label: '💵 Contado' },
-                            { val: 'credito', label: '📅 Crédito' },
+                            { val: 'contado', label: 'Contado' },
+                            { val: 'credito', label: 'Crédito' },
                         ].map(f => (
                             <button key={f.val} onClick={() => setFiltroTipo(f.val)}
                                 style={{ padding: '6px 14px', borderRadius: '20px', border: '1px solid', fontSize: '12px', fontWeight: '600', cursor: 'pointer', background: filtroTipo === f.val ? '#3b82f6' : s.surfaceLow, color: filtroTipo === f.val ? 'white' : s.textMuted, borderColor: filtroTipo === f.val ? '#3b82f6' : s.border }}>
@@ -383,7 +383,7 @@ function Proveedores() {
                             <tbody>
                                 {facturasFiltradas.length === 0 ? (
                                     <tr><td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: s.textMuted }}>
-                                        <p style={{ fontSize: '24px', marginBottom: '8px' }}>🧾</p>
+                                        <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.4 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                                         <p>No hay facturas que coincidan.</p>
                                     </td></tr>
                                 ) : facturasFiltradas.map(f => {
@@ -416,7 +416,7 @@ function Proveedores() {
                                             </td>
                                             <td style={{ padding: '12px 16px' }}>
                                                 <span style={{ fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px', background: f.tipo === 'contado' ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe'), color: f.tipo === 'contado' ? '#10b981' : '#3b82f6' }}>
-                                                    {f.tipo === 'contado' ? '💵 Contado' : '📅 Crédito'}
+                                                    {f.tipo === 'contado' ? 'Contado' : 'Crédito'}
                                                 </span>
                                             </td>
                                             <td style={{ padding: '12px 16px' }}>
@@ -448,7 +448,7 @@ function Proveedores() {
                                                                     <span style={{ color: s.textFaint, minWidth: '80px' }}>{formatearSoloFecha(pago.fecha_pago)}</span>
                                                                     {pago.numero_recibo && <span style={{ color: s.textMuted, fontFamily: 'monospace' }}>Recibo: {pago.numero_recibo}</span>}
                                                                     <span style={{ fontWeight: '700', color: '#10b981' }}>Gs. {parseInt(pago.monto).toLocaleString('es-PY')}</span>
-                                                                    <span style={{ color: s.textMuted }}>{pago.metodo_pago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}</span>
+                                                                    <span style={{ color: s.textMuted }}>{pago.metodo_pago === 'efectivo' ? 'Efectivo' : 'Transferencia'}</span>
                                                                     <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: pago.tipo_pago === 'total' ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe'), color: pago.tipo_pago === 'total' ? '#10b981' : '#3b82f6' }}>
                                                                         {pago.tipo_pago === 'total' ? 'Pago total' : 'Pago parcial'}
                                                                     </span>
@@ -501,15 +501,14 @@ function Proveedores() {
                                 {/* Métricas */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                                     {[
-                                        { label: 'Total comprado', val: `Gs. ${parseInt(reportes.resumen.total_comprado||0).toLocaleString('es-PY')}`, color: '#1a1a2e', icono: '💰' },
-                                        { label: 'Facturas', val: reportes.resumen.total_facturas, color: '#3b82f6', icono: '🧾' },
-                                        { label: 'Promedio factura', val: `Gs. ${parseInt(reportes.resumen.promedio_factura||0).toLocaleString('es-PY')}`, color: '#f59e0b', icono: '📊' },
-                                        { label: 'Total crédito', val: `Gs. ${parseInt(reportes.resumen.total_credito||0).toLocaleString('es-PY')}`, color: '#ef4444', icono: '📅' },
+                                        { label: 'Total comprado', val: `Gs. ${parseInt(reportes.resumen.total_comprado||0).toLocaleString('es-PY')}`, color: '#1a1a2e' },
+                                        { label: 'Facturas', val: reportes.resumen.total_facturas, color: '#3b82f6' },
+                                        { label: 'Promedio factura', val: `Gs. ${parseInt(reportes.resumen.promedio_factura||0).toLocaleString('es-PY')}`, color: '#f59e0b' },
+                                        { label: 'Total crédito', val: `Gs. ${parseInt(reportes.resumen.total_credito||0).toLocaleString('es-PY')}`, color: '#ef4444' },
                                     ].map((m, i) => (
                                         <div key={i} style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <div style={{ marginBottom: '8px' }}>
                                                 <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</p>
-                                                <span style={{ fontSize: '18px' }}>{m.icono}</span>
                                             </div>
                                             <p style={{ fontSize: '18px', fontWeight: '800', color: m.color }}>{m.val}</p>
                                         </div>
@@ -588,7 +587,7 @@ function Proveedores() {
                                 {reportes.vencidas.length > 0 && (
                                     <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid #fca5a5`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                         <div style={{ padding: '14px 18px', borderBottom: `1px solid #fca5a5`, background: darkMode ? 'rgba(239,68,68,0.1)' : '#fee2e2' }}>
-                                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#991b1b' }}>🔴 Facturas vencidas ({reportes.vencidas.length})</p>
+                                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#991b1b' }}>Facturas vencidas ({reportes.vencidas.length})</p>
                                         </div>
                                         {reportes.vencidas.map(f => (
                                             <div key={f.id} style={{ padding: '12px 18px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
@@ -770,7 +769,7 @@ function Proveedores() {
 
                         {formFactura.tipo === 'credito' && formFactura.plazo_dias && formFactura.fecha_emision && (
                             <div style={{ padding: '10px 14px', background: darkMode ? 'rgba(59,130,246,0.1)' : '#eff6ff', borderRadius: '8px', marginTop: '4px', fontSize: '12px', color: '#3b82f6' }}>
-                                📅 Vence el {new Date(new Date(formFactura.fecha_emision).setDate(new Date(formFactura.fecha_emision).getDate() + parseInt(formFactura.plazo_dias))).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })}
+                                Vence el {new Date(new Date(formFactura.fecha_emision).setDate(new Date(formFactura.fecha_emision).getDate() + parseInt(formFactura.plazo_dias))).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })}
                             </div>
                         )}
 
@@ -818,7 +817,7 @@ function Proveedores() {
                         </div>
                         <label style={labelStyle}>Tipo de pago *</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                            {[{ val: 'parcial', label: '🔵 Pago parcial' }, { val: 'total', label: '✅ Pago total' }].map(t => (
+                            {[{ val: 'parcial', label: 'Pago parcial' }, { val: 'total', label: 'Pago total' }].map(t => (
                                 <button key={t.val} onClick={() => setFormPago({...formPago, tipo_pago: t.val, monto: t.val === 'total' ? modalPago.saldo.toString() : formPago.monto})}
                                 style={{ padding: '10px', borderRadius: '8px', border: `2px solid ${formPago.tipo_pago === t.val ? '#3b82f6' : s.border}`, background: formPago.tipo_pago === t.val ? (darkMode ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent', color: formPago.tipo_pago === t.val ? '#3b82f6' : s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: formPago.tipo_pago === t.val ? '700' : '500' }}>
                                 {t.label}

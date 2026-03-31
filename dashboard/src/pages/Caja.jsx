@@ -480,7 +480,7 @@ function Caja() {
 
                     resetCaja()
                     setModalConfirmar({
-                        titulo: 'Venta registrada ✓',
+                        titulo: 'Venta registrada',
                         mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
                         textoBoton: 'Nueva venta', colorBoton: '#10b981',
                         onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
@@ -504,8 +504,8 @@ function Caja() {
             {/* Pestañas */}
             <div style={{ background: s.surface, borderBottom: `1px solid ${s.border}`, padding: '0 32px', display: 'flex', gap: '0', flexShrink: 0 }}>
                 {[
-                    { id: 'venta', label: '🧾 Nueva Venta' },
-                    { id: 'cierre', label: '📊 Cierre de Caja' },
+                    { id: 'venta', label: 'Nueva Venta' },
+                    { id: 'cierre', label: 'Cierre de Caja' },
                 ].map(p => (
                     <button key={p.id} onClick={() => setPestana(p.id)}
                         style={{ padding: '16px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: pestana === p.id ? '700' : '500', color: pestana === p.id ? s.text : s.textMuted, borderBottom: `2px solid ${pestana === p.id ? '#1a1a2e' : 'transparent'}`, transition: 'all 0.15s' }}>
@@ -753,14 +753,16 @@ function Caja() {
                         <section style={{ marginBottom: '24px' }}>
                             <h3 style={{ fontSize: '13px', fontWeight: '700', color: s.text, marginBottom: '12px' }}>Modalidad</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                {[{ valor: 'presencial', label: 'Retiro en tienda', icono: '🏪' }, { valor: 'delivery', label: 'Delivery', icono: '🚚' }].map(c => {
+                                {[
+                                    { valor: 'presencial', label: 'Retiro en tienda', svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+                                    { valor: 'delivery', label: 'Delivery', svg: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
+                                ].map(c => {
                                     const activo = canal === c.valor
                                     return (
                                         <button key={c.valor} onClick={() => setCanal(c.valor)}
-                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: `${activo ? 2 : 1}px solid ${activo ? '#1a1a2e' : s.border}`, borderRadius: '12px', background: activo ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : 'transparent', cursor: 'pointer', transition: 'all 0.15s' }}>
-                                            <span style={{ fontSize: '24px' }}>{c.icono}</span>
-                                            <span style={{ fontSize: '12px', fontWeight: activo ? '700' : '500', color: activo ? s.text : s.textMuted }}>{c.label}</span>
-                                            {activo && <span style={{ fontSize: '12px' }}>✓</span>}
+                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: `${activo ? 2 : 1}px solid ${activo ? '#1a1a2e' : s.border}`, borderRadius: '12px', background: activo ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : 'transparent', cursor: 'pointer', transition: 'all 0.15s', color: activo ? s.text : s.textMuted }}>
+                                            {c.svg}
+                                            <span style={{ fontSize: '12px', fontWeight: activo ? '700' : '500' }}>{c.label}</span>
                                         </button>
                                     )
                                 })}
@@ -771,10 +773,14 @@ function Caja() {
                         <section style={{ marginBottom: '24px' }}>
                             <h3 style={{ fontSize: '13px', fontWeight: '700', color: s.text, marginBottom: '12px' }}>Metodo de pago</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: metodoPago === 'tarjeta' ? '12px' : '0' }}>
-                                {[{ val: 'efectivo', label: 'Efectivo', icono: '💵' }, { val: 'transferencia', label: 'Transferencia', icono: '🏦' }, { val: 'tarjeta', label: 'Tarjeta', icono: '💳' }].map(m => (
+                                {[
+                                    { val: 'efectivo', label: 'Efectivo', svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> },
+                                    { val: 'transferencia', label: 'Transferencia', svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><line x1="9" y1="22" x2="15" y2="22"/></svg> },
+                                    { val: 'tarjeta', label: 'Tarjeta', svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> },
+                                ].map(m => (
                                     <button key={m.val} onClick={() => { setMetodoPago(m.val); setSubtipoPago('') }}
                                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 8px', borderRadius: '12px', border: `1px solid ${s.border}`, background: metodoPago === m.val ? '#1a1a2e' : 'transparent', color: metodoPago === m.val ? 'white' : s.textMuted, cursor: 'pointer', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', transition: 'all 0.15s', boxShadow: metodoPago === m.val ? '0 4px 12px rgba(26,26,46,0.3)' : 'none' }}>
-                                        <span style={{ fontSize: '22px' }}>{m.icono}</span>
+                                        {m.svg}
                                         {m.label}
                                     </button>
                                 ))}
@@ -783,10 +789,10 @@ function Caja() {
                             {/* Subtipo tarjeta */}
                             {metodoPago === 'tarjeta' && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                    {[{ val: 'debito', label: 'Débito', icono: '💙' }, { val: 'credito', label: 'Crédito', icono: '🟡' }].map(t => (
+                                    {[{ val: 'debito', label: 'Débito' }, { val: 'credito', label: 'Crédito' }].map(t => (
                                         <button key={t.val} onClick={() => setSubtipoPago(t.val)}
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '10px', border: `2px solid ${subtipoPago === t.val ? '#3b82f6' : s.border}`, background: subtipoPago === t.val ? (darkMode ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent', color: subtipoPago === t.val ? '#3b82f6' : s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: subtipoPago === t.val ? '700' : '500', transition: 'all 0.15s' }}>
-                                            <span>{t.icono}</span> {t.label}
+                                            {t.label}
                                         </button>
                                     ))}
                                 </div>
@@ -797,11 +803,10 @@ function Caja() {
                         <section style={{ marginBottom: '24px' }}>
                             <h3 style={{ fontSize: '13px', fontWeight: '700', color: s.text, marginBottom: '12px' }}>Condición de venta</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: tipoVenta === 'credito' ? '12px' : '0' }}>
-                                {[{ val: 'contado', label: 'Contado', icono: '💵' }, { val: 'credito', label: 'Crédito', icono: '📋' }].map(t => (
+                                {[{ val: 'contado', label: 'Contado' }, { val: 'credito', label: 'Crédito' }].map(t => (
                                     <button key={t.val} onClick={() => setTipoVenta(t.val)}
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '12px', border: `${tipoVenta === t.val ? 2 : 1}px solid ${tipoVenta === t.val ? '#1a1a2e' : s.border}`, background: tipoVenta === t.val ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: tipoVenta === t.val ? '700' : '500', color: tipoVenta === t.val ? s.text : s.textMuted, transition: 'all 0.15s' }}>
-                                        <span>{t.icono}</span> {t.label}
-                                        {tipoVenta === t.val && <span style={{ fontSize: '11px' }}>✓</span>}
+                                        {t.label}
                                     </button>
                                 ))}
                             </div>
@@ -822,12 +827,12 @@ function Caja() {
                                         style={{ ...inputStyle, marginBottom: 0 }} />
                                     {clienteSeleccionado && (
                                         <p style={{ fontSize: '11px', color: '#f59e0b', marginTop: '6px' }}>
-                                            ⚠️ Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
+                                            Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
                                         </p>
                                     )}
                                     {!clienteSeleccionado && (
                                         <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>
-                                            ⚠️ Debes seleccionar un cliente para venta a crédito
+                                            Debes seleccionar un cliente para venta a crédito
                                         </p>
                                     )}
                                 </div>
@@ -839,7 +844,7 @@ function Caja() {
                             <p style={{ fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Resumen</p>
                             {lineasValidas.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '20px 0', color: '#334155' }}>
-                                    <p style={{ fontSize: '28px', marginBottom: '8px' }}>🛒</p>
+                                    <span style={{ color: '#334155', display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg></span>
                                     <p style={{ fontSize: '13px' }}>Selecciona productos para comenzar</p>
                                 </div>
                             ) : (
@@ -882,13 +887,13 @@ function Caja() {
 
                                     {metodoPago === 'tarjeta' && subtipoPago && (
                                         <div style={{ background: '#1e293b', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#93c5fd' }}>
-                                            💳 Tarjeta {subtipoPago === 'debito' ? 'Débito' : 'Crédito'}
+                                            Tarjeta {subtipoPago === 'debito' ? 'Débito' : 'Crédito'}
                                         </div>
                                     )}
 
                                     {tipoVenta === 'credito' && (
                                         <div style={{ background: '#1e293b', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#fbbf24' }}>
-                                            📋 Crédito — {plazoDias} días · Vence: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
+                                            Crédito — {plazoDias} días · Vence: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}
                                         </div>
                                     )}
 
@@ -915,7 +920,7 @@ function Caja() {
                                                 </div>
                                             )}
                                             {montoEfectivo && parseInt(montoEfectivo) < total && (
-                                                <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>⚠️ Monto insuficiente</p>
+                                                <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>Monto insuficiente</p>
                                             )}
                                         </div>
                                     )}
@@ -949,7 +954,7 @@ function Caja() {
                                     style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '13px', outline: 'none' }} />
                                 <button onClick={handleImprimirCierre} disabled={!cierreDatos}
                                     style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: cierreDatos ? '#1a1a2e' : s.surfaceLow, color: cierreDatos ? 'white' : s.textFaint, cursor: cierreDatos ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '700' }}>
-                                    🖨️ Imprimir cierre
+                                    Imprimir cierre
                                 </button>
                             </div>
                         </div>
@@ -964,14 +969,18 @@ function Caja() {
                                 {/* Métricas rápidas */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                                     {[
-                                        { label: 'Total ventas', val: `Gs. ${cierreDatos.totalGeneral.toLocaleString('es-PY')}`, color: '#10b981', icono: '💰' },
-                                        { label: 'Cantidad ventas', val: cierreDatos.cantidadVentas, color: '#3b82f6', icono: '🛒' },
-                                        { label: 'Total gastos', val: `Gs. ${gastos.reduce((s, g) => s + g.monto, 0).toLocaleString('es-PY')}`, color: '#ef4444', icono: '📤' },
+                                        { label: 'Total ventas',   val: `Gs. ${cierreDatos.totalGeneral.toLocaleString('es-PY')}`, color: '#10b981', icono: 'money' },
+                                        { label: 'Cantidad ventas', val: cierreDatos.cantidadVentas, color: '#3b82f6', icono: 'cart' },
+                                        { label: 'Total gastos',   val: `Gs. ${gastos.reduce((s, g) => s + g.monto, 0).toLocaleString('es-PY')}`, color: '#ef4444', icono: 'out' },
                                     ].map((m, i) => (
                                         <div key={i} style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                 <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</p>
-                                                <span style={{ fontSize: '18px' }}>{m.icono}</span>
+                                                <span style={{ color: m.color, display: 'flex' }}>
+                                                {m.icono === 'money' && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>}
+                                                {m.icono === 'cart'  && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>}
+                                                {m.icono === 'out'   && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>}
+                                            </span>
                                             </div>
                                             <p style={{ fontSize: '20px', fontWeight: '800', color: m.color }}>{m.val}</p>
                                         </div>
@@ -985,8 +994,8 @@ function Caja() {
                                     </div>
                                     {Object.entries(cierreDatos.resumen).map(([k, v]) => {
                                         const label = v.metodo === 'tarjeta'
-                                            ? `💳 Tarjeta ${v.subtipo === 'debito' ? 'Débito' : v.subtipo === 'credito' ? 'Crédito' : ''}`
-                                            : v.metodo === 'transferencia' ? '🏦 Transferencia' : '💵 Efectivo'
+                                            ? `Tarjeta ${v.subtipo === 'debito' ? 'Débito' : v.subtipo === 'credito' ? 'Crédito' : ''}`
+                                            : v.metodo === 'transferencia' ? 'Transferencia' : 'Efectivo'
                                         const porcentaje = cierreDatos.totalGeneral > 0 ? Math.round((v.total / cierreDatos.totalGeneral) * 100) : 0
                                         return (
                                             <div key={k} style={{ padding: '14px 18px', borderBottom: `1px solid ${s.borderLight}` }}>
