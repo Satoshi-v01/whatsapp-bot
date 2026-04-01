@@ -64,10 +64,10 @@ function Home() {
     }
 
     const tarjetas = [
-        { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `Ganancia: ${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: '#10b981', accentBg: darkMode ? '#052e16' : '#f0fdf4', accentText: '#10b981', icono: 'trend', ruta: '/ventas' },
-        { label: 'Pendientes de pago', valor: resumen?.pendientes || 0, sub: 'requieren confirmación', color: '#f59e0b', accentBg: darkMode ? '#451a03' : '#fffbeb', accentText: '#f59e0b', icono: 'clock', ruta: '/ventas?estado=pendiente_pago' },
-        { label: 'Deliveries activos', valor: resumen?.deliveries || 0, sub: 'en proceso', color: '#3b82f6', accentBg: darkMode ? '#0c1a3a' : '#eff6ff', accentText: '#3b82f6', icono: 'truck', ruta: '/delivery' },
-        { label: 'Chats esperando', valor: resumen?.esperando_agente || 0, sub: 'requieren atención', color: '#ef4444', accentBg: darkMode ? '#450a0a' : '#fef2f2', accentText: '#ef4444', icono: 'chat', ruta: '/chat' },
+        { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `Ganancia: ${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: '#10b981', accentBg: darkMode ? '#052e16' : '#f0fdf4', accentText: '#10b981', icono: 'trend', ruta: '/dashboard/ventas' },
+        { label: 'Pendientes de pago', valor: resumen?.pendientes || 0, sub: 'requieren confirmación', color: '#f59e0b', accentBg: darkMode ? '#451a03' : '#fffbeb', accentText: '#f59e0b', icono: 'clock', ruta: '/dashboard/ventas?estado=pendiente_pago' },
+        { label: 'Deliveries activos', valor: resumen?.deliveries || 0, sub: 'en proceso', color: '#3b82f6', accentBg: darkMode ? '#0c1a3a' : '#eff6ff', accentText: '#3b82f6', icono: 'truck', ruta: '/dashboard/delivery' },
+        { label: 'Chats esperando', valor: resumen?.esperando_agente || 0, sub: 'requieren atención', color: '#ef4444', accentBg: darkMode ? '#450a0a' : '#fef2f2', accentText: '#ef4444', icono: 'chat', ruta: '/dashboard/chat' },
     ]
 
     if (cargando) return (
@@ -107,14 +107,14 @@ function Home() {
                                         {facturasVencidas.length} factura{facturasVencidas.length !== 1 ? 's' : ''} vencida{facturasVencidas.length !== 1 ? 's' : ''}
                                     </p>
                                 </div>
-                                <button onClick={() => navigate('/proveedores')}
+                                <button onClick={() => navigate('/dashboard/proveedores')}
                                     style={{ fontSize: '12px', fontWeight: '600', color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
                                     Ver todas →
                                 </button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {facturasVencidas.slice(0, 3).map(f => (
-                                    <div key={f.id} onClick={() => navigate('/proveedores')}
+                                    <div key={f.id} onClick={() => navigate('/dashboard/proveedores')}
                                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(239,68,68,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fca5a5' }}
                                         onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2'}
                                         onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(239,68,68,0.08)' : 'white'}>
@@ -144,7 +144,7 @@ function Home() {
                                         {proximasVencer.length} factura{proximasVencer.length !== 1 ? 's' : ''} próxima{proximasVencer.length !== 1 ? 's' : ''} a vencer
                                     </p>
                                 </div>
-                                <button onClick={() => navigate('/proveedores')}
+                                <button onClick={() => navigate('/dashboard/proveedores')}
                                     style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
                                     Ver todas →
                                 </button>
@@ -153,7 +153,7 @@ function Home() {
                                 {proximasVencer.slice(0, 3).map(f => {
                                     const dias = diasParaVencer(f.fecha_vencimiento)
                                     return (
-                                        <div key={f.id} onClick={() => navigate('/proveedores')}
+                                        <div key={f.id} onClick={() => navigate('/dashboard/proveedores')}
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(245,158,11,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fde68a' }}
                                             onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7'}
                                             onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.08)' : 'white'}>
@@ -268,7 +268,7 @@ function Home() {
                     ) : (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '220px' }}>
                             {resumen.stock_bajo.map((item, i) => (
-                                <div key={i} onClick={() => navigate('/inventario')}
+                                <div key={i} onClick={() => navigate('/dashboard/inventario')}
                                     style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
                                     onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
                                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
@@ -290,7 +290,7 @@ function Home() {
                         </div>
                     )}
 
-                    <button onClick={() => navigate('/inventario')}
+                    <button onClick={() => navigate('/dashboard/inventario')}
                         style={{ marginTop: '16px', padding: '10px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'background 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -303,7 +303,7 @@ function Home() {
             <div style={{ background: s.surface, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', borderBottom: `1px solid ${s.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>Productos más vendidos del mes</h3>
-                    <button onClick={() => navigate('/reportes')}
+                    <button onClick={() => navigate('/dashboard/reportes')}
                         style={{ fontSize: '13px', color: '#4f46e5', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer' }}>
                         Ver reportes
                     </button>
