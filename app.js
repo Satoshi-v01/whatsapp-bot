@@ -27,6 +27,10 @@ const auditoriaRoutes = require('./src/routes/auditoria')
 
 const app = express()
 
+// Render.com (y cualquier reverse proxy) pone X-Forwarded-For
+// Sin esto express-rate-limit tira ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+app.set('trust proxy', 1)
+
 // Rate limiting general
 const limiterGeneral = rateLimit({
     windowMs: 15 * 60 * 1000,
