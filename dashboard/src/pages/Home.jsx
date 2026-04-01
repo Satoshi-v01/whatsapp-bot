@@ -15,6 +15,7 @@ function Home() {
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const navigate = useNavigate()
     const { darkMode } = useApp()
+    const usuario = (() => { try { return JSON.parse(localStorage.getItem('usuario') || '{}') } catch { return {} } })()
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -82,9 +83,14 @@ function Home() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                    <h2 style={{ fontSize: '24px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>Resumen de Actividad</h2>
-                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px' }}>
+                    <p style={{ fontSize: '12px', color: s.textFaint, marginBottom: '6px', textTransform: 'capitalize' }}>
                         {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
+                    <h2 style={{ fontSize: '26px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>
+                        Bienvenido{usuario.nombre ? `, ${usuario.nombre.split(' ')[0]}` : ''}
+                    </h2>
+                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px', fontWeight: '400' }}>
+                        Este es el resumen de actividad de hoy.
                     </p>
                 </div>
                 <button onClick={cargarDatos}
