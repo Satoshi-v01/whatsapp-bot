@@ -11,7 +11,7 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha } from '../utils/fecha'
 import { getLotesPresentacion, crearLote, eliminarLote } from '../services/lotes'
-import { formatearCalidad } from '../utils/formato'
+import { formatearCalidad, formatMiles, parseMiles } from '../utils/formato'
 
 function Modal({ children, zIndex = 1000, s }) {
     return (
@@ -73,6 +73,8 @@ function Inventario() {
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
     const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
+    const [marcasExpandidas, setMarcasExpandidas] = useState({})
+    const toggleMarca = (marca) => setMarcasExpandidas(prev => ({ ...prev, [marca]: !prev[marca] }))
     const [lotes, setLotes] = useState([])
     const [cargandoLotes, setCargandoLotes] = useState(false)
     const [nuevoLote, setNuevoLote] = useState({ numero_lote: '', fecha_vencimiento: '', stock_inicial: '' })
@@ -236,6 +238,17 @@ function colorVencimiento(diasParaVencer) {
         (p.sku && p.sku.toLowerCase().includes(buscar.toLowerCase()))
     )
 
+    // Agrupar por marca → categoría
+    const porMarca = {}
+    productosFiltrados.forEach(p => {
+        const marca = p.marca_nombre || 'Sin Marca'
+        const cat = p.categoria_nombre || 'Sin Categoría'
+        if (!porMarca[marca]) porMarca[marca] = {}
+        if (!porMarca[marca][cat]) porMarca[marca][cat] = []
+        porMarca[marca][cat].push(p)
+    })
+    const marcasOrdenadas = Object.keys(porMarca).sort((a, b) => a === 'Sin Marca' ? 1 : b === 'Sin Marca' ? -1 : a.localeCompare(b))
+
     
     if (cargando) return (
         <div style={{ padding: '32px', background: s.bg, color: s.textMuted, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -298,208 +311,212 @@ function colorVencimiento(diasParaVencer) {
                 <button onClick={cargarDatos} style={{ ...btnSecundario, padding: '10px 14px', fontSize: '12px' }}>↻ Actualizar</button>
             </div>
 
-            {/* Tabla */}
-            <div style={{ background: s.surface, borderRadius: '0 0 12px 12px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ background: s.tableTh, borderBottom: `1px solid ${s.borderLight}` }}>
-                            {['Producto', 'SKU', 'Categoría', 'Calidad', 'Presentaciones', 'Acciones'].map(h => (
-                                <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {productosFiltrados.length === 0 ? (
-                            <tr>
-                                <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: s.textMuted, fontSize: '14px' }}>
-                                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.35 }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
-                                    <p>No hay productos que coincidan con la búsqueda.</p>
-                                </td>
-                            </tr>
-                        ) : (
-                            productosFiltrados.map(producto => {
-                                const expandido = productoExpandido === producto.id
-                                const stockTotal = producto.presentaciones.reduce((sum, pr) => sum + pr.stock, 0)
-                                const alertas = producto.presentaciones.filter(pr => pr.stock <= 3).length
+            {/* Vista agrupada: Marca → Categoría → Productos */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {marcasOrdenadas.length === 0 ? (
+                    <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, padding: '48px', textAlign: 'center', color: s.textMuted, fontSize: '14px' }}>
+                        No hay productos que coincidan con la búsqueda.
+                    </div>
+                ) : marcasOrdenadas.map(marca => {
+                    const expandida = marcasExpandidas[marca] === true
+                    const catsPorMarca = porMarca[marca]
+                    const totalStockMarca = Object.values(catsPorMarca).flat().reduce((acc, p) => acc + p.presentaciones.reduce((a, pr) => a + pr.stock, 0), 0)
+                    const totalProdsMarca = Object.values(catsPorMarca).flat().length
+                    const catsOrdenadas = Object.keys(catsPorMarca).sort((a, b) => a === 'Sin Categoría' ? 1 : b === 'Sin Categoría' ? -1 : a.localeCompare(b))
 
-                                return (
-                                    <>
-                                        <tr key={producto.id}
-                                            style={{ borderBottom: `1px solid ${expandido ? 'transparent' : s.borderLight}`, transition: 'background 0.1s', cursor: 'pointer' }}
-                                            onClick={() => setProductoExpandido(expandido ? null : producto.id)}
-                                            onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
-                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                        >
-                                            <td style={{ padding: '16px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: s.surfaceLow, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: s.textFaint }}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>
-                                                            {producto.marca_nombre && <span style={{ color: s.textMuted }}>{producto.marca_nombre} — </span>}
-                                                            {producto.nombre}
-                                                        </p>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                                                            <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {stockTotal}</span>
-                                                            {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>{alertas} bajo stock</span>}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px' }}>
-                                                {producto.sku
-                                                    ? <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', padding: '3px 8px', borderRadius: '6px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>{producto.sku}</span>
-                                                    : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>
-                                                }
-                                            </td>
-                                            <td style={{ padding: '16px' }}>
-                                                <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>
-                                                    {producto.categoria_nombre || '—'}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '16px' }}>
-                                                <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>
-                                                    {formatearCalidad(producto.calidad)}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '16px' }}>
-                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                                    {producto.presentaciones.slice(0, 3).map(pr => (
-                                                        <span key={pr.id} style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '6px', background: s.surfaceLow, color: pr.stock <= 3 ? '#ef4444' : s.textMuted, border: `1px solid ${pr.stock <= 3 ? '#fca5a5' : s.border}` }}>
-                                                            {pr.nombre}
-                                                        </span>
-                                                    ))}
-                                                    {producto.presentaciones.length > 3 && <span style={{ fontSize: '10px', color: s.textFaint }}>+{producto.presentaciones.length - 3}</span>}
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px', textAlign: 'right' }}>
-                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                    <button onClick={e => { e.stopPropagation(); abrirModalEditar(producto) }}
-                                                        style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                        Editar
-                                                    </button>
-                                                    <span style={{ color: s.textFaint, display: 'flex', alignItems: 'center' }}>
-                                                        {expandido
-                                                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-                                                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                                        }
-                                                    </span>
-                                                </div>
-                                            </td>
-                                        </tr>
+                    return (
+                        <div key={marca} style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
 
-                                        {/* Fila expandida */}
-                                        {expandido && (
-                                            <tr key={`${producto.id}-expand`}>
-                                                <td colSpan={6} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
-                                                    <div style={{ padding: '16px 20px' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</p>
-                                                            <button onClick={() => setModalPresentacion(producto.id)}
-                                                                style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
-                                                                + Agregar presentación
-                                                            </button>
-                                                        </div>
-                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                            <thead>
-                                                                <tr style={{ background: s.surface }}>
-                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Acciones'].map(h => (
-                                                                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                                                                    ))}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {producto.presentaciones.map(pr => {
-                                                                    const { precio, conDescuento } = calcularPrecioEfectivo(pr)
-                                                                    const mg = margen(pr)
-                                                                    return (
-                                                                        <tr key={pr.id} style={{ borderTop: `1px solid ${s.borderLight}` }}>
-                                                                            <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: '600', color: s.text }}>{pr.nombre}</td>
-                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                {pr.codigo_barras
-                                                                                    ? <span style={{ fontSize: '11px', fontFamily: 'monospace', color: s.text }}>{pr.codigo_barras}</span>
-                                                                                    : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>
-                                                                                }
-                                                                            </td>
-                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>{pr.precio_compra ? `Gs. ${pr.precio_compra.toLocaleString()}` : '—'}</td>
-                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.text }}>
-                                                                                {conDescuento ? (
-                                                                                    <span>
-                                                                                        <span style={{ textDecoration: 'line-through', color: s.textFaint, fontSize: '11px' }}>Gs. {pr.precio_venta.toLocaleString()}</span>
-                                                                                        <span style={{ marginLeft: '6px', color: '#10b981', fontWeight: '700' }}>Gs. {precio.toLocaleString()}</span>
-                                                                                        <span style={{ marginLeft: '4px', fontSize: '10px', background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '8px', fontWeight: '700' }}>%</span>
-                                                                                    </span>
-                                                                                ) : `Gs. ${(pr.precio_venta || 0).toLocaleString()}`}
-                                                                            </td>
-                                                                            <td style={{ padding: '10px 12px', fontSize: '12px' }}>
-                                                                                {pr.descuento_activo && pr.precio_descuento
-                                                                                    ? <span style={{ color: '#10b981', fontWeight: '600' }}>Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span>
-                                                                                    : <span style={{ color: s.textFaint }}>—</span>}
-                                                                            </td>
-                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                {mg !== null ? (
-                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                        <span style={{ fontSize: '13px', fontWeight: '700', color: mg >= 20 ? '#10b981' : mg >= 10 ? '#f59e0b' : '#ef4444' }}>{mg}%</span>
-                                                                                        <div style={{ width: '48px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
-                                                                                            <div style={{ width: `${Math.min(mg, 100)}%`, height: '100%', background: mg >= 20 ? '#10b981' : mg >= 10 ? '#f59e0b' : '#ef4444', borderRadius: '2px' }} />
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ) : <span style={{ color: s.textFaint }}>—</span>}
-                                                                            </td>
-                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981' }}>{pr.stock}</span>
-                                                                                    <div style={{ width: '48px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
-                                                                                        <div style={{ width: `${Math.min((pr.stock / 20) * 100, 100)}%`, height: '100%', background: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981', borderRadius: '2px' }} />
-                                                                                    </div>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                                                                    <button onClick={() => { setNuevoStockValor(String(pr.stock)); setModalStock({ id: pr.id, nombre: pr.nombre, stockActual: pr.stock }) }}
-                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                        Stock
-                                                                                    </button>
-                                                                                    <button onClick={() => abrirModalPrecio(pr)}
-                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                        Precio
-                                                                                    </button>
-                                                                                    <button onClick={() => abrirModalCodigoBarras(pr)}
-                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                        Cod.
-                                                                                    </button>
-                                                                                    <button onClick={() => abrirModalLotes(pr)}
-                                                                                        style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                        Lotes
-                                                                                    </button>
-                                                                                </div>
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
-                                                                    )
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </td>
+                            {/* Header marca */}
+                            <div onClick={() => toggleMarca(marca)}
+                                style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: darkMode ? '#1a2536' : '#f8fafc', borderBottom: expandida ? `1px solid ${s.border}` : 'none', userSelect: 'none' }}
+                                onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
+                                onMouseLeave={e => e.currentTarget.style.background = darkMode ? '#1a2536' : '#f8fafc'}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <span style={{ fontSize: '14px', fontWeight: '800', color: 'white' }}>{marca.charAt(0).toUpperCase()}</span>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: s.text, letterSpacing: '-0.3px' }}>{marca}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '1px' }}>
+                                            {totalProdsMarca} producto{totalProdsMarca !== 1 ? 's' : ''} · {catsOrdenadas.length} categoría{catsOrdenadas.length !== 1 ? 's' : ''} · Stock total: {totalStockMarca}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span style={{ color: s.textFaint, display: 'flex' }}>
+                                    {expandida
+                                        ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    }
+                                </span>
+                            </div>
+
+                            {/* Categorías dentro de la marca */}
+                            {expandida && catsOrdenadas.map((cat, catIdx) => (
+                                <div key={cat} style={{ borderTop: catIdx > 0 ? `1px solid ${s.borderLight}` : 'none' }}>
+
+                                    {/* Sub-header categoría */}
+                                    <div style={{ padding: '8px 20px 8px 72px', background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(26,26,127,0.025)', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${s.borderLight}` }}>
+                                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#3730a3', background: '#e0e7ff', padding: '2px 10px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{cat}</span>
+                                        <span style={{ fontSize: '11px', color: s.textFaint }}>{catsPorMarca[cat].length} producto{catsPorMarca[cat].length !== 1 ? 's' : ''}</span>
+                                    </div>
+
+                                    {/* Tabla de productos */}
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ background: s.tableTh }}>
+                                                {['Producto', 'SKU', 'Calidad', 'Presentaciones', 'Acciones'].map(h => (
+                                                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
+                                                ))}
                                             </tr>
-                                        )}
-                                    </>
-                                )
-                            })
-                        )}
-                    </tbody>
-                </table>
+                                        </thead>
+                                        <tbody>
+                                            {catsPorMarca[cat].map(producto => {
+                                                const expandido = productoExpandido === producto.id
+                                                const stockTotal = producto.presentaciones.reduce((sum, pr) => sum + pr.stock, 0)
+                                                const alertas = producto.presentaciones.filter(pr => pr.stock <= 3).length
+                                                return (
+                                                    <>
+                                                        <tr key={producto.id}
+                                                            style={{ borderBottom: `1px solid ${expandido ? 'transparent' : s.borderLight}`, transition: 'background 0.1s', cursor: 'pointer' }}
+                                                            onClick={() => setProductoExpandido(expandido ? null : producto.id)}
+                                                            onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
+                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                        >
+                                                            <td style={{ padding: '14px 16px' }}>
+                                                                <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{producto.nombre}</p>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                                                    <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {stockTotal}</span>
+                                                                    {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>{alertas} bajo stock</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '14px 16px' }}>
+                                                                {producto.sku
+                                                                    ? <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', padding: '3px 8px', borderRadius: '6px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>{producto.sku}</span>
+                                                                    : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
+                                                            </td>
+                                                            <td style={{ padding: '14px 16px' }}>
+                                                                <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>{formatearCalidad(producto.calidad)}</span>
+                                                            </td>
+                                                            <td style={{ padding: '14px 16px' }}>
+                                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                                    {producto.presentaciones.slice(0, 3).map(pr => (
+                                                                        <span key={pr.id} style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '6px', background: s.surfaceLow, color: pr.stock <= 3 ? '#ef4444' : s.textMuted, border: `1px solid ${pr.stock <= 3 ? '#fca5a5' : s.border}` }}>
+                                                                            {pr.nombre}
+                                                                        </span>
+                                                                    ))}
+                                                                    {producto.presentaciones.length > 3 && <span style={{ fontSize: '10px', color: s.textFaint }}>+{producto.presentaciones.length - 3}</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                                    <button onClick={e => { e.stopPropagation(); abrirModalEditar(producto) }}
+                                                                        style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                                        Editar
+                                                                    </button>
+                                                                    <span style={{ color: s.textFaint, display: 'flex', alignItems: 'center' }}>
+                                                                        {expandido
+                                                                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                                                                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
 
-                <div style={{ padding: '12px 20px', background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(248,250,252,0.8)', borderTop: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '12px', color: s.textFaint }}>
-                        Mostrando <strong style={{ color: s.text }}>{productosFiltrados.length}</strong> de <strong style={{ color: s.text }}>{productos.length}</strong> productos
-                    </p>
-                    <p style={{ fontSize: '12px', color: s.textFaint }}>{totalPresentaciones} presentaciones en total</p>
-                </div>
+                                                        {expandido && (
+                                                            <tr key={`${producto.id}-expand`}>
+                                                                <td colSpan={5} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
+                                                                    <div style={{ padding: '16px 20px' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                                                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</p>
+                                                                            <button onClick={() => setModalPresentacion(producto.id)}
+                                                                                style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                                                                                + Agregar presentación
+                                                                            </button>
+                                                                        </div>
+                                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                                            <thead>
+                                                                                <tr style={{ background: s.surface }}>
+                                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Acciones'].map(h => (
+                                                                                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {producto.presentaciones.map(pr => {
+                                                                                    const { precio, conDescuento } = calcularPrecioEfectivo(pr)
+                                                                                    const mg = margen(pr)
+                                                                                    return (
+                                                                                        <tr key={pr.id} style={{ borderTop: `1px solid ${s.borderLight}` }}>
+                                                                                            <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: '600', color: s.text }}>{pr.nombre}</td>
+                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                                {pr.codigo_barras ? <span style={{ fontSize: '11px', fontFamily: 'monospace', color: s.text }}>{pr.codigo_barras}</span> : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>{pr.precio_compra ? `Gs. ${pr.precio_compra.toLocaleString()}` : '—'}</td>
+                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.text }}>
+                                                                                                {conDescuento ? (
+                                                                                                    <span>
+                                                                                                        <span style={{ textDecoration: 'line-through', color: s.textFaint, fontSize: '11px' }}>Gs. {pr.precio_venta.toLocaleString()}</span>
+                                                                                                        <span style={{ marginLeft: '6px', color: '#10b981', fontWeight: '700' }}>Gs. {precio.toLocaleString()}</span>
+                                                                                                        <span style={{ marginLeft: '4px', fontSize: '10px', background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '8px', fontWeight: '700' }}>%</span>
+                                                                                                    </span>
+                                                                                                ) : `Gs. ${(pr.precio_venta || 0).toLocaleString()}`}
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px' }}>
+                                                                                                {pr.descuento_activo && pr.precio_descuento ? <span style={{ color: '#10b981', fontWeight: '600' }}>Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span> : <span style={{ color: s.textFaint }}>—</span>}
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                                {mg !== null ? (
+                                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                                        <span style={{ fontSize: '13px', fontWeight: '700', color: mg >= 20 ? '#10b981' : mg >= 10 ? '#f59e0b' : '#ef4444' }}>{mg}%</span>
+                                                                                                        <div style={{ width: '48px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
+                                                                                                            <div style={{ width: `${Math.min(mg, 100)}%`, height: '100%', background: mg >= 20 ? '#10b981' : mg >= 10 ? '#f59e0b' : '#ef4444', borderRadius: '2px' }} />
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                ) : <span style={{ color: s.textFaint }}>—</span>}
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981' }}>{pr.stock}</span>
+                                                                                                    <div style={{ width: '48px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
+                                                                                                        <div style={{ width: `${Math.min((pr.stock / 20) * 100, 100)}%`, height: '100%', background: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981', borderRadius: '2px' }} />
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                                                                    <button onClick={() => { setNuevoStockValor(String(pr.stock)); setModalStock({ id: pr.id, nombre: pr.nombre, stockActual: pr.stock }) }} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Stock</button>
+                                                                                                    <button onClick={() => abrirModalPrecio(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Precio</button>
+                                                                                                    <button onClick={() => abrirModalCodigoBarras(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cod.</button>
+                                                                                                    <button onClick={() => abrirModalLotes(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Lotes</button>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    )
+                                                                                })}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                })}
+            </div>
+
+            <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <p style={{ fontSize: '12px', color: s.textFaint }}>Mostrando <strong style={{ color: s.text }}>{productosFiltrados.length}</strong> de <strong style={{ color: s.text }}>{productos.length}</strong> productos</p>
+                <p style={{ fontSize: '12px', color: s.textFaint }}>{totalPresentaciones} presentaciones en total</p>
             </div>
 
             {/* ===== MODALES ===== */}
@@ -606,9 +623,9 @@ function colorVencimiento(diasParaVencer) {
                         <label style={labelStyle}>Nombre</label>
                         <input placeholder="Ej: 3kg, 1KG, 15kg" value={nuevaPresentacion.nombre} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, nombre: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Precio de compra (Gs.)</label>
-                        <input type="number" value={nuevaPresentacion.precio_compra} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_compra: e.target.value })} style={inputStyle} />
+                        <input type="text" inputMode="numeric" placeholder="Ej: 50.000" value={formatMiles(nuevaPresentacion.precio_compra)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_compra: parseMiles(e.target.value) })} style={inputStyle} />
                         <label style={labelStyle}>Precio de venta (Gs.)</label>
-                        <input type="number" value={nuevaPresentacion.precio_venta} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_venta: e.target.value })} style={inputStyle} />
+                        <input type="text" inputMode="numeric" placeholder="Ej: 75.000" value={formatMiles(nuevaPresentacion.precio_venta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_venta: parseMiles(e.target.value) })} style={inputStyle} />
                         <label style={labelStyle}>Stock inicial</label>
                         <input type="number" value={nuevaPresentacion.stock} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, stock: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Codigo de barras (opcional)</label>
@@ -651,12 +668,12 @@ function colorVencimiento(diasParaVencer) {
                         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px', color: s.text }}>Precio y descuento</h3>
                         <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>{modalPrecio.nombre}</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                            <div><label style={labelStyle}>P. compra (Gs.)</label><input type="number" value={precioForm.precio_compra} onChange={e => setPrecioForm({ ...precioForm, precio_compra: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                            <div><label style={labelStyle}>P. venta (Gs.)</label><input type="number" value={precioForm.precio_venta} onChange={e => setPrecioForm({ ...precioForm, precio_venta: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                            <div><label style={labelStyle}>P. compra (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra)} onChange={e => setPrecioForm({ ...precioForm, precio_compra: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                            <div><label style={labelStyle}>P. venta (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_venta)} onChange={e => setPrecioForm({ ...precioForm, precio_venta: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
                         </div>
                         {precioForm.precio_compra && precioForm.precio_venta && (
                             <div style={{ padding: '10px 14px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#166534', fontWeight: '600' }}>
-                                Margen: {Math.round(((precioForm.precio_venta - precioForm.precio_compra) / precioForm.precio_venta) * 100)}% · Ganancia: Gs. {(precioForm.precio_venta - precioForm.precio_compra).toLocaleString()}
+                                Margen: {Math.round(((parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)) / parseInt(precioForm.precio_venta)) * 100)}% · Ganancia: Gs. {(parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)).toLocaleString()}
                             </div>
                         )}
                         <div style={{ borderTop: `1px solid ${s.borderLight}`, paddingTop: '16px', marginBottom: '12px' }}>
@@ -669,8 +686,8 @@ function colorVencimiento(diasParaVencer) {
                                     <div style={{ background: darkMode ? '#1e3a5f' : '#f0f4ff', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
                                         <p style={{ fontSize: '11px', fontWeight: '700', color: '#3730a3', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Precios con descuento</p>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                            <div><label style={labelStyle}>P. compra descuento</label><input type="number" value={precioForm.precio_compra_descuento || ''} onChange={e => setPrecioForm({ ...precioForm, precio_compra_descuento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                                            <div><label style={labelStyle}>P. venta descuento</label><input type="number" value={precioForm.precio_descuento} onChange={e => setPrecioForm({ ...precioForm, precio_descuento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                                            <div><label style={labelStyle}>P. compra descuento</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra_descuento || '')} onChange={e => setPrecioForm({ ...precioForm, precio_compra_descuento: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                                            <div><label style={labelStyle}>P. venta descuento</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_descuento)} onChange={e => setPrecioForm({ ...precioForm, precio_descuento: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>

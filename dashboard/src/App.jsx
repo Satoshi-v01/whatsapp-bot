@@ -152,6 +152,13 @@ function App() {
                             )}
                         </Routes>
                     </main>
+                    {!esRepartidor && (
+                        <div style={{ padding: '6px 24px', textAlign: 'center', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
+                            <span style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.05em' }}>
+                                Hecho por <span style={{ fontWeight: '700' }}>Satoshi</span>
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppContext.Provider>

@@ -9,6 +9,7 @@ import api from '../services/api'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 const MODULOS = [
+    { key: 'inicio', label: 'Inicio', icono: '🏠' },
     { key: 'ventas', label: 'Ventas', icono: '🛒' },
     { key: 'caja', label: 'Caja', icono: '🧾' },
     { key: 'inventario', label: 'Inventario', icono: '📦' },
@@ -19,9 +20,12 @@ const MODULOS = [
     { key: 'auditoria', label: 'Auditoría', icono: '🔍' },
     { key: 'configuracion', label: 'Configuración', icono: '⚙️' },
     { key: 'usuarios', label: 'Usuarios', icono: '👤' },
+    { key: 'chat', label: 'Chat', icono: '💬' },
+    { key: 'ordenes', label: 'Órdenes', icono: '📋' },
 ]
 
 const ACCIONES_POR_MODULO = {
+    inicio: ['ver'],
     ventas: ['ver', 'crear', 'editar', 'cancelar', 'exportar'],
     caja: ['ver', 'operar', 'imprimir', 'cierre'],
     inventario: ['ver', 'crear', 'editar', 'eliminar', 'gestionar_lotes'],
@@ -32,6 +36,8 @@ const ACCIONES_POR_MODULO = {
     auditoria: ['ver'],
     configuracion: ['ver', 'editar'],
     usuarios: ['ver', 'crear', 'editar', 'eliminar'],
+    chat: ['ver'],
+    ordenes: ['ver', 'crear', 'editar', 'cancelar'],
 }
 
 const LABEL_ACCIONES = {
