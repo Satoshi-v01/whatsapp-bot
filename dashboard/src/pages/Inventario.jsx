@@ -12,6 +12,7 @@ import { useApp } from '../App'
 import { formatearFecha } from '../utils/fecha'
 import { getLotesPresentacion, crearLote, eliminarLote } from '../services/lotes'
 import { formatearCalidad, formatMiles, parseMiles } from '../utils/formato'
+import { registrarTransformacion } from '../services/transformaciones'
 
 function Modal({ children, zIndex = 1000, s }) {
     return (
@@ -75,6 +76,9 @@ function Inventario() {
     const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
     const [marcasExpandidas, setMarcasExpandidas] = useState({})
     const toggleMarca = (marca) => setMarcasExpandidas(prev => ({ ...prev, [marca]: !prev[marca] }))
+    const [modalFraccionar, setModalFraccionar] = useState(null) // { producto, presentacion }
+    const [fraccionForm, setFraccionForm] = useState({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', nota: '' })
+    const [fraccionando, setFraccionando] = useState(false)
     const [lotes, setLotes] = useState([])
     const [cargandoLotes, setCargandoLotes] = useState(false)
     const [nuevoLote, setNuevoLote] = useState({ numero_lote: '', fecha_vencimiento: '', stock_inicial: '' })
@@ -132,6 +136,35 @@ function Inventario() {
     async function handleAgregarPresentacion(productoId) {
         try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
+
+    function abrirModalFraccionar(producto, pr) {
+        setFraccionForm({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', nota: '' })
+        setModalFraccionar({ producto, presentacion: pr })
+    }
+
+    async function handleConfirmarFraccion() {
+        if (!fraccionForm.presentacion_destino_id) return setModalConfirmar({ titulo: 'Error', mensaje: 'Seleccioná la presentación destino.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        const cantOrigen = parseInt(fraccionForm.cantidad_origen)
+        const cantDestino = parseInt(fraccionForm.cantidad_destino)
+        if (!cantOrigen || cantOrigen < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad a transformar debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        if (!cantDestino || cantDestino < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad resultante debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        try {
+            setFraccionando(true)
+            await registrarTransformacion({
+                presentacion_origen_id: modalFraccionar.presentacion.id,
+                cantidad_origen: cantOrigen,
+                presentacion_destino_id: parseInt(fraccionForm.presentacion_destino_id),
+                cantidad_destino: cantDestino,
+                nota: fraccionForm.nota || null
+            })
+            setModalFraccionar(null)
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar la transformación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally {
+            setFraccionando(false)
+        }
     }
 
     async function abrirModalLotes(pr) {
@@ -491,6 +524,9 @@ function colorVencimiento(diasParaVencer) {
                                                                                                     <button onClick={() => abrirModalPrecio(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Precio</button>
                                                                                                     <button onClick={() => abrirModalCodigoBarras(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cod.</button>
                                                                                                     <button onClick={() => abrirModalLotes(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Lotes</button>
+                                                                                                    {producto.presentaciones.length > 1 && (
+                                                                                                        <button onClick={() => abrirModalFraccionar(producto, pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Fraccionar</button>
+                                                                                                    )}
                                                                                                 </div>
                                                                                             </td>
                                                                                         </tr>
@@ -901,6 +937,94 @@ function colorVencimiento(diasParaVencer) {
                 </div>
             </Modal>
         )}
+
+            {modalFraccionar && (() => {
+                const pr = modalFraccionar.presentacion
+                const producto = modalFraccionar.producto
+                const otrasPresent = producto.presentaciones.filter(p => p.id !== pr.id)
+                const cantOrigen = parseInt(fraccionForm.cantidad_origen) || 0
+                const cantDestino = parseInt(fraccionForm.cantidad_destino) || 0
+                const destino = otrasPresent.find(p => p.id === parseInt(fraccionForm.presentacion_destino_id))
+                return (
+                    <Modal s={s} zIndex={2000}>
+                        <div style={{ width: '460px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Fraccionar stock</h3>
+                                <button onClick={() => setModalFraccionar(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                            </div>
+                            <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>{producto.nombre}</p>
+
+                            {/* Origen */}
+                            <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
+                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Origen</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{pr.nombre}</span>
+                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Stock: <strong style={{ color: cantOrigen > pr.stock ? '#ef4444' : '#10b981' }}>{pr.stock - cantOrigen >= 0 ? pr.stock - cantOrigen : pr.stock}</strong> / {pr.stock}</span>
+                                </div>
+                                <label style={labelStyle}>Cantidad a transformar</label>
+                                <input
+                                    type="number" min="1" max={pr.stock}
+                                    value={fraccionForm.cantidad_origen}
+                                    onChange={e => setFraccionForm({ ...fraccionForm, cantidad_origen: e.target.value })}
+                                    placeholder={`Máx. ${pr.stock}`}
+                                    style={{ ...inputStyle, marginBottom: 0, borderColor: cantOrigen > pr.stock ? '#ef4444' : s.border }}
+                                />
+                                {cantOrigen > pr.stock && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>Stock insuficiente</p>}
+                            </div>
+
+                            {/* Destino */}
+                            <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
+                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Destino</p>
+                                <label style={labelStyle}>Presentación destino</label>
+                                <select
+                                    value={fraccionForm.presentacion_destino_id}
+                                    onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
+                                    style={{ ...inputStyle, marginBottom: '10px' }}
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    {otrasPresent.map(p => (
+                                        <option key={p.id} value={p.id}>{p.nombre} (stock actual: {p.stock})</option>
+                                    ))}
+                                </select>
+                                {destino && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '12px', color: s.textMuted }}>Stock después:</span>
+                                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>{destino.stock + cantDestino}</span>
+                                    </div>
+                                )}
+                                <label style={labelStyle}>Cantidad resultante</label>
+                                <input
+                                    type="number" min="1"
+                                    value={fraccionForm.cantidad_destino}
+                                    onChange={e => setFraccionForm({ ...fraccionForm, cantidad_destino: e.target.value })}
+                                    placeholder="Unidades que se generan"
+                                    style={{ ...inputStyle, marginBottom: 0 }}
+                                />
+                            </div>
+
+                            {/* Nota */}
+                            <label style={labelStyle}>Nota (opcional)</label>
+                            <input
+                                value={fraccionForm.nota}
+                                onChange={e => setFraccionForm({ ...fraccionForm, nota: e.target.value })}
+                                placeholder="Ej: Bolsa 15kg → 15 bolsas 1kg"
+                                style={{ ...inputStyle }}
+                            />
+
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                                <button onClick={() => setModalFraccionar(null)} style={btnSecundario}>Cancelar</button>
+                                <button
+                                    onClick={handleConfirmarFraccion}
+                                    disabled={fraccionando || cantOrigen > pr.stock || !fraccionForm.presentacion_destino_id || !cantOrigen || !cantDestino}
+                                    style={{ ...btnPrimario, background: '#6d28d9', opacity: (fraccionando || cantOrigen > pr.stock || !fraccionForm.presentacion_destino_id || !cantOrigen || !cantDestino) ? 0.6 : 1, cursor: (fraccionando || cantOrigen > pr.stock) ? 'not-allowed' : 'pointer' }}
+                                >
+                                    {fraccionando ? 'Registrando...' : 'Confirmar transformación'}
+                                </button>
+                            </div>
+                        </div>
+                    </Modal>
+                )
+            })()}
 
             {modalConfirmar && (
                 <ModalConfirmar

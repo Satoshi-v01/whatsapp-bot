@@ -24,6 +24,7 @@ const cors = require('cors')
 const logger = require('./src/middleware/logger')
 const lotesRoutes = require('./src/routes/lotes')
 const auditoriaRoutes = require('./src/routes/auditoria')
+const transformacionesRoutes = require('./src/routes/transformaciones')
 
 const app = express()
 
@@ -112,6 +113,7 @@ app.use('/api/zonas', limiterGeneral, autenticar, zonasRoutes)
 app.use('/api/carrito', limiterGeneral, autenticar, carritoRoutes)
 app.use('/api/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/api/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
+app.use('/api/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
 
 // Rutas
 app.use('/webhook', webhookRoutes)
@@ -131,6 +133,7 @@ app.use('/zonas', limiterGeneral, autenticar, zonasRoutes)
 app.use('/carrito', limiterGeneral, autenticar, carritoRoutes)
 app.use('/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
+app.use('/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
 
 const path = require('path')
 
