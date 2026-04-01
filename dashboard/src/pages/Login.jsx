@@ -135,7 +135,7 @@ function Login({ onLogin }) {
                     </form>
 
                     <p style={{ marginTop: '28px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
-                        Sosa Bulls · Dashboard v2
+                        Sosa BULLS · Dashboard v2
                     </p>
                 </div>
             </div>
