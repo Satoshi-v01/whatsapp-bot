@@ -139,7 +139,24 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                     m.nombre as marca_nombre,
                     c.nombre as cliente_nombre,
                     c.ruc as cliente_ruc,
-                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia,
+                    (SELECT JSON_AGG(JSON_BUILD_OBJECT(
+                        'id', vi.id,
+                        'presentacion_id', vi.presentacion_id,
+                        'cantidad', vi.cantidad,
+                        'precio_unitario', vi.precio_unitario,
+                        'precio_total', vi.precio_total,
+                        'tipo_iva', vi.tipo_iva,
+                        'producto_nombre', p2.nombre,
+                        'presentacion_nombre', pr2.nombre,
+                        'marca_nombre', m2.nombre,
+                        'precio_compra', pr2.precio_compra
+                    ) ORDER BY vi.id)
+                    FROM ventas_items vi
+                    JOIN presentaciones pr2 ON vi.presentacion_id = pr2.id
+                    JOIN productos p2 ON pr2.producto_id = p2.id
+                    LEFT JOIN marcas m2 ON p2.marca_id = m2.id
+                    WHERE vi.venta_id = v.id) as items
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              LEFT JOIN productos p ON pr.producto_id = p.id
@@ -285,7 +302,7 @@ router.get('/reporte/exportar', async (req, res) => {
 })
 
 // 5. Ver una venta específica
-router.patch('/:id/estado', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
+router.get('/:id', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
         const resultado = await db.query(
@@ -348,15 +365,14 @@ router.patch('/:id/estado', validarId, validarEstado, async (req, res) => {
 }
 })
 
-// 7. Registrar venta presencial
+// 7. Registrar venta presencial (soporta multi-producto via items[])
 router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const {
             cliente_id,
-            presentacion_id,
-            cantidad,
-            precio,
+            items,            // [{presentacion_id, cantidad, precio_unitario, tipo_iva}]
+            precio,           // total de la venta (sin delivery)
             metodo_pago,
             subtipo_pago,
             quiere_factura,
@@ -369,59 +385,91 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             tipo_venta,
             plazo_dias,
             tipo_iva,
+            costo_delivery,
+            zona_delivery,
+            // backward compat single-product
+            presentacion_id,
+            cantidad,
         } = req.body
+
+        // Normalizar a array de items
+        const itemsNorm = (Array.isArray(items) && items.length > 0)
+            ? items
+            : [{ presentacion_id: parseInt(presentacion_id), cantidad: parseInt(cantidad) || 1, precio_unitario: Math.round(parseInt(precio) / (parseInt(cantidad) || 1)), tipo_iva: tipo_iva || '10' }]
+
+        const subtotal = itemsNorm.reduce((s, it) => s + (parseInt(it.precio_unitario) * parseInt(it.cantidad)), 0)
+        const totalPrecio = subtotal + (parseInt(costo_delivery) || 0)
 
         await client.query('BEGIN')
 
-        const stock = await client.query(
-            `SELECT stock, nombre FROM presentaciones WHERE id = $1 FOR UPDATE`,
-            [presentacion_id]
-        )
+        // Validar stock de todos los items antes de insertar
+        for (const item of itemsNorm) {
+            const stock = await client.query(
+                `SELECT stock, nombre FROM presentaciones WHERE id = $1 FOR UPDATE`,
+                [parseInt(item.presentacion_id)]
+            )
+            if (stock.rows.length === 0) {
+                await client.query('ROLLBACK')
+                return res.status(404).json({ error: `Presentación ${item.presentacion_id} no encontrada` })
+            }
+            if (stock.rows[0].stock < parseInt(item.cantidad)) {
+                await client.query('ROLLBACK')
+                return res.status(400).json({ error: `Stock insuficiente para "${stock.rows[0].nombre}". Disponible: ${stock.rows[0].stock}` })
+            }
+        }
 
         const fecha_vencimiento_credito = tipo_venta === 'credito' && plazo_dias
             ? new Date(Date.now() + parseInt(plazo_dias) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
             : null
 
-
-        if (stock.rows.length === 0) {
-            await client.query('ROLLBACK')
-            return res.status(404).json({ error: 'Presentación no encontrada' })
-        }
-
-        if (stock.rows[0].stock < cantidad) {
-            await client.query('ROLLBACK')
-            return res.status(400).json({ error: `Stock insuficiente. Disponible: ${stock.rows[0].stock}` })
-        }
-
-        const canalFinal = canal || 'en_tienda'
+        const canalFinal = canal || 'agente_presencial'
         const estadoVenta = (tipo_venta === 'credito' || canalFinal === 'agente_delivery' || canalFinal === 'whatsapp_delivery')
             ? 'pendiente_pago'
             : 'pagado'
 
+        // Para backward compat: si es un solo item, guardar presentacion_id en la venta header
+        const ventaPresentacionId = itemsNorm.length === 1 ? parseInt(itemsNorm[0].presentacion_id) : null
+        const ventaCantidad = itemsNorm.length === 1 ? parseInt(itemsNorm[0].cantidad) : null
+        const ventaTipoIva = itemsNorm.length === 1 ? (itemsNorm[0].tipo_iva || '10') : '10'
+
         const venta = await client.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
             RETURNING *`,
-            [cliente_id || null, presentacion_id, cantidad, precio, canalFinal, estadoVenta,
+            [cliente_id || null, ventaPresentacionId, ventaCantidad, totalPrecio, canalFinal, estadoVenta,
             metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
             razon_social || null, agente_id || null,
-            tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, tipo_iva || '10']
+            tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, ventaTipoIva,
+            costo_delivery || 0, zona_delivery || null]
         )
 
-        
-        // Si hay lotes cargados, descontar por FEFO. Si no, descontar directo.
-        const lotesExisten = await client.query(
-            `SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`,
-            [presentacion_id]
-        )
+        const ventaId = venta.rows[0].id
 
-        if (parseInt(lotesExisten.rows[0].total) > 0) {
-            await descontarStockFEFO(client, presentacion_id, cantidad)
-        } else {
+        // Insertar items en ventas_items
+        for (const item of itemsNorm) {
             await client.query(
-                `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
-                [cantidad, presentacion_id]
+                `INSERT INTO ventas_items (venta_id, presentacion_id, cantidad, precio_unitario, precio_total, tipo_iva)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [ventaId, parseInt(item.presentacion_id), parseInt(item.cantidad),
+                 parseInt(item.precio_unitario), parseInt(item.precio_unitario) * parseInt(item.cantidad),
+                 item.tipo_iva || '10']
             )
+        }
+
+        // Descontar stock por cada item (FEFO si hay lotes)
+        for (const item of itemsNorm) {
+            const lotesExisten = await client.query(
+                `SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`,
+                [parseInt(item.presentacion_id)]
+            )
+            if (parseInt(lotesExisten.rows[0].total) > 0) {
+                await descontarStockFEFO(client, parseInt(item.presentacion_id), parseInt(item.cantidad))
+            } else {
+                await client.query(
+                    `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
+                    [parseInt(item.cantidad), parseInt(item.presentacion_id)]
+                )
+            }
         }
 
         if (es_de_whatsapp && sesion_numero) {
@@ -437,24 +485,27 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
 
         await client.query('COMMIT')
 
-            // Recalcular stats del cliente en background (no bloquea la respuesta)
-            if (cliente_id) {
-                recalcularStats(cliente_id).catch(() => {})
-            }
+        if (cliente_id) {
+            recalcularStats(cliente_id).catch(() => {})
+        }
 
-            registrarLog({
-                usuario_id: req.usuario?.id || null,
-                usuario_nombre: req.usuario?.nombre || 'Sistema',
-                accion: 'crear',
-                modulo: 'ventas',
-                entidad: 'venta',
-                entidad_id: venta.rows[0].id,
-                descripcion: `Venta registrada — ${stock.rows[0].nombre} x${cantidad} — Gs. ${precio.toLocaleString()}`,
-                dato_nuevo: venta.rows[0],
-                ip: req.ip
-            }).catch(() => {})
+        const descripcion = itemsNorm.length === 1
+            ? `Venta registrada — ${itemsNorm[0].cantidad}x item — Gs. ${totalPrecio.toLocaleString()}`
+            : `Venta registrada — ${itemsNorm.length} productos — Gs. ${totalPrecio.toLocaleString()}`
 
-            res.status(201).json({ ok: true, venta: venta.rows[0] })
+        registrarLog({
+            usuario_id: req.usuario?.id || null,
+            usuario_nombre: req.usuario?.nombre || 'Sistema',
+            accion: 'crear',
+            modulo: 'ventas',
+            entidad: 'venta',
+            entidad_id: ventaId,
+            descripcion,
+            dato_nuevo: venta.rows[0],
+            ip: req.ip
+        }).catch(() => {})
+
+        res.status(201).json({ ok: true, venta: venta.rows[0] })
 
     } catch (error) {
         await client.query('ROLLBACK')

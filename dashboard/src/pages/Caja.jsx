@@ -9,7 +9,7 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { imprimirFactura, imprimirCierre } from '../utils/factura'
 import { useApp } from '../App'
 import api from '../services/api'
-import { formatearCalidad } from '../utils/formato'
+import { formatearCalidad, formatRUC, formatMiles, parseMiles } from '../utils/formato'
 
 
 function Caja() {
@@ -58,6 +58,7 @@ function Caja() {
     const [metodoPago, setMetodoPago] = useState('efectivo')
     const [subtipoPago, setSubtipoPago] = useState('')
     const [opOrigen, setOpOrigen] = useState(null)
+    const [submitting, setSubmitting] = useState(false)
     const [formDelivery, setFormDelivery] = useState({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
 
     // Estados cierre de caja
@@ -221,7 +222,9 @@ function Caja() {
     async function handleBuscarCliente(valor) {
         setBusquedaCliente(valor)
         if (valor.length < 2) { setResultadosCliente([]); return }
-        try { const r = await buscarClientes(valor); setResultadosCliente(r) } catch (err) {}
+        // Eliminar puntos para que "4.154.264-9" busque igual que "4154264-9"
+        const valorNorm = valor.replace(/\./g, '')
+        try { const r = await buscarClientes(valorNorm); setResultadosCliente(r) } catch (err) {}
     }
 
     function handleBuscarProducto(lineaId, valor) {
@@ -396,38 +399,41 @@ function Caja() {
             mensaje: `Registrar ${lineasValidas.length} producto(s) por Gs. ${total.toLocaleString()}?`,
             textoBoton: 'Confirmar', colorBoton: '#10b981',
             onConfirmar: async () => {
+                if (submitting) return
+                setSubmitting(true)
                 try {
                     // Obtener número de factura
                     const resNumero = await api.post('/configuracion/factura/siguiente-numero')
                     const numeroFactura = resNumero.data.numero_formateado
 
-                    const ventasIds = []
-                    for (let i = 0; i < lineasValidas.length; i++) {
-                        const linea = lineasValidas[i]
-                        const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
-                        const respuesta = await registrarVentaPresencial({
-                            cliente_id: clienteSeleccionado?.id || null,
-                            presentacion_id: linea.presentacionSeleccionada.id,
-                            cantidad: linea.cantidad,
-                            precio: precio * linea.cantidad,
-                            metodo_pago: metodoPago,
-                            subtipo_pago: subtipoPago || null,
-                            tipo_iva: '10', 
-                            quiere_factura: !!(razonSocial || rucFactura),
-                            ruc_factura: rucFactura || null,
-                            razon_social: razonSocial || null,
-                            canal: canalFinal,
-                            tipo_venta: tipoVenta,
-                            plazo_dias: tipoVenta === 'credito' ? plazoDias : null,
-                            costo_delivery: i === 0 ? costoDelivery : 0,
-                            zona_delivery: i === 0 ? (formDelivery.zona_nombre || null) : null
-                        })
-                        ventasIds.push(respuesta?.venta?.id)
-                    }
+                    const respuesta = await registrarVentaPresencial({
+                        cliente_id: clienteSeleccionado?.id || null,
+                        items: lineasValidas.map(linea => {
+                            const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
+                            return {
+                                presentacion_id: linea.presentacionSeleccionada.id,
+                                cantidad: linea.cantidad,
+                                precio_unitario: precio,
+                                tipo_iva: '10'
+                            }
+                        }),
+                        precio: subtotal,
+                        metodo_pago: metodoPago,
+                        subtipo_pago: subtipoPago || null,
+                        quiere_factura: !!(razonSocial || rucFactura),
+                        ruc_factura: rucFactura || null,
+                        razon_social: razonSocial || null,
+                        canal: canalFinal,
+                        tipo_venta: tipoVenta,
+                        plazo_dias: tipoVenta === 'credito' ? plazoDias : null,
+                        costo_delivery: costoDelivery,
+                        zona_delivery: formDelivery.zona_nombre || null
+                    })
+                    const ventaId = respuesta?.venta?.id
 
-                    if (canal === 'delivery' && ventasIds[0]) {
+                    if (canal === 'delivery' && ventaId) {
                         await api.post('/deliveries/simple', {
-                            venta_id: ventasIds[0],
+                            venta_id: ventaId,
                             cliente_numero: clienteSeleccionado?.telefono || null,
                             ubicacion: formDelivery.ubicacion,
                             referencia: formDelivery.referencia,
@@ -487,6 +493,8 @@ function Caja() {
                     })
                 } catch (err) {
                     setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar la venta.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                } finally {
+                    setSubmitting(false)
                 }
             }
         })
@@ -644,8 +652,8 @@ function Caja() {
                         <section style={{ marginBottom: '24px' }}>
                             <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: '14px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                 <h2 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '20px' }}>Cliente y Factura</h2>
-                                <label style={labelStyle}>Buscar cliente (opcional)</label>
-                                <input placeholder="Nombre, RUC o telefono..." value={busquedaCliente} onChange={e => handleBuscarCliente(e.target.value)} style={inputStyle} />
+                                <label style={labelStyle}>Buscar cliente por nombre, RUC o teléfono</label>
+                                <input placeholder="Ej: Juan García · 80012345-0 · 0981..." value={busquedaCliente} onChange={e => handleBuscarCliente(e.target.value)} style={inputStyle} />
                                 {resultadosCliente.length > 0 && (
                                     <div style={{ border: `1px solid ${s.border}`, borderRadius: '10px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
                                         {resultadosCliente.map(c => (
@@ -654,7 +662,10 @@ function Caja() {
                                                 onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
                                                 onMouseLeave={e => e.currentTarget.style.background = s.surface}>
                                                 <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{c.nombre}</p>
-                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{c.ruc && `RUC: ${c.ruc} · `}{c.telefono && `${c.telefono}`}</p>
+                                                <div style={{ display: 'flex', gap: '10px', marginTop: '2px' }}>
+                                                    {c.ruc && <span style={{ fontSize: '11px', color: s.textMuted, background: darkMode ? '#1e3a5f' : '#eff6ff', padding: '1px 6px', borderRadius: '4px' }}>RUC: {formatRUC(c.ruc)}</span>}
+                                                    {c.telefono && <span style={{ fontSize: '11px', color: s.textMuted }}>{c.telefono}</span>}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -663,7 +674,7 @@ function Caja() {
                                     <div style={{ padding: '12px 16px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '10px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #86efac' }}>
                                         <div>
                                             <p style={{ fontSize: '13px', fontWeight: '700', color: '#166534' }}>✓ {clienteSeleccionado.nombre}</p>
-                                            {clienteSeleccionado.ruc && <p style={{ fontSize: '11px', color: s.textMuted }}>RUC: {clienteSeleccionado.ruc}</p>}
+                                            {clienteSeleccionado.ruc && <p style={{ fontSize: '11px', color: s.textMuted }}>RUC: {formatRUC(clienteSeleccionado.ruc)}</p>}
                                             {clienteSeleccionado.telefono && <p style={{ fontSize: '11px', color: s.textMuted }}>Tel: {clienteSeleccionado.telefono}</p>}
                                         </div>
                                         <button onClick={() => { setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, fontSize: '18px' }}>✕</button>
@@ -925,11 +936,11 @@ function Caja() {
                                         </div>
                                     )}
 
-                                    <button onClick={handleConfirmarVenta}
-                                        style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: '#10b981', color: '#0f172a', cursor: 'pointer', fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'opacity 0.15s' }}
-                                        onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                                    <button onClick={handleConfirmarVenta} disabled={submitting}
+                                        style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: submitting ? '#6ee7b7' : '#10b981', color: '#0f172a', cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'opacity 0.15s' }}
+                                        onMouseEnter={e => { if (!submitting) e.currentTarget.style.opacity = '0.9' }}
                                         onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-                                        ✓ Registrar venta
+                                        {submitting ? 'Registrando...' : '✓ Registrar venta'}
                                     </button>
                                 </>
                             )}
