@@ -131,8 +131,17 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
             valores
         )
 
-        const ventas = await db.query(
-            `SELECT v.*,
+        const queryBase = `
+             FROM ventas v
+             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+             LEFT JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             LEFT JOIN clientes c ON v.cliente_id = c.id
+             WHERE ${where}
+             ORDER BY v.created_at DESC
+             LIMIT $${i} OFFSET $${i + 1}`
+
+        const selectConItems = `SELECT v.*,
                     pr.nombre as presentacion_nombre,
                     pr.precio_compra,
                     p.nombre as producto_nombre,
@@ -156,17 +165,35 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                     JOIN presentaciones pr2 ON vi.presentacion_id = pr2.id
                     JOIN productos p2 ON pr2.producto_id = p2.id
                     LEFT JOIN marcas m2 ON p2.marca_id = m2.id
-                    WHERE vi.venta_id = v.id) as items
-             FROM ventas v
-             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
-             LEFT JOIN productos p ON pr.producto_id = p.id
-             LEFT JOIN marcas m ON p.marca_id = m.id
-             LEFT JOIN clientes c ON v.cliente_id = c.id
-             WHERE ${where}
-             ORDER BY v.created_at DESC
-             LIMIT $${i} OFFSET $${i + 1}`,
-            [...valores, parseInt(por_pagina), offset]
-        )
+                    WHERE vi.venta_id = v.id) as items`
+
+        const selectSinItems = `SELECT v.*,
+                    pr.nombre as presentacion_nombre,
+                    pr.precio_compra,
+                    p.nombre as producto_nombre,
+                    m.nombre as marca_nombre,
+                    c.nombre as cliente_nombre,
+                    c.ruc as cliente_ruc,
+                    (v.precio - COALESCE(pr.precio_compra, 0)) as ganancia,
+                    NULL::json as items`
+
+        let ventas
+        try {
+            ventas = await db.query(
+                selectConItems + queryBase,
+                [...valores, parseInt(por_pagina), offset]
+            )
+        } catch (err) {
+            // 42P01 = tabla no existe (ventas_items aún no fue migrada)
+            if (err.code === '42P01') {
+                ventas = await db.query(
+                    selectSinItems + queryBase,
+                    [...valores, parseInt(por_pagina), offset]
+                )
+            } else {
+                throw err
+            }
+        }
 
         const resumenDia = await db.query(
             `SELECT COUNT(*) as cantidad,
