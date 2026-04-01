@@ -74,7 +74,7 @@ function Ordenes() {
 
     function handleProcesarEnCaja(orden) {
         sessionStorage.setItem('op_precargada', JSON.stringify(orden))
-        navigate('/caja')
+        navigate('/dashboard/caja')
     }
 
     function handleCancelar(orden) {
