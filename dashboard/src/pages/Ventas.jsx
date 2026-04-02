@@ -211,7 +211,7 @@ function Ventas() {
     const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
 
     return (
-        <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll" style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
                 <div>

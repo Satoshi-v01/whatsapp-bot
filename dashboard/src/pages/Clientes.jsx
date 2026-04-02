@@ -336,13 +336,13 @@ function Clientes() {
 
     
     return (
-        <div style={{ background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll" style={{ background: s.bg, minHeight: '100%' }}>
 
             {clienteSeleccionado ? (
-                <div style={{ display: 'flex', height: 'calc(100vh - 56px)' }}>
+                <div className="split-content" style={{ display: 'flex', height: 'calc(100vh - 56px)' }}>
 
                     {/* Lista lateral */}
-                    <div style={{ width: '320px', flexShrink: 0, borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface }}>
+                    <div className="split-list has-detail" style={{ width: '320px', flexShrink: 0, borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface }}>
                         <div style={{ padding: '12px', borderBottom: `1px solid ${s.border}` }}>
                             <div style={{ position: 'relative' }}>
                                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
@@ -375,7 +375,7 @@ function Clientes() {
                     </div>
 
                     {/* Perfil — layout de 2 columnas */}
-                    <div style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
+                    <div className="split-detail has-detail" style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
                         {cargandoPerfil ? (
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textMuted }}>Cargando perfil...</div>
                         ) : (
@@ -622,7 +622,7 @@ function Clientes() {
                 </div>
             ) : (
                 // Vista tabla
-                <div style={{ padding: '32px' }}>
+                <div className="page-scroll" style={{ padding: '32px' }}>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
                         <div>
