@@ -262,7 +262,7 @@ function Delivery() {
     )
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
+        <div className="delivery-wrap" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
 
             {/* Header */}
             <div style={{ padding: '20px 28px', borderBottom: `1px solid ${s.border}`, background: s.surface }}>
@@ -289,7 +289,7 @@ function Delivery() {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div className="delivery-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                     {[
                         { label: 'Entregas activas', valor: activos, sub: 'pendientes y en proceso', color: '#3b82f6', bg: darkMode ? '#0c1a3a' : '#eff6ff', icono: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
                         { label: 'En camino ahora', valor: enCamino, sub: 'repartidores en ruta', color: '#8b5cf6', bg: darkMode ? '#2d1b69' : '#f5f3ff', icono: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
@@ -310,10 +310,10 @@ function Delivery() {
             </div>
 
             {/* Contenido */}
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div className="split-content" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
                 {/* Lista */}
-                <div style={{ width: '340px', borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface, flexShrink: 0 }}>
+                <div className={`split-list${detalle ? ' has-detail' : ''}`} style={{ width: '340px', borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface, flexShrink: 0 }}>
                     <div style={{ padding: '12px 14px', borderBottom: `1px solid ${s.border}` }}>
                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {filtros.map(f => {
@@ -374,7 +374,7 @@ function Delivery() {
                 </div>
 
                 {/* Detalle central */}
-                <div style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
+                <div className={`split-detail${detalle ? ' has-detail' : ''}`} style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
                     {!detalle ? (
                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
                             <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>

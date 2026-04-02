@@ -8,7 +8,10 @@
       "Bash(npm run:*)",
       "Bash(npm audit:*)",
       "Bash(grep -n \"SELECT u\\\\.\" /c/Users/Usuario/Desktop/whatsapp-bot/whatsapp-bot/src/routes/*.js)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"pet store ERP admin dashboard inventory sales management\" --design-system -p \"Sosa BULLS Admin\")",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"pet store ERP admin dashboard inventory sales management\" --design-system -p \"Sosa BULLS Admin\")",
+      "Bash(xargs wc:*)"
     ]
   }
 }

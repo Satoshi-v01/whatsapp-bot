@@ -63,9 +63,10 @@
             pointer-events: none;
             z-index: 0;
             background:
-                radial-gradient(ellipse 80% 60% at 15% 40%, rgba(255,166,1,.07) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 50% at 85% 20%, rgba(255,166,1,.05) 0%, transparent 65%),
-                radial-gradient(ellipse 50% 40% at 55% 85%, rgba(255,166,1,.04) 0%, transparent 60%);
+                radial-gradient(ellipse 90% 70% at 10% 35%, rgba(255,166,1,.09) 0%, transparent 65%),
+                radial-gradient(ellipse 70% 55% at 88% 18%, rgba(255,166,1,.07) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 50% 90%, rgba(255,166,1,.06) 0%, transparent 55%),
+                radial-gradient(ellipse 40% 35% at 72% 55%, rgba(255,200,80,.04) 0%, transparent 50%);
         }
 
         /* ─────────────────────────────────────────────
@@ -421,20 +422,6 @@
             transform: translateY(-2px);
         }
 
-        /* ── Decorative pet silhouettes ── */
-        .pet-deco {
-            position: absolute;
-            pointer-events: none;
-            opacity: .065;
-            animation: petFloat 7s ease-in-out infinite;
-        }
-        .pet-deco.left  { bottom: 6%; left: 2%;  width: 200px; animation-delay: 0s; }
-        .pet-deco.right { bottom: 6%; right: 2%; width: 175px; animation-delay: -3.5s; }
-
-        @keyframes petFloat {
-            0%, 100% { transform: translateY(0); }
-            50%       { transform: translateY(-18px); }
-        }
 
         /* ─────────────────────────────────────────────
            SECTION DIVIDER
@@ -655,7 +642,6 @@
         @media (max-width: 768px) {
             .hero-title  { letter-spacing: -2.5px; }
             .info-grid   { grid-template-columns: 1fr; }
-            .pet-deco    { display: none; }
         }
 
         @media (max-width: 520px) {
@@ -699,59 +685,6 @@
     ════════════════════════════════════ -->
     <section class="hero" aria-labelledby="main-heading">
 
-        <!-- Decorative pet silhouettes -->
-        <svg class="pet-deco left" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="var(--brand)">
-            <!-- Dog sitting silhouette -->
-            <ellipse cx="130" cy="70" rx="52" ry="44"/>
-            <!-- Floppy ear -->
-            <path d="M 85 55 Q 62 28 72 62 Q 78 72 90 68 Z"/>
-            <!-- Eyes -->
-            <circle cx="115" cy="58" r="6" fill="white"/>
-            <circle cx="144" cy="58" r="6" fill="white"/>
-            <circle cx="117" cy="60" r="3" fill="#1a1208"/>
-            <circle cx="146" cy="60" r="3" fill="#1a1208"/>
-            <!-- Nose -->
-            <ellipse cx="130" cy="79" rx="10" ry="7"/>
-            <!-- Mouth -->
-            <path d="M 122 86 Q 130 96 138 86" stroke="#1a1208" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <!-- Tongue -->
-            <ellipse cx="130" cy="93" rx="6" ry="5" fill="#ff8fa3"/>
-            <!-- Body -->
-            <rect x="83" y="108" width="94" height="80" rx="18"/>
-            <!-- Front legs -->
-            <rect x="88"  y="178" width="22" height="48" rx="11"/>
-            <rect x="148" y="178" width="22" height="48" rx="11"/>
-            <!-- Tail -->
-            <path d="M 177 140 Q 210 120 205 148 Q 200 164 178 158" fill="var(--brand)"/>
-        </svg>
-
-        <svg class="pet-deco right" viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="var(--brand)">
-            <!-- Cat sitting silhouette -->
-            <!-- Pointy ears -->
-            <polygon points="60,52 42,18 78,46"/>
-            <polygon points="118,52 136,18 100,46"/>
-            <!-- Head -->
-            <ellipse cx="90" cy="74" rx="46" ry="40"/>
-            <!-- Eyes -->
-            <ellipse cx="76" cy="64" rx="7" ry="8" fill="white"/>
-            <ellipse cx="104" cy="64" rx="7" ry="8" fill="white"/>
-            <ellipse cx="77" cy="66" rx="3.5" ry="5" fill="#1a1208"/>
-            <ellipse cx="105" cy="66" rx="3.5" ry="5" fill="#1a1208"/>
-            <!-- Nose -->
-            <path d="M 86 78 L 90 82 L 94 78 Z" fill="#ffaab5"/>
-            <!-- Whiskers -->
-            <line x1="90" y1="80" x2="62" y2="76" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="90" y1="82" x2="60" y2="83" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="90" y1="80" x2="118" y2="76" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="90" y1="82" x2="120" y2="83" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
-            <!-- Body -->
-            <rect x="50" y="108" width="80" height="78" rx="22"/>
-            <!-- Front paws (neatly tucked) -->
-            <ellipse cx="70"  cy="186" rx="16" ry="10"/>
-            <ellipse cx="110" cy="186" rx="16" ry="10"/>
-            <!-- Tail curling around -->
-            <path d="M 130 170 Q 162 162 158 185 Q 155 198 140 195 Q 128 192 130 180" fill="var(--brand)" stroke="none"/>
-        </svg>
 
         <!-- "Próximamente" badge -->
         <div class="hero-badge" role="status" aria-live="polite">
@@ -964,14 +897,17 @@
             <circle cx="78" cy="38" r="11"/>
         </svg>`;
 
-        const COUNT = 9;
+        const COUNT = 18;
+        // Divide screen in COUNT equal vertical strips to guarantee uniform spread
         for (let i = 0; i < COUNT; i++) {
             const el = document.createElement('div');
             el.className = 'paw-item';
-            const size     = 18 + Math.random() * 32;   // 18–50px
-            const leftPct  = Math.random() * 96;
-            const duration = 12 + Math.random() * 16;   // 12–28s
-            const delay    = -(Math.random() * duration); // stagger start
+            const size     = 18 + Math.random() * 32;
+            // Each paw gets its own strip (0–100% split into COUNT bands) + small jitter
+            const stripW   = 100 / COUNT;
+            const leftPct  = i * stripW + Math.random() * stripW * 0.85;
+            const duration = 12 + Math.random() * 16;
+            const delay    = -(Math.random() * duration);
             el.style.cssText = `
                 left:${leftPct}%;
                 width:${size}px;
