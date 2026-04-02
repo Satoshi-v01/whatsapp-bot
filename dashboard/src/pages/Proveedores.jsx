@@ -236,7 +236,7 @@ function Proveedores() {
     )
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
+        <div className="proveedores-wrap" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
 
             {/* Pestañas */}
             <div style={{ background: s.surface, borderBottom: `1px solid ${s.border}`, padding: '0 32px', display: 'flex', gap: '0', flexShrink: 0 }}>
@@ -254,7 +254,7 @@ function Proveedores() {
 
             {/* ── PROVEEDORES ── */}
             {pestana === 'proveedores' && (
-                <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+                <div className="page-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <div>
                             <h1 style={{ fontSize: '22px', fontWeight: '800', color: s.text }}>Proveedores</h1>
@@ -328,7 +328,7 @@ function Proveedores() {
 
             {/* ── FACTURAS ── */}
             {pestana === 'facturas' && (
-                <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+                <div className="page-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h1 style={{ fontSize: '22px', fontWeight: '800', color: s.text }}>Facturas de Compra</h1>
                         <button onClick={() => setModalLibroCompras(true)}
@@ -471,7 +471,7 @@ function Proveedores() {
 
             {/* ── REPORTES ── */}
             {pestana === 'reportes' && (
-                <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+                <div className="page-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
                     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                             <h1 style={{ fontSize: '22px', fontWeight: '800', color: s.text }}>Reportes de Compras</h1>

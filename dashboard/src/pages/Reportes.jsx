@@ -292,7 +292,7 @@ function Reportes() {
     )
 
     return (
-        <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll" style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
 
             <div style={{ marginBottom: '28px' }}>
                 <h1 style={{ fontSize: '28px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>Reportes de Operación</h1>

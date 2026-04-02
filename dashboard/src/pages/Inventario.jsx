@@ -290,7 +290,7 @@ function colorVencimiento(diasParaVencer) {
     )
 
     return (
-        <div style={{ padding: '32px', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll" style={{ padding: '32px', background: s.bg, minHeight: '100%' }}>
 
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>

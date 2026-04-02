@@ -947,12 +947,9 @@ button:focus:not(:focus-visible) { outline: none; }
     transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: var(--shadow-xl);
   }
-
   .sb.mobile-open {
     transform: translateX(0) !important;
   }
-
-  /* Expand label when forced open on mobile */
   .sb.mobile-open .sb-brand { opacity: 1; max-width: 160px; }
   .sb.mobile-open .sb-label { opacity: 1; max-width: 160px; }
   .sb.mobile-open .sb-item  { padding: 8px 10px; justify-content: flex-start; gap: 10px; }
@@ -969,33 +966,119 @@ button:focus:not(:focus-visible) { outline: none; }
   .tb-page-name { font-size: 14px; }
 
   /* Home grids */
-  .home-tarjetas {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .home-charts {
-    grid-template-columns: 1fr !important;
-  }
+  .home-tarjetas { grid-template-columns: repeat(2, 1fr) !important; }
+  .home-charts   { grid-template-columns: 1fr !important; }
 
-  /* Global page padding reduction */
-  .contenido > div {
+  /* Scrollable pages: reduce padding */
+  .page-scroll {
     padding: 16px !important;
-    gap: 16px !important;
   }
 
-  /* Tables: allow horizontal scroll */
-  .contenido table {
-    font-size: 12px;
-  }
-  .contenido table td,
-  .contenido table th {
-    padding: 10px 12px !important;
-  }
-
-  /* Prevent header overflow */
+  /* Header rows that need to wrap */
   .home-header-row {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 10px !important;
+  }
+
+  /* Tables: compact + horizontal scroll */
+  .contenido table { font-size: 12px; }
+  .contenido table td,
+  .contenido table th { padding: 10px 12px !important; }
+
+  /* ── Full-height split-panel pages ──
+     Chat, Delivery, Ordenes, Clientes   */
+  .chat-wrap,
+  .delivery-wrap,
+  .ordenes-wrap,
+  .caja-wrap,
+  .proveedores-wrap {
+    height: auto !important;
+    min-height: calc(100vh - 60px) !important;
+    overflow: auto !important;
+  }
+
+  /* Split content (2-panel flex row → column) */
+  .split-content {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* List panel (left fixed-width → full width) */
+  .split-list {
+    width: 100% !important;
+    flex-shrink: 1 !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    max-height: 45vh;
+    overflow-y: auto !important;
+  }
+
+  /* When detail is selected: make list compact, show detail below */
+  .split-list.has-detail { max-height: 35vh; }
+  .split-detail { width: 100% !important; min-height: 40vh; }
+
+  /* ── Chat específico ── */
+  .chat-sessions {
+    max-height: 42vh;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  /* Hide list when a chat is open on mobile */
+  .chat-sessions.has-active { display: none !important; }
+  /* Show messages full-height */
+  .chat-messages { min-height: calc(100vh - 60px); }
+  /* Hide messages when no chat selected on mobile */
+  .chat-messages:not(.has-active) { display: none !important; }
+  /* Back button: show on mobile */
+  .chat-back-btn { display: flex !important; }
+
+  /* ── Delivery stats ── */
+  .delivery-stats {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ── Caja checkout panel ── */
+  .caja-checkout {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border) !important;
+    flex-shrink: 1 !important;
+  }
+  .caja-form {
+    padding: 16px !important;
+    overflow: auto !important;
+  }
+
+  /* ── Proveedores inner scrollable sections ── */
+  .proveedores-wrap > div[style*="overflowY"] {
+    padding: 16px !important;
+  }
+
+  /* ── page-scroll: simple scrollable pages ── */
+  .page-scroll { overflow: auto !important; }
+
+  /* ── Configuración nav → tabs on mobile ── */
+  .config-wrap {
+    height: auto !important;
+    flex-direction: column !important;
+    overflow: auto !important;
+  }
+  .config-nav {
+    width: 100% !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding: 8px !important;
+    gap: 4px;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    min-height: 0 !important;
+  }
+  .config-nav button {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }
 
