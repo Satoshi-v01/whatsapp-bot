@@ -30,6 +30,7 @@ function App() {
     const [darkMode, setDarkMode] = useState(() => {
         return localStorage.getItem('darkMode') === 'true'
     })
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
     useEffect(() => {
         const usuarioGuardado = localStorage.getItem('usuario')
@@ -61,6 +62,14 @@ function App() {
 
     function toggleDarkMode() {
         setDarkMode(prev => !prev)
+    }
+
+    function toggleMobileSidebar() {
+        setMobileSidebarOpen(prev => !prev)
+    }
+
+    function closeMobileSidebar() {
+        setMobileSidebarOpen(false)
     }
 
     // Helper de permisos — admin siempre puede todo
@@ -96,7 +105,7 @@ function App() {
                         (usuario.permisos && Object.keys(usuario.permisos).length === 1 && usuario.permisos.delivery)
 
     return (
-        <AppContext.Provider value={{ darkMode, toggleDarkMode, usuario, puedo }}>
+        <AppContext.Provider value={{ darkMode, toggleDarkMode, usuario, puedo, mobileSidebarOpen, toggleMobileSidebar, closeMobileSidebar }}>
             <div className="app" data-theme={darkMode ? 'dark' : ''}>
                 {!esRepartidor && <Sidebar />}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -111,9 +120,7 @@ function App() {
                                 <>
                                     <Route path="/dashboard" element={<Navigate to="/dashboard/inicio" replace />} />
                                     <Route path="/dashboard/" element={<Navigate to="/dashboard/inicio" replace />} />
-                                    <Route path="/dashboard/inicio" element={
-                                        puedo('home', 'ver') ? <Home /> : <Navigate to="/dashboard/delivery" replace />
-                                    } />
+                                    <Route path="/dashboard/inicio" element={<Home />} />
                                     <Route path="/dashboard/chat" element={
                                         <RutaProtegida modulo="chat"><Chat /></RutaProtegida>
                                     } />
@@ -152,13 +159,6 @@ function App() {
                             )}
                         </Routes>
                     </main>
-                    {!esRepartidor && (
-                        <div style={{ padding: '6px 24px', textAlign: 'center', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
-                            <span style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.05em' }}>
-                                Hecho por <span style={{ fontWeight: '700' }}>Satoshi</span>
-                            </span>
-                        </div>
-                    )}
                 </div>
             </div>
         </AppContext.Provider>
