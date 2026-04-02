@@ -2,16 +2,17 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { soloAdmin } = require('../middleware/auth')
 
-router.get('/', async (req, res) => {
+router.get('/', soloAdmin, async (req, res) => {
     try {
         const {
             usuario_id, modulo, accion,
             fecha_desde, fecha_hasta,
             periodo = 'hoy',
             pagina = 1,
-            por_pagina = 50
         } = req.query
+        const por_pagina = Math.min(parseInt(req.query.por_pagina) || 50, 200)
 
         const offset = (parseInt(pagina) - 1) * parseInt(por_pagina)
         let condiciones = ['1=1']

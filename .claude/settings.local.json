@@ -5,7 +5,10 @@
       "Bash(grep -r \"MODULOS\\\\|modulos\" /c/Users/Admin/Desktop/Proyectos/Dev/whatsapp_Bot_SOSA_BULLS/whatsapp-bot/src --include=*.js)",
       "Bash(grep -r \"INSERT INTO roles\\\\|CREATE TABLE roles\\\\|ALTER TABLE usuarios\" /c/Users/Admin/Desktop/Proyectos/Dev/whatsapp_Bot_SOSA_BULLS/whatsapp-bot --include=*.js --include=*.sql)",
       "Bash(grep -r \"marca_nombre\\\\|precio_compra\" /c/Users/Admin/Desktop/Proyectos/Dev/whatsapp_Bot_SOSA_BULLS/whatsapp-bot/src/routes/*.js)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npm audit:*)",
+      "Bash(grep -n \"SELECT u\\\\.\" /c/Users/Usuario/Desktop/whatsapp-bot/whatsapp-bot/src/routes/*.js)",
+      "Bash(grep:*)"
     ]
   }
 }

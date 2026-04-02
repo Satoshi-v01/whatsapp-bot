@@ -3,6 +3,7 @@ const router = express.Router()
 const db = require('../db/index')
 const bcrypt = require('bcryptjs')
 const { manejarError } = require('../middleware/validar')
+const { soloAdmin } = require('../middleware/auth')
 
 // Listar usuarios
 router.get('/', async (req, res) => {
@@ -31,7 +32,7 @@ router.get('/roles', async (req, res) => {
 })
 
 // Crear rol
-router.post('/roles', async (req, res) => {
+router.post('/roles', soloAdmin, async (req, res) => {
     try {
         const { nombre, permisos } = req.body
         if (!nombre) return res.status(400).json({ error: 'Nombre del rol requerido' })
@@ -47,7 +48,7 @@ router.post('/roles', async (req, res) => {
 })
 
 // Actualizar permisos de rol
-router.patch('/roles/:id', async (req, res) => {
+router.patch('/roles/:id', soloAdmin, async (req, res) => {
     try {
         const { id } = req.params
         const { nombre, permisos } = req.body
@@ -64,7 +65,7 @@ router.patch('/roles/:id', async (req, res) => {
 })
 
 // Eliminar rol
-router.use('/roles/:id', async (req, res, next) => {
+router.use('/roles/:id', soloAdmin, async (req, res, next) => {
     if (req.method !== 'DELETE') return next()
     try {
         const { id } = req.params
@@ -80,7 +81,7 @@ router.use('/roles/:id', async (req, res, next) => {
 })
 
 // Crear usuario
-router.post('/', async (req, res) => {
+router.post('/', soloAdmin, async (req, res) => {
     try {
         const { nombre, email, password, rol_id } = req.body
         if (!nombre || !email || !password) {
@@ -110,6 +111,11 @@ router.patch('/:id/password', async (req, res) => {
         const { id } = req.params
         const { password_actual, password_nueva } = req.body
 
+        const esAdmin = req.usuario?.rol === 'admin'
+        if (parseInt(id) !== req.usuario?.id && !esAdmin) {
+            return res.status(403).json({ error: 'Solo podés cambiar tu propia contraseña' })
+        }
+
         if (!password_actual || !password_nueva) {
             return res.status(400).json({ error: 'Contraseña actual y nueva son requeridas' })
         }
@@ -137,7 +143,7 @@ router.patch('/:id/password', async (req, res) => {
 })
 
 // Eliminar usuario
-router.use('/:id', async (req, res, next) => {
+router.use('/:id', soloAdmin, async (req, res, next) => {
     if (req.method !== 'DELETE') return next()
     try {
         const { id } = req.params
