@@ -143,8 +143,10 @@ app.get('/dashboard/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard/dist/index.html'))
 })
 
+// Landing page pública en /
+app.use(express.static(path.join(__dirname, 'landing')))
 app.get('/', (req, res) => {
-    res.json({ mensaje: 'Servidor funcionando' })
+    res.sendFile(path.join(__dirname, 'landing/index.html'))
 })
 
 app.get('/test-db', async (req, res) => {

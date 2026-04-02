@@ -524,9 +524,7 @@ function colorVencimiento(diasParaVencer) {
                                                                                                     <button onClick={() => abrirModalPrecio(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Precio</button>
                                                                                                     <button onClick={() => abrirModalCodigoBarras(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cod.</button>
                                                                                                     <button onClick={() => abrirModalLotes(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Lotes</button>
-                                                                                                    {producto.presentaciones.length > 1 && (
-                                                                                                        <button onClick={() => abrirModalFraccionar(producto, pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Fraccionar</button>
-                                                                                                    )}
+                                                                                                    <button onClick={() => abrirModalFraccionar(producto, pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Fraccionar</button>
                                                                                                 </div>
                                                                                             </td>
                                                                                         </tr>
@@ -976,16 +974,22 @@ function colorVencimiento(diasParaVencer) {
                             <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
                                 <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Destino</p>
                                 <label style={labelStyle}>Presentación destino</label>
-                                <select
-                                    value={fraccionForm.presentacion_destino_id}
-                                    onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
-                                    style={{ ...inputStyle, marginBottom: '10px' }}
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    {otrasPresent.map(p => (
-                                        <option key={p.id} value={p.id}>{p.nombre} (stock actual: {p.stock})</option>
-                                    ))}
-                                </select>
+                                {otrasPresent.length === 0 ? (
+                                    <p style={{ fontSize: '12.5px', color: '#f59e0b', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px' }}>
+                                        Este producto solo tiene una presentación. Agregá otra presentación primero para poder fraccionar.
+                                    </p>
+                                ) : (
+                                    <select
+                                        value={fraccionForm.presentacion_destino_id}
+                                        onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
+                                        style={{ ...inputStyle, marginBottom: '10px' }}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {otrasPresent.map(p => (
+                                            <option key={p.id} value={p.id}>{p.nombre} (stock actual: {p.stock})</option>
+                                        ))}
+                                    </select>
+                                )}
                                 {destino && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                         <span style={{ fontSize: '12px', color: s.textMuted }}>Stock después:</span>
