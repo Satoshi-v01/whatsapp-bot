@@ -61,4 +61,11 @@ function verificarPermiso(modulo, accion) {
     }
 }
 
-module.exports = { autenticar, verificarPermiso }
+function soloAdmin(req, res, next) {
+    if (req.usuario?.rol !== 'admin') {
+        return res.status(403).json({ error: 'Requiere rol admin' })
+    }
+    next()
+}
+
+module.exports = { autenticar, verificarPermiso, soloAdmin }

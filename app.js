@@ -35,7 +35,7 @@ app.set('trust proxy', 1)
 // Rate limiting general
 const limiterGeneral = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000,  // era 200, subimos a 1000
+    max: 300,
     message: { error: 'Demasiadas solicitudes, intentá de nuevo en 15 minutos.' },
     standardHeaders: true,
     legacyHeaders: false
@@ -54,7 +54,18 @@ app.use(express.json())
 
 // Seguridad HTTP headers
 app.use(helmet({
-    contentSecurityPolicy: false
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:      ["'self'"],
+            scriptSrc:       ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc:        ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc:         ["'self'", "data:", "https://fonts.gstatic.com"],
+            imgSrc:          ["'self'", "data:", "blob:", "https:"],
+            connectSrc:      ["'self'", "https:"],
+            objectSrc:       ["'none'"],
+            frameAncestors:  ["'none'"],
+        }
+    }
 }))
 
 // CORS
