@@ -78,7 +78,7 @@ function Home() {
     )
 
     return (
-        <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', background: s.bg, minHeight: '100%' }}>
 
             {/* Header */}
             <div className="home-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>

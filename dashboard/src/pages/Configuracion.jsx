@@ -312,10 +312,10 @@ function Configuracion() {
     ]
 
     return (
-        <div style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+        <div className="split-content config-wrap" style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
 
             {/* Sidebar */}
-            <div style={{ width: '220px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', padding: '24px 12px', flexShrink: 0 }}>
+            <div className="config-nav" style={{ width: '220px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', padding: '24px 12px', flexShrink: 0 }}>
                 <p style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px', paddingLeft: '12px' }}>Configuración</p>
                 {pestanas.map(p => (
                     <button key={p.key} onClick={() => setPestana(p.key)}
@@ -326,7 +326,7 @@ function Configuracion() {
             </div>
 
             {/* Contenido */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+            <div className="page-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
 
                 {/* ===== USUARIOS Y ROLES ===== */}
                 {pestana === 'usuarios' && (

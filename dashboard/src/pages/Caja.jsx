@@ -951,7 +951,7 @@ function Caja() {
 
             {/* ── PESTAÑA CIERRE ── */}
             {pestana === 'cierre' && (
-                <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+                <div className="page-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
                         {/* Header */}
