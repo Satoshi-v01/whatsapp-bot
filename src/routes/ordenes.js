@@ -243,13 +243,13 @@ router.post('/:id/confirmar', async (req, res) => {
             )
 
             // Descontar stock
-            const lotesExisten = await db.query(`SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`, [presentacion_id])
+            const lotesExisten = await db.query(`SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`, [item.presentacion_id])
             if (parseInt(lotesExisten.rows[0].total) > 0) {
                 const client = await db.pool.connect()
-                try { await descontarStockFEFO(client, presentacion_id, cantidad) }
+                try { await descontarStockFEFO(client, item.presentacion_id, item.cantidad) }
                 finally { client.release() }
             } else {
-                await db.query(`UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`, [cantidad, presentacion_id])
+                await db.query(`UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`, [item.cantidad, item.presentacion_id])
             }
 
             ventasIds.push(venta.rows[0].id)

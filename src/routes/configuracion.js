@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { soloAdmin } = require('../middleware/auth')
 
 // Obtener toda la configuración
 router.get('/', async (req, res) => {
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
 })
 
 // Actualizar una clave
-router.patch('/:clave', async (req, res) => {
+router.patch('/:clave', soloAdmin, async (req, res) => {
     try {
         const { clave } = req.params
         const { valor } = req.body
@@ -35,7 +36,7 @@ router.patch('/:clave', async (req, res) => {
 })
 
 // Actualizar múltiples claves a la vez
-router.post('/bulk', async (req, res) => {
+router.post('/bulk', soloAdmin, async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { configuraciones } = req.body
@@ -123,7 +124,7 @@ router.get('/factura', async (req, res) => {
 })
 
 // Reiniciar número de factura (solo para pruebas)
-router.post('/factura/reiniciar-numero', async (req, res) => {
+router.post('/factura/reiniciar-numero', soloAdmin, async (req, res) => {
     try {
         const { numero = 1 } = req.body
         await db.query(

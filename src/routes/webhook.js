@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
@@ -9,7 +10,10 @@ router.get('/', (req, res) => {
     const token = req.query['hub.verify_token']
     const challenge = req.query['hub.challenge']
 
-    if (mode === 'subscribe' && token === process.env.WEBHOOK_VERIFY_TOKEN) {
+    const secret = process.env.WEBHOOK_VERIFY_TOKEN || ''
+    const tokenSeguro = secret.length === token?.length &&
+        crypto.timingSafeEqual(Buffer.from(token), Buffer.from(secret))
+    if (mode === 'subscribe' && tokenSeguro) {
         console.log('Webhook verificado por Meta')
         res.status(200).send(challenge)
     } else {
