@@ -56,7 +56,9 @@ function TopBar({ usuario, onLogout }) {
     const [menuNotif, setMenuNotif]         = useState(false)
     const [notificaciones, setNotificaciones] = useState([])
     const [chatsEsperando, setChatsEsperando] = useState(0)
-    const [leidas, setLeidas]               = useState([])
+    const [leidas, setLeidas]               = useState(() => {
+        try { return JSON.parse(localStorage.getItem('notif_leidas') || '[]') } catch { return [] }
+    })
     const [popupAgente, setPopupAgente]     = useState(null)
     const navigate                          = useNavigate()
     const prevChatsEsperando                = useRef(0)
@@ -94,6 +96,15 @@ function TopBar({ usuario, onLogout }) {
             prevNotifCount.current     = lista.length
             setNotificaciones(lista)
             setChatsEsperando(chats)
+            // Limpiar leidas obsoletas (notificaciones que ya no existen)
+            const claves = new Set(lista.map(n => `${n.tipo}-${n.mensaje}`))
+            setLeidas(prev => {
+                const limpias = prev.filter(k => claves.has(k))
+                if (limpias.length !== prev.length) {
+                    try { localStorage.setItem('notif_leidas', JSON.stringify(limpias)) } catch {}
+                }
+                return limpias
+            })
         } catch (err) {}
     }
 
@@ -123,7 +134,11 @@ function TopBar({ usuario, onLogout }) {
     }
 
     function marcarLeida(notif) {
-        setLeidas(prev => [...prev, `${notif.tipo}-${notif.mensaje}`])
+        setLeidas(prev => {
+            const nueva = [...prev, `${notif.tipo}-${notif.mensaje}`]
+            try { localStorage.setItem('notif_leidas', JSON.stringify(nueva)) } catch {}
+            return nueva
+        })
     }
     function handleClickNotif(notif) {
         marcarLeida(notif)
@@ -132,7 +147,11 @@ function TopBar({ usuario, onLogout }) {
         else if (notif.tipo === 'stock') navigate('/inventario')
     }
     function marcarTodasLeidas() {
-        setLeidas(prev => [...new Set([...prev, ...notificaciones.map(n => `${n.tipo}-${n.mensaje}`)])])
+        setLeidas(prev => {
+            const nueva = [...new Set([...prev, ...notificaciones.map(n => `${n.tipo}-${n.mensaje}`)])]
+            try { localStorage.setItem('notif_leidas', JSON.stringify(nueva)) } catch {}
+            return nueva
+        })
     }
 
     const sinLeer = notificaciones.filter(n => !leidas.includes(`${n.tipo}-${n.mensaje}`)).length

@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sosa Bulls - Petshop en Lambaré, Paraguay. Alimentos balanceados y accesorios para perros y gatos. Barrio San Rafael.">
+    <meta name="theme-color" content="#ffa601">
+    <title>Sosa Bulls — Próximamente</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ─────────────────────────────────────────────
+           VARIABLES
+        ───────────────────────────────────────────── */
+        :root {
+            --brand:        #ffa601;
+            --brand-dark:   #e08900;
+            --brand-darker: #c07600;
+            --brand-light:  #fff3d6;
+            --brand-glow:   rgba(255, 166, 1, 0.25);
+
+            --bg:           #fffbf4;
+            --text:         #1a1208;
+            --text-muted:   #8b6f47;
+            --text-faint:   #c4a882;
+            --white:        #ffffff;
+
+            --card-border:  rgba(255, 166, 1, 0.18);
+            --shadow:       0 4px 28px rgba(26, 18, 8, 0.07);
+            --shadow-hover: 0 10px 48px rgba(26, 18, 8, 0.12);
+
+            --radius:    20px;
+            --radius-sm: 12px;
+        }
+
+        /* ─────────────────────────────────────────────
+           RESET
+        ───────────────────────────────────────────── */
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ─────────────────────────────────────────────
+           BACKGROUND GLOW
+        ───────────────────────────────────────────── */
+        .bg-glow {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 15% 40%, rgba(255,166,1,.07) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 85% 20%, rgba(255,166,1,.05) 0%, transparent 65%),
+                radial-gradient(ellipse 50% 40% at 55% 85%, rgba(255,166,1,.04) 0%, transparent 60%);
+        }
+
+        /* ─────────────────────────────────────────────
+           FLOATING PAW PRINTS
+        ───────────────────────────────────────────── */
+        .paw-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .paw-item {
+            position: absolute;
+            opacity: 0;
+            fill: var(--brand);
+            animation: risePaw linear infinite;
+        }
+
+        @keyframes risePaw {
+            0%   { opacity: 0;    transform: translateY(110vh) rotate(0deg); }
+            8%   { opacity: .11; }
+            88%  { opacity: .11; }
+            100% { opacity: 0;    transform: translateY(-120px) rotate(720deg); }
+        }
+
+        /* ─────────────────────────────────────────────
+           FLOATING NAV
+        ───────────────────────────────────────────── */
+        header {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(calc(100% - 28px), 1080px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 20px;
+            background: rgba(255,255,255,.82);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,166,1,.22);
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.06);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        /* ── Logo mark ── */
+        .logo-mark {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(145deg, var(--brand) 0%, var(--brand-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px var(--brand-glow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /*
+         * ──────────────────────────────────────────────────────────────
+         *  PARA AGREGAR EL LOGO:
+         *  1. Colocá el archivo en  whatsapp-bot/landing/logo.png  (o .svg)
+         *  2. Cambiá el contenido de .logo-mark a:
+         *       <img src="logo.png" alt="Sosa Bulls" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">
+         *  3. Hacé lo mismo en .hero-logo-wrap más abajo.
+         * ──────────────────────────────────────────────────────────────
+         */
+        .logo-initials {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            color: white;
+            letter-spacing: -.3px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-name {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text);
+            letter-spacing: -.3px;
+        }
+        .nav-name em {
+            color: var(--brand);
+            font-style: normal;
+        }
+
+        .nav-wa {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 18px;
+            background: #25D366;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: background .2s, transform .2s, box-shadow .2s;
+        }
+        .nav-wa:hover {
+            background: #1aaf55;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(37,211,102,.45);
+        }
+        .nav-wa svg { flex-shrink: 0; }
+
+        /* hide label on very small screens */
+        @media (max-width: 400px) { .nav-wa-label { display: none; } }
+
+        /* ─────────────────────────────────────────────
+           HERO
+        ───────────────────────────────────────────── */
+        .hero {
+            min-height: 100svh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 110px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── "Próximamente" pill ── */
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 18px;
+            background: var(--brand-light);
+            border: 1px solid rgba(255,166,1,.35);
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--brand-darker);
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            animation: fadeDown .5s ease both;
+        }
+
+        .badge-pulse {
+            width: 7px;
+            height: 7px;
+            background: var(--brand);
+            border-radius: 50%;
+            animation: dotPulse 1.6s ease infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1);   opacity: 1; }
+            50%       { transform: scale(.6); opacity: .45; }
+        }
+
+        /* ── Big logo in hero ── */
+        .hero-logo-wrap {
+            margin-bottom: 28px;
+            animation: fadeDown .5s ease .08s both;
+        }
+
+        .hero-logo-mark {
+            width: 110px;
+            height: 110px;
+            margin: 0 auto;
+            background: linear-gradient(145deg, var(--brand) 0%, var(--brand-dark) 100%);
+            border-radius: 26px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 40px var(--brand-glow), 0 2px 6px rgba(0,0,0,.09);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-logo-mark::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(255,255,255,.22) 0%, transparent 55%);
+        }
+
+        .hero-logo-text {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 900;
+            font-size: 30px;
+            color: white;
+            letter-spacing: -1px;
+            line-height: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-logo-sub {
+            font-family: 'Inter', sans-serif;
+            font-size: 9px;
+            font-weight: 700;
+            color: rgba(255,255,255,.7);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            margin-top: 3px;
+        }
+
+        /* decorative paw on logo corner */
+        .logo-paw-deco {
+            position: absolute;
+            bottom: 6px;
+            right: 8px;
+            opacity: .2;
+            fill: white;
+        }
+
+        /* ── Main title ── */
+        .hero-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 900;
+            font-size: clamp(3.2rem, 11vw, 7rem);
+            color: var(--text);
+            letter-spacing: -4px;
+            line-height: .92;
+            margin-bottom: 14px;
+            animation: fadeUp .6s ease .15s both;
+        }
+        .hero-title .hl { color: var(--brand); display: block; }
+
+        .hero-tagline {
+            font-size: clamp(.95rem, 2.2vw, 1.2rem);
+            color: var(--text-muted);
+            font-weight: 500;
+            max-width: 500px;
+            line-height: 1.65;
+            margin-bottom: 38px;
+            animation: fadeUp .6s ease .22s both;
+        }
+
+        /* ── Progress ── */
+        .progress-wrap {
+            width: min(100%, 440px);
+            margin: 0 auto 46px;
+            animation: fadeUp .6s ease .3s both;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 9px;
+        }
+        .progress-meta span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .progress-meta .pct { color: var(--brand); }
+
+        .progress-track {
+            height: 7px;
+            background: var(--brand-light);
+            border-radius: 50px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--brand) 0%, var(--brand-dark) 100%);
+            border-radius: 50px;
+            transition: width 1.6s cubic-bezier(.16,1,.3,1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%);
+            animation: barShine 2.2s ease infinite;
+        }
+
+        @keyframes barShine {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+
+        /* ── CTA buttons ── */
+        .hero-ctas {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeUp .6s ease .37s both;
+        }
+
+        .btn-wa {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 15px 30px;
+            background: #25D366;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 15px;
+            box-shadow: 0 6px 24px rgba(37,211,102,.4);
+            transition: all .2s ease;
+            cursor: pointer;
+        }
+        .btn-wa:hover {
+            background: #1aaf55;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 34px rgba(37,211,102,.5);
+        }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 15px 28px;
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 15px;
+            border: 2px solid rgba(26,18,8,.13);
+            transition: all .2s ease;
+            cursor: pointer;
+        }
+        .btn-ghost:hover {
+            border-color: var(--brand);
+            color: var(--brand-darker);
+            transform: translateY(-2px);
+        }
+
+        /* ── Decorative pet silhouettes ── */
+        .pet-deco {
+            position: absolute;
+            pointer-events: none;
+            opacity: .065;
+            animation: petFloat 7s ease-in-out infinite;
+        }
+        .pet-deco.left  { bottom: 6%; left: 2%;  width: 200px; animation-delay: 0s; }
+        .pet-deco.right { bottom: 6%; right: 2%; width: 175px; animation-delay: -3.5s; }
+
+        @keyframes petFloat {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-18px); }
+        }
+
+        /* ─────────────────────────────────────────────
+           SECTION DIVIDER
+        ───────────────────────────────────────────── */
+        .section-sep {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 0 24px;
+        }
+        .section-sep::before,
+        .section-sep::after {
+            content: '';
+            flex: 1;
+            max-width: 160px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,166,1,.25), transparent);
+        }
+
+        /* ─────────────────────────────────────────────
+           INFO CARDS SECTION
+        ───────────────────────────────────────────── */
+        .info-section {
+            position: relative;
+            z-index: 1;
+            padding: 56px 24px 80px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 20px;
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255,255,255,.92);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 30px 28px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(255,166,1,.32);
+        }
+
+        .card-icon-wrap {
+            width: 50px;
+            height: 50px;
+            background: var(--brand-light);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .card-icon-wrap svg { fill: var(--brand); }
+
+        .card-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 17px;
+            color: var(--text);
+            letter-spacing: -.3px;
+            margin-bottom: 16px;
+        }
+
+        /* ── Hours rows ── */
+        .hours-list { display: flex; flex-direction: column; gap: 0; }
+
+        .hour-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,166,1,.08);
+            font-size: 14px;
+        }
+        .hour-row:last-child { border-bottom: none; }
+
+        .hour-day   { color: var(--text-muted); font-weight: 500; }
+        .hour-time  { color: var(--text); font-weight: 700; }
+        .hour-closed { color: var(--text-faint); font-style: italic; font-weight: 400; }
+
+        .open-now {
+            display: inline-block;
+            padding: 2px 9px;
+            background: rgba(37,211,102,.12);
+            color: #159946;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-left: 8px;
+        }
+
+        /* ── Location ── */
+        .location-address {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .location-address strong { color: var(--text); }
+
+        .map-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            background: var(--brand-light);
+            color: var(--brand-darker);
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+            transition: background .2s, transform .2s;
+            cursor: pointer;
+        }
+        .map-link:hover { background: rgba(255,166,1,.22); transform: translateX(3px); }
+        .map-link svg { fill: var(--brand); }
+
+        /* ── Contact phone rows ── */
+        .phone-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            background: var(--brand-light);
+            border-radius: 14px;
+            text-decoration: none;
+            margin-bottom: 10px;
+            transition: background .2s, transform .2s;
+            cursor: pointer;
+        }
+        .phone-row:last-child { margin-bottom: 0; }
+        .phone-row:hover { background: rgba(255,166,1,.22); transform: translateX(4px); }
+
+        .phone-icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .phone-icon-box svg { fill: white; }
+        .phone-icon-box.green  { background: #25D366; }
+        .phone-icon-box.orange { background: var(--brand); }
+
+        .phone-detail { flex: 1; min-width: 0; }
+        .phone-label  { font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; }
+        .phone-number {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ─────────────────────────────────────────────
+           FOOTER
+        ───────────────────────────────────────────── */
+        footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 28px 24px;
+            border-top: 1px solid rgba(255,166,1,.1);
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: var(--text-faint);
+            line-height: 1.8;
+        }
+        .footer-text .brand { color: var(--brand); font-weight: 700; }
+
+        /* ─────────────────────────────────────────────
+           KEYFRAMES
+        ───────────────────────────────────────────── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(28px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─────────────────────────────────────────────
+           REDUCED MOTION
+        ───────────────────────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+            }
+        }
+
+        /* ─────────────────────────────────────────────
+           RESPONSIVE
+        ───────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .hero-title  { letter-spacing: -2.5px; }
+            .info-grid   { grid-template-columns: 1fr; }
+            .pet-deco    { display: none; }
+        }
+
+        @media (max-width: 520px) {
+            .hero-ctas   { flex-direction: column; align-items: stretch; }
+            .btn-wa, .btn-ghost { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ▓▓ BACKGROUND ▓▓ -->
+<div class="bg-glow"  aria-hidden="true"></div>
+<div class="paw-layer" aria-hidden="true" id="pawLayer"></div>
+
+<!-- ▓▓ FLOATING NAV ▓▓ -->
+<header role="banner">
+    <a href="#" class="nav-brand" aria-label="Sosa Bulls — inicio">
+        <!--
+            LOGO NAV: para usar tu imagen, reemplazá el div.logo-mark por:
+            <img src="logo.png" alt="Sosa Bulls" style="width:38px;height:38px;object-fit:contain;border-radius:10px;">
+        -->
+        <div class="logo-mark" aria-hidden="true">
+            <span class="logo-initials">SB</span>
+        </div>
+        <span class="nav-name">SOSA <em>BULLS</em></span>
+    </a>
+
+    <a href="https://wa.me/595982316578"
+       class="nav-wa"
+       target="_blank"
+       rel="noopener noreferrer"
+       aria-label="Contactar por WhatsApp">
+        <!-- WhatsApp icon -->
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.86L0 24l6.335-1.56A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.847 0-3.587-.478-5.1-1.317l-.366-.218-3.754.924.99-3.642-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+        </svg>
+        <span class="nav-wa-label">WhatsApp</span>
+    </a>
+</header>
+
+<!-- ▓▓ MAIN ▓▓ -->
+<main>
+
+    <!-- ════════════════════════════════════
+         HERO
+    ════════════════════════════════════ -->
+    <section class="hero" aria-labelledby="main-heading">
+
+        <!-- Decorative pet silhouettes -->
+        <svg class="pet-deco left" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="var(--brand)">
+            <!-- Dog sitting silhouette -->
+            <ellipse cx="130" cy="70" rx="52" ry="44"/>
+            <!-- Floppy ear -->
+            <path d="M 85 55 Q 62 28 72 62 Q 78 72 90 68 Z"/>
+            <!-- Eyes -->
+            <circle cx="115" cy="58" r="6" fill="white"/>
+            <circle cx="144" cy="58" r="6" fill="white"/>
+            <circle cx="117" cy="60" r="3" fill="#1a1208"/>
+            <circle cx="146" cy="60" r="3" fill="#1a1208"/>
+            <!-- Nose -->
+            <ellipse cx="130" cy="79" rx="10" ry="7"/>
+            <!-- Mouth -->
+            <path d="M 122 86 Q 130 96 138 86" stroke="#1a1208" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- Tongue -->
+            <ellipse cx="130" cy="93" rx="6" ry="5" fill="#ff8fa3"/>
+            <!-- Body -->
+            <rect x="83" y="108" width="94" height="80" rx="18"/>
+            <!-- Front legs -->
+            <rect x="88"  y="178" width="22" height="48" rx="11"/>
+            <rect x="148" y="178" width="22" height="48" rx="11"/>
+            <!-- Tail -->
+            <path d="M 177 140 Q 210 120 205 148 Q 200 164 178 158" fill="var(--brand)"/>
+        </svg>
+
+        <svg class="pet-deco right" viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="var(--brand)">
+            <!-- Cat sitting silhouette -->
+            <!-- Pointy ears -->
+            <polygon points="60,52 42,18 78,46"/>
+            <polygon points="118,52 136,18 100,46"/>
+            <!-- Head -->
+            <ellipse cx="90" cy="74" rx="46" ry="40"/>
+            <!-- Eyes -->
+            <ellipse cx="76" cy="64" rx="7" ry="8" fill="white"/>
+            <ellipse cx="104" cy="64" rx="7" ry="8" fill="white"/>
+            <ellipse cx="77" cy="66" rx="3.5" ry="5" fill="#1a1208"/>
+            <ellipse cx="105" cy="66" rx="3.5" ry="5" fill="#1a1208"/>
+            <!-- Nose -->
+            <path d="M 86 78 L 90 82 L 94 78 Z" fill="#ffaab5"/>
+            <!-- Whiskers -->
+            <line x1="90" y1="80" x2="62" y2="76" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="90" y1="82" x2="60" y2="83" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="90" y1="80" x2="118" y2="76" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="90" y1="82" x2="120" y2="83" stroke="#1a1208" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- Body -->
+            <rect x="50" y="108" width="80" height="78" rx="22"/>
+            <!-- Front paws (neatly tucked) -->
+            <ellipse cx="70"  cy="186" rx="16" ry="10"/>
+            <ellipse cx="110" cy="186" rx="16" ry="10"/>
+            <!-- Tail curling around -->
+            <path d="M 130 170 Q 162 162 158 185 Q 155 198 140 195 Q 128 192 130 180" fill="var(--brand)" stroke="none"/>
+        </svg>
+
+        <!-- "Próximamente" badge -->
+        <div class="hero-badge" role="status" aria-live="polite">
+            <span class="badge-pulse" aria-hidden="true"></span>
+            Sitio web en construcción
+        </div>
+
+        <!-- Hero logo -->
+        <div class="hero-logo-wrap">
+            <!--
+                LOGO HERO: para usar tu imagen, reemplazá .hero-logo-mark por:
+                <img src="logo.png" alt="Sosa Bulls"
+                     style="width:110px;height:110px;object-fit:contain;border-radius:26px;
+                            box-shadow:0 10px 40px rgba(255,166,1,.25);">
+            -->
+            <div class="hero-logo-mark" role="img" aria-label="Logo Sosa Bulls">
+                <span class="hero-logo-text">SB</span>
+                <span class="hero-logo-sub">Petshop</span>
+                <!-- decorative paw -->
+                <svg class="logo-paw-deco" width="34" height="34" viewBox="0 0 100 100" aria-hidden="true">
+                    <ellipse cx="50" cy="65" rx="24" ry="20"/>
+                    <circle cx="22" cy="38" r="11"/>
+                    <circle cx="42" cy="26" r="11"/>
+                    <circle cx="62" cy="26" r="11"/>
+                    <circle cx="78" cy="38" r="11"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Main heading -->
+        <h1 class="hero-title" id="main-heading">
+            SOSA
+            <span class="hl">BULLS</span>
+        </h1>
+
+        <p class="hero-tagline">
+            Alimentos balanceados y accesorios para perros y gatos.<br>
+            Tu petshop de confianza en Lambaré, Paraguay.
+        </p>
+
+        <!-- Progress bar -->
+        <div class="progress-wrap"
+             role="progressbar"
+             aria-valuenow="68"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             aria-label="Progreso del sitio web: 68%">
+            <div class="progress-meta">
+                <span>Estamos preparando algo increíble para vos</span>
+                <span class="pct">68%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- CTAs -->
+        <div class="hero-ctas">
+            <a href="https://wa.me/595982316578"
+               class="btn-wa"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Escribir por WhatsApp al +595 982 316 578">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.86L0 24l6.335-1.56A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.847 0-3.587-.478-5.1-1.317l-.366-.218-3.754.924.99-3.642-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                </svg>
+                Escribir por WhatsApp
+            </a>
+
+            <a href="tel:+595982316578"
+               class="btn-ghost"
+               aria-label="Llamar al +595 982 316 578">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                </svg>
+                Llamar ahora
+            </a>
+        </div>
+
+    </section>
+
+    <!-- ════════════════════════════════════
+         DIVIDER
+    ════════════════════════════════════ -->
+    <div class="section-sep" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 100 100" fill="var(--brand)" style="opacity:.35">
+            <ellipse cx="50" cy="65" rx="24" ry="20"/>
+            <circle cx="22" cy="38" r="11"/>
+            <circle cx="42" cy="26" r="11"/>
+            <circle cx="62" cy="26" r="11"/>
+            <circle cx="78" cy="38" r="11"/>
+        </svg>
+    </div>
+
+    <!-- ════════════════════════════════════
+         INFO CARDS
+    ════════════════════════════════════ -->
+    <section class="info-section" aria-label="Información de contacto, horarios y ubicación">
+        <div class="info-grid">
+
+            <!-- ── Card 1: Horarios ── -->
+            <article class="card">
+                <div class="card-icon-wrap" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24">
+                        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
+                    </svg>
+                </div>
+                <h2 class="card-title">Horarios de Atención</h2>
+                <div class="hours-list" role="list">
+                    <div class="hour-row" role="listitem">
+                        <span class="hour-day">Lunes – Viernes</span>
+                        <span class="hour-time">9:00 – 19:00</span>
+                    </div>
+                    <div class="hour-row" role="listitem">
+                        <span class="hour-day">Sábados</span>
+                        <span class="hour-time">8:00 – 19:00</span>
+                    </div>
+                    <div class="hour-row" role="listitem">
+                        <span class="hour-day">Domingos</span>
+                        <span class="hour-closed">Cerrado</span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- ── Card 2: Ubicación ── -->
+            <article class="card">
+                <div class="card-icon-wrap" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                </div>
+                <h2 class="card-title">Dónde Encontrarnos</h2>
+                <p class="location-address">
+                    <strong>Barrio San Rafael</strong><br>
+                    Lambaré, Paraguay
+                </p>
+                <a href="https://maps.google.com/?q=Barrio+San+Rafael+Lambare+Paraguay"
+                   class="map-link"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Ver Barrio San Rafael en Google Maps">
+                    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    Ver en Google Maps
+                </a>
+            </article>
+
+            <!-- ── Card 3: Contacto ── -->
+            <article class="card">
+                <div class="card-icon-wrap" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24">
+                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                    </svg>
+                </div>
+                <h2 class="card-title">Contacto</h2>
+
+                <a href="https://wa.me/595982316578"
+                   class="phone-row"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="WhatsApp: +595 982 316 578">
+                    <div class="phone-icon-box green" aria-hidden="true">
+                        <svg width="17" height="17" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.86L0 24l6.335-1.56A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.847 0-3.587-.478-5.1-1.317l-.366-.218-3.754.924.99-3.642-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                        </svg>
+                    </div>
+                    <div class="phone-detail">
+                        <div class="phone-label">WhatsApp</div>
+                        <div class="phone-number">+595 982 316 578</div>
+                    </div>
+                </a>
+
+                <a href="tel:+595972108110"
+                   class="phone-row"
+                   aria-label="Llamar al 0972 108 110">
+                    <div class="phone-icon-box orange" aria-hidden="true">
+                        <svg width="17" height="17" viewBox="0 0 24 24">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                    </div>
+                    <div class="phone-detail">
+                        <div class="phone-label">Teléfono</div>
+                        <div class="phone-number">0972 108 110</div>
+                    </div>
+                </a>
+
+            </article>
+
+        </div>
+    </section>
+
+</main>
+
+<!-- ▓▓ FOOTER ▓▓ -->
+<footer role="contentinfo">
+    <p class="footer-text">
+        © 2026 <span class="brand">Sosa Bulls</span> — Todos los derechos reservados<br>
+        <small>Barrio San Rafael · Lambaré · Paraguay</small>
+    </p>
+</footer>
+
+<!-- ▓▓ SCRIPTS ▓▓ -->
+<script>
+    // ── Animate progress bar after paint
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            const bar = document.getElementById('progressBar');
+            if (bar) bar.style.width = '68%';
+        }, 200);
+    });
+
+    // ── Generate floating paw prints
+    (function spawnPaws() {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        const layer = document.getElementById('pawLayer');
+        const PAW_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="50" cy="65" rx="24" ry="20"/>
+            <circle cx="22" cy="38" r="11"/>
+            <circle cx="42" cy="26" r="11"/>
+            <circle cx="62" cy="26" r="11"/>
+            <circle cx="78" cy="38" r="11"/>
+        </svg>`;
+
+        const COUNT = 9;
+        for (let i = 0; i < COUNT; i++) {
+            const el = document.createElement('div');
+            el.className = 'paw-item';
+            const size     = 18 + Math.random() * 32;   // 18–50px
+            const leftPct  = Math.random() * 96;
+            const duration = 12 + Math.random() * 16;   // 12–28s
+            const delay    = -(Math.random() * duration); // stagger start
+            el.style.cssText = `
+                left:${leftPct}%;
+                width:${size}px;
+                height:${size}px;
+                animation-duration:${duration}s;
+                animation-delay:${delay}s;
+            `;
+            el.innerHTML = PAW_SVG;
+            layer.appendChild(el);
+        }
+    })();
+
+    // ── Auto-detect open/closed and show badge next to "Lunes–Viernes"
+    (function showOpenBadge() {
+        const now = new Date();
+        const tz  = 'America/Asuncion';
+        const dt  = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+        const day = dt.getDay();   // 0=Dom … 6=Sab
+        const h   = dt.getHours();
+        const m   = dt.getMinutes();
+        const mins = h * 60 + m;
+
+        const openWeekday = day >= 1 && day <= 5 && mins >= 540  && mins < 1140; // 9:00–19:00
+        const openSat     = day === 6               && mins >= 480  && mins < 1140; // 8:00–19:00
+
+        if (!openWeekday && !openSat) return; // closed, no badge
+
+        const rows = document.querySelectorAll('.hour-row');
+        rows.forEach(row => {
+            const dayEl = row.querySelector('.hour-day');
+            if (!dayEl) return;
+            const txt = dayEl.textContent;
+            if (openWeekday && txt.includes('Lunes')) {
+                const badge = document.createElement('span');
+                badge.className = 'open-now';
+                badge.textContent = 'Abierto';
+                dayEl.appendChild(badge);
+            }
+            if (openSat && txt.includes('Sábado')) {
+                const badge = document.createElement('span');
+                badge.className = 'open-now';
+                badge.textContent = 'Abierto';
+                dayEl.appendChild(badge);
+            }
+        });
+    })();
+</script>
+
+</body>
+</html>
