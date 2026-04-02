@@ -507,7 +507,7 @@ function Caja() {
     )
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
+        <div className="caja-wrap" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
 
             {/* Pestañas */}
             <div style={{ background: s.surface, borderBottom: `1px solid ${s.border}`, padding: '0 32px', display: 'flex', gap: '0', flexShrink: 0 }}>
@@ -524,10 +524,10 @@ function Caja() {
 
             {/* ── PESTAÑA VENTA ── */}
             {pestana === 'venta' && (
-                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                <div className="split-content" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
                     {/* Centro scroll */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+                    <div className="caja-form" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
 
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -758,7 +758,7 @@ function Caja() {
                     </div>
 
                     {/* Panel derecho */}
-                    <div style={{ width: '400px', background: s.surface, borderLeft: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', padding: '24px', overflowY: 'auto', flexShrink: 0 }}>
+                    <div className="caja-checkout" style={{ width: '400px', background: s.surface, borderLeft: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', padding: '24px', overflowY: 'auto', flexShrink: 0 }}>
 
                         {/* Modalidad */}
                         <section style={{ marginBottom: '24px' }}>

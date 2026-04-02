@@ -81,7 +81,7 @@ function Home() {
         <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', background: s.bg, minHeight: '100%' }}>
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div className="home-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
                     <p style={{ fontSize: '12px', color: s.textFaint, marginBottom: '6px', textTransform: 'capitalize' }}>
                         {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
@@ -183,7 +183,7 @@ function Home() {
             )}
 
             {/* Tarjetas métricas */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div className="home-tarjetas" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 {tarjetas.map((t, i) => (
                     <div key={i} onClick={() => navigate(t.ruta)}
                         style={{ background: s.surface, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
@@ -211,7 +211,7 @@ function Home() {
             </div>
 
             {/* Gráfico + Alertas inventario */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+            <div className="home-charts" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
 
                 {/* Gráfico barras */}
                 <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}` }}>

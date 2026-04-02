@@ -162,10 +162,10 @@ function Chat() {
     )
 
     return (
-        <div style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+        <div className="chat-wrap" style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
 
             {/* Lista conversaciones */}
-            <aside style={{ width: '340px', flexShrink: 0, borderRight: `1px solid ${s.border}`, background: s.surface, display: 'flex', flexDirection: 'column' }}>
+            <aside className={`chat-sessions${sesionActiva ? ' has-active' : ''}`} style={{ width: '340px', flexShrink: 0, borderRight: `1px solid ${s.border}`, background: s.surface, display: 'flex', flexDirection: 'column' }}>
                 {/* Buscador */}
                 <div style={{ padding: '14px 16px', borderBottom: `1px solid ${s.border}` }}>
                     <div style={{ position: 'relative' }}>
@@ -226,7 +226,7 @@ function Chat() {
             </aside>
 
             {/* Panel chat */}
-            <section style={{ flex: 1, display: 'flex', flexDirection: 'column', background: s.chatBg, minWidth: 0 }}>
+            <section className={`chat-messages${sesionActiva ? ' has-active' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', background: s.chatBg, minWidth: 0 }}>
                 {!sesionActiva ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
                         <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
@@ -238,6 +238,9 @@ function Chat() {
                         {/* Header chat */}
                         <div style={{ height: '72px', background: s.headerBg, borderBottom: `1px solid ${s.border}`, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <button className="chat-back-btn" onClick={() => setSesionActiva(null)} title="Volver a chats" style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'none', alignItems: 'center', padding: '4px' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                </button>
                                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: darkMode ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: '700', color: s.textMuted }}>
                                     {sesionActiva.cliente_numero.slice(-2)}
                                 </div>

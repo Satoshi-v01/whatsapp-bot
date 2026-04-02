@@ -97,7 +97,7 @@ function Ordenes() {
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
+        <div className="ordenes-wrap" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', background: s.bg, overflow: 'hidden' }}>
 
             {/* Header */}
             <div style={{ padding: '20px 28px', borderBottom: `1px solid ${s.border}`, background: s.surface }}>
@@ -128,10 +128,10 @@ function Ordenes() {
             </div>
 
             {/* Contenido */}
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div className="split-content" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
                 {/* Lista */}
-                <div style={{ width: '380px', borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface, flexShrink: 0, overflowY: 'auto' }}>
+                <div className={`split-list${ordenSeleccionada ? ' has-detail' : ''}`} style={{ width: '380px', borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface, flexShrink: 0, overflowY: 'auto' }}>
                     {cargando ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: s.textMuted }}>Cargando...</div>
                     ) : ordenes.length === 0 ? (
@@ -187,7 +187,7 @@ function Ordenes() {
                 </div>
 
                 {/* Detalle */}
-                <div style={{ flex: 1, overflowY: 'auto', background: s.bg }}>
+                <div className={`split-detail${ordenSeleccionada ? ' has-detail' : ''}`} style={{ flex: 1, overflowY: 'auto', background: s.bg }}>
                     {!ordenSeleccionada ? (
                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
                             <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>

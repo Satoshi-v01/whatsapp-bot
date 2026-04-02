@@ -30,7 +30,9 @@ function Login({ onLogin }) {
             {/* Panel de marca — lado izquierdo */}
             <div className="login-brand-panel">
                 <div className="login-brand-inner">
-                    <img src="/logo.svg" alt="Sosa Bulls" className="login-brand-logo" />
+                    <div className="login-brand-logo">
+                        <span className="login-brand-logo-fallback">SB</span>
+                    </div>
 
                     <h1 className="login-headline">
                         Centro de<br />

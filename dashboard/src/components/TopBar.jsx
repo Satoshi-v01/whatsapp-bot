@@ -1,7 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { getNotificaciones } from '../services/estadisticas'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '../App'
+
+const PAGE_TITLES = {
+    '/dashboard/inicio':       'Inicio',
+    '/dashboard/caja':         'Caja',
+    '/dashboard/ordenes':      'Órdenes',
+    '/dashboard/chat':         'Chat',
+    '/dashboard/delivery':     'Delivery',
+    '/dashboard/ventas':       'Ventas',
+    '/dashboard/inventario':   'Inventario',
+    '/dashboard/proveedores':  'Proveedores',
+    '/dashboard/clientes':     'Clientes',
+    '/dashboard/reportes':     'Reportes',
+    '/dashboard/auditoria':    'Auditoría',
+    '/dashboard/configuracion':'Configuración',
+}
 
 /* ── Micro SVG icons ── */
 function IcoSun() {
@@ -61,10 +76,11 @@ function TopBar({ usuario, onLogout }) {
     })
     const [popupAgente, setPopupAgente]     = useState(null)
     const navigate                          = useNavigate()
+    const location                          = useLocation()
     const prevChatsEsperando                = useRef(0)
     const prevNotifCount                    = useRef(0)
     const audioCtxRef                       = useRef(null)
-    const { darkMode, toggleDarkMode }      = useApp()
+    const { darkMode, toggleDarkMode, toggleMobileSidebar } = useApp()
 
     useEffect(() => {
         cargarNotificaciones()
@@ -177,6 +193,8 @@ function TopBar({ usuario, onLogout }) {
         return `hace ${Math.floor(diff / 86400)} d`
     }
 
+    const paginaTitulo = PAGE_TITLES[location.pathname] || 'Dashboard'
+
     return (
         <>
             {/* Popup urgente de agente */}
@@ -205,6 +223,27 @@ function TopBar({ usuario, onLogout }) {
             )}
 
             <header className="topbar">
+
+                {/* Hamburger — solo mobile */}
+                <button
+                    className="tb-btn tb-hamburger"
+                    onClick={toggleMobileSidebar}
+                    aria-label="Abrir menú"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="3" y1="6"  x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+
+                {/* Título de página — izquierda */}
+                <div className="tb-page-title">
+                    <span className="tb-page-name">{paginaTitulo}</span>
+                </div>
+
+                {/* Acciones — derecha */}
+                <div className="tb-actions">
 
                 {/* Toggle dark mode */}
                 <button
@@ -315,6 +354,8 @@ function TopBar({ usuario, onLogout }) {
                         </div>
                     )}
                 </div>
+
+                </div>{/* .tb-actions */}
             </header>
         </>
     )

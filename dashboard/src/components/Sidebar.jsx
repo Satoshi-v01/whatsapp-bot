@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useApp } from '../App'
 
-/* ── SVG Icon primitives ── */
 function Ico({ size = 18, children }) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -14,17 +13,17 @@ function Ico({ size = 18, children }) {
 }
 
 const ICONS = {
-    home: <Ico><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Ico>,
-    caja: <Ico><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></Ico>,
-    ordenes: <Ico><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></Ico>,
-    chat: <Ico><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></Ico>,
-    delivery: <Ico><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></Ico>,
-    ventas: <Ico><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></Ico>,
-    inventario: <Ico><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></Ico>,
-    proveedores: <Ico><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18z"/><path d="M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2"/><path d="M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/><rect x="10" y="6" width="4" height="4"/><rect x="10" y="14" width="4" height="4"/></Ico>,
-    clientes: <Ico><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></Ico>,
-    reportes: <Ico><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></Ico>,
-    auditoria: <Ico><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Ico>,
+    home:          <Ico><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Ico>,
+    caja:          <Ico><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></Ico>,
+    ordenes:       <Ico><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></Ico>,
+    chat:          <Ico><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></Ico>,
+    delivery:      <Ico><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></Ico>,
+    ventas:        <Ico><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></Ico>,
+    inventario:    <Ico><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></Ico>,
+    proveedores:   <Ico><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18z"/><path d="M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2"/><path d="M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/><rect x="10" y="6" width="4" height="4"/><rect x="10" y="14" width="4" height="4"/></Ico>,
+    clientes:      <Ico><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></Ico>,
+    reportes:      <Ico><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></Ico>,
+    auditoria:     <Ico><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Ico>,
     configuracion: <Ico><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></Ico>,
 }
 
@@ -34,8 +33,9 @@ function Sidebar() {
         if (guardado !== null) return guardado === 'true'
         return window.innerWidth > 1280
     })
+    const [logoError, setLogoError] = useState(false)
     const location = useLocation()
-    const { puedo } = useApp()
+    const { puedo, mobileSidebarOpen, closeMobileSidebar } = useApp()
 
     function esActivo(path) { return location.pathname === path }
 
@@ -46,33 +46,59 @@ function Sidebar() {
     }
 
     const links = [
-        { to: '/dashboard/inicio',        icono: 'home',          label: 'Inicio',        modulo: 'home' },
-        { to: '/dashboard/caja',           icono: 'caja',          label: 'Caja',          modulo: 'ventas' },
-        { to: '/dashboard/ordenes',        icono: 'ordenes',       label: 'Ordenes',       modulo: 'ordenes' },
-        { to: '/dashboard/chat',           icono: 'chat',          label: 'Chat',          modulo: 'chat' },
-        { to: '/dashboard/delivery',       icono: 'delivery',      label: 'Delivery',      modulo: 'delivery' },
-        { divider: true },
-        { to: '/dashboard/ventas',         icono: 'ventas',        label: 'Ventas',        modulo: 'ventas' },
-        { to: '/dashboard/inventario',     icono: 'inventario',    label: 'Inventario',    modulo: 'inventario' },
-        { to: '/dashboard/proveedores',    icono: 'proveedores',   label: 'Proveedores',   modulo: 'proveedores' },
-        { to: '/dashboard/clientes',       icono: 'clientes',      label: 'Clientes',      modulo: 'clientes' },
-        { divider: true },
-        { to: '/dashboard/reportes',       icono: 'reportes',      label: 'Reportes',      modulo: 'reportes' },
-        { to: '/dashboard/auditoria',      icono: 'auditoria',     label: 'Auditoría',     modulo: 'auditoria', soloAdmin: true },
-        { to: '/dashboard/configuracion',  icono: 'configuracion', label: 'Configuración', modulo: 'configuracion' },
+        { section: 'OPERACIONES' },
+        { to: '/dashboard/inicio',       icono: 'home',          label: 'Inicio',        modulo: null },
+        { to: '/dashboard/caja',          icono: 'caja',          label: 'Caja',          modulo: 'ventas' },
+        { to: '/dashboard/ordenes',       icono: 'ordenes',       label: 'Órdenes',       modulo: 'ordenes' },
+        { to: '/dashboard/chat',          icono: 'chat',          label: 'Chat',          modulo: 'chat' },
+        { to: '/dashboard/delivery',      icono: 'delivery',      label: 'Delivery',      modulo: 'delivery' },
+        { section: 'GESTIÓN' },
+        { to: '/dashboard/ventas',        icono: 'ventas',        label: 'Ventas',        modulo: 'ventas' },
+        { to: '/dashboard/inventario',    icono: 'inventario',    label: 'Inventario',    modulo: 'inventario' },
+        { to: '/dashboard/proveedores',   icono: 'proveedores',   label: 'Proveedores',   modulo: 'proveedores' },
+        { to: '/dashboard/clientes',      icono: 'clientes',      label: 'Clientes',      modulo: 'clientes' },
+        { section: 'ANÁLISIS' },
+        { to: '/dashboard/reportes',      icono: 'reportes',      label: 'Reportes',      modulo: 'reportes' },
+        { to: '/dashboard/auditoria',     icono: 'auditoria',     label: 'Auditoría',     modulo: 'auditoria', soloAdmin: true },
+        { to: '/dashboard/configuracion', icono: 'configuracion', label: 'Configuración', modulo: 'configuracion' },
     ]
 
     const linksFiltrados = links.filter(l => {
-        if (l.divider) return true
+        if (l.section) return true
         return l.modulo === null || puedo(l.modulo, 'ver')
     })
 
+    function handleNavClick() {
+        closeMobileSidebar()
+    }
+
     return (
-        <nav className={`sb${expandido ? '' : ' collapsed'}`}>
+        <>
+        {mobileSidebarOpen && (
+            <div className="sb-backdrop" onClick={closeMobileSidebar} />
+        )}
+        <nav className={`sb${expandido ? '' : ' collapsed'}${mobileSidebarOpen ? ' mobile-open' : ''}`}>
             {/* Header */}
             <div className="sb-header">
-                <div className="sb-logo">SB</div>
-                <span className="sb-brand">Sosa Bulls</span>
+                <div className="sb-logo">
+                    {!logoError ? (
+                        <img
+                            src="/logo.png"
+                            alt="Sosa Bulls"
+                            onError={() => setLogoError(true)}
+                        />
+                    ) : (
+                        <span className="sb-logo-fallback">SB</span>
+                    )}
+                </div>
+
+                <div className="sb-brand">
+                    <span className="sb-brand-name">
+                        Sosa <strong>BULLS</strong>
+                    </span>
+                    <span className="sb-brand-sub">Panel Admin</span>
+                </div>
+
                 <button
                     className="sb-toggle"
                     onClick={toggleSidebar}
@@ -96,10 +122,14 @@ function Sidebar() {
             {/* Nav links */}
             <div className="sb-nav">
                 {linksFiltrados.map((link, idx) => {
-                    if (link.divider) return <div key={`div-${idx}`} className="sb-divider" />
+                    if (link.section) return (
+                        <div key={`sec-${idx}`} className="sb-section-label">
+                            <span className="sb-section-text">{link.section}</span>
+                        </div>
+                    )
                     const activo = esActivo(link.to)
                     return (
-                        <Link key={link.to} to={link.to} className="sb-link">
+                        <Link key={link.to} to={link.to} className="sb-link" onClick={handleNavClick}>
                             <div
                                 className={`sb-item${activo ? ' active' : ''}`}
                                 title={!expandido ? link.label : undefined}
@@ -111,7 +141,17 @@ function Sidebar() {
                     )
                 })}
             </div>
+
+            {/* Footer */}
+            {expandido && (
+                <div className="sb-footer">
+                    <span className="sb-footer-text">
+                        Hecho por <strong>Satoshi</strong>
+                    </span>
+                </div>
+            )}
         </nav>
+        </>
     )
 }
 

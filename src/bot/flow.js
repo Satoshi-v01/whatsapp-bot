@@ -901,36 +901,37 @@ async function manejarFactura(numero, texto, sesion) {
 
 async function manejarRucFactura(numero, texto, sesion) {
     const partes = texto.trim().split(' ')
-    let ruc = ''
-    let razonSocial = ''
 
-    // Si el RUC ya existe en otro cliente, asociar este número
-    const clienteConRuc = await db.query(
-        `SELECT id, nombre FROM clientes WHERE ruc = $1 AND telefono != $2`,
-        [ruc, numero]
-    )
-    if (clienteConRuc.rows.length > 0) {
-        const clienteExistente = clienteConRuc.rows[0]
-        await db.query(
-            `UPDATE clientes SET telefono = $1, updated_at = NOW() WHERE id = $2`,
-            [numero, clienteExistente.id]
-        )
-        // Actualizar nombre si el cliente se llama "Cliente {numero}"
-        const clienteActual = await db.query(`SELECT nombre FROM clientes WHERE telefono = $1`, [numero])
-        if (clienteActual.rows[0]?.nombre?.startsWith('Cliente ')) {
-            await db.query(`DELETE FROM clientes WHERE telefono = $1 AND nombre LIKE 'Cliente %'`, [numero])
-        }
-    }
-
+    // Parsear RUC y razón social ANTES de cualquier query
     const ultimaParte = partes[partes.length - 1]
     const esRuc = /^[\d\.\-]+$/.test(ultimaParte)
 
+    let ruc, razonSocial
     if (esRuc && partes.length > 1) {
         ruc = ultimaParte
         razonSocial = partes.slice(0, -1).join(' ')
     } else {
         razonSocial = texto.trim()
         ruc = texto.trim()
+    }
+
+    // Si el RUC ya existe en otro cliente, asociar este número
+    if (ruc) {
+        const clienteConRuc = await db.query(
+            `SELECT id, nombre FROM clientes WHERE ruc = $1 AND telefono != $2`,
+            [ruc, numero]
+        )
+        if (clienteConRuc.rows.length > 0) {
+            const clienteExistente = clienteConRuc.rows[0]
+            await db.query(
+                `UPDATE clientes SET telefono = $1, updated_at = NOW() WHERE id = $2`,
+                [numero, clienteExistente.id]
+            )
+            const clienteActual = await db.query(`SELECT nombre FROM clientes WHERE telefono = $1`, [numero])
+            if (clienteActual.rows[0]?.nombre?.startsWith('Cliente ')) {
+                await db.query(`DELETE FROM clientes WHERE telefono = $1 AND nombre LIKE 'Cliente %'`, [numero])
+            }
+        }
     }
 
     const datos = {
