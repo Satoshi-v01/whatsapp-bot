@@ -1,0 +1,260 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Variables — identicas a landing ───────────────────── */
+:root {
+  --brand:        #ffa601;
+  --brand-dark:   #e08900;
+  --brand-darker: #c07600;
+  --brand-light:  #fff3d6;
+  --brand-glow:   rgba(255, 166, 1, 0.25);
+
+  --color-secondary:     #1a1208;
+
+  --color-primary:       #ffa601;
+  --color-primary-dark:  #e08900;
+  --color-primary-darker:#c07600;
+  --color-primary-light: #fff3d6;
+
+  --color-bg:          #fffbf4;
+  --color-bg-elevated: #fff8ee;
+  --color-bg-card:     rgba(255, 255, 255, 0.92);
+  --color-text:        #1a1208;
+  --color-text-muted:  #8b6f47;
+  --color-text-faint:  #c4a882;
+  --color-text-inverse:#ffffff;
+
+  --color-success: #159946;
+  --color-warning: #e08900;
+  --color-danger:  #dc2626;
+
+  --color-border:       rgba(255, 166, 1, 0.18);
+  --color-border-hover: rgba(255, 166, 1, 0.32);
+  --color-border-focus: #ffa601;
+
+  --shadow-sm:        0 4px 28px rgba(26, 18, 8, 0.07);
+  --shadow-md:        0 8px 36px rgba(26, 18, 8, 0.10);
+  --shadow-lg:        0 12px 48px rgba(26, 18, 8, 0.13);
+  --shadow-card-hover:0 10px 48px rgba(26, 18, 8, 0.12);
+  --shadow-nav:       0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-brand:     0 6px 24px rgba(255, 166, 1, 0.35);
+
+  --radius:    20px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-pill: 50px;
+}
+
+/* ─── Base ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', system-ui, sans-serif;
+  line-height: 1.15;
+  color: var(--color-text);
+  letter-spacing: -0.3px;
+}
+
+/* ─── Background glow — identico a landing ──────────────── */
+.bg-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 90% 70% at 10% 35%, rgba(255,166,1,.09) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 55% at 88% 18%, rgba(255,166,1,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 50% 90%, rgba(255,166,1,.06) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 72% 55%, rgba(255,200,80,.04) 0%, transparent 50%);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+/* ─── Focus visible ─────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ─── Accesibilidad: sr-only ─────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto; height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ─── Keyframes ─────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(0.6); opacity: 0.45; }
+}
+@keyframes bounce-badge {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.5); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ─── Utility classes ───────────────────────────────────── */
+.animate-float        { animation: float 8s ease-in-out infinite; }
+.animate-fade-in      { animation: fade-in 0.5s ease-out forwards; }
+.animate-slide-up     { animation: slide-up 0.5s ease-out forwards; opacity: 0; }
+.animate-fade-up      { animation: fadeUp 0.6s ease both; }
+.animate-pulse-soft   { animation: pulse-soft 2s ease-in-out infinite; }
+.animate-bounce-badge { animation: bounce-badge 0.4s ease-out; }
+.animate-spin         { animation: spin 0.8s linear infinite; }
+
+/* ─── Reduced motion ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Componentes base ──────────────────────────────────── */
+@layer components {
+
+  /* Boton primario — pill shape igual que landing */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 font-display font-bold
+           transition-all duration-200 ease-out cursor-pointer
+           focus-visible:ring-2 focus-visible:ring-primary/50;
+    padding: 13px 28px;
+    border-radius: var(--radius-pill);
+    background: var(--color-primary);
+    color: white;
+    font-size: 15px;
+    box-shadow: var(--shadow-brand);
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 34px rgba(255,166,1,0.45);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-outline {
+    @apply inline-flex items-center gap-2 font-display font-semibold
+           transition-all duration-200 ease-out cursor-pointer;
+    padding: 13px 28px;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-text);
+    font-size: 15px;
+    border: 2px solid rgba(26,18,8,0.13);
+  }
+  .btn-outline:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary-darker);
+    transform: translateY(-2px);
+  }
+
+  /* Card base — igual que landing */
+  .card-base {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  .card-hover {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-border-hover);
+  }
+
+  .section-padding { @apply py-16 md:py-24 px-6 md:px-8; }
+  .container-base  { @apply max-w-7xl mx-auto; }
+
+  /* Input — consistent con estilo landing */
+  .input-base {
+    @apply w-full font-body;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    background: white;
+    color: var(--color-text);
+    font-size: 15px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-base::placeholder { color: var(--color-text-faint); }
+  .input-base:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255,166,1,0.15);
+  }
+}
