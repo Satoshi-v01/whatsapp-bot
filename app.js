@@ -25,6 +25,7 @@ const logger = require('./src/middleware/logger')
 const lotesRoutes = require('./src/routes/lotes')
 const auditoriaRoutes = require('./src/routes/auditoria')
 const transformacionesRoutes = require('./src/routes/transformaciones')
+const ecommerceRoutes = require('./src/routes/ecommerce')
 
 const app = express()
 
@@ -76,7 +77,7 @@ app.use(cors({
             'https://www.sosabulls.com.py',
             'https://whatsapp-bot-0272.onrender.com',
           ]
-        : ['http://localhost:5173', 'http://localhost:3000'],
+        : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -125,6 +126,7 @@ app.use('/api/carrito', limiterGeneral, autenticar, carritoRoutes)
 app.use('/api/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/api/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 app.use('/api/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
+app.use('/api/ecommerce', limiterGeneral, ecommerceRoutes)
 
 // Rutas
 app.use('/webhook', webhookRoutes)
