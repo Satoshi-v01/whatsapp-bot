@@ -124,7 +124,7 @@ function EmptyCart() {
 }
 
 // ─── Confirmacion de pedido ──────────────────────────────────
-function OrderConfirmation({ numero, mensaje, total, onClose }) {
+function OrderConfirmation({ numero, mensaje, total, whatsappUrl, onClose }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -163,6 +163,21 @@ function OrderConfirmation({ numero, mensaje, total, onClose }) {
         </p>
       </div>
 
+      {whatsappUrl && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-bold text-white transition-opacity duration-150 hover:opacity-90"
+          style={{ backgroundColor: '#25D366' }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Coordinar retiro por WhatsApp
+        </a>
+      )}
+
       <Link to="/" className="btn-primary w-full justify-center" onClick={onClose}>
         Seguir comprando
       </Link>
@@ -170,16 +185,72 @@ function OrderConfirmation({ numero, mensaje, total, onClose }) {
   )
 }
 
+// ─── Selector delivery / retiro ─────────────────────────────
+function EntregaSelector({ value, onChange }) {
+  const opts = [
+    {
+      key: 'delivery',
+      label: 'Envío a domicilio',
+      desc: 'Te lo llevamos a tu dirección',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'retiro',
+      label: 'Retiro en local',
+      desc: 'Retirá en nuestra tienda',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      ),
+    },
+  ]
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>¿Cómo recibís tu pedido?</p>
+      <div className="grid grid-cols-2 gap-3">
+        {opts.map(opt => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer text-center"
+            style={{
+              borderColor: value === opt.key ? 'var(--color-primary)' : 'var(--color-border)',
+              backgroundColor: value === opt.key ? 'var(--color-primary-light)' : 'white',
+              color: value === opt.key ? 'var(--color-primary-darker)' : 'var(--color-text-muted)',
+            }}
+            aria-pressed={value === opt.key}
+          >
+            <span style={{ color: value === opt.key ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+              {opt.icon}
+            </span>
+            <span className="text-sm font-bold leading-tight">{opt.label}</span>
+            <span className="text-xs leading-tight">{opt.desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Formulario de datos del cliente ────────────────────────
-function CustomerForm({ onSubmit, loading }) {
+function CustomerForm({ onSubmit, loading, tipoEntrega, onTipoEntrega }) {
   const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '', notas: '' })
   const [errors, setErrors] = useState({})
+  const esRetiro = tipoEntrega === 'retiro'
 
   function validate() {
     const errs = {}
     if (!form.nombre.trim()) errs.nombre = 'El nombre es requerido'
     if (!form.telefono.trim()) errs.telefono = 'El telefono es requerido'
-    if (!form.direccion.trim()) errs.direccion = 'La direccion es requerida'
+    if (!esRetiro && !form.direccion.trim()) errs.direccion = 'La direccion es requerida'
     return errs
   }
 
@@ -192,12 +263,15 @@ function CustomerForm({ onSubmit, loading }) {
   function handleSubmit(e) {
     e.preventDefault()
     const errs = validate()
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs)
-      return
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     onSubmit(form)
   }
+
+  const camposBase = [
+    { name: 'nombre',   label: 'Nombre completo', type: 'text', placeholder: 'Juan Perez',      required: true },
+    { name: 'telefono', label: 'Teléfono',         type: 'tel',  placeholder: '0981 000 000',    required: true },
+    ...(!esRetiro ? [{ name: 'direccion', label: 'Dirección', type: 'text', placeholder: 'Calle, número, barrio, ciudad', required: true }] : []),
+  ]
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
@@ -205,26 +279,34 @@ function CustomerForm({ onSubmit, loading }) {
         Datos de entrega
       </h2>
 
-      {[
-        { name: 'nombre',    label: 'Nombre completo',  type: 'text',     placeholder: 'Juan Perez', required: true },
-        { name: 'telefono',  label: 'Telefono',         type: 'tel',      placeholder: '0981 000 000', required: true },
-        { name: 'direccion', label: 'Direccion',        type: 'text',     placeholder: 'Calle, numero, barrio, ciudad', required: true },
-      ].map(field => (
+      {/* Selector delivery/retiro */}
+      <EntregaSelector value={tipoEntrega} onChange={onTipoEntrega} />
+
+      {/* Aviso retiro */}
+      {esRetiro && (
+        <div
+          className="flex items-start gap-3 p-3 rounded-xl text-sm"
+          style={{ backgroundColor: 'var(--color-primary-light)', border: '1px solid var(--color-border)' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-darker)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span style={{ color: 'var(--color-primary-darker)' }}>
+            Al confirmar te enviaremos a WhatsApp para coordinar el retiro en local.
+          </span>
+        </div>
+      )}
+
+      {/* Campos del formulario */}
+      {camposBase.map(field => (
         <div key={field.name} className="flex flex-col gap-1.5">
-          <label
-            htmlFor={field.name}
-            className="text-sm font-semibold"
-            style={{ color: 'var(--color-text)' }}
-          >
+          <label htmlFor={field.name} className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
             {field.label}
             {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
           </label>
           <input
-            id={field.name}
-            name={field.name}
-            type={field.type}
-            value={form[field.name]}
-            onChange={handleChange}
+            id={field.name} name={field.name} type={field.type}
+            value={form[field.name]} onChange={handleChange}
             placeholder={field.placeholder}
             autoComplete={field.name === 'nombre' ? 'name' : field.name === 'telefono' ? 'tel' : 'street-address'}
             className="input-base"
@@ -242,27 +324,21 @@ function CustomerForm({ onSubmit, loading }) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="notas" className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-          Notas adicionales <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(opcional)</span>
+          Notas {esRetiro ? '(opcional)' : 'adicionales'} <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>{!esRetiro && '(opcional)'}</span>
         </label>
         <textarea
-          id="notas"
-          name="notas"
-          value={form.notas}
-          onChange={handleChange}
-          placeholder="Horario preferido, referencias de la casa, etc."
-          rows={3}
-          className="input-base resize-none"
+          id="notas" name="notas" value={form.notas} onChange={handleChange}
+          placeholder={esRetiro ? 'Cualquier consulta adicional...' : 'Horario preferido, referencias de la casa, etc.'}
+          rows={3} className="input-base resize-none"
         />
       </div>
 
       <motion.button
-        type="submit"
-        disabled={loading}
-        whileTap={{ scale: 0.97 }}
+        type="submit" disabled={loading} whileTap={{ scale: 0.97 }}
         className="btn-primary w-full justify-center text-base py-4"
         style={loading ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
       >
-        {loading ? 'Enviando pedido...' : 'Confirmar pedido'}
+        {loading ? 'Enviando pedido...' : esRetiro ? 'Confirmar y coordinar retiro' : 'Confirmar pedido'}
       </motion.button>
     </form>
   )
@@ -327,6 +403,7 @@ export default function Cart() {
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState(null)
   const [confirmacion, setConfirmacion] = useState(null)
+  const [tipoEntrega, setTipoEntrega] = useState('delivery')
 
   if (confirmacion) {
     return (
@@ -339,6 +416,7 @@ export default function Cart() {
               numero={confirmacion.numero}
               mensaje={confirmacion.mensaje}
               total={confirmacion.total}
+              whatsappUrl={confirmacion.whatsapp_url}
               onClose={clearCart}
             />
           </div>
@@ -369,6 +447,7 @@ export default function Cart() {
           direccion: clienteData.direccion,
         },
         notas: clienteData.notas || undefined,
+        tipo_entrega: tipoEntrega,
       }
 
       const { data } = await api.post('/api/ecommerce/pedidos', payload)
@@ -378,6 +457,7 @@ export default function Cart() {
         numero: data.numero,
         mensaje: data.mensaje,
         total: data.total,
+        whatsapp_url: data.whatsapp_url || null,
       })
     } catch (err) {
       const msg = err.response?.data?.error ?? 'No se pudo procesar el pedido. Intenta nuevamente.'
@@ -484,7 +564,7 @@ export default function Cart() {
                 </motion.div>
               )}
 
-              <CustomerForm onSubmit={handleSubmit} loading={loading} />
+              <CustomerForm onSubmit={handleSubmit} loading={loading} tipoEntrega={tipoEntrega} onTipoEntrega={setTipoEntrega} />
             </div>
           </div>
         </div>
