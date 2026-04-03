@@ -1,5 +1,6 @@
 import SEOHead from '@/components/seo/SEOHead'
 import HeroBanner from '@/components/ui/HeroBanner'
+import PromoBanner from '@/components/ui/PromoBanner'
 import CategoryCard from '@/components/ui/CategoryCard'
 import ProductGrid from '@/components/ui/ProductGrid'
 import SectionTitle from '@/components/ui/SectionTitle'
@@ -83,8 +84,9 @@ export default function Home() {
       <SEOHead />
 
       <HeroBanner />
+      <PromoBanner />
 
-      <section className="section-padding" aria-labelledby="categories-title">
+      <section className="pt-8 pb-4 md:pt-10 md:pb-6 px-6 md:px-8" aria-labelledby="categories-title">
         <div className="container-base">
           <SectionTitle
             id="categories-title"
@@ -96,7 +98,7 @@ export default function Home() {
       </section>
 
       <section
-        className="section-padding"
+        className="pt-4 pb-8 md:pt-6 md:pb-12 px-6 md:px-8"
         aria-labelledby="featured-title"
         style={{ backgroundColor: 'var(--color-bg-elevated)' }}
       >

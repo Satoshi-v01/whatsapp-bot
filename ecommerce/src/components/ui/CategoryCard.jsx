@@ -1,39 +1,29 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
-// SVG icons por categoria — sin dependencias externas
+// SVG icons por categoria
 const CATEGORY_ICONS = {
   perros: (
     <svg width="32" height="32" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
-      {/* Cuerpo */}
       <ellipse cx="32" cy="40" rx="18" ry="14" />
-      {/* Cabeza */}
       <circle cx="32" cy="22" r="12" />
-      {/* Orejas */}
       <ellipse cx="22" cy="13" rx="6" ry="9" transform="rotate(-15 22 13)" />
       <ellipse cx="42" cy="13" rx="6" ry="9" transform="rotate(15 42 13)" />
-      {/* Nariz */}
       <ellipse cx="32" cy="26" rx="3" ry="2" fill="white" opacity="0.6" />
     </svg>
   ),
   gatos: (
     <svg width="32" height="32" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
-      {/* Cuerpo */}
       <ellipse cx="32" cy="42" rx="16" ry="13" />
-      {/* Cabeza */}
       <circle cx="32" cy="24" r="13" />
-      {/* Orejas puntiagudas */}
       <polygon points="20,14 14,2 26,10" />
       <polygon points="44,14 50,2 38,10" />
-      {/* Nariz */}
       <polygon points="32,27 30,30 34,30" fill="white" opacity="0.6" />
-      {/* Cola */}
       <path d="M48 42 Q58 30 55 20" stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round" />
     </svg>
   ),
   accesorios: (
     <svg width="32" height="32" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
-      {/* Hueso */}
       <rect x="18" y="28" width="28" height="8" rx="4" />
       <circle cx="14" cy="24" r="7" />
       <circle cx="14" cy="40" r="7" />
@@ -43,10 +33,8 @@ const CATEGORY_ICONS = {
   ),
   ofertas: (
     <svg width="32" height="32" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
-      {/* Etiqueta de precio */}
       <path d="M8 8 L40 8 L56 32 L40 56 L8 56 Z" />
       <circle cx="20" cy="20" r="4" fill="white" opacity="0.7" />
-      {/* Signo % */}
       <text x="22" y="44" fontSize="18" fontWeight="bold" fill="white" opacity="0.9">%</text>
     </svg>
   ),
@@ -56,12 +44,11 @@ function CategoryIcon({ slug, color }) {
   const icon = CATEGORY_ICONS[slug]
   return (
     <div
-      className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+      className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
       style={{ backgroundColor: `${color}18`, color }}
       aria-hidden="true"
     >
       {icon ?? (
-        // Fallback: pata genérica
         <svg width="32" height="32" viewBox="0 0 100 100" fill="currentColor">
           <ellipse cx="50" cy="65" rx="24" ry="20" />
           <circle cx="22" cy="38" r="11" />
@@ -75,8 +62,7 @@ function CategoryIcon({ slug, color }) {
 }
 
 /**
- * CategoryCard
- * Props: { slug, label, description, color, count? }
+ * CategoryCard — Props: { slug, label, description, color, count? }
  */
 export default function CategoryCard({ slug, label, description, color = '#ffa601', count }) {
   return (
@@ -99,7 +85,7 @@ export default function CategoryCard({ slug, label, description, color = '#ffa60
         }}
         onMouseEnter={e => {
           e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
-          e.currentTarget.style.borderColor = 'var(--color-primary)'
+          e.currentTarget.style.borderColor = 'var(--color-border-hover)'
         }}
         onMouseLeave={e => {
           e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
