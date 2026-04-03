@@ -763,8 +763,10 @@ function Configuracion() {
                                 <input value={configFactura.direccion_matriz || ''} onChange={e => setConfigFactura({ ...configFactura, direccion_matriz: e.target.value })} style={inputStyle} placeholder="Av. Principal 123, Asunción" />
                                 <label style={labelStyle}>Dirección sucursal (opcional)</label>
                                 <input value={configFactura.direccion_sucursal || ''} onChange={e => setConfigFactura({ ...configFactura, direccion_sucursal: e.target.value })} style={inputStyle} placeholder="Solo si aplica" />
-                                <label style={labelStyle}>Teléfonos / Email</label>
-                                <input value={configFactura.telefonos || ''} onChange={e => setConfigFactura({ ...configFactura, telefonos: e.target.value })} style={inputStyle} placeholder="0981 123 456 / info@empresa.com" />
+                                <label style={labelStyle}>Teléfono</label>
+                                <input value={configFactura.telefonos || ''} onChange={e => setConfigFactura({ ...configFactura, telefonos: e.target.value })} style={inputStyle} placeholder="0981 123 456" />
+                                <label style={labelStyle}>Correo electrónico</label>
+                                <input value={configFactura.correo || ''} onChange={e => setConfigFactura({ ...configFactura, correo: e.target.value })} style={inputStyle} placeholder="info@empresa.com" />
                             </div>
 
                             {/* Timbrado y numeración */}
@@ -801,6 +803,7 @@ function Configuracion() {
                                     <label style={labelStyle}>Ancho de papel</label>
                                     <select value={configFactura.ancho_papel || '80'} onChange={e => setConfigFactura({ ...configFactura, ancho_papel: e.target.value })} style={inputStyle}>
                                         <option value="58">58mm (pequeño)</option>
+                                        <option value="76">76mm (Epson TM-U220D)</option>
                                         <option value="80">80mm (estándar)</option>
                                     </select>
                                     <label style={labelStyle}>Cliente ocasional (sin datos)</label>
