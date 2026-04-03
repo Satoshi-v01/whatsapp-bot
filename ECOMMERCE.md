@@ -5,9 +5,142 @@
 ---
 
 ## Estado general
-- **Fase actual:** FASE 6 completada — ecommerce funcional end-to-end
-- **Ultima sesion:** 2026-04-02
-- **Proximo paso:** Deploy — configurar servicio Render Static Site o Vercel apuntando a ecommerce/dist/
+- **Fase actual:** FASE 7 en curso — integración Dashboard ↔ Ecommerce (branch: `ecommerce`)
+- **Ultima sesion:** 2026-04-03
+- **Proximo paso:** Ejecutar `src/db/migrations/ecommerce_fase7.sql` en Supabase — FASE 7 completada
+
+---
+
+## FASE 7 — Integración Dashboard ↔ Ecommerce
+
+> Nombre sugerido para la sección del dashboard: **"Tienda Web"**
+> Razón: genérico, claro, y deja espacio para crecer (no amarra el nombre a una tecnología).
+> Alternativas consideradas: "Ecommerce", "Mi Tienda", "Catálogo Online".
+
+### Arquitectura general del flujo
+
+```
+Cliente en ecommerce
+  → elige productos → llena formulario (delivery) o ingresa WhatsApp (retiro)
+  → POST /api/ecommerce/pedidos
+  → se genera Orden de Pedido (OP) en tabla ordenes_pedido (canal = 'ecommerce')
+  → OP visible en dashboard → Ordenes (misma página que ya existe)
+  → stock se descuenta del inventario (mismo sistema que bot de WhatsApp)
+```
+
+---
+
+### Módulos de la página "Tienda Web" en el dashboard
+
+#### 7.1 — Gestión de Productos Ecommerce
+
+- **Mismo flujo que el bot de WhatsApp** — usa los mismos endpoints de `/api/productos` que ya existen
+- Cada producto del ecommerce debe **vincularse con un producto del inventario** (tabla `productos` + `presentaciones`)
+- La vinculación se hace por `presentacion_id` — ya existe en el ecommerce backend
+- Al generar una OP desde el ecommerce, se usa ese `presentacion_id` para descontar stock
+- En el panel: listar productos del ecommerce, crear/editar/eliminar, asignar imagen, marcar como destacado/novedad
+- Al crear/editar: selector que busca productos del inventario y los vincula
+
+**Campos del producto ecommerce:**
+| Campo | Descripción |
+|---|---|
+| `nombre` | Nombre visible en la tienda |
+| `descripcion` | Texto de la página de producto |
+| `imagen_url` | URL de imagen (subida o externa) |
+| `slug` | URL amigable (auto-generado desde nombre) |
+| `presentacion_id` | Vinculo con inventario (stock, precio) |
+| `es_destacado` | Aparece en sección "Productos destacados" |
+| `es_novedad` | Badge "NUEVO" + sección novedades |
+| `disponible` | Activo/inactivo en la tienda |
+
+#### 7.2 — Gestión de Banners
+
+- Crear, editar, reordenar y eliminar banners del HeroBanner
+- Campos: `titulo`, `subtitulo`, `badge`, `cta_texto`, `cta_url`, `imagen_url`, `orden`, `activo`
+- Preview del banner directamente en el panel
+
+#### 7.3 — Pedidos Ecommerce
+
+- **No es una página nueva** — los pedidos del ecommerce ya caen en `ordenes_pedido` con `canal = 'ecommerce'`
+- La página existente **Ordenes** del dashboard ya los muestra (o debe filtrarse por canal)
+- En esa vista ya se puede gestionar: ver detalle, cambiar estado, asignar repartidor
+
+#### 7.4 — Configuración de la Tienda
+
+| Setting | Descripción |
+|---|---|
+| `nombre_tienda` | Nombre visible en navbar y SEO |
+| `whatsapp` | Número de WhatsApp para pedidos de retiro y CTA del footer |
+| `mensaje_retiro` | Mensaje pre-cargado en WhatsApp para retiro en local |
+| `delivery_activo` | Habilita/deshabilita opción delivery en checkout |
+| `retiro_activo` | Habilita/deshabilita opción retiro en local |
+| `zona_cobertura` | Texto libre: "Asunción y Gran Asunción" |
+| `horario` | Texto: "Lun-Sab 8:00 - 18:00" |
+
+---
+
+### Flujo de checkout (detallado)
+
+#### Opción A — Delivery
+1. Cliente agrega productos al carrito
+2. Selecciona "Envío a domicilio"
+3. Rellena formulario: nombre, teléfono, dirección, notas
+4. POST `/api/ecommerce/pedidos` con `tipo_entrega: 'delivery'`
+5. Se genera OP → canal `ecommerce`, tipo `delivery`
+6. Dashboard Ordenes muestra la OP → puede asignarse a repartidor
+
+#### Opción B — Retiro en local
+1. Cliente agrega productos al carrito
+2. Selecciona "Retirar en local"
+3. Se le pide solo nombre y teléfono (sin dirección)
+4. POST `/api/ecommerce/pedidos` con `tipo_entrega: 'retiro'`
+5. Se genera OP → canal `ecommerce`, tipo `retiro`
+6. Se abre WhatsApp con número configurado + mensaje pre-armado con detalle del pedido
+
+> **Nota:** La pasarela de pago se vinculará en una fase posterior. Por ahora el pago es contra entrega / coordinado por WhatsApp.
+
+---
+
+### Cambios de schema necesarios (migraciones pendientes)
+
+```sql
+-- Agregar tipo_entrega a ordenes_pedido si no existe
+ALTER TABLE ordenes_pedido ADD COLUMN IF NOT EXISTS tipo_entrega VARCHAR(20) DEFAULT 'delivery';
+
+-- Tabla configuración de la tienda
+CREATE TABLE IF NOT EXISTS tienda_config (
+  id SERIAL PRIMARY KEY,
+  clave VARCHAR(100) UNIQUE NOT NULL,
+  valor TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Settings iniciales
+INSERT INTO tienda_config (clave, valor) VALUES
+  ('whatsapp', '595981000000'),
+  ('nombre_tienda', 'Sosa Bulls'),
+  ('delivery_activo', 'true'),
+  ('retiro_activo', 'true'),
+  ('zona_cobertura', 'Asunción y Gran Asunción'),
+  ('horario', 'Lun-Sab 8:00 - 18:00'),
+  ('mensaje_retiro', 'Hola, quiero retirar mi pedido en el local.')
+ON CONFLICT (clave) DO NOTHING;
+```
+
+---
+
+### Tareas pendientes FASE 7
+
+- [x] 7.1 Página "Tienda Web" en dashboard — estructura y routing
+- [x] 7.1 Tab: Productos — listado, toggles disponible/novedad/destacado, editar imagen_url
+- [x] 7.1 Tab: Banners — CRUD con preview de imagen
+- [x] 7.2 Checkout ecommerce — elegir delivery vs retiro (Cart.jsx bug fix: tipoEntrega state + payload)
+- [x] 7.2 Backend: `tipo_entrega` en POST `/api/ecommerce/pedidos` (ya estaba)
+- [x] 7.2 Botón WhatsApp en confirmación de pedido retiro
+- [x] 7.3 Dashboard Ordenes — filtro por canal (Tienda Web / WhatsApp / Todos) + badge "Tienda Web" + fix tipo_entrega
+- [x] 7.4 Tab: Configuración — form de settings con guardado
+- [x] Migraciones SQL creadas en `src/db/migrations/ecommerce_fase7.sql` (pendiente ejecutar en Supabase)
+- [ ] Pasarela de pago — FASE FUTURA
 
 ---
 
