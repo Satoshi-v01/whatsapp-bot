@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { autenticar } = require('../middleware/auth')
 
 // ─── Helpers ─────────────────────────────────────────────────
 function toSlug(text) {
@@ -214,11 +215,24 @@ router.get('/productos/:slug', async (req, res) => {
   }
 })
 
+// ─── GET /api/ecommerce/config (público — datos básicos de la tienda) ──
+router.get('/config', async (req, res) => {
+  try {
+    const resultado = await db.query(`SELECT clave, valor FROM tienda_config`)
+    const config = {}
+    resultado.rows.forEach(r => { config[r.clave] = r.valor })
+    res.json(config)
+  } catch (error) {
+    if (error.code === '42P01') return res.json({})
+    manejarError(res, error)
+  }
+})
+
 // ─── POST /api/ecommerce/pedidos ──────────────────────────────
 router.post('/pedidos', async (req, res) => {
   const client = await db.pool.connect()
   try {
-    const { items, cliente, notas } = req.body
+    const { items, cliente, notas, tipo_entrega = 'delivery' } = req.body
 
     // Validaciones basicas
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -230,8 +244,8 @@ router.post('/pedidos', async (req, res) => {
     if (!cliente?.telefono?.trim()) {
       return res.status(400).json({ error: 'El telefono es requerido' })
     }
-    if (!cliente?.direccion?.trim()) {
-      return res.status(400).json({ error: 'La direccion es requerida' })
+    if (tipo_entrega === 'delivery' && !cliente?.direccion?.trim()) {
+      return res.status(400).json({ error: 'La direccion es requerida para delivery' })
     }
 
     // Sanitizar telefono
@@ -308,10 +322,10 @@ router.post('/pedidos', async (req, res) => {
     // 4. Crear orden
     const ordenResult = await client.query(
       `INSERT INTO ordenes_pedido
-         (cliente_id, canal, estado, total, notas, numero_pedido)
-       VALUES ($1, 'pagina_web', 'pendiente', $2, $3, $4)
+         (cliente_id, canal, estado, total, notas, numero_pedido, tipo_entrega)
+       VALUES ($1, 'pagina_web', 'pendiente', $2, $3, $4, $5)
        RETURNING id`,
-      [clienteId, total, notas?.trim() || null, numeroPedido]
+      [clienteId, total, notas?.trim() || null, numeroPedido, tipo_entrega]
     )
     const ordenId = ordenResult.rows[0].id
 
@@ -327,17 +341,230 @@ router.post('/pedidos', async (req, res) => {
 
     await client.query('COMMIT')
 
+    // Obtener WhatsApp de la config para retiro
+    let whatsappRetiro = null
+    let mensajeRetiro = null
+    if (tipo_entrega === 'retiro') {
+      try {
+        const cfg = await db.query(`SELECT clave, valor FROM tienda_config WHERE clave IN ('whatsapp','mensaje_retiro')`)
+        const cfgMap = {}
+        cfg.rows.forEach(r => { cfgMap[r.clave] = r.valor })
+        whatsappRetiro = cfgMap.whatsapp || null
+        const itemsTexto = itemsVerificados.map((it, idx) => {
+          const orig = items[idx]
+          return `• x${it.cantidad} — Gs. ${it.precio_total.toLocaleString('es-PY')}`
+        }).join('\n')
+        mensajeRetiro = encodeURIComponent(
+          `Hola! Quiero retirar mi pedido *${numeroPedido}*\n${itemsTexto}\n*Total: Gs. ${total.toLocaleString('es-PY')}*`
+        )
+      } catch (_) {}
+    }
+
+    const mensajeDelivery = `Tu pedido ${numeroPedido} fue recibido. Nos comunicaremos al ${telefonoLimpio} para coordinar la entrega.`
+    const mensajeRetiroTexto = `Tu pedido ${numeroPedido} fue registrado. Coordiná la retirada por WhatsApp.`
+
     res.status(201).json({
       pedido_id: ordenId,
       numero: numeroPedido,
       total,
-      mensaje: `Tu pedido ${numeroPedido} fue recibido. Nos comunicaremos al ${telefonoLimpio} para coordinar la entrega.`,
+      tipo_entrega,
+      mensaje: tipo_entrega === 'retiro' ? mensajeRetiroTexto : mensajeDelivery,
+      ...(tipo_entrega === 'retiro' && whatsappRetiro ? {
+        whatsapp_url: `https://wa.me/${whatsappRetiro.replace(/\D/g, '')}?text=${mensajeRetiro}`,
+      } : {}),
     })
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {})
     manejarError(res, error)
   } finally {
     client.release()
+  }
+})
+
+// ════════════════════════════════════════════════════════════════
+// RUTAS ADMIN — requieren autenticación dashboard
+// ════════════════════════════════════════════════════════════════
+
+// ─── GET /api/ecommerce/admin/config ──────────────────────────
+router.get('/admin/config', autenticar, async (req, res) => {
+  try {
+    const resultado = await db.query(`SELECT clave, valor, updated_at FROM tienda_config ORDER BY clave`)
+    const config = {}
+    resultado.rows.forEach(r => { config[r.clave] = r.valor })
+    res.json(config)
+  } catch (error) {
+    if (error.code === '42P01') return res.json({})
+    manejarError(res, error)
+  }
+})
+
+// ─── PUT /api/ecommerce/admin/config ──────────────────────────
+router.put('/admin/config', autenticar, async (req, res) => {
+  try {
+    const updates = req.body // { clave: valor, ... }
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ error: 'Body invalido' })
+    }
+    for (const [clave, valor] of Object.entries(updates)) {
+      await db.query(
+        `INSERT INTO tienda_config (clave, valor, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (clave) DO UPDATE SET valor = $2, updated_at = NOW()`,
+        [clave, String(valor)]
+      )
+    }
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/admin/banners ─────────────────────────
+router.get('/admin/banners', autenticar, async (req, res) => {
+  try {
+    const resultado = await db.query(
+      `SELECT * FROM ecommerce_banners ORDER BY orden ASC`
+    )
+    res.json(resultado.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+// ─── POST /api/ecommerce/admin/banners ────────────────────────
+router.post('/admin/banners', autenticar, async (req, res) => {
+  try {
+    const { titulo, subtitulo, badge, cta_texto, cta_url, imagen_url, orden = 0, activo = true } = req.body
+    if (!titulo?.trim()) return res.status(400).json({ error: 'El título es requerido' })
+    const resultado = await db.query(
+      `INSERT INTO ecommerce_banners (titulo, subtitulo, badge, cta_texto, cta_url, imagen_url, orden, activo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [titulo.trim(), subtitulo || null, badge || null, cta_texto || null, cta_url || null, imagen_url || null, orden, activo]
+    )
+    res.status(201).json(resultado.rows[0])
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── PATCH /api/ecommerce/admin/banners/:id ───────────────────
+router.patch('/admin/banners/:id', autenticar, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { titulo, subtitulo, badge, cta_texto, cta_url, imagen_url, orden, activo } = req.body
+    const resultado = await db.query(
+      `UPDATE ecommerce_banners SET
+         titulo     = COALESCE($1, titulo),
+         subtitulo  = COALESCE($2, subtitulo),
+         badge      = COALESCE($3, badge),
+         cta_texto  = COALESCE($4, cta_texto),
+         cta_url    = COALESCE($5, cta_url),
+         imagen_url = COALESCE($6, imagen_url),
+         orden      = COALESCE($7, orden),
+         activo     = COALESCE($8, activo)
+       WHERE id = $9 RETURNING *`,
+      [titulo, subtitulo, badge, cta_texto, cta_url, imagen_url, orden, activo, id]
+    )
+    if (!resultado.rows.length) return res.status(404).json({ error: 'Banner no encontrado' })
+    res.json(resultado.rows[0])
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── DELETE /api/ecommerce/admin/banners/:id ──────────────────
+router.delete('/admin/banners/:id', autenticar, async (req, res) => {
+  try {
+    await db.query(`DELETE FROM ecommerce_banners WHERE id = $1`, [req.params.id])
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/admin/productos ───────────────────────
+// Lista presentaciones con campos editables para el ecommerce
+router.get('/admin/productos', autenticar, async (req, res) => {
+  try {
+    const { buscar = '', categoria } = req.query
+    const conds = []
+    const vals = []
+    let i = 1
+    if (buscar) {
+      conds.push(`(p.nombre ILIKE $${i} OR pr.nombre ILIKE $${i})`)
+      vals.push(`%${buscar}%`); i++
+    }
+    if (categoria) {
+      conds.push(`c.id = $${i}`); vals.push(categoria); i++
+    }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
+    const resultado = await db.query(
+      `SELECT
+         pr.id AS presentacion_id,
+         pr.nombre AS presentacion_nombre,
+         pr.precio_venta,
+         pr.stock,
+         pr.disponible,
+         pr.codigo_barras,
+         p.id AS producto_id,
+         p.nombre AS producto_nombre,
+         p.descripcion,
+         p.imagen_url,
+         COALESCE(p.es_novedad, false) AS es_novedad,
+         COALESCE(p.es_destacado, false) AS es_destacado,
+         c.nombre AS categoria_nombre,
+         m.nombre AS marca_nombre
+       FROM presentaciones pr
+       JOIN productos p ON p.id = pr.producto_id
+       LEFT JOIN categorias c ON c.id = p.categoria_id
+       LEFT JOIN marcas m ON m.id = p.marca_id
+       ${where}
+       ORDER BY p.nombre ASC, pr.nombre ASC`,
+      vals
+    )
+    res.json(resultado.rows)
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── PATCH /api/ecommerce/admin/productos/:presentacionId ─────
+// Edita campos ecommerce del producto (imagen, novedad, destacado, disponible)
+router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) => {
+  try {
+    const { presentacionId } = req.params
+    const { imagen_url, es_novedad, es_destacado, disponible } = req.body
+
+    // Actualizar disponible en la presentacion
+    if (disponible !== undefined) {
+      await db.query(
+        `UPDATE presentaciones SET disponible = $1 WHERE id = $2`,
+        [disponible, presentacionId]
+      )
+    }
+
+    // Obtener producto_id de esta presentacion
+    const pr = await db.query(`SELECT producto_id FROM presentaciones WHERE id = $1`, [presentacionId])
+    if (!pr.rows.length) return res.status(404).json({ error: 'Presentación no encontrada' })
+    const productoId = pr.rows[0].producto_id
+
+    // Actualizar campos en producto (COALESCE para no pisar con null si no vienen)
+    const sets = []
+    const vals = []
+    let i = 1
+    if (imagen_url !== undefined) { sets.push(`imagen_url = $${i++}`); vals.push(imagen_url) }
+    if (es_novedad !== undefined) { sets.push(`es_novedad = $${i++}`); vals.push(es_novedad) }
+    if (es_destacado !== undefined) { sets.push(`es_destacado = $${i++}`); vals.push(es_destacado) }
+
+    if (sets.length) {
+      vals.push(productoId)
+      await db.query(`UPDATE productos SET ${sets.join(', ')} WHERE id = $${i}`, vals)
+    }
+
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
   }
 })
 

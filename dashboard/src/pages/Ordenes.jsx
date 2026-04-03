@@ -9,6 +9,7 @@ function Ordenes() {
     const [ordenes, setOrdenes] = useState([])
     const [cargando, setCargando] = useState(true)
     const [filtroEstado, setFiltroEstado] = useState('pendiente')
+    const [filtroCanal, setFiltroCanal] = useState('')
     const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const navigate = useNavigate()
@@ -42,13 +43,14 @@ function Ordenes() {
         { valor: '', label: 'Todas' },
     ]
 
-    useEffect(() => { cargarOrdenes() }, [filtroEstado])
+    useEffect(() => { cargarOrdenes() }, [filtroEstado, filtroCanal])
 
     async function cargarOrdenes() {
         try {
             setCargando(true)
             const params = {}
             if (filtroEstado) params.estado = filtroEstado
+            if (filtroCanal) params.canal = filtroCanal
             const datos = await getOrdenes(params)
             setOrdenes(datos)
         } catch (err) {
@@ -112,7 +114,7 @@ function Ordenes() {
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {filtros.map(f => {
                         const cfg = estadoConfig[f.valor]
                         const activo = filtroEstado === f.valor
@@ -121,6 +123,23 @@ function Ordenes() {
                             <button key={f.valor} onClick={() => setFiltroEstado(f.valor)}
                                 style={{ padding: '5px 12px', borderRadius: '20px', border: '1px solid', fontSize: '11px', fontWeight: '600', cursor: 'pointer', background: activo ? (cfg?.color || '#1a1a2e') : s.surfaceLow, color: activo ? 'white' : s.textMuted, borderColor: activo ? (cfg?.color || '#1a1a2e') : s.border }}>
                                 {f.label} ({count})
+                            </button>
+                        )
+                    })}
+                </div>
+
+                {/* Filtro canal */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                    {[
+                        { valor: '',           label: 'Todos los canales' },
+                        { valor: 'whatsapp',   label: 'WhatsApp' },
+                        { valor: 'pagina_web', label: 'Tienda Web' },
+                    ].map(f => {
+                        const activo = filtroCanal === f.valor
+                        return (
+                            <button key={f.valor} onClick={() => setFiltroCanal(f.valor)}
+                                style={{ padding: '4px 10px', borderRadius: '20px', border: '1px solid', fontSize: '11px', fontWeight: '600', cursor: 'pointer', background: activo ? (f.valor === 'pagina_web' ? '#7c3aed' : f.valor === 'whatsapp' ? '#25D366' : '#1a1a2e') : s.surfaceLow, color: activo ? 'white' : s.textMuted, borderColor: activo ? (f.valor === 'pagina_web' ? '#7c3aed' : f.valor === 'whatsapp' ? '#25D366' : '#1a1a2e') : s.border }}>
+                                {f.label}
                             </button>
                         )
                     })}
@@ -152,14 +171,26 @@ function Ordenes() {
                                 onMouseEnter={e => { if (!activo) e.currentTarget.style.background = s.surfaceLow }}
                                 onMouseLeave={e => { if (!activo) e.currentTarget.style.background = s.surface }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                         <span style={{ fontSize: '13px', fontWeight: '800', color: s.text }}>{o.numero}</span>
-                                        <span style={{ padding: '1px 7px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: o.modalidad === 'delivery' ? '#dbeafe' : '#dcfce7', color: o.modalidad === 'delivery' ? '#1d4ed8' : '#166534', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                            {o.modalidad === 'delivery'
-                                                ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Delivery</>
-                                                : <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retiro</>
-                                            }
-                                        </span>
+                                        {o.canal === 'pagina_web' && (
+                                            <span style={{ padding: '1px 7px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: '#ede9fe', color: '#6d28d9', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                                                Tienda Web
+                                            </span>
+                                        )}
+                                        {(() => {
+                                            const entrega = o.tipo_entrega || o.modalidad
+                                            if (!entrega) return null
+                                            return (
+                                                <span style={{ padding: '1px 7px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: entrega === 'delivery' ? '#dbeafe' : '#dcfce7', color: entrega === 'delivery' ? '#1d4ed8' : '#166534', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                    {entrega === 'delivery'
+                                                        ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Delivery</>
+                                                        : <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retiro</>
+                                                    }
+                                                </span>
+                                            )
+                                        })()}
                                     </div>
                                     <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg }}>
                                         {cfg.label}
@@ -200,14 +231,26 @@ function Ordenes() {
                             <div style={{ background: s.surface, borderRadius: '12px', padding: '20px', border: `1px solid ${s.border}`, marginBottom: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                                     <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
                                             <h2 style={{ fontSize: '20px', fontWeight: '800', color: s.text }}>{ordenSeleccionada.numero}</h2>
-                                            <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: ordenSeleccionada.modalidad === 'delivery' ? '#dbeafe' : '#dcfce7', color: ordenSeleccionada.modalidad === 'delivery' ? '#1d4ed8' : '#166534', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                                {ordenSeleccionada.modalidad === 'delivery'
-                                                    ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Delivery</>
-                                                    : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retiro en tienda</>
-                                                }
-                                            </span>
+                                            {ordenSeleccionada.canal === 'pagina_web' && (
+                                                <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: '#ede9fe', color: '#6d28d9', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                                                    Tienda Web
+                                                </span>
+                                            )}
+                                            {(() => {
+                                                const entrega = ordenSeleccionada.tipo_entrega || ordenSeleccionada.modalidad
+                                                if (!entrega) return null
+                                                return (
+                                                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: entrega === 'delivery' ? '#dbeafe' : '#dcfce7', color: entrega === 'delivery' ? '#1d4ed8' : '#166534', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                                        {entrega === 'delivery'
+                                                            ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Delivery</>
+                                                            : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retiro en tienda</>
+                                                        }
+                                                    </span>
+                                                )
+                                            })()}
                                         </div>
                                         <p style={{ fontSize: '12px', color: s.textMuted }}>
                                             Creada: {formatearFecha(ordenSeleccionada.created_at)}
@@ -278,7 +321,7 @@ function Ordenes() {
                             </div>
 
                             {/* Datos de entrega */}
-                            {ordenSeleccionada.modalidad === 'delivery' && (
+                            {(ordenSeleccionada.tipo_entrega || ordenSeleccionada.modalidad) === 'delivery' && (
                                 <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, padding: '18px', marginBottom: '16px' }}>
                                     <p style={{ fontSize: '11px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Datos de entrega</p>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
