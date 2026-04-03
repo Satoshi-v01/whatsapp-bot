@@ -268,6 +268,59 @@ function CustomerForm({ onSubmit, loading }) {
   )
 }
 
+// ─── Indicador de pasos ─────────────────────────────────────
+const STEPS = ['Carrito', 'Datos', 'Confirmado']
+
+function CartSteps({ active }) {
+  return (
+    <nav aria-label="Pasos del proceso de compra" className="flex items-center justify-center gap-0 mb-8">
+      {STEPS.map((label, i) => {
+        const done   = i < active
+        const current = i === active
+        return (
+          <div key={label} className="flex items-center">
+            {/* Paso */}
+            <div className="flex flex-col items-center gap-1.5">
+              <motion.div
+                animate={{
+                  backgroundColor: current ? 'var(--color-primary)' : done ? 'var(--color-success)' : 'transparent',
+                  borderColor: current ? 'var(--color-primary)' : done ? 'var(--color-success)' : 'var(--color-border)',
+                  scale: current ? 1.1 : 1,
+                }}
+                transition={{ duration: 0.3 }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2"
+                style={{ color: current || done ? 'white' : 'var(--color-text-muted)' }}
+                aria-current={current ? 'step' : undefined}
+              >
+                {done ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : i + 1}
+              </motion.div>
+              <span
+                className="text-xs font-semibold whitespace-nowrap"
+                style={{ color: current ? 'var(--color-primary)' : done ? 'var(--color-success)' : 'var(--color-text-faint)' }}
+              >
+                {label}
+              </span>
+            </div>
+
+            {/* Línea conectora */}
+            {i < STEPS.length - 1 && (
+              <div
+                className="h-[2px] w-12 md:w-20 mx-1 mb-5 rounded-full transition-colors duration-400"
+                style={{ backgroundColor: done ? 'var(--color-success)' : 'var(--color-border)' }}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+        )
+      })}
+    </nav>
+  )
+}
+
 // ─── Pagina principal del carrito ────────────────────────────
 export default function Cart() {
   const { items, total, updateQty, removeItem, clearCart } = useCart()
@@ -279,13 +332,16 @@ export default function Cart() {
     return (
       <>
         <SEOHead title="Pedido confirmado" noindex />
-        <main className="container-base px-4 md:px-6">
-          <OrderConfirmation
-            numero={confirmacion.numero}
-            mensaje={confirmacion.mensaje}
-            total={confirmacion.total}
-            onClose={clearCart}
-          />
+        <main className="section-padding !pt-8">
+          <div className="container-base max-w-lg mx-auto">
+            <CartSteps active={2} />
+            <OrderConfirmation
+              numero={confirmacion.numero}
+              mensaje={confirmacion.mensaje}
+              total={confirmacion.total}
+              onClose={clearCart}
+            />
+          </div>
         </main>
       </>
     )
@@ -337,6 +393,7 @@ export default function Cart() {
 
       <main className="section-padding !pt-8">
         <div className="container-base">
+          <CartSteps active={1} />
           <h1 className="font-display text-3xl md:text-4xl mb-8" style={{ color: 'var(--color-secondary)' }}>
             Tu carrito
           </h1>

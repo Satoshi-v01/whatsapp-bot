@@ -18,33 +18,47 @@ const PAGE_SIZE = 12
 
 function FilterBar({ soloDisponibles, onToggleDisponibles, sort, onSort }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
-      <label className="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-        <input
-          type="checkbox"
-          checked={soloDisponibles}
-          onChange={e => onToggleDisponibles(e.target.checked)}
-          className="w-4 h-4 accent-primary rounded"
-          aria-label="Mostrar solo productos disponibles"
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-8 pb-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+
+      {/* Toggle "Solo disponibles" */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={soloDisponibles}
+        onClick={() => onToggleDisponibles(!soloDisponibles)}
+        className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer border"
+        style={{
+          backgroundColor: soloDisponibles ? 'var(--color-primary)' : 'transparent',
+          color: soloDisponibles ? 'white' : 'var(--color-text-muted)',
+          borderColor: soloDisponibles ? 'var(--color-primary)' : 'var(--color-border)',
+        }}
+      >
+        <span
+          className="w-2 h-2 rounded-full transition-colors duration-200"
+          style={{ backgroundColor: soloDisponibles ? 'white' : 'var(--color-text-faint)' }}
+          aria-hidden="true"
         />
         Solo disponibles
-      </label>
+      </button>
 
-      <div className="flex items-center gap-2">
-        <label htmlFor="sort-select" className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          Ordenar por:
-        </label>
-        <select
-          id="sort-select"
-          value={sort}
-          onChange={e => onSort(e.target.value)}
-          className="input-base py-2 text-sm w-auto"
-          style={{ minWidth: '160px' }}
-        >
-          {SORT_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+      {/* Pill buttons de ordenamiento */}
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Ordenar productos">
+        {SORT_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onSort(opt.value)}
+            aria-pressed={sort === opt.value}
+            className="px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer border"
+            style={{
+              backgroundColor: sort === opt.value ? 'var(--color-secondary)' : 'transparent',
+              color: sort === opt.value ? 'white' : 'var(--color-text-muted)',
+              borderColor: sort === opt.value ? 'var(--color-secondary)' : 'var(--color-border)',
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
     </div>
   )

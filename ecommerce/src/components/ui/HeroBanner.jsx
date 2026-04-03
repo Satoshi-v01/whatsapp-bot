@@ -42,13 +42,13 @@ function SlideContent({ slide, index }) {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 container-base px-6 md:px-8 py-8 max-w-xl">
+      <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-5" style={{ maxWidth: '480px' }}>
         {slide.badge && (
           <motion.span
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.35 }}
-            className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-4"
+            className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2.5"
             style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
           >
             {slide.badge}
@@ -59,7 +59,7 @@ function SlideContent({ slide, index }) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25, duration: 0.4 }}
-          className="font-display text-3xl md:text-4xl lg:text-5xl text-white mb-3 leading-tight"
+          className="font-display text-xl md:text-2xl lg:text-3xl text-white mb-2 leading-tight"
         >
           {slide.titulo}
         </motion.h1>
@@ -69,7 +69,7 @@ function SlideContent({ slide, index }) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.4 }}
-            className="text-white/80 text-base md:text-lg mb-6 leading-relaxed"
+            className="text-white/80 text-sm md:text-base mb-4 leading-relaxed"
           >
             {slide.subtitulo}
           </motion.p>
@@ -83,7 +83,7 @@ function SlideContent({ slide, index }) {
           >
             <Link
               to={slide.cta_url ?? '/'}
-              className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2"
+              className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2"
             >
               {slide.cta_texto}
               <span aria-hidden="true">&#8594;</span>
@@ -169,7 +169,7 @@ export default function HeroBanner() {
       <div
         className="w-full animate-pulse"
         style={{
-          height: 'clamp(260px, 40vw, 520px)',
+          height: 'clamp(180px, 26vw, 320px)',
           backgroundColor: 'var(--color-border)',
         }}
         aria-busy="true"
@@ -184,7 +184,7 @@ export default function HeroBanner() {
     <section
       aria-label="Banners promocionales"
       className="relative w-full overflow-hidden"
-      style={{ height: 'clamp(280px, 42vw, 520px)' }}
+      style={{ height: 'clamp(200px, 28vw, 340px)' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

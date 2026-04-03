@@ -112,11 +112,34 @@
 ---
 
 ## Componentes de 21st.dev instalados
-<!-- Próxima sesión: instalar carousel/slider para HeroBanner y card para productos si aplica -->
 
-| Componente | URL 21st.dev | Usado en | Customizaciones |
-|-----------|--------------|----------|-----------------|
-| -         | -            | -        | -               |
+> Skill usada: **21st.dev** (sesión 2026-04-02) + **frontend-design** (audit sesión 2026-04-02)
+
+| Componente | Patrón 21st.dev | Archivo | Estado |
+|---|---|---|---|
+| SpotlightCard | Cursor-tracking radial glow | `components/ui/SpotlightCard.jsx` | ✅ Hecho |
+| ShimmerButton | Sweep shine animation | `components/ui/ShimmerButton.jsx` | ✅ Hecho |
+| Border Beam | Spinning conic-gradient border | `CategoryCard.jsx` | ❌ Revertido (usuario no lo quiso) |
+| Spotlight en ProductCard | CSS custom props `--sx/--sy` | `ProductCard.jsx` | ✅ Hecho |
+| Spotlight en WhyUs | SpotlightCard wrapper | `WhyUs.jsx` | ✅ Hecho |
+| Animated gradient line | whileInView width expand | `SectionTitle.jsx` | ✅ Hecho |
+
+---
+
+## Plan de mejoras — Audit frontend-design (2026-04-02)
+
+| # | Mejora | Skill | Estado |
+|---|--------|-------|--------|
+| 1 | Marquee ticker debajo del banner (`PromoBanner.jsx`) | frontend-design | ✅ Hecho |
+| 2 | FilterBar: pill buttons en vez de `<select>` nativo | frontend-design | ✅ Hecho |
+| 3 | Primera ProductCard como card hero 2 cols (`HeroProductCard.jsx`) | frontend-design | ✅ Hecho |
+| 4 | Página 404 con patitas animadas + "se la comió el perro" | frontend-design | ✅ Hecho |
+| 5 | Hover en imagen del ProductCard — overlay con lupa | frontend-design | ✅ Hecho |
+| 6 | Página de Producto — imagen con sombra desplazada, gradiente, puntos deco | frontend-design | ✅ Hecho |
+| 7 | Textura noise/grain sutil en el fondo (`body::before`) | frontend-design | ✅ Hecho |
+| 8 | Cart — `CartSteps` indicador de 3 pasos animado con Framer Motion | frontend-design | ✅ Hecho |
+| 9 | FloatingPaws — 22 patitas, opacidad 0.18, tamaños 16–60px | frontend-design | ✅ Hecho |
+| 10 | Footer — CTA WhatsApp botón verde + mensaje pre-cargado | frontend-design | ✅ Hecho |
 
 ---
 

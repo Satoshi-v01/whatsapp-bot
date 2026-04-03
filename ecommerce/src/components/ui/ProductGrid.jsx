@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import ProductCard from './ProductCard'
+import HeroProductCard from './HeroProductCard'
 import { useCart } from '@/hooks/useCart'
 
 function SkeletonCard() {
@@ -12,6 +13,14 @@ function SkeletonCard() {
         <div className="h-6 bg-gray-200 rounded w-1/2 mt-auto" />
         <div className="h-10 bg-gray-200 rounded-xl" />
       </div>
+    </div>
+  )
+}
+
+function SkeletonHero() {
+  return (
+    <div className="col-span-2 rounded-2xl overflow-hidden border animate-pulse" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}>
+      <div className="w-full bg-gray-200" style={{ aspectRatio: '2/1' }} />
     </div>
   )
 }
@@ -38,11 +47,21 @@ function ErrorState({ message }) {
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.07 } },
 }
 
-export default function ProductGrid({ products = [], loading, error, skeletonCount = 8 }) {
+/**
+ * ProductGrid — muestra el primer producto como card hero (2 columnas)
+ * y el resto en grid normal 2/3/4 columnas.
+ *
+ * Props:
+ *   heroFirst — si es true (default), el primer producto ocupa 2 columnas
+ */
+export default function ProductGrid({ products = [], loading, error, skeletonCount = 8, heroFirst = true }) {
   const { addItem } = useCart()
+
+  const [hero, ...rest] = products
+  const showHero = heroFirst && !loading && !error && hero
 
   return (
     <motion.div
@@ -53,15 +72,29 @@ export default function ProductGrid({ products = [], loading, error, skeletonCou
       role="list"
       aria-label="Listado de productos"
     >
-      {loading && Array.from({ length: skeletonCount }).map((_, i) => (
-        <div key={i} role="listitem"><SkeletonCard /></div>
-      ))}
+      {loading && (
+        <>
+          <SkeletonHero />
+          {Array.from({ length: skeletonCount - 1 }).map((_, i) => (
+            <div key={i} role="listitem"><SkeletonCard /></div>
+          ))}
+        </>
+      )}
 
       {!loading && error && <ErrorState message={error} />}
 
       {!loading && !error && products.length === 0 && <EmptyState />}
 
-      {!loading && !error && products.map(product => (
+      {showHero && (
+        <div className="col-span-2" role="listitem">
+          <HeroProductCard
+            product={hero}
+            onAddToCart={() => addItem(hero)}
+          />
+        </div>
+      )}
+
+      {!loading && !error && (showHero ? rest : products).map(product => (
         <div key={product.id} role="listitem">
           <ProductCard
             product={product}
