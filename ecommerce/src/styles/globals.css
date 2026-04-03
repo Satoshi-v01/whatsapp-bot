@@ -258,3 +258,31 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 0 0 3px rgba(255,166,1,0.15);
   }
 }
+
+/* ─── 21st.dev — Border Beam ────────────────────────────── */
+@keyframes border-beam-spin {
+  to { transform: rotate(1turn); }
+}
+
+/* ─── 21st.dev — Shimmer sweep ──────────────────────────── */
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(250%)  skewX(-12deg); opacity: 0; }
+}
+
+/* ─── 21st.dev — Spotlight (CSS custom props for cursor pos) */
+/* Se usan via style inline en SpotlightCard */
+
+/* ─── Textura noise sutil sobre el fondo ────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}

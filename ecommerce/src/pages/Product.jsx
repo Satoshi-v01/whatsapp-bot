@@ -192,14 +192,63 @@ export default function Product() {
                 initial={{ opacity: 0, x: -24 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.45 }}
-                className="rounded-2xl overflow-hidden border"
-                style={{
-                  aspectRatio: '1/1',
-                  borderColor: 'var(--color-border)',
-                  boxShadow: 'var(--shadow-md)',
-                }}
+                className="relative"
               >
-                <ProductImage src={imagen_url} alt={nombre} />
+                {/* Sombra decorativa desplazada */}
+                <div
+                  aria-hidden="true"
+                  className="absolute rounded-2xl"
+                  style={{
+                    inset: 0,
+                    transform: 'translate(10px, 10px)',
+                    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+                    opacity: 0.18,
+                    borderRadius: 'var(--radius-xl)',
+                    zIndex: 0,
+                  }}
+                />
+
+                {/* Marco con gradiente sutil */}
+                <div
+                  className="relative rounded-2xl overflow-hidden"
+                  style={{
+                    aspectRatio: '1/1',
+                    border: '1.5px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-lg)',
+                    background: 'linear-gradient(145deg, var(--color-primary-light) 0%, #fff 60%, var(--color-bg-elevated) 100%)',
+                    zIndex: 1,
+                  }}
+                >
+                  <ProductImage src={imagen_url} alt={nombre} />
+
+                  {/* Overlay hover zoom hint */}
+                  {imagen_url && (
+                    <div
+                      className="absolute inset-0 flex items-end justify-end p-3 opacity-0 hover:opacity-100 transition-opacity duration-250"
+                      style={{ background: 'linear-gradient(to top, rgba(26,18,8,0.22) 0%, transparent 50%)' }}
+                    >
+                      <span
+                        className="text-xs font-semibold text-white px-2.5 py-1 rounded-full"
+                        style={{ backgroundColor: 'rgba(26,18,8,0.55)', backdropFilter: 'blur(4px)' }}
+                      >
+                        Ver detalle
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Punto decorativo — esquina superior izquierda */}
+                <div
+                  aria-hidden="true"
+                  className="absolute -top-2 -left-2 w-5 h-5 rounded-full z-10"
+                  style={{ backgroundColor: 'var(--color-primary)', boxShadow: '0 0 0 3px var(--color-primary-light)' }}
+                />
+                {/* Punto decorativo — esquina inferior derecha */}
+                <div
+                  aria-hidden="true"
+                  className="absolute -bottom-2 -right-2 w-3 h-3 rounded-full z-10"
+                  style={{ backgroundColor: 'var(--color-primary-dark)', opacity: 0.5 }}
+                />
               </motion.div>
 
               {/* Detalle */}
