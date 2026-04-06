@@ -14,12 +14,14 @@ export function useCategories() {
       try {
         const { data } = await api.get('/api/ecommerce/categorias')
         if (!cancelled) {
-          // Enriquecer datos del backend con íconos/colores locales
-          const enriched = data.map(cat => {
-            const local = CATEGORIES.find(c => c.slug === cat.slug)
-            return { ...local, ...cat }
+          // Las categorias de la DB pueden ser subcategorias — siempre
+          // usamos las constantes del frontend como fuente de verdad,
+          // solo tomamos el count si el slug coincide
+          const enriched = CATEGORIES.map(cat => {
+            const dbCat = data.find(c => c.slug === cat.slug)
+            return dbCat ? { ...cat, count: dbCat.count } : cat
           })
-          setCategories(enriched.length ? enriched : CATEGORIES)
+          setCategories(enriched)
         }
       } catch {
         if (!cancelled) {

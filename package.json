@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/Satoshi-v01/whatsapp-bot#readme",
   "dependencies": {
+    "@supabase/supabase-js": "^2.101.1",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
@@ -30,6 +31,7 @@
     "express-rate-limit": "^8.3.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "pg": "^8.20.0",
     "react-router-dom": "^7.13.1",
     "winston": "^3.19.0",
