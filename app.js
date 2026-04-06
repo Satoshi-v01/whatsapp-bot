@@ -26,6 +26,7 @@ const lotesRoutes = require('./src/routes/lotes')
 const auditoriaRoutes = require('./src/routes/auditoria')
 const transformacionesRoutes = require('./src/routes/transformaciones')
 const ecommerceRoutes = require('./src/routes/ecommerce')
+const uploadsRoutes = require('./src/routes/uploads')
 
 const app = express()
 
@@ -127,6 +128,7 @@ app.use('/api/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/api/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 app.use('/api/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
 app.use('/api/ecommerce', limiterGeneral, ecommerceRoutes)
+app.use('/api/uploads', limiterGeneral, uploadsRoutes)
 
 // Rutas
 app.use('/webhook', webhookRoutes)
@@ -149,6 +151,12 @@ app.use('/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 app.use('/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
 
 const path = require('path')
+
+// Servir imágenes subidas — CORP cross-origin para que el dashboard pueda cargarlas
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    next()
+}, express.static(path.join(__dirname, 'public/uploads')))
 
 // Servir dashboard estático
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist')))

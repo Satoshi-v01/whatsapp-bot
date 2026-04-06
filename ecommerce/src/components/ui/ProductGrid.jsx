@@ -86,7 +86,7 @@ export default function ProductGrid({ products = [], loading, error, skeletonCou
       {!loading && !error && products.length === 0 && <EmptyState />}
 
       {showHero && (
-        <div className="col-span-2" role="listitem">
+        <div className="col-span-2 h-full" role="listitem">
           <HeroProductCard
             product={hero}
             onAddToCart={() => addItem(hero)}
@@ -95,7 +95,7 @@ export default function ProductGrid({ products = [], loading, error, skeletonCou
       )}
 
       {!loading && !error && (showHero ? rest : products).map(product => (
-        <div key={product.id} role="listitem">
+        <div key={product.id} role="listitem" className="h-full">
           <ProductCard
             product={product}
             onAddToCart={() => addItem(product)}

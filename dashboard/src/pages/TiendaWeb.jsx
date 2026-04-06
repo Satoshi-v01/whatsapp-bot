@@ -1,8 +1,77 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../services/api'
 import { useApp } from '../App'
 import { formatMiles } from '../utils/formato'
 import ModalConfirmar from '../components/ModalConfirmar'
+
+// ─── Upload de imagen ─────────────────────────────────────────
+function InputImagen({ value, onChange, s, inputStyle }) {
+    const inputRef = useRef(null)
+    const [subiendo, setSubiendo] = useState(false)
+    const [errorImg, setErrorImg] = useState('')
+
+    async function handleArchivo(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        setErrorImg('')
+        setSubiendo(true)
+        try {
+            const fd = new FormData()
+            fd.append('imagen', file)
+            const { data } = await api.post('/uploads/imagen', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            })
+            onChange(data.url)
+        } catch (err) {
+            setErrorImg(err.response?.data?.error || 'Error al subir la imagen.')
+        } finally {
+            setSubiendo(false)
+        }
+    }
+
+    return (
+        <div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                    type="text"
+                    placeholder="URL de imagen o subí un archivo..."
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                />
+                <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    disabled={subiendo}
+                    style={{
+                        padding: '9px 14px', borderRadius: 8, border: `1px solid ${s.border}`,
+                        background: s.surface, color: s.text, cursor: subiendo ? 'not-allowed' : 'pointer',
+                        fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+                        opacity: subiendo ? 0.7 : 1,
+                    }}
+                >
+                    {subiendo ? 'Subiendo...' : 'Subir archivo'}
+                </button>
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    style={{ display: 'none' }}
+                    onChange={handleArchivo}
+                />
+            </div>
+            {errorImg && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{errorImg}</p>}
+            {value && (
+                <img
+                    src={value}
+                    alt=""
+                    style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, marginTop: 8, display: 'block' }}
+                    onError={e => { e.target.style.display = 'none' }}
+                />
+            )}
+        </div>
+    )
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 function Modal({ children, s, onClose, title, width = 520 }) {
@@ -47,10 +116,39 @@ function Toggle({ checked, onChange, disabled }) {
     )
 }
 
+// ─── Selector de subcategoria dinamico ───────────────────────
+const SUBCATS_CACHE = {}
+
+function SubcatSelect({ categoriaSlug, value, onChange, inputStyle }) {
+    const [opciones, setOpciones] = useState([])
+
+    useEffect(() => {
+        if (!categoriaSlug) { setOpciones([]); return }
+        if (SUBCATS_CACHE[categoriaSlug]) { setOpciones(SUBCATS_CACHE[categoriaSlug]); return }
+        api.get(`/ecommerce/subcategorias`, { params: { categoria: categoriaSlug } })
+            .then(({ data }) => { SUBCATS_CACHE[categoriaSlug] = data; setOpciones(data) })
+            .catch(() => setOpciones([]))
+    }, [categoriaSlug])
+
+    return (
+        <select
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            disabled={!categoriaSlug || opciones.length === 0}
+            style={{ ...inputStyle, marginBottom: 0, opacity: (!categoriaSlug || opciones.length === 0) ? 0.5 : 1 }}
+        >
+            <option value="">-- Todas --</option>
+            {opciones.map(s => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+        </select>
+    )
+}
+
 // ════════════════════════════════════════════════════════════════
 // TAB — PRODUCTOS
 // ════════════════════════════════════════════════════════════════
-function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
+function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, sharedProps }) {
     const [productos, setProductos] = useState([])
     const [cargando, setCargando] = useState(true)
     const [buscar, setBuscar] = useState('')
@@ -86,7 +184,14 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario })
 
     function abrirEditar(prod) {
         setEditando(prod)
-        setEditForm({ imagen_url: prod.imagen_url || '', es_novedad: prod.es_novedad, es_destacado: prod.es_destacado, disponible: prod.disponible })
+        setEditForm({
+            imagen_url: prod.imagen_url || '',
+            es_novedad: prod.es_novedad,
+            es_destacado: prod.es_destacado,
+            disponible: prod.disponible,
+            ecommerce_categoria: prod.ecommerce_categoria || '',
+            ecommerce_subcategoria_id: prod.ecommerce_subcategoria_id || '',
+        })
     }
 
     async function guardarEditar() {
@@ -193,17 +298,13 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario })
                 <Modal s={s} onClose={() => setEditando(null)} title={`${editando.producto_nombre} — ${editando.presentacion_nombre}`}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
-                            <label style={labelStyle}>URL de imagen</label>
-                            <input
-                                type="url"
-                                placeholder="https://..."
+                            <label style={labelStyle}>Imagen</label>
+                            <InputImagen
                                 value={editForm.imagen_url}
-                                onChange={e => setEditForm(f => ({ ...f, imagen_url: e.target.value }))}
-                                style={inputStyle}
+                                onChange={url => setEditForm(f => ({ ...f, imagen_url: url }))}
+                                s={s}
+                                inputStyle={inputStyle}
                             />
-                            {editForm.imagen_url && (
-                                <img src={editForm.imagen_url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, marginTop: 4 }} onError={e => { e.target.style.display = 'none' }} />
-                            )}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
@@ -217,6 +318,34 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario })
                                     <Toggle checked={editForm[key]} onChange={v => setEditForm(f => ({ ...f, [key]: v }))} />
                                 </div>
                             ))}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div>
+                                <label style={labelStyle}>Categoria web</label>
+                                <select
+                                    value={editForm.ecommerce_categoria}
+                                    onChange={e => setEditForm(f => ({ ...f, ecommerce_categoria: e.target.value, ecommerce_subcategoria_id: '' }))}
+                                    style={{ ...inputStyle, marginBottom: 0 }}
+                                >
+                                    <option value="">-- Sin categoria --</option>
+                                    <option value="perros">Perros</option>
+                                    <option value="gatos">Gatos</option>
+                                    <option value="medicamentos">Medicamentos</option>
+                                    <option value="accesorios">Accesorios</option>
+                                    <option value="cuidado">Cuidado</option>
+                                    <option value="ofertas">Ofertas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Subcategoria web</label>
+                                <SubcatSelect
+                                    categoriaSlug={editForm.ecommerce_categoria}
+                                    value={editForm.ecommerce_subcategoria_id}
+                                    onChange={v => setEditForm(f => ({ ...f, ecommerce_subcategoria_id: v }))}
+                                    inputStyle={inputStyle}
+                                />
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
@@ -381,7 +510,6 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                             { key: 'badge', label: 'Badge (ej: NUEVO, -20%)', placeholder: 'NUEVO' },
                             { key: 'cta_texto', label: 'Texto del botón CTA', placeholder: 'Ver productos' },
                             { key: 'cta_url', label: 'URL del botón CTA', placeholder: '/categoria/perros' },
-                            { key: 'imagen_url', label: 'URL de imagen', placeholder: 'https://...' },
                         ].map(({ key, label, placeholder }) => (
                             <div key={key}>
                                 <label style={labelStyle}>{label}</label>
@@ -394,10 +522,23 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                             </div>
                         ))}
 
-                        {/* Preview imagen */}
-                        {form.imagen_url && (
-                            <img src={form.imagen_url} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }} onError={e => { e.target.style.display = 'none' }} />
-                        )}
+                        <div>
+                            <label style={labelStyle}>Imagen del banner</label>
+                            <div style={{ fontSize: 11, color: s.textMuted, background: s.surfaceLow, border: `1px solid ${s.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 8, lineHeight: 1.6 }}>
+                                <strong style={{ color: s.text }}>Tamano recomendado: 1920 x 600 px</strong> (relacion 16:5)<br />
+                                Minimo: 1280 x 340 px — Formato: JPG o WEBP — Peso max: 2 MB<br />
+                                <span style={{ color: '#f97316' }}>El texto se muestra sobre el lado izquierdo con fondo oscuro. Pone el sujeto a la derecha o al centro.</span>
+                            </div>
+                            <InputImagen
+                                value={form.imagen_url}
+                                onChange={url => setForm(f => ({ ...f, imagen_url: url }))}
+                                s={s}
+                                inputStyle={inputStyle}
+                            />
+                            {form.imagen_url && (
+                                <img src={form.imagen_url} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginTop: 8 }} onError={e => { e.target.style.display = 'none' }} />
+                            )}
+                        </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             <div>
@@ -548,12 +689,197 @@ function TabConfiguracion({ s, inputStyle, labelStyle, btnPrimario }) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// TAB — TRAFICO
+// ════════════════════════════════════════════════════════════════
+function KpiCard({ label, valor, sub, s }) {
+    return (
+        <div style={{ background: s.surfaceLow, borderRadius: 10, padding: '18px 20px', border: `1px solid ${s.border}` }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+            <p style={{ margin: '6px 0 0', fontSize: 22, fontWeight: 800, color: s.text }}>{valor}</p>
+            {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: s.textFaint }}>{sub}</p>}
+        </div>
+    )
+}
+
+function TabTrafico({ s }) {
+    const [periodo, setPeriodo] = useState('mes')
+    const [datos, setDatos] = useState(null)
+    const [cargando, setCargando] = useState(true)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        setCargando(true)
+        setError('')
+        api.get('/ecommerce/admin/estadisticas', { params: { periodo } })
+            .then(({ data }) => setDatos(data))
+            .catch(() => setError('No se pudieron cargar las estadísticas.'))
+            .finally(() => setCargando(false))
+    }, [periodo])
+
+    const barColor = s.barColor || '#1a1a2e'
+    const barTrack = s.barTrack || '#f1f5f9'
+
+    const gs = v => `Gs. ${formatMiles(v)}`
+
+    if (cargando) return <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando estadísticas...</p>
+    if (error)    return <p style={{ color: '#ef4444', fontSize: 13 }}>{error}</p>
+    if (!datos)   return null
+
+    const { kpis, por_dia, por_entrega, top_productos, nuevos_clientes } = datos
+
+    const maxDia = por_dia.reduce((m, d) => Math.max(m, parseInt(d.total)), 1)
+
+    const totalEntrega = por_entrega.reduce((s, r) => s + parseInt(r.cantidad), 0)
+
+    const coloresEstado = { pendiente: '#f59e0b', confirmado: '#3b82f6', entregado: '#22c55e', cancelado: '#ef4444' }
+    const estadosKpi = [
+        { key: 'pendientes',  label: 'Pendientes',  color: coloresEstado.pendiente },
+        { key: 'confirmados', label: 'Confirmados', color: coloresEstado.confirmado },
+        { key: 'entregados',  label: 'Entregados',  color: coloresEstado.entregado },
+        { key: 'cancelados',  label: 'Cancelados',  color: coloresEstado.cancelado },
+    ]
+
+    return (
+        <div>
+            {/* Selector de periodo */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+                {[{ key: 'semana', label: '7 dias' }, { key: 'mes', label: '30 dias' }, { key: 'trimestre', label: '90 dias' }].map(p => (
+                    <button
+                        key={p.key}
+                        onClick={() => setPeriodo(p.key)}
+                        style={{
+                            padding: '7px 14px', borderRadius: 7, border: `1px solid ${s.border}`, cursor: 'pointer',
+                            fontSize: 12, fontWeight: 600,
+                            background: periodo === p.key ? '#1a1a2e' : s.surfaceLow,
+                            color: periodo === p.key ? 'white' : s.textMuted,
+                        }}
+                    >{p.label}</button>
+                ))}
+            </div>
+
+            {/* KPIs principales */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+                <KpiCard label="Total pedidos"    valor={formatMiles(kpis.total_pedidos)}  sub="en el periodo" s={s} />
+                <KpiCard label="Ingresos"         valor={gs(kpis.total_ingresos)}          sub="ecommerce" s={s} />
+                <KpiCard label="Ticket promedio"  valor={gs(Math.round(kpis.ticket_promedio))} sub="por pedido" s={s} />
+                <KpiCard label="Nuevos clientes"  valor={formatMiles(nuevos_clientes)}     sub="registrados via web" s={s} />
+            </div>
+
+            {/* Estados de pedidos */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
+                {estadosKpi.map(e => (
+                    <div key={e.key} style={{ padding: '12px 16px', borderRadius: 9, border: `1px solid ${s.border}`, background: s.surfaceLow, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: e.color, flexShrink: 0 }} />
+                        <div>
+                            <p style={{ margin: 0, fontSize: 11, color: s.textMuted, fontWeight: 600 }}>{e.label}</p>
+                            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: s.text }}>{kpis[e.key] || 0}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Pedidos por dia + Delivery vs Retiro */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
+                <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
+                    <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 700, color: s.text }}>Pedidos por dia</h3>
+                    {por_dia.length === 0 ? (
+                        <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: 13 }}>Sin pedidos en este periodo</div>
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 160 }}>
+                            {por_dia.map((d, i) => {
+                                const altura = Math.max((parseInt(d.total) / maxDia) * 100, 3)
+                                const fecha = new Date(d.fecha)
+                                const label = `${fecha.getDate()}/${fecha.getMonth() + 1}`
+                                return (
+                                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+                                        <div
+                                            title={`${gs(d.total)} — ${d.cantidad} pedidos`}
+                                            style={{ width: '100%', height: `${altura}%`, background: barColor, borderRadius: '3px 3px 0 0', minHeight: 4, transition: 'height 0.3s' }}
+                                        />
+                                        <p style={{ fontSize: 8, color: s.textFaint, margin: 0, textAlign: 'center' }}>{label}</p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
+                    <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 700, color: s.text }}>Tipo de entrega</h3>
+                    {por_entrega.length === 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: 13, height: 100 }}>Sin datos</div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {por_entrega.map((e, i) => {
+                                const pct = totalEntrega > 0 ? Math.round((parseInt(e.cantidad) / totalEntrega) * 100) : 0
+                                const colores = ['#3b82f6', '#f59e0b', '#22c55e']
+                                return (
+                                    <div key={i}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                            <span style={{ fontSize: 12, color: s.text, fontWeight: 600, textTransform: 'capitalize' }}>{e.tipo_entrega || 'delivery'}</span>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: s.text }}>{pct}% ({e.cantidad})</span>
+                                        </div>
+                                        <div style={{ height: 7, background: barTrack, borderRadius: 4, overflow: 'hidden' }}>
+                                            <div style={{ height: '100%', width: `${pct}%`, background: colores[i % colores.length], borderRadius: 4, transition: 'width 0.5s' }} />
+                                        </div>
+                                        <p style={{ fontSize: 10, color: s.textFaint, marginTop: 2 }}>{gs(e.total)}</p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Top productos */}
+            <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
+                <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: s.text }}>Top productos mas pedidos</h3>
+                {top_productos.length === 0 ? (
+                    <p style={{ color: s.textFaint, fontSize: 13 }}>Sin datos en este periodo.</p>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                {['#', 'Producto', 'Presentacion', 'Unidades', 'Total'].map(h => (
+                                    <th key={h} style={{ padding: '8px 10px', textAlign: h === '#' || h === 'Unidades' || h === 'Total' ? 'right' : 'left', fontSize: 10, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${s.border}` }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {top_productos.map((p, i) => {
+                                const maxUnidades = parseInt(top_productos[0]?.unidades || 1)
+                                const pct = Math.round((parseInt(p.unidades) / maxUnidades) * 100)
+                                return (
+                                    <tr key={i} style={{ borderBottom: `1px solid ${s.border}` }}>
+                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: 12, color: s.textFaint, fontWeight: 700 }}>{i + 1}</td>
+                                        <td style={{ padding: '10px', fontSize: 13, color: s.text, fontWeight: 600 }}>
+                                            {p.nombre}
+                                            <div style={{ marginTop: 4, height: 3, background: barTrack, borderRadius: 2, overflow: 'hidden', maxWidth: 180 }}>
+                                                <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2 }} />
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '10px', fontSize: 12, color: s.textMuted }}>{p.presentacion}</td>
+                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: s.text }}>{formatMiles(p.unidades)}</td>
+                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: 12, color: s.textMuted }}>{gs(p.total)}</td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ════════════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL — TIENDA WEB
 // ════════════════════════════════════════════════════════════════
 const TABS = [
     { key: 'productos',     label: 'Productos' },
     { key: 'banners',       label: 'Banners' },
     { key: 'configuracion', label: 'Configuración' },
+    { key: 'trafico',       label: 'Trafico' },
 ]
 
 function TiendaWeb() {
@@ -571,6 +897,8 @@ function TiendaWeb() {
         textFaint:   darkMode ? '#64748b' : '#94a3b8',
         inputBg:     darkMode ? '#0f172a' : '#f8fafc',
         tableTh:     darkMode ? '#1a2536' : 'rgba(26,26,127,0.02)',
+        barColor:    darkMode ? '#4f46e5' : '#1a1a2e',
+        barTrack:    darkMode ? '#334155' : '#f1f5f9',
     }
 
     const inputStyle = {
@@ -626,6 +954,7 @@ function TiendaWeb() {
                 {tab === 'productos'     && <TabProductos     {...sharedProps} />}
                 {tab === 'banners'       && <TabBanners       {...sharedProps} />}
                 {tab === 'configuracion' && <TabConfiguracion {...sharedProps} />}
+                {tab === 'trafico'       && <TabTrafico       s={s} />}
             </div>
         </div>
     )

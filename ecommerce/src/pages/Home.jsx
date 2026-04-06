@@ -3,6 +3,7 @@ import HeroBanner from '@/components/ui/HeroBanner'
 import PromoBanner from '@/components/ui/PromoBanner'
 import CategoryCard from '@/components/ui/CategoryCard'
 import ProductGrid from '@/components/ui/ProductGrid'
+import ProductSlider from '@/components/ui/ProductSlider'
 import SectionTitle from '@/components/ui/SectionTitle'
 import WhyUs from '@/components/ui/WhyUs'
 import { useCategories } from '@/hooks/useCategories'
@@ -26,7 +27,7 @@ function CategoriesSection() {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
       {categories.map(cat => (
         <CategoryCard key={cat.slug} {...cat} />
       ))}
@@ -36,17 +37,17 @@ function CategoriesSection() {
 
 function FeaturedProducts() {
   const { products, loading, error } = useProducts({
-    featured: true,
+    sort: 'destacados',
     limit: 8,
     solo_disponibles: true,
   })
 
   return (
-    <ProductGrid
+    <ProductSlider
       products={products}
       loading={loading}
       error={error}
-      skeletonCount={8}
+      skeletonCount={5}
     />
   )
 }

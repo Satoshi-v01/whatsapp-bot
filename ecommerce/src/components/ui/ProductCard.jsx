@@ -116,7 +116,7 @@ export default function ProductCard({ product, onAddToCart }) {
       viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
       whileHover={outOfStock ? {} : { y: -4 }}
-      className="relative flex flex-col rounded-2xl overflow-hidden border"
+      className="relative flex flex-col rounded-2xl overflow-hidden border h-full"
       style={{
         '--sx': '-400px',
         '--sy': '-400px',
