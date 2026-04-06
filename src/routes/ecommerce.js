@@ -40,20 +40,35 @@ router.get('/categorias', async (req, res) => {
   try {
     const resultado = await db.query(
       `SELECT
-         c.id,
-         c.nombre AS label,
-         LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS slug,
+         p.ecommerce_categoria AS slug,
          COUNT(DISTINCT p.id) FILTER (
            WHERE pr.stock > 0 AND pr.disponible = true
          ) AS count
-       FROM categorias c
-       LEFT JOIN productos p ON p.categoria_id = c.id
+       FROM productos p
        LEFT JOIN presentaciones pr ON pr.producto_id = p.id
-       GROUP BY c.id, c.nombre
-       ORDER BY c.nombre ASC`
+       WHERE p.ecommerce_categoria IS NOT NULL
+       GROUP BY p.ecommerce_categoria`
     )
     res.json(resultado.rows)
   } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/subcategorias ────────────────────────
+router.get('/subcategorias', async (req, res) => {
+  try {
+    const { categoria } = req.query
+    const resultado = await db.query(
+      `SELECT id, nombre, slug, orden
+       FROM ecommerce_subcategorias
+       ${categoria ? 'WHERE categoria_slug = $1' : ''}
+       ORDER BY orden ASC, nombre ASC`,
+      categoria ? [categoria] : []
+    )
+    res.json(resultado.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
     manejarError(res, error)
   }
 })
@@ -64,9 +79,13 @@ router.get('/productos', async (req, res) => {
     const {
       categoria,
       search,
+      subcategoria_id,
       solo_disponibles = 'true',
       novedad,
       sort = 'relevancia',
+      marca_id,
+      precio_min,
+      precio_max,
       limit = 20,
       offset = 0,
     } = req.query
@@ -83,9 +102,7 @@ router.get('/productos', async (req, res) => {
     }
 
     if (categoria) {
-      condiciones.push(
-        `LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) = $${i++}`
-      )
+      condiciones.push(`p.ecommerce_categoria = $${i++}`)
       valores.push(categoria.toLowerCase())
     }
 
@@ -99,15 +116,27 @@ router.get('/productos', async (req, res) => {
       condiciones.push(`p.es_novedad = true`)
     }
 
-    const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''
-
-    let orderBy
-    switch (sort) {
-      case 'precio_asc':  orderBy = 'pr.precio_venta ASC';  break
-      case 'precio_desc': orderBy = 'pr.precio_venta DESC'; break
-      case 'nombre':      orderBy = 'p.nombre ASC';          break
-      default:            orderBy = 'p.nombre ASC'
+    if (subcategoria_id) {
+      condiciones.push(`p.ecommerce_subcategoria_id = $${i++}`)
+      valores.push(parseInt(subcategoria_id))
     }
+
+    if (marca_id) {
+      condiciones.push(`p.marca_id = $${i++}`)
+      valores.push(parseInt(marca_id))
+    }
+
+    if (precio_min) {
+      condiciones.push(`pr.precio_venta >= $${i++}`)
+      valores.push(parseFloat(precio_min))
+    }
+
+    if (precio_max) {
+      condiciones.push(`pr.precio_venta <= $${i++}`)
+      valores.push(parseFloat(precio_max))
+    }
+
+    const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''
 
     // Conteo total para paginacion
     const countResult = await db.query(
@@ -119,27 +148,76 @@ router.get('/productos', async (req, res) => {
       valores
     )
 
-    const itemsResult = await db.query(
-      `SELECT
-         pr.id,
-         pr.nombre AS presentacion_nombre,
-         pr.precio_venta,
-         pr.stock,
-         p.id AS producto_id,
-         p.nombre AS nombre_base,
-         COALESCE(p.descripcion, '') AS descripcion,
-         COALESCE(p.imagen_url, '') AS imagen_url,
-         COALESCE(p.es_novedad, false) AS es_novedad,
-         LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
-         c.nombre AS categoria_nombre
-       FROM presentaciones pr
-       JOIN productos p ON p.id = pr.producto_id
-       LEFT JOIN categorias c ON c.id = p.categoria_id
-       ${where}
-       ORDER BY ${orderBy}
-       LIMIT $${i} OFFSET $${i + 1}`,
-      [...valores, limitInt, offsetInt]
-    )
+    // Queries con JOIN de ventas (para sorts que necesitan datos de ventas)
+    const usaVentas = sort === 'mas_vendido' || sort === 'destacados'
+
+    let itemsResult
+    if (usaVentas) {
+      // destacados: manuales primero (es_destacado DESC), luego por ventas
+      // mas_vendido: solo por ventas
+      const orderVentas = sort === 'destacados'
+        ? 'p.es_destacado DESC, total_vendido DESC, p.nombre ASC'
+        : 'total_vendido DESC, p.nombre ASC'
+
+      itemsResult = await db.query(
+        `SELECT
+           pr.id,
+           pr.nombre AS presentacion_nombre,
+           pr.precio_venta,
+           pr.stock,
+           p.id AS producto_id,
+           p.nombre AS nombre_base,
+           COALESCE(p.descripcion, '') AS descripcion,
+           COALESCE(p.imagen_url, '') AS imagen_url,
+           COALESCE(p.es_novedad, false) AS es_novedad,
+           COALESCE(p.es_destacado, false) AS es_destacado,
+           LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
+           c.nombre AS categoria_nombre,
+           COALESCE(SUM(opi.cantidad) FILTER (
+             WHERE op.estado != 'cancelado'
+           ), 0) AS total_vendido
+         FROM presentaciones pr
+         JOIN productos p ON p.id = pr.producto_id
+         LEFT JOIN categorias c ON c.id = p.categoria_id
+         LEFT JOIN ordenes_pedido_items opi ON opi.presentacion_id = pr.id
+         LEFT JOIN ordenes_pedido op ON op.id = opi.orden_id
+         ${where}
+         GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.stock,
+                  p.id, p.nombre, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, c.nombre
+         ORDER BY ${orderVentas}
+         LIMIT $${i} OFFSET $${i + 1}`,
+        [...valores, limitInt, offsetInt]
+      )
+    } else {
+      let orderBy
+      switch (sort) {
+        case 'precio_asc':  orderBy = 'pr.precio_venta ASC';  break
+        case 'precio_desc': orderBy = 'pr.precio_venta DESC'; break
+        case 'nombre':      orderBy = 'p.nombre ASC';          break
+        default:            orderBy = 'p.nombre ASC'
+      }
+      itemsResult = await db.query(
+        `SELECT
+           pr.id,
+           pr.nombre AS presentacion_nombre,
+           pr.precio_venta,
+           pr.stock,
+           p.id AS producto_id,
+           p.nombre AS nombre_base,
+           COALESCE(p.descripcion, '') AS descripcion,
+           COALESCE(p.imagen_url, '') AS imagen_url,
+           COALESCE(p.es_novedad, false) AS es_novedad,
+           LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
+           c.nombre AS categoria_nombre
+         FROM presentaciones pr
+         JOIN productos p ON p.id = pr.producto_id
+         LEFT JOIN categorias c ON c.id = p.categoria_id
+         ${where}
+         ORDER BY ${orderBy}
+         LIMIT $${i} OFFSET $${i + 1}`,
+        [...valores, limitInt, offsetInt]
+      )
+    }
 
     const items = itemsResult.rows.map(row => ({
       id: row.id,
@@ -513,12 +591,16 @@ router.get('/admin/productos', autenticar, async (req, res) => {
          p.imagen_url,
          COALESCE(p.es_novedad, false) AS es_novedad,
          COALESCE(p.es_destacado, false) AS es_destacado,
+         p.ecommerce_categoria,
+         p.ecommerce_subcategoria_id,
+         es2.nombre AS ecommerce_subcategoria_nombre,
          c.nombre AS categoria_nombre,
          m.nombre AS marca_nombre
        FROM presentaciones pr
        JOIN productos p ON p.id = pr.producto_id
        LEFT JOIN categorias c ON c.id = p.categoria_id
        LEFT JOIN marcas m ON m.id = p.marca_id
+       LEFT JOIN ecommerce_subcategorias es2 ON es2.id = p.ecommerce_subcategoria_id
        ${where}
        ORDER BY p.nombre ASC, pr.nombre ASC`,
       vals
@@ -534,7 +616,7 @@ router.get('/admin/productos', autenticar, async (req, res) => {
 router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) => {
   try {
     const { presentacionId } = req.params
-    const { imagen_url, es_novedad, es_destacado, disponible } = req.body
+    const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id } = req.body
 
     // Actualizar disponible en la presentacion
     if (disponible !== undefined) {
@@ -549,13 +631,15 @@ router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) =>
     if (!pr.rows.length) return res.status(404).json({ error: 'Presentación no encontrada' })
     const productoId = pr.rows[0].producto_id
 
-    // Actualizar campos en producto (COALESCE para no pisar con null si no vienen)
+    // Actualizar campos en producto
     const sets = []
     const vals = []
     let i = 1
-    if (imagen_url !== undefined) { sets.push(`imagen_url = $${i++}`); vals.push(imagen_url) }
-    if (es_novedad !== undefined) { sets.push(`es_novedad = $${i++}`); vals.push(es_novedad) }
-    if (es_destacado !== undefined) { sets.push(`es_destacado = $${i++}`); vals.push(es_destacado) }
+    if (imagen_url !== undefined)              { sets.push(`imagen_url = $${i++}`);                vals.push(imagen_url) }
+    if (es_novedad !== undefined)              { sets.push(`es_novedad = $${i++}`);                vals.push(es_novedad) }
+    if (es_destacado !== undefined)            { sets.push(`es_destacado = $${i++}`);              vals.push(es_destacado) }
+    if (ecommerce_categoria !== undefined)     { sets.push(`ecommerce_categoria = $${i++}`);       vals.push(ecommerce_categoria || null) }
+    if (ecommerce_subcategoria_id !== undefined) { sets.push(`ecommerce_subcategoria_id = $${i++}`); vals.push(ecommerce_subcategoria_id ? parseInt(ecommerce_subcategoria_id) : null) }
 
     if (sets.length) {
       vals.push(productoId)
@@ -565,6 +649,228 @@ router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) =>
     res.json({ ok: true })
   } catch (error) {
     manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/filtros ───────────────────────────────
+// Devuelve marcas disponibles y rango de precios para una categoria
+router.get('/filtros', async (req, res) => {
+  try {
+    const { categoria } = req.query
+    const conds = ['pr.disponible = true', 'pr.stock > 0']
+    const vals = []
+    let i = 1
+
+    if (categoria) {
+      conds.push(`p.ecommerce_categoria = $${i++}`)
+      vals.push(categoria.toLowerCase())
+    }
+
+    const where = `WHERE ${conds.join(' AND ')}`
+
+    const [marcasRes, precioRes] = await Promise.all([
+      db.query(
+        `SELECT DISTINCT m.id, m.nombre
+         FROM marcas m
+         JOIN productos p ON p.marca_id = m.id
+         JOIN presentaciones pr ON pr.producto_id = p.id
+         ${where}
+         ORDER BY m.nombre ASC`,
+        vals
+      ),
+      db.query(
+        `SELECT
+           MIN(pr.precio_venta) AS precio_min,
+           MAX(pr.precio_venta) AS precio_max
+         FROM presentaciones pr
+         JOIN productos p ON p.id = pr.producto_id
+         ${where}`,
+        vals
+      ),
+    ])
+
+    res.json({
+      marcas: marcasRes.rows,
+      precio_min: Number(precioRes.rows[0]?.precio_min || 0),
+      precio_max: Number(precioRes.rows[0]?.precio_max || 0),
+    })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/admin/estadisticas ────────────────────
+router.get('/admin/estadisticas', autenticar, async (req, res) => {
+  try {
+    const { periodo = 'mes' } = req.query
+
+    let intervalo
+    switch (periodo) {
+      case 'semana':    intervalo = '7 days';  break
+      case 'trimestre': intervalo = '90 days'; break
+      default:          intervalo = '30 days'
+    }
+
+    // KPIs generales
+    const kpis = await db.query(
+      `SELECT
+         COUNT(*)                           AS total_pedidos,
+         COALESCE(SUM(total), 0)            AS total_ingresos,
+         COALESCE(AVG(total), 0)            AS ticket_promedio,
+         COUNT(*) FILTER (WHERE estado = 'pendiente')   AS pendientes,
+         COUNT(*) FILTER (WHERE estado = 'confirmado')  AS confirmados,
+         COUNT(*) FILTER (WHERE estado = 'entregado')   AS entregados,
+         COUNT(*) FILTER (WHERE estado = 'cancelado')   AS cancelados
+       FROM ordenes_pedido
+       WHERE canal = 'pagina_web'
+         AND created_at >= NOW() - INTERVAL '${intervalo}'`
+    )
+
+    // Pedidos por dia
+    const porDia = await db.query(
+      `SELECT
+         DATE(created_at AT TIME ZONE 'America/Asuncion') AS fecha,
+         COUNT(*)                                         AS cantidad,
+         COALESCE(SUM(total), 0)                          AS total
+       FROM ordenes_pedido
+       WHERE canal = 'pagina_web'
+         AND created_at >= NOW() - INTERVAL '${intervalo}'
+       GROUP BY 1
+       ORDER BY 1 ASC`
+    )
+
+    // Delivery vs retiro
+    const porEntrega = await db.query(
+      `SELECT
+         tipo_entrega,
+         COUNT(*) AS cantidad,
+         COALESCE(SUM(total), 0) AS total
+       FROM ordenes_pedido
+       WHERE canal = 'pagina_web'
+         AND created_at >= NOW() - INTERVAL '${intervalo}'
+       GROUP BY tipo_entrega`
+    )
+
+    // Top 10 productos mas pedidos
+    const topProductos = await db.query(
+      `SELECT
+         p.nombre   AS nombre,
+         pr.nombre  AS presentacion,
+         SUM(opi.cantidad)       AS unidades,
+         SUM(opi.precio_total)   AS total
+       FROM ordenes_pedido_items opi
+       JOIN ordenes_pedido op ON op.id = opi.orden_id
+       JOIN presentaciones pr ON pr.id = opi.presentacion_id
+       JOIN productos p ON p.id = pr.producto_id
+       WHERE op.canal = 'pagina_web'
+         AND op.created_at >= NOW() - INTERVAL '${intervalo}'
+       GROUP BY p.nombre, pr.nombre
+       ORDER BY unidades DESC
+       LIMIT 10`
+    )
+
+    // Nuevos clientes ecommerce en el periodo
+    const nuevosClientes = await db.query(
+      `SELECT COUNT(*) AS total
+       FROM clientes
+       WHERE canal_origen = 'ecommerce'
+         AND created_at >= NOW() - INTERVAL '${intervalo}'`
+    )
+
+    res.json({
+      kpis: kpis.rows[0],
+      por_dia: porDia.rows,
+      por_entrega: porEntrega.rows,
+      top_productos: topProductos.rows,
+      nuevos_clientes: parseInt(nuevosClientes.rows[0]?.total || 0),
+    })
+  } catch (error) {
+    if (error.code === '42P01') {
+      return res.json({
+        kpis: { total_pedidos: 0, total_ingresos: 0, ticket_promedio: 0, pendientes: 0, confirmados: 0, entregados: 0, cancelados: 0 },
+        por_dia: [], por_entrega: [], top_productos: [], nuevos_clientes: 0,
+      })
+    }
+    manejarError(res, error)
+  }
+})
+
+// ─── POST /api/ecommerce/vincular-cliente ─────────────────────
+// Vincula un usuario autenticado de Supabase con el registro en clientes.
+// Se llama desde el ecommerce al completar el primer pedido o el perfil.
+// Requiere: { supabase_user_id, email, telefono, nombre }
+// La actualizacion de perfiles.cliente_id se ejecuta cuando la tabla exista (paso 2).
+router.post('/vincular-cliente', async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { supabase_user_id, email, telefono, nombre } = req.body
+
+    if (!supabase_user_id) {
+      return res.status(400).json({ error: 'supabase_user_id es requerido' })
+    }
+    if (!email && !telefono) {
+      return res.status(400).json({ error: 'Se requiere email o telefono para vincular' })
+    }
+
+    await client.query('BEGIN')
+
+    // Buscar cliente existente por email o telefono
+    const condiciones = []
+    const valores = []
+    let i = 1
+
+    if (email) {
+      condiciones.push(`LOWER(email) = LOWER($${i++})`)
+      valores.push(email.trim())
+    }
+    if (telefono) {
+      const telefonoLimpio = telefono.replace(/[^0-9+]/g, '')
+      condiciones.push(`telefono ILIKE $${i++}`)
+      valores.push(`%${telefonoLimpio}%`)
+    }
+
+    const existente = await client.query(
+      `SELECT id FROM clientes WHERE ${condiciones.join(' OR ')} LIMIT 1`,
+      valores
+    )
+
+    let clienteId
+    let creado = false
+
+    if (existente.rows.length > 0) {
+      clienteId = existente.rows[0].id
+    } else {
+      // Crear nuevo cliente con origen ecommerce
+      const telefonoLimpio = telefono?.replace(/[^0-9+\s()-]/g, '').trim() || null
+      const nuevo = await client.query(
+        `INSERT INTO clientes (tipo, nombre, email, telefono, origen)
+         VALUES ('persona', $1, $2, $3, 'ecommerce')
+         RETURNING id`,
+        [nombre?.trim() || email?.split('@')[0] || 'Cliente web', email?.trim() || null, telefonoLimpio]
+      )
+      clienteId = nuevo.rows[0].id
+      creado = true
+    }
+
+    // Intentar actualizar perfiles.cliente_id si la tabla ya existe (paso 2)
+    try {
+      await client.query(
+        `UPDATE perfiles SET cliente_id = $1 WHERE id = $2`,
+        [clienteId, supabase_user_id]
+      )
+    } catch (errPerfil) {
+      // La tabla perfiles todavia no existe (paso 2 pendiente) — ignorar
+      if (errPerfil.code !== '42P01') throw errPerfil
+    }
+
+    await client.query('COMMIT')
+
+    res.json({ cliente_id: clienteId, creado, vinculado: true })
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
   }
 })
 
