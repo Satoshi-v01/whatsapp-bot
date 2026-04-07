@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import SEOHead from '@/components/seo/SEOHead'
 import ProductGrid from '@/components/ui/ProductGrid'
+import Pagination from '@/components/ui/Pagination'
 import { useProducts } from '@/hooks/useProducts'
+import { CATEGORIES } from '@/constants/categories'
 
 const PAGE_SIZE = 20
 
@@ -60,15 +62,39 @@ export default function Search() {
             )}
           </div>
 
-          {/* Sin query */}
+          {/* Sin query — mostrar categorias */}
           {!q && (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: '#8b6f47' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>
-                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#ffa601" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block' }}>
+            <div>
+              <div style={{ textAlign: 'center', padding: '32px 0 24px', color: 'var(--color-text-muted)' }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', opacity: 0.6 }}>
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
+                <p style={{ fontSize: 15, fontWeight: 600, marginTop: 12, color: 'var(--color-text)' }}>Ingresa una busqueda</p>
+                <p style={{ fontSize: 13, marginTop: 4 }}>o explora nuestras categorias</p>
               </div>
-              <p style={{ fontSize: 15, fontWeight: 600 }}>Ingresa una busqueda en el navbar</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+                {CATEGORIES.map(cat => (
+                  <Link
+                    key={cat.slug}
+                    to={`/categoria/${cat.slug}`}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 10, padding: '20px 12px', borderRadius: 16, textDecoration: 'none',
+                      background: cat.bg, border: `1.5px solid ${cat.color}28`,
+                      transition: 'transform 0.15s, box-shadow 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 6px 20px ${cat.color}22` }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+                  >
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: cat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 3px 10px ${cat.color}40` }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" />
+                      </svg>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: cat.color, textAlign: 'center' }}>{cat.label}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
 
@@ -89,25 +115,11 @@ export default function Search() {
                 </div>
               )}
 
-              {/* Paginacion */}
-              {totalPages > 1 && (
-                <nav aria-label="Paginacion" style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 40, flexWrap: 'wrap' }}>
-                  <button onClick={() => setPage(p => p - 1)} disabled={page === 1}
-                    style={{ padding: '8px 18px', borderRadius: 10, border: '1.5px solid rgba(255,166,1,0.2)', background: '#fff', color: '#1a1208', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.38 : 1, fontSize: 13, fontWeight: 600 }}>
-                    Anterior
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <button key={p} onClick={() => setPage(p)}
-                      style={{ width: 40, height: 40, borderRadius: 10, border: `1.5px solid ${p === page ? '#ffa601' : 'rgba(255,166,1,0.2)'}`, background: p === page ? '#ffa601' : '#fff', color: p === page ? '#fff' : '#1a1208', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                      {p}
-                    </button>
-                  ))}
-                  <button onClick={() => setPage(p => p + 1)} disabled={page === totalPages}
-                    style={{ padding: '8px 18px', borderRadius: 10, border: '1.5px solid rgba(255,166,1,0.2)', background: '#fff', color: '#1a1208', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.38 : 1, fontSize: 13, fontWeight: 600 }}>
-                    Siguiente
-                  </button>
-                </nav>
-              )}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPage={p => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+              />
             </>
           )}
         </div>

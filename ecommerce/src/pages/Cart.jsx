@@ -481,7 +481,7 @@ export default function Cart() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
             {/* Lista de items */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 lg:order-1 order-2">
               <AnimatePresence initial={false}>
                 {items.map(item => (
                   <CartItem
@@ -514,7 +514,7 @@ export default function Cart() {
             </div>
 
             {/* Panel lateral: resumen + formulario */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 lg:order-2 order-1">
               <div
                 className="rounded-2xl p-6 mb-6 border"
                 style={{ backgroundColor: 'var(--color-bg-elevated)', borderColor: 'var(--color-border)' }}

@@ -184,7 +184,7 @@ export default function HeroBanner() {
     <section
       aria-label="Banners promocionales"
       className="relative w-full overflow-hidden"
-      style={{ height: 'clamp(200px, 28vw, 340px)' }}
+      style={{ height: 'clamp(240px, 44vw, 520px)' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

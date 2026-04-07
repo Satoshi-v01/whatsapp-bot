@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 export default function SectionTitle({ title, subtitle, center = false, id, className = '' }) {
   return (
     <motion.div
-      className={`mb-10 ${center ? 'text-center' : ''} ${className}`}
+      className={`mb-6 ${center ? 'text-center' : ''} ${className}`}
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-30px' }}

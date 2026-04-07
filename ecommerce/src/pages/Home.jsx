@@ -62,7 +62,7 @@ function NewProducts() {
   if (!loading && products.length === 0) return null
 
   return (
-    <section className="section-padding" style={{ backgroundColor: 'var(--color-bg-elevated)' }}>
+    <section className="pt-4 pb-4 md:pt-6 md:pb-6 px-6 md:px-8" style={{ backgroundColor: 'var(--color-bg-elevated)' }}>
       <div className="container-base">
         <SectionTitle
           title="Novedades"
@@ -99,7 +99,7 @@ export default function Home() {
       </section>
 
       <section
-        className="pt-4 pb-8 md:pt-6 md:pb-12 px-6 md:px-8"
+        className="pt-8 pb-4 md:pt-10 md:pb-6 px-6 md:px-8"
         aria-labelledby="featured-title"
         style={{ backgroundColor: 'var(--color-bg-elevated)' }}
       >
@@ -113,9 +113,9 @@ export default function Home() {
         </div>
       </section>
 
-      <WhyUs />
-
       <NewProducts />
+
+      <WhyUs />
     </>
   )
 }

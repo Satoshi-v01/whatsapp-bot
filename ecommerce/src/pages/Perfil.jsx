@@ -370,7 +370,7 @@ function SeccionMascotas() {
 
       {mascotas.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🐾</div>
+          <div style={{ marginBottom: 12, color: 'var(--color-primary)', opacity: 0.5 }}><Icon d={icons.paw} size={40} /></div>
           <p style={{ fontWeight: 600, marginBottom: 4 }}>Todavia no registraste mascotas</p>
           <p style={{ fontSize: 13 }}>Agregalas para recibir recomendaciones personalizadas</p>
         </div>
@@ -378,8 +378,8 @@ function SeccionMascotas() {
         <div style={{ display: 'grid', gap: 12 }}>
           {mascotas.map(m => (
             <div key={m.id} className="card-base" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>
-                {m.especie === 'perro' ? '🐶' : m.especie === 'gato' ? '🐱' : '🐾'}
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--color-primary)' }}>
+                <Icon d={m.especie === 'perro' ? icons.dog : icons.paw} size={22} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontWeight: 700, color: 'var(--color-text)', marginBottom: 2 }}>{m.nombre}</p>
@@ -511,7 +511,7 @@ function SeccionDirecciones() {
 
       {direcciones.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📍</div>
+          <div style={{ marginBottom: 12, color: 'var(--color-primary)', opacity: 0.5 }}><Icon d={icons.map} size={40} /></div>
           <p style={{ fontWeight: 600, marginBottom: 4 }}>Sin direcciones guardadas</p>
           <p style={{ fontSize: 13 }}>Agrega una para agilizar el checkout</p>
         </div>
@@ -654,7 +654,7 @@ function SeccionFacturacion() {
 
       {fichas.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🧾</div>
+          <div style={{ marginBottom: 12, color: 'var(--color-primary)', opacity: 0.5 }}><Icon d={icons.receipt} size={40} /></div>
           <p style={{ fontWeight: 600, marginBottom: 4 }}>Sin fichas de facturacion</p>
           <p style={{ fontSize: 13 }}>Agrega una para agilizar el checkout</p>
         </div>
@@ -754,7 +754,7 @@ function SeccionPedidos() {
 
       {pedidos.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
+          <div style={{ marginBottom: 12, color: 'var(--color-primary)', opacity: 0.5 }}><Icon d={icons.package} size={40} /></div>
           <p style={{ fontWeight: 600, marginBottom: 4 }}>Todavia no tenes pedidos</p>
           <p style={{ fontSize: 13 }}>Explora nuestros productos y hace tu primer compra</p>
         </div>
@@ -867,7 +867,7 @@ export default function Perfil() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr]" style={{ gap: 20, alignItems: 'start' }}>
 
           {/* Sidebar tabs — desktop */}
           <div className="card-base hidden md:flex flex-col" style={{ padding: '12px 8px', gap: 2 }}>
@@ -885,9 +885,7 @@ export default function Perfil() {
                   transition: 'all 0.15s',
                 }}
               >
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  {t.icon.split(' ').map((d, i) => <path key={i} d={d} />)}
-                </svg>
+                <Icon d={t.icon} size={16} />
                 {t.label}
               </button>
             ))}
@@ -911,22 +909,33 @@ export default function Perfil() {
             </button>
           </div>
 
-          {/* Tabs mobile — select */}
-          <div className="md:hidden" style={{ gridColumn: '1 / -1' }}>
-            <select
-              value={tab}
-              onChange={e => setTab(e.target.value)}
-              className="input-base"
-              style={{ fontWeight: 600 }}
-            >
+          {/* Tabs mobile — pills scrollables */}
+          <div className="md:hidden" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 8, width: 'max-content' }}>
               {TABS.map(t => (
-                <option key={t.id} value={t.id}>{t.label}</option>
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '9px 16px', borderRadius: 20,
+                    border: tab === t.id ? 'none' : '1.5px solid var(--color-border)',
+                    cursor: 'pointer', whiteSpace: 'nowrap',
+                    fontSize: 13, fontWeight: 600,
+                    background: tab === t.id ? 'var(--color-primary)' : 'white',
+                    color: tab === t.id ? 'white' : 'var(--color-text-muted)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Icon d={t.icon} size={14} />
+                  {t.label}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Contenido del tab */}
-          <div className="card-base" style={{ padding: '28px 24px', gridColumn: 'span 1' }}>
+          <div className="card-base" style={{ padding: '28px 24px' }}>
             {tab === 'datos'       && <SeccionDatos user={user} />}
             {tab === 'mascotas'    && <SeccionMascotas />}
             {tab === 'direcciones' && <SeccionDirecciones />}

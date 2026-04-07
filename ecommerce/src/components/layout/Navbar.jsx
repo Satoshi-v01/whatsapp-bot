@@ -460,6 +460,13 @@ export default function Navbar() {
           overflow: 'hidden',
         }}
       >
+        <style>{`
+          .navbar-search { display: none; }
+          @media (min-width: 768px) { .navbar-search { display: flex; } }
+          .navbar-spacer { display: flex; flex: 1 1 0%; }
+          @media (min-width: 768px) { .navbar-spacer { display: none; } }
+        `}</style>
+
         {/* ══ Fila 1: Logo | Search (desktop) | Login + Cart | Mobile icons ══ */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px' }}>
 
@@ -490,13 +497,13 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Search bar — siempre visible, ocupa todo el espacio central */}
-          <div className="flex" style={{ flex: '1 1 0', minWidth: 0, maxWidth: 560 }}>
+          {/* Search bar — desktop only */}
+          <div className="navbar-search" style={{ flex: '1 1 0', minWidth: 0, maxWidth: 560 }}>
             <DesktopSearch />
           </div>
 
           {/* Spacer mobile — empuja los iconos a la derecha */}
-          <div className="flex-1 md:hidden" />
+          <div className="navbar-spacer" />
 
           {/* ── Acciones — siempre a la derecha ── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
