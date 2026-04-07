@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import SEOHead from '@/components/seo/SEOHead'
 import StockBadge from '@/components/ui/StockBadge'
+import ProductCard from '@/components/ui/ProductCard'
 import { useProduct } from '@/hooks/useProduct'
+import { useProducts } from '@/hooks/useProducts'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice } from '@/utils/formatPrice'
 import { CATEGORIES } from '@/constants/categories'
@@ -77,15 +79,44 @@ function QuantitySelector({ value, max, onChange }) {
 function ProductSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-pulse">
-      <div className="rounded-2xl bg-gray-200" style={{ aspectRatio: '1/1' }} />
+      <div className="rounded-2xl" style={{ aspectRatio: '1/1', backgroundColor: 'var(--color-border)' }} />
       <div className="flex flex-col gap-4 pt-2">
-        <div className="h-8 bg-gray-200 rounded w-3/4" />
-        <div className="h-4 bg-gray-200 rounded w-1/4" />
-        <div className="h-6 bg-gray-200 rounded w-1/3 mt-2" />
-        <div className="h-20 bg-gray-200 rounded mt-2" />
-        <div className="h-12 bg-gray-200 rounded-xl mt-4" />
+        <div className="h-8 rounded w-3/4" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-4 rounded w-1/4" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-6 rounded w-1/3 mt-2" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-20 rounded mt-2" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-12 rounded-xl mt-4" style={{ backgroundColor: 'var(--color-border)' }} />
       </div>
     </div>
+  )
+}
+
+// ─── Productos relacionados ──────────────────────────────────
+function RelatedProducts({ categoriaSlug, excludeSlug }) {
+  const params = useMemo(() => ({
+    categoria: categoriaSlug,
+    solo_disponibles: true,
+    limit: 6,
+  }), [categoriaSlug])
+
+  const { products, loading } = useProducts(params)
+  const filtered = products.filter(p => p.slug !== excludeSlug).slice(0, 4)
+
+  if (loading || filtered.length === 0) return null
+
+  return (
+    <section className="section-padding !pt-4">
+      <div className="container-base">
+        <h2 className="font-display text-2xl mb-6" style={{ color: 'var(--color-text)' }}>
+          Tambien te puede interesar
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {filtered.map(p => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -360,6 +391,10 @@ export default function Product() {
             </div>
           </div>
         </section>
+
+        {categoria_slug && (
+          <RelatedProducts categoriaSlug={categoria_slug} excludeSlug={slug} />
+        )}
       </main>
     </>
   )

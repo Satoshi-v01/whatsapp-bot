@@ -121,41 +121,41 @@ export default function ProductSlider({ products = [], loading, error, skeletonC
         .sk-pulse { animation: skpulse 1.5s ease-in-out infinite; }
       `}</style>
 
-      {/* Flechas alineadas a la derecha */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
+      {/* Slider con flechas a los costados */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Arrow onClick={prev} disabled={!prevOk} dir="prev" />
-        <Arrow onClick={next} disabled={!nextOk} dir="next" />
-      </div>
 
-      {/* Slider */}
-      <div ref={emblaRef} style={{ overflow: 'hidden' }}>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
+        <div ref={emblaRef} style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
 
-          {loading && Array.from({ length: skeletonCount }).map((_, i) => (
-            <div key={i} className="embla-slide sk-pulse">
-              <SkeletonCard />
-            </div>
-          ))}
+            {loading && Array.from({ length: skeletonCount }).map((_, i) => (
+              <div key={i} className="embla-slide sk-pulse">
+                <SkeletonCard />
+              </div>
+            ))}
 
-          {!loading && !error && hero && (
-            <div className="embla-slide-hero">
-              <HeroProductCard product={hero} onAddToCart={() => addItem(hero)} />
-            </div>
-          )}
+            {!loading && !error && hero && (
+              <div className="embla-slide-hero">
+                <HeroProductCard product={hero} onAddToCart={() => addItem(hero)} />
+              </div>
+            )}
 
-          {!loading && !error && rest.map((product, i) => (
-            <motion.div
-              key={product.id}
-              className="embla-slide"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
-            >
-              <ProductCard product={product} onAddToCart={() => addItem(product)} />
-            </motion.div>
-          ))}
+            {!loading && !error && rest.map((product, i) => (
+              <motion.div
+                key={product.id}
+                className="embla-slide"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.3 }}
+              >
+                <ProductCard product={product} onAddToCart={() => addItem(product)} />
+              </motion.div>
+            ))}
 
+          </div>
         </div>
+
+        <Arrow onClick={next} disabled={!nextOk} dir="next" />
       </div>
 
       {/* Dots */}

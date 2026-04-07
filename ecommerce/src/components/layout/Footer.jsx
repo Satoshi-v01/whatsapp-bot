@@ -110,7 +110,7 @@ export default function Footer() {
             <h3 className="font-display text-lg text-white mb-1">Contacto</h3>
             <ul className="flex flex-col gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
               <li>Asuncion, Paraguay</li>
-              <li>+595 981 000 000</li>
+              <li><a href="tel:+595981000000" style={{ color: 'inherit', textDecoration: 'none' }}>+595 981 000 000</a></li>
               <li>Lun-Sab: 8:00 - 18:00</li>
             </ul>
 

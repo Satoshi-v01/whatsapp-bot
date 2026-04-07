@@ -4,10 +4,20 @@ import { motion, AnimatePresence } from 'framer-motion'
 import SEOHead from '@/components/seo/SEOHead'
 import ProductGrid from '@/components/ui/ProductGrid'
 import PriceRangeSlider from '@/components/ui/PriceRangeSlider'
+import Pagination from '@/components/ui/Pagination'
 import { useProducts } from '@/hooks/useProducts'
 import { useSubcategories } from '@/hooks/useSubcategories'
 import { CATEGORIES } from '@/constants/categories'
 import api from '@/services/api'
+
+const CATEGORY_ICONS = {
+  perros:      'M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5 M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5 M8 14v.5 M16 14v.5 M11.25 16.25h1.5L12 17l-.75-.75z M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309',
+  gatos:       'M12 5c.67 0 1.35.09 2 .26 1.78-2 5.03-2.84 6.42-2.26 1.4.58-.42 7-.42 7 .57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3-9-7.56c0-1.25.5-2.4 1-3.44 0 0-1.89-6.42-.5-7 1.39-.58 4.72.23 6.5 2.26A9.06 9.06 0 0 1 12 5z M8 14v.5 M16 14v.5 M11.25 16.25h1.5L12 17l-.75-.75z',
+  ofertas:     'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01',
+  medicamentos:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M12 8v8 M8 12h8',
+  cuidado:     'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z M8.5 14.5s1.5 2 3.5 2 3.5-2 3.5-2 M9 9h.01 M15 9h.01',
+  accesorios:  'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0',
+}
 
 const SORT_OPTIONS = [
   { value: 'mas_vendido', label: 'Mas vendidos' },
@@ -128,30 +138,6 @@ function FilterPanel({ marcas, marcaId, onMarca, precioMin, precioMax, low, high
   )
 }
 
-// ─── Paginacion ──────────────────────────────────────────
-function Pagination({ page, totalPages, onPage, color }) {
-  if (totalPages <= 1) return null
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
-  return (
-    <nav aria-label="Paginacion" style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 40, flexWrap: 'wrap' }}>
-      <button onClick={() => onPage(page - 1)} disabled={page === 1}
-        style={{ padding: '8px 18px', borderRadius: 10, border: '1.5px solid rgba(255,166,1,0.2)', background: '#fff', color: '#1a1208', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.38 : 1, fontSize: 13, fontWeight: 600 }}>
-        Anterior
-      </button>
-      {pages.map(p => (
-        <button key={p} onClick={() => onPage(p)}
-          style={{ width: 40, height: 40, borderRadius: 10, border: `1.5px solid ${p === page ? color : 'rgba(255,166,1,0.2)'}`, background: p === page ? color : '#fff', color: p === page ? '#fff' : '#1a1208', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-          {p}
-        </button>
-      ))}
-      <button onClick={() => onPage(page + 1)} disabled={page === totalPages}
-        style={{ padding: '8px 18px', borderRadius: 10, border: '1.5px solid rgba(255,166,1,0.2)', background: '#fff', color: '#1a1208', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.38 : 1, fontSize: 13, fontWeight: 600 }}>
-        Siguiente
-      </button>
-    </nav>
-  )
-}
-
 // ─── Pagina ───────────────────────────────────────────────
 export default function Category() {
   const { slug }   = useParams()
@@ -245,8 +231,10 @@ export default function Category() {
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-            <div style={{ width: 52, height: 52, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 16px ${color}40`, fontSize: 24 }}>
-              {slug === 'perros' ? '🐕' : slug === 'gatos' ? '🐈' : slug === 'ofertas' ? '🏷️' : slug === 'medicamentos' ? '💊' : slug === 'cuidado' ? '🧴' : '🛍️'}
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 16px ${color}40`, color: 'white' }}>
+              <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d={CATEGORY_ICONS[slug] ?? CATEGORY_ICONS.accesorios} />
+              </svg>
             </div>
             <div>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1a1208', fontFamily: "'Poppins', sans-serif", letterSpacing: '-0.3px' }}>{pageTitle}</h1>
@@ -311,12 +299,27 @@ export default function Category() {
                       Filtros {activeFilters > 0 && `(${activeFilters})`}
                     </button>
                   )}
-                  {SORT_OPTIONS.map(opt => (
-                    <button key={opt.value} onClick={() => { setSort(opt.value); setPage(1) }}
-                      style={{ padding: '7px 14px', borderRadius: 99, border: `1.5px solid ${sort === opt.value ? color : 'rgba(255,166,1,0.2)'}`, background: sort === opt.value ? color : '#fff', color: sort === opt.value ? '#fff' : '#8b6f47', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
-                      {opt.label}
-                    </button>
-                  ))}
+                  {/* Sort select — mobile */}
+                  <select
+                    value={sort}
+                    onChange={e => { setSort(e.target.value); setPage(1) }}
+                    className="md:hidden input-base"
+                    style={{ padding: '7px 32px 7px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer', minWidth: 120 }}
+                    aria-label="Ordenar por"
+                  >
+                    {SORT_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {/* Sort pills — desktop */}
+                  <div className="hidden md:flex" style={{ gap: 7 }}>
+                    {SORT_OPTIONS.map(opt => (
+                      <button key={opt.value} onClick={() => { setSort(opt.value); setPage(1) }}
+                        style={{ padding: '7px 14px', borderRadius: 99, border: `1.5px solid ${sort === opt.value ? color : 'rgba(255,166,1,0.2)'}`, background: sort === opt.value ? color : '#fff', color: sort === opt.value ? '#fff' : '#8b6f47', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

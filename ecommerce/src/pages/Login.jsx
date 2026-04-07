@@ -48,33 +48,39 @@ function IconEye({ size = 16, closed = false }) {
   )
 }
 
-// Google y Facebook — placeholders hasta integrar OAuth
+// Google y Facebook — placeholders hasta integrar OAuth (paso 1)
 function SocialButton({ children, disabled = true }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        padding: '11px 16px',
-        borderRadius: 'var(--radius-md)',
-        border: '1.5px solid var(--color-border)',
-        background: 'white',
-        color: 'var(--color-text-muted)',
-        fontSize: 14,
-        fontWeight: 600,
-        fontFamily: 'var(--font-body)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: 'all 0.15s',
-      }}
-    >
-      {children}
-    </button>
+    <div style={{ position: 'relative' }}>
+      <button
+        type="button"
+        disabled={disabled}
+        title="Disponible proxima actualizacion"
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          padding: '11px 16px',
+          borderRadius: 'var(--radius-md)',
+          border: '1.5px solid var(--color-border)',
+          background: 'white',
+          color: 'var(--color-text-muted)',
+          fontSize: 14,
+          fontWeight: 600,
+          fontFamily: 'inherit',
+          cursor: 'not-allowed',
+          opacity: 0.55,
+          transition: 'all 0.15s',
+        }}
+      >
+        {children}
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'var(--color-border)', color: 'var(--color-text-faint)', marginLeft: 'auto' }}>
+          Proximamente
+        </span>
+      </button>
+    </div>
   )
 }
 

@@ -61,7 +61,7 @@ body {
   margin: 0;
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Nunito Sans', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.6;
   min-height: 100vh;
@@ -69,7 +69,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', system-ui, sans-serif;
+  font-family: 'Rubik', system-ui, sans-serif;
   line-height: 1.15;
   color: var(--color-text);
   letter-spacing: -0.3px;
@@ -187,6 +187,7 @@ h1, h2, h3, h4, h5, h6 {
     background: var(--color-primary);
     color: white;
     font-size: 15px;
+    font-family: 'Rubik', system-ui, sans-serif;
     box-shadow: var(--shadow-brand);
   }
   .btn-primary:hover {
