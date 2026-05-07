@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffa601" />
     <meta name="color-scheme" content="light" />
+    <meta name="facebook-domain-verification" content="3gcjeq8tweqybv3j353hzuf3c5rrsh" />
 
     <title>Sosa Bulls — Tienda de Mascotas en Paraguay</title>
     <meta name="description" content="Alimentos, accesorios y productos premium para perros y gatos en Paraguay. Envios a todo el pais." />
@@ -14,15 +15,104 @@
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
+    <!-- Schema.org LocalBusiness — estatico para crawlers sin JS -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "PetStore",
+      "name": "SOSA Bulls Balanceados",
+      "url": "https://sosabulls.com.py",
+      "telephone": "+595982316578",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+595982316578",
+        "contactType": "customer service",
+        "contactOption": "WhatsApp",
+        "availableLanguage": "Spanish"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Barrio San Rafael",
+        "addressLocality": "Lambare",
+        "addressRegion": "Central",
+        "addressCountry": "PY"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": -25.3500,
+        "longitude": -57.6167
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+          "opens": "09:00",
+          "closes": "19:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": "Saturday",
+          "opens": "08:00",
+          "closes": "19:00"
+        }
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Alimentos y accesorios para mascotas",
+        "itemListElement": [
+          {"@type": "Offer", "itemOffered": {"@type": "Product", "name": "Alimento balanceado para perros"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Product", "name": "Alimento balanceado para gatos"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Delivery por WhatsApp"}}
+        ]
+      },
+      "areaServed": {"@type": "City", "name": "Lambare"},
+      "currenciesAccepted": "PYG",
+      "priceRange": "$$"
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SOSA Bulls Balanceados",
+      "url": "https://sosabulls.com.py"
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "SOSA Bulls Balanceados",
+      "url": "https://sosabulls.com.py",
+      "logo": "https://sosabulls.com.py/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+595982316578",
+        "contactType": "customer service",
+        "availableLanguage": "Spanish"
+      }
+    }
+    </script>
+
     <!-- Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Rubik + Nunito Sans — ecommerce clean, warm, conversion-optimized -->
+    <!-- Montserrat + Inter — carga asincrona para no bloquear render -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&family=Nunito+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
