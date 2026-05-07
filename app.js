@@ -92,20 +92,9 @@ app.use((req, res, next) => {
         const duration = Date.now() - start
         // Solo loguear errores 400+ y requests lentos (+2000ms)
         if (res.statusCode >= 400) {
-            logger.error({
-                method: req.method,
-                url: req.url,
-                status: res.statusCode,
-                duration: `${duration}ms`
-            })
+            logger.error(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`)
         } else if (duration > 2000) {
-            logger.warn({
-                method: req.method,
-                url: req.url,
-                status: res.statusCode,
-                duration: `${duration}ms`,
-                message: 'Request lento'
-            })
+            logger.warn(`Request lento: ${req.method} ${req.url} ${res.statusCode} ${duration}ms`)
         }
     })
     next()
