@@ -1,0 +1,35 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /carrito
+Disallow: /perfil
+
+# Facebook scraper — necesario para verificacion de dominio y previsualizacion de links
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+# Crawlers de busqueda AI — se permiten para aparecer en AI Overviews y ChatGPT Search
+User-agent: Google-Extended
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+# Crawlers de entrenamiento — bloqueados
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+Sitemap: https://sosabulls.com.py/sitemap.xml
