@@ -110,6 +110,8 @@ app.use((req, res, next) => {
     next()
 })
 
+app.use('/public', express.static(path.join(__dirname, 'public')))
+
 // Alias /api para compatibilidad con frontend
 app.use('/api/auth', limiterAuth, authRoutes)
 app.use('/api/usuarios', limiterGeneral, autenticar, usuariosRoutes)
@@ -158,14 +160,22 @@ app.use('/uploads', (req, res, next) => {
     next()
 }, express.static(path.join(__dirname, 'public/uploads')))
 
+const staticAssetHeaders = (res, filePath) => {
+    if (/\.(html|txt|xml)$/.test(filePath)) {
+        res.setHeader('Cache-Control', 'no-cache')
+    } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    }
+}
+
 // Servir dashboard estático
-app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist')))
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist'), { setHeaders: staticAssetHeaders }))
 app.get('/dashboard/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard/dist/index.html'))
 })
 
 // Landing page pública en /
-app.use(express.static(path.join(__dirname, 'landing')))
+app.use(express.static(path.join(__dirname, 'landing'), { setHeaders: staticAssetHeaders }))
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'landing/index.html'))
 })
