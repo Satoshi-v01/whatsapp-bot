@@ -1,5 +1,6 @@
 require('dotenv').config()
 process.env.TZ = 'America/Asuncion'
+const path = require('path')
 const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { query } = require('./src/db/index')
@@ -151,8 +152,6 @@ app.use('/carrito', limiterGeneral, autenticar, carritoRoutes)
 app.use('/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 app.use('/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
-
-const path = require('path')
 
 // Servir imágenes subidas — CORP cross-origin para que el dashboard pueda cargarlas
 app.use('/uploads', (req, res, next) => {
