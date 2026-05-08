@@ -289,19 +289,23 @@ function Chat() {
                                                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                                                 border: esCliente ? `1px solid ${s.borderLight}` : esBot ? `1px solid rgba(99,102,241,0.2)` : 'none'
                                             }}>
-                                                {msg.texto?.startsWith('[imagen:') ? (
-                                                    <div style={{ 
-                                                        padding: '8px', 
-                                                        background: s.surfaceLow, 
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px'
-                                                    }}>
+                                                {msg.texto?.startsWith('https://') ? (
+                                                    <a href={msg.texto} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                                                        <img
+                                                            src={msg.texto}
+                                                            alt="Comprobante"
+                                                            style={{ maxWidth: '240px', maxHeight: '320px', borderRadius: '8px', display: 'block', objectFit: 'cover' }}
+                                                            onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+                                                        />
+                                                        <div style={{ display: 'none', padding: '8px', background: s.surfaceLow, borderRadius: '8px', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{ color: s.textMuted, display: 'flex' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+                                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Ver imagen</span>
+                                                        </div>
+                                                    </a>
+                                                ) : msg.texto?.startsWith('[imagen:') ? (
+                                                    <div style={{ padding: '8px', background: s.surfaceLow, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         <span style={{ color: s.textMuted, display: 'flex' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-                                                        <span style={{ fontSize: '12px', color: s.textMuted }}>
-                                                            Imagen enviada por el cliente
-                                                        </span>
+                                                        <span style={{ fontSize: '12px', color: s.textMuted }}>Imagen enviada por el cliente</span>
                                                     </div>
                                                 ) : (
                                                     <p style={{ whiteSpace: 'pre-wrap' }}>{msg.texto}</p>

@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
-const { enviarMensaje } = require('../services/whatsapp')
+const { enviarMensaje, descargarYGuardarImagen } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const logger = require('../middleware/logger')
 
@@ -48,7 +48,15 @@ router.post('/', async (req, res) => {
 
         if (tipo === 'image') {
             const imageId = mensaje.image?.id || ''
-            await guardarMensaje(numero, `[imagen: ${imageId}]`, 'cliente')
+            let textoGuardado = `[imagen: ${imageId}]`
+            if (imageId) {
+                try {
+                    textoGuardado = await descargarYGuardarImagen(imageId)
+                } catch (e) {
+                    logger.warn(`No se pudo descargar imagen ${imageId}: ${e.message}`)
+                }
+            }
+            await guardarMensaje(numero, textoGuardado, 'cliente')
             await procesarMensaje(numero, imageId, 'image')
             return res.status(200).send('OK')
         }
