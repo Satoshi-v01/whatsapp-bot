@@ -187,22 +187,17 @@ app.get('/test-db', async (req, res) => {
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
-    logger.error({
-        message: err.message,
-        stack: err.stack,
-        url: req.url,
-        method: req.method
-    })
+    logger.error(`${req.method} ${req.url} — ${err.message}`)
     res.status(500).json({ error: 'Error interno del servidor' })
 })
 
 // Manejo de promesas no capturadas
-process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection:', { reason, promise })
+process.on('unhandledRejection', (reason) => {
+    logger.error(`Unhandled Rejection: ${reason?.message || reason}`)
 })
 
 process.on('uncaughtException', (error) => {
-    logger.error('Uncaught Exception:', error)
+    logger.error(`Uncaught Exception: ${error.message}`)
     process.exit(1)
 })
 
