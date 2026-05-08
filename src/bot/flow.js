@@ -20,6 +20,41 @@ async function enviarYGuardar(numero, texto) {
     await guardarMensaje(numero, texto, 'bot')
 }
 
+async function manejarPedidoWeb(numero, texto) {
+    const match = texto.match(/#PEDIDO_WEB#(ECO-\d+)/)
+    if (!match) {
+        await enviarYGuardar(numero, `Se registro tu compra via web. Un asesor se comunicara con vos en breve. Muchas gracias!`)
+        return
+    }
+    const numeroPedido = match[1]
+    try {
+        const res = await db.query(
+            `SELECT op.id, op.tipo_entrega, op.zona_delivery,
+                    COALESCE(SUM(opi.precio_total), 0) + COALESCE(op.costo_delivery, 0) AS total
+             FROM ordenes_pedido op
+             LEFT JOIN ordenes_pedido_items opi ON opi.orden_id = op.id
+             WHERE op.numero_pedido = $1
+             GROUP BY op.id, op.tipo_entrega, op.zona_delivery, op.costo_delivery`,
+            [numeroPedido]
+        )
+        if (!res.rows[0]) {
+            await enviarYGuardar(numero, `Se registro tu compra *${numeroPedido}* via web. Un asesor se comunicara con vos en breve. Muchas gracias!`)
+            return
+        }
+        await db.query(
+            `UPDATE ordenes_pedido SET cliente_numero = $1 WHERE id = $2`,
+            [numero, res.rows[0].id]
+        )
+        await enviarYGuardar(numero,
+            `Se registro tu compra *${numeroPedido}* via web.\n\n` +
+            `Un asesor se comunicara con vos en breve para confirmar los detalles.\n\n` +
+            `Muchas gracias por elegirnos!`
+        )
+    } catch (e) {
+        await enviarYGuardar(numero, `Se registro tu compra *${numeroPedido}* via web. Un asesor se comunicara con vos en breve. Muchas gracias!`)
+    }
+}
+
 // ─────────────────────────────────────────────
 // PROCESADOR PRINCIPAL
 // ─────────────────────────────────────────────
@@ -27,6 +62,11 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
     const sesion = await obtenerSesion(numero)
 
     if (sesion.modo === 'humano') return
+
+    if (tipoMensaje === 'text' && texto?.includes('#PEDIDO_WEB#')) {
+        await manejarPedidoWeb(numero, texto)
+        return
+    }
 
     if (sesion.modo === 'esperando_agente') {
         await enviarYGuardar(numero, `Un agente te atenderá en breve. Por favor aguardá 🙏`)
