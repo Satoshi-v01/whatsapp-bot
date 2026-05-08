@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDeliveries, actualizarEstadoDelivery, agregarNota, crearDeliveryManual } from '../services/deliveries'
+import { actualizarEstadoVenta } from '../services/ventas'
 import { getProductos, getCategorias } from '../services/productos'
 import { buscarClientes } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
@@ -86,6 +87,16 @@ function Delivery() {
         }
     }
 
+    async function confirmarPago(ventaId) {
+        try {
+            await actualizarEstadoVenta(ventaId, 'pagado')
+            await cargarDeliveries()
+            if (detalle) setDetalle(prev => ({ ...prev, estado_venta: 'pagado' }))
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo confirmar el pago.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        }
+    }
+
     async function handleAgregarNota(tipo = 'nota') {
         const texto = tipo === 'nota' ? notaTexto : demoras.find(d => d.tipo === tipo)?.label
         if (!texto?.trim()) return
@@ -158,6 +169,17 @@ function Delivery() {
                             </p>
                         </div>
                     </div>
+                    {!pagado && d.metodo_pago === 'transferencia' && (
+                        <button
+                            onClick={() => confirmarPago(d.venta_id)}
+                            style={{ marginTop: '10px', width: '100%', padding: '10px 14px', borderRadius: '10px', border: 'none', background: '#10b981', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#059669'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#10b981'}
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Pago confirmado
+                        </button>
+                    )}
                     {d.quiere_factura && (
                         <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', background: s.surfaceLow, fontSize: '11px', color: s.textMuted }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Factura a:</span> <strong style={{ color: s.text }}>{d.razon_social || 'Sin razón social'}</strong>
