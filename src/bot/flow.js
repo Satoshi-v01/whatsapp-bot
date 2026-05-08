@@ -740,6 +740,67 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
 }
 
 // ─────────────────────────────────────────────
+// CONFIRMACION DELIVERY TARDE
+// ─────────────────────────────────────────────
+async function manejarConfirmandoDeliveryTarde(numero, texto, sesion) {
+    const t = texto.trim()
+
+    if (t === '1') {
+        const clienteRes = await db.query(
+            `SELECT direccion, referencia_delivery, ciudad FROM clientes WHERE telefono = $1`,
+            [numero]
+        )
+        const cliente = clienteRes.rows[0]
+
+        if (cliente?.direccion) {
+            await actualizarSesion(numero, {
+                paso: 'confirmando_ubicacion',
+                modo: 'bot',
+                datos: { ...sesion.datos, modalidad: 'delivery' }
+            })
+            await enviarYGuardar(numero,
+                `Tu ultima ubicacion registrada:\n` +
+                `*${cliente.direccion}*` +
+                `${cliente.referencia_delivery ? `\nReferencia: ${cliente.referencia_delivery}` : ''}\n\n` +
+                `Queres entregar en la misma direccion?\n` +
+                `1. Si, misma direccion\n` +
+                `2. No, quiero poner una nueva`
+            )
+            return
+        }
+
+        const zonas = await getZonasActivas()
+        if (!zonas.length) {
+            await enviarYGuardar(numero, `Lo sentimos, por ahora no contamos con delivery disponible.\n\nQueres retirar en tienda? Responde *1*.`)
+            return
+        }
+        const lista = await formatearListaZonas(zonas)
+        await actualizarSesion(numero, {
+            paso: 'eligiendo_zona',
+            modo: 'bot',
+            datos: { ...sesion.datos, modalidad: 'delivery', zonas }
+        })
+        await enviarYGuardar(numero,
+            `Zonas de delivery disponibles:\n\n${lista}\n\n` +
+            `Responde con el numero de tu zona.`
+        )
+        return
+    }
+
+    if (t === '2') {
+        await actualizarSesion(numero, { paso: 'factura', modo: 'bot', datos: { ...sesion.datos, modalidad: 'retiro' } })
+        await enviarYGuardar(numero,
+            `Necesitas factura?\n\n` +
+            `1. Si, con factura\n` +
+            `2. No, sin factura`
+        )
+        return
+    }
+
+    await enviarYGuardar(numero, `Responde *1* para continuar con delivery manana o *2* para retirar en tienda hoy.`)
+}
+
+// ─────────────────────────────────────────────
 // ELECCION DE ZONA
 // ─────────────────────────────────────────────
 async function manejarEleccionZona(numero, texto, sesion) {
