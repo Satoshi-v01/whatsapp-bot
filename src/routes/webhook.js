@@ -2,9 +2,8 @@ const express = require('express')
 const router = express.Router()
 const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
-const { enviarMensaje, descargarYGuardarImagen } = require('../services/whatsapp')
+const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
-const logger = require('../middleware/logger')
 
 router.get('/', (req, res) => {
     const mode = req.query['hub.mode']
@@ -36,8 +35,6 @@ router.post('/', async (req, res) => {
         const numero = mensaje.from
         const tipo = mensaje.type
 
-        logger.info(`[webhook] mensaje de ${numero} tipo=${tipo}${tipo === 'text' ? ` texto="${mensaje.text?.body}"` : ''}`)
-
         if (tipo === 'location') {
             const { latitude, longitude } = mensaje.location
             const ubicacion = `https://maps.google.com/?q=${latitude},${longitude}`
@@ -48,15 +45,7 @@ router.post('/', async (req, res) => {
 
         if (tipo === 'image') {
             const imageId = mensaje.image?.id || ''
-            let textoGuardado = `[imagen: ${imageId}]`
-            if (imageId) {
-                try {
-                    textoGuardado = await descargarYGuardarImagen(imageId)
-                } catch (e) {
-                    logger.warn(`No se pudo descargar imagen ${imageId}: ${e.message}`)
-                }
-            }
-            await guardarMensaje(numero, textoGuardado, 'cliente')
+            await guardarMensaje(numero, `[imagen: ${imageId}]`, 'cliente')
             await procesarMensaje(numero, imageId, 'image')
             return res.status(200).send('OK')
         }

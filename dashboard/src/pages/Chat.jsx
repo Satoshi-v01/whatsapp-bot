@@ -13,7 +13,6 @@ function Chat() {
     const [enviando, setEnviando] = useState(false)
     const [mensajes, setMensajes] = useState([])
     const [modalConfirmar, setModalConfirmar] = useState(null)
-    const [imagenAmpliada, setImagenAmpliada] = useState(null)
     const [buscar, setBuscar] = useState('')
     const inputRef = useRef(null)
     const mensajesRef = useRef(null)
@@ -290,23 +289,19 @@ function Chat() {
                                                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                                                 border: esCliente ? `1px solid ${s.borderLight}` : esBot ? `1px solid rgba(99,102,241,0.2)` : 'none'
                                             }}>
-                                                {msg.texto?.startsWith('https://') ? (
-                                                    <div onClick={() => setImagenAmpliada(msg.texto)} style={{ cursor: 'zoom-in', display: 'inline-block' }}>
-                                                        <img
-                                                            src={msg.texto}
-                                                            alt="Comprobante"
-                                                            style={{ maxWidth: '240px', maxHeight: '320px', borderRadius: '8px', display: 'block', objectFit: 'cover' }}
-                                                            onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
-                                                        />
-                                                        <div style={{ display: 'none', padding: '8px', background: s.surfaceLow, borderRadius: '8px', alignItems: 'center', gap: '8px' }}>
-                                                            <span style={{ color: s.textMuted, display: 'flex' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-                                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Ver imagen</span>
-                                                        </div>
-                                                    </div>
-                                                ) : msg.texto?.startsWith('[imagen:') ? (
-                                                    <div style={{ padding: '8px', background: s.surfaceLow, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {msg.texto?.startsWith('[imagen:') ? (
+                                                    <div style={{ 
+                                                        padding: '8px', 
+                                                        background: s.surfaceLow, 
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px'
+                                                    }}>
                                                         <span style={{ color: s.textMuted, display: 'flex' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-                                                        <span style={{ fontSize: '12px', color: s.textMuted }}>Imagen enviada por el cliente</span>
+                                                        <span style={{ fontSize: '12px', color: s.textMuted }}>
+                                                            Imagen enviada por el cliente
+                                                        </span>
                                                     </div>
                                                 ) : (
                                                     <p style={{ whiteSpace: 'pre-wrap' }}>{msg.texto}</p>
@@ -391,26 +386,6 @@ function Chat() {
                     onConfirmar={modalConfirmar.onConfirmar}
                     onCancelar={() => setModalConfirmar(null)}
                 />
-            )}
-
-            {imagenAmpliada && (
-                <div
-                    onClick={() => setImagenAmpliada(null)}
-                    style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}
-                >
-                    <button
-                        onClick={() => setImagenAmpliada(null)}
-                        style={{ position: 'absolute', top: '16px', right: '20px', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: 'white', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                    >
-                        ×
-                    </button>
-                    <img
-                        src={imagenAmpliada}
-                        alt="Comprobante"
-                        onClick={e => e.stopPropagation()}
-                        style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '12px', objectFit: 'contain', cursor: 'default', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
-                    />
-                </div>
             )}
         </div>
     )

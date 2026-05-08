@@ -194,11 +194,11 @@ function Clientes() {
     }
 
     function colorOrigen(origen) {
-        return { bot: '#10b981', presencial: '#3b82f6', manual: '#64748b' }[origen] || '#64748b'
+        return { bot: '#10b981', presencial: '#3b82f6', manual: '#64748b', ecommerce: '#f59e0b' }[origen] || '#64748b'
     }
 
     function bgOrigen(origen) {
-        return { bot: darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7', presencial: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe', manual: darkMode ? '#334155' : '#f1f5f9' }[origen] || (darkMode ? '#334155' : '#f1f5f9')
+        return { bot: darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7', presencial: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe', manual: darkMode ? '#334155' : '#f1f5f9', ecommerce: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7' }[origen] || (darkMode ? '#334155' : '#f1f5f9')
     }
 
     function colorEstado(estado) {
@@ -394,6 +394,9 @@ function Clientes() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
                                                 <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text, letterSpacing: '-0.3px' }}>{clienteSeleccionado.nombre}</h2>
                                                 <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', color: colorOrigen(clienteSeleccionado.origen), background: bgOrigen(clienteSeleccionado.origen) }}>{clienteSeleccionado.origen}</span>
+                                                {clienteSeleccionado.origen === 'ecommerce' && (
+                                                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', color: '#7c3aed', background: darkMode ? 'rgba(124,58,237,0.15)' : '#ede9fe' }} title="Tiene cuenta en el ecommerce">Ecommerce</span>
+                                                )}
                                                 <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', color: clienteSeleccionado.cliente_activo ? '#10b981' : s.textMuted, background: clienteSeleccionado.cliente_activo ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? '#334155' : '#f1f5f9') }}>
                                                     {clienteSeleccionado.cliente_activo ? '● Activo' : '○ Inactivo'}
                                                 </span>
