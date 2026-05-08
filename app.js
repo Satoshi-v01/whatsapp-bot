@@ -27,6 +27,7 @@ const lotesRoutes = require('./src/routes/lotes')
 const auditoriaRoutes = require('./src/routes/auditoria')
 const transformacionesRoutes = require('./src/routes/transformaciones')
 const ecommerceRoutes = require('./src/routes/ecommerce')
+const uploadsRoutes = require('./src/routes/uploads')
 
 const app = express()
 
@@ -91,20 +92,9 @@ app.use((req, res, next) => {
         const duration = Date.now() - start
         // Solo loguear errores 400+ y requests lentos (+2000ms)
         if (res.statusCode >= 400) {
-            logger.error({
-                method: req.method,
-                url: req.url,
-                status: res.statusCode,
-                duration: `${duration}ms`
-            })
+            logger.error(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`)
         } else if (duration > 2000) {
-            logger.warn({
-                method: req.method,
-                url: req.url,
-                status: res.statusCode,
-                duration: `${duration}ms`,
-                message: 'Request lento'
-            })
+            logger.warn(`Request lento: ${req.method} ${req.url} ${res.statusCode} ${duration}ms`)
         }
     })
     next()
@@ -130,6 +120,7 @@ app.use('/api/lotes', limiterGeneral, autenticar, lotesRoutes)
 app.use('/api/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 app.use('/api/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
 app.use('/api/ecommerce', limiterGeneral, ecommerceRoutes)
+app.use('/api/uploads', limiterGeneral, uploadsRoutes)
 
 // Rutas
 app.use('/webhook', webhookRoutes)
@@ -164,6 +155,7 @@ const staticAssetHeaders = (res, filePath) => {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     }
 }
+
 // Servir dashboard estático
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist'), { setHeaders: staticAssetHeaders }))
 app.get('/dashboard/*splat', (req, res) => {
@@ -187,17 +179,22 @@ app.get('/test-db', async (req, res) => {
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
-    logger.error(`${req.method} ${req.url} — ${err.message}`)
+    logger.error({
+        message: err.message,
+        stack: err.stack,
+        url: req.url,
+        method: req.method
+    })
     res.status(500).json({ error: 'Error interno del servidor' })
 })
 
 // Manejo de promesas no capturadas
-process.on('unhandledRejection', (reason) => {
-    logger.error(`Unhandled Rejection: ${reason?.message || reason}`)
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection:', { reason, promise })
 })
 
 process.on('uncaughtException', (error) => {
-    logger.error(`Uncaught Exception: ${error.message}`)
+    logger.error('Uncaught Exception:', error)
     process.exit(1)
 })
 
