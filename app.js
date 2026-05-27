@@ -312,7 +312,12 @@ app.get('/ecommerce/buscar',             (req, res) => res.sendFile(ECO_INDEX))
 app.get('/ecommerce/login',              (req, res) => res.sendFile(ECO_INDEX))
 app.get('/ecommerce/registro',           (req, res) => res.sendFile(ECO_INDEX))
 app.get('/ecommerce/perfil',             (req, res) => res.sendFile(ECO_INDEX))
-app.get('/ecommerce/*splat',             (req, res) => res.sendFile(ECO_INDEX))
+// Assets con extension (.js, .css, .ico, etc.) devuelven 404 si no existen
+// — evita que CDNs cacheen HTML como si fuera un asset valido
+app.get('/ecommerce/*splat', (req, res) => {
+    if (/\.\w{1,6}$/.test(req.path)) return res.status(404).end()
+    res.sendFile(ECO_INDEX)
+})
 
 app.get('/test-db', async (req, res) => {
   try {
