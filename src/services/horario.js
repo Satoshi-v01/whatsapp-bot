@@ -1,32 +1,42 @@
 const db = require('../db/index')
 
+function getAhoraEnPY() {
+    const partes = new Intl.DateTimeFormat('es-PY', {
+        timeZone: 'America/Asuncion',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).formatToParts(new Date())
+    const get = tipo => partes.find(p => p.type === tipo)?.value ?? ''
+    const dia = get('weekday')
+    const diaCap = dia.charAt(0).toUpperCase() + dia.slice(1)
+    const horas = parseInt(get('hour'))
+    const minutos = parseInt(get('minute'))
+    return { dia: diaCap, minutos: horas * 60 + minutos }
+}
+
 async function estaAbierto() {
     try {
         const resultado = await db.query(
             `SELECT valor FROM configuracion WHERE clave = 'tienda_horario'`
         )
-        if (!resultado.rows.length) return true // si no hay config, asumir abierto
+        if (!resultado.rows.length) return true
 
         const horario = JSON.parse(resultado.rows[0].valor)
-
-        const ahora = new Date()
-        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-        const diaHoy = diasSemana[ahora.getDay()]
+        const { dia: diaHoy, minutos: minutosAhora } = getAhoraEnPY()
 
         const config = horario[diaHoy]
         if (!config || !config.activo) return false
 
-        // Comparar hora actual con rango
         const [desdeH, desdeM] = config.desde.split(':').map(Number)
         const [hastaH, hastaM] = config.hasta.split(':').map(Number)
-
-        const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes()
         const minutosDesde = desdeH * 60 + desdeM
         const minutosHasta = hastaH * 60 + hastaM
 
         return minutosAhora >= minutosDesde && minutosAhora < minutosHasta
     } catch (err) {
-        return true // ante cualquier error, no bloquear al cliente
+        return true
     }
 }
 
@@ -43,20 +53,16 @@ async function getMensajeFueraHorario() {
 
 async function estaAbiertoParaDelivery() {
     try {
-        const ahora = new Date()
-        const horas = ahora.getHours()
-        // Después de las 16:00 no se procesan deliveries
-        return horas < 16
+        const { minutos } = getAhoraEnPY()
+        return minutos < 16 * 60
     } catch (err) {
         return true
     }
 }
 
-// Retiro en tienda: cierra a las 19:00, pero desde las 18:30 ya no da tiempo
 function esRetiroHoy() {
-    const ahora = new Date()
-    const minutos = ahora.getHours() * 60 + ahora.getMinutes()
-    return minutos < (18 * 60 + 30) // antes de las 18:30
+    const { minutos } = getAhoraEnPY()
+    return minutos < (18 * 60 + 30)
 }
 
 module.exports = { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery, esRetiroHoy }

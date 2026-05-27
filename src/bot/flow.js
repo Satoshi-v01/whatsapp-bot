@@ -20,9 +20,18 @@ async function enviarYGuardar(numero, texto) {
     await guardarMensaje(numero, texto, 'bot')
 }
 
+function getMinutosPY() {
+    const partes = new Intl.DateTimeFormat('es-PY', {
+        timeZone: 'America/Asuncion',
+        hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(new Date())
+    const h = parseInt(partes.find(p => p.type === 'hour')?.value ?? '0')
+    const m = parseInt(partes.find(p => p.type === 'minute')?.value ?? '0')
+    return h * 60 + m
+}
+
 function mensajeRetiro() {
-    const ahora = new Date()
-    const minutos = ahora.getHours() * 60 + ahora.getMinutes()
+    const minutos = getMinutosPY()
     if (minutos < 18 * 60 + 30) {
         return `🏪 *Retiro en tienda*\n⏰ Atendemos hasta las *19:00 hs*.\n\n`
     }

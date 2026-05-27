@@ -29,6 +29,7 @@ const transformacionesRoutes = require('./src/routes/transformaciones')
 const ecommerceRoutes = require('./src/routes/ecommerce')
 const uploadsRoutes = require('./src/routes/uploads')
 const sitemapRoutes = require('./src/routes/sitemap')
+const mediaRoutes = require('./src/routes/media')
 
 const app = express()
 
@@ -122,6 +123,7 @@ app.use('/api/auditoria', limiterGeneral, autenticar, auditoriaRoutes)
 app.use('/api/transformaciones', limiterGeneral, autenticar, transformacionesRoutes)
 app.use('/api/ecommerce', limiterGeneral, ecommerceRoutes)
 app.use('/api/uploads', limiterGeneral, uploadsRoutes)
+app.use('/api/media', limiterGeneral, mediaRoutes)
 
 // Rutas
 app.use('/webhook', webhookRoutes)
