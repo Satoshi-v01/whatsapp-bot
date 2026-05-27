@@ -14,7 +14,7 @@ export default function SEOHead({
   schema = null,
 }) {
   const { pathname } = useLocation()
-  const canonical  = `${SITE_URL}${pathname}`
+  const canonical  = `${SITE_URL}/ecommerce${pathname}`
   const fullTitle  = title
     ? `${title} — ${SITE_NAME}`
     : `${SITE_NAME} — Tienda de Mascotas en Paraguay`

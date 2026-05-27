@@ -62,7 +62,7 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc:      ["'self'"],
-            scriptSrc:       ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            scriptSrc:       ["'self'", "'unsafe-inline'"],
             styleSrc:        ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc:         ["'self'", "data:", "https://fonts.gstatic.com"],
             imgSrc:          ["'self'", "data:", "blob:", "https:"],
@@ -300,7 +300,7 @@ async function serveEco(req, res) {
         .replace('</head>', `  ${inject}\n</head>`)
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=120, stale-while-revalidate=60')
     res.send(html)
 }
 
