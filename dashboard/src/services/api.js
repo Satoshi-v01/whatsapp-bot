@@ -1,11 +1,9 @@
 import axios from 'axios'
 
-const baseURL = import.meta.env.PROD 
-    ? 'https://whatsapp-bot-0272.onrender.com'
-    : '/api'
-    
+// El dashboard corre en el mismo servidor Express que la API,
+// por lo que /api funciona tanto en dev (via Vite proxy) como en prod.
 const api = axios.create({
-    baseURL
+    baseURL: '/api'
 })
 
 api.interceptors.request.use(config => {
