@@ -1,9 +1,11 @@
 User-agent: *
 Allow: /
-Disallow: /carrito
-Disallow: /perfil
-Disallow: /login
-Disallow: /registro
+Disallow: /ecommerce/carrito
+Disallow: /ecommerce/perfil
+Disallow: /ecommerce/login
+Disallow: /ecommerce/registro
+Disallow: /dashboard/
+Disallow: /api/
 
 User-agent: GPTBot
 Allow: /

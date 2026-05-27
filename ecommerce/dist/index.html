@@ -127,18 +127,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Montserrat + Inter -->
+    <!-- Montserrat + Inter — carga asincrona para no bloquear render -->
     <link
+      rel="preload"
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
-    <script type="module" crossorigin src="/ecommerce/assets/index-TAK2RY2k.js"></script>
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <script type="module" crossorigin src="/ecommerce/assets/index-DS5c_GO9.js"></script>
     <link rel="modulepreload" crossorigin href="/ecommerce/assets/vendor-react--8O9iy0i.js">
     <link rel="modulepreload" crossorigin href="/ecommerce/assets/vendor-motion-DQXsPpSX.js">
     <link rel="modulepreload" crossorigin href="/ecommerce/assets/vendor-axios-qFyJwsfU.js">
     <link rel="stylesheet" crossorigin href="/ecommerce/assets/index-DUYXvONF.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>
