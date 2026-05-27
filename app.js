@@ -319,6 +319,16 @@ app.get('/ecommerce/*splat', (req, res) => {
     res.sendFile(ECO_INDEX)
 })
 
+app.get('/debug-eco', (req, res) => {
+    const dirPath = path.join(__dirname, 'ecommerce/dist/assets')
+    try {
+        const files = require('fs').readdirSync(dirPath)
+        res.json({ __dirname, dirPath, files })
+    } catch (e) {
+        res.json({ __dirname, dirPath, error: e.message })
+    }
+})
+
 app.get('/test-db', async (req, res) => {
   try {
     const result = await query('SELECT NOW()');
