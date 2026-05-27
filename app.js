@@ -186,6 +186,8 @@ app.get('/', (req, res) => {
 })
 
 // Ecommerce SPA en /ecommerce — assets estáticos con prefijo
+// Montar /ecommerce/assets de forma explícita para evitar ambiguedad de path-stripping en Express 5
+app.use('/ecommerce/assets', express.static(path.join(__dirname, 'ecommerce/dist/assets'), { setHeaders: staticAssetHeaders }))
 app.use('/ecommerce', express.static(path.join(__dirname, 'ecommerce/dist'), { setHeaders: staticAssetHeaders }))
 
 // SSR meta-injection: Googlebot ve title/description/schema reales desde la DB
