@@ -930,11 +930,18 @@ function TabTrafico({ s }) {
     if (error)    return <p style={{ color: '#ef4444', fontSize: 13 }}>{error}</p>
     if (!datos)   return null
 
-    const { kpis, por_dia, por_entrega, top_productos, nuevos_clientes } = datos
+    const {
+        kpis          = {},
+        por_dia       = [],
+        por_entrega   = [],
+        top_productos = [],
+        nuevos_clientes = 0
+    } = datos
 
-    const maxDia = por_dia.reduce((m, d) => Math.max(m, parseInt(d.total)), 1)
+    const safeArr = v => (Array.isArray(v) ? v : [])
 
-    const totalEntrega = por_entrega.reduce((s, r) => s + parseInt(r.cantidad), 0)
+    const maxDia      = safeArr(por_dia).reduce((m, d) => Math.max(m, parseInt(d.total)), 1)
+    const totalEntrega = safeArr(por_entrega).reduce((s, r) => s + parseInt(r.cantidad), 0)
 
     const coloresEstado = { pendiente: '#f59e0b', confirmado: '#3b82f6', entregado: '#22c55e', cancelado: '#ef4444' }
     const estadosKpi = [
@@ -987,11 +994,11 @@ function TabTrafico({ s }) {
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
                 <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
                     <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 700, color: s.text }}>Pedidos por dia</h3>
-                    {por_dia.length === 0 ? (
+                    {safeArr(por_dia).length === 0 ? (
                         <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: 13 }}>Sin pedidos en este periodo</div>
                     ) : (
                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 160 }}>
-                            {por_dia.map((d, i) => {
+                            {safeArr(por_dia).map((d, i) => {
                                 const altura = Math.max((parseInt(d.total) / maxDia) * 100, 3)
                                 const fecha = new Date(d.fecha)
                                 const label = `${fecha.getDate()}/${fecha.getMonth() + 1}`
@@ -1011,11 +1018,11 @@ function TabTrafico({ s }) {
 
                 <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
                     <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 700, color: s.text }}>Tipo de entrega</h3>
-                    {por_entrega.length === 0 ? (
+                    {safeArr(por_entrega).length === 0 ? (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: 13, height: 100 }}>Sin datos</div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {por_entrega.map((e, i) => {
+                            {safeArr(por_entrega).map((e, i) => {
                                 const pct = totalEntrega > 0 ? Math.round((parseInt(e.cantidad) / totalEntrega) * 100) : 0
                                 const colores = ['#3b82f6', '#f59e0b', '#22c55e']
                                 return (
@@ -1039,7 +1046,7 @@ function TabTrafico({ s }) {
             {/* Top productos */}
             <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
                 <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: s.text }}>Top productos mas pedidos</h3>
-                {top_productos.length === 0 ? (
+                {safeArr(top_productos).length === 0 ? (
                     <p style={{ color: s.textFaint, fontSize: 13 }}>Sin datos en este periodo.</p>
                 ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1051,8 +1058,8 @@ function TabTrafico({ s }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {top_productos.map((p, i) => {
-                                const maxUnidades = parseInt(top_productos[0]?.unidades || 1)
+                            {safeArr(top_productos).map((p, i) => {
+                                const maxUnidades = parseInt(safeArr(top_productos)[0]?.unidades || 1)
                                 const pct = Math.round((parseInt(p.unidades) / maxUnidades) * 100)
                                 return (
                                     <tr key={i} style={{ borderBottom: `1px solid ${s.border}` }}>
