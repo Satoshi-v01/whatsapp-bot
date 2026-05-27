@@ -1,0 +1,1 @@
+const r=e=>`eco_delivery_prefs_${e}`;function l(e){if(!e)return null;try{return JSON.parse(localStorage.getItem(r(e))||"null")}catch{return null}}function n(e,t){e&&localStorage.setItem(r(e),JSON.stringify(t))}export{l as g,n as s};
