@@ -115,8 +115,9 @@ export default function Login() {
   return (
     <>
       <SEOHead
-        title="Ingresar — Sosa Bulls"
-        description="Ingresa a tu cuenta para ver tus pedidos, mascotas y datos de facturacion."
+        title="Ingresar"
+        description="Ingresá a tu cuenta para ver tus pedidos, mascotas y datos de facturación."
+        noindex
       />
 
       <div
@@ -147,7 +148,7 @@ export default function Login() {
                 Bienvenido de vuelta
               </h1>
               <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                Ingresa a tu cuenta de Sosa Bulls
+                Ingresá a tu cuenta de Sosa BULLS
               </p>
             </div>
           </div>

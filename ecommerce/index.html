@@ -7,92 +7,119 @@
     <meta name="color-scheme" content="light" />
     <meta name="facebook-domain-verification" content="3gcjeq8tweqybv3j353hzuf3c5rrsh" />
 
-    <title>Sosa Bulls — Tienda de Mascotas en Paraguay</title>
-    <meta name="description" content="Alimentos, accesorios y productos premium para perros y gatos en Paraguay. Envios a todo el pais." />
+    <title>Sosa BULLS — Tienda de Mascotas en Paraguay</title>
+    <meta name="description" content="Alimentos, accesorios y productos premium para perros y gatos en Paraguay. Envios a todo el pais desde Lambare, Departamento Central." />
 
-    <meta property="og:site_name" content="Sosa Bulls" />
+    <meta property="og:site_name" content="Sosa BULLS" />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_PY" />
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
-    <!-- Schema.org LocalBusiness — estatico para crawlers sin JS -->
+    <!-- Schema.org — estatico para crawlers sin JS -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "PetStore",
-      "name": "SOSA Bulls Balanceados",
-      "url": "https://sosabulls.com.py",
-      "telephone": "+595982316578",
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+595982316578",
-        "contactType": "customer service",
-        "contactOption": "WhatsApp",
-        "availableLanguage": "Spanish"
-      },
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Barrio San Rafael",
-        "addressLocality": "Lambare",
-        "addressRegion": "Central",
-        "addressCountry": "PY"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": -25.3500,
-        "longitude": -57.6167
-      },
-      "openingHoursSpecification": [
+      "@graph": [
         {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
-          "opens": "09:00",
-          "closes": "19:00"
+          "@type": "PetStore",
+          "@id": "https://sosabulls.com.py/#organization",
+          "name": "Sosa BULLS",
+          "url": "https://sosabulls.com.py",
+          "telephone": "+595982211934",
+          "foundingDate": "2014",
+          "founder": {
+            "@type": "Person",
+            "name": "Osvaldo Sosa"
+          },
+          "image": "https://sosabulls.com.py/logo.png",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://sosabulls.com.py/logo.png",
+            "width": 512,
+            "height": 512
+          },
+          "contactPoint": [
+            {
+              "@type": "ContactPoint",
+              "telephone": "+595982211934",
+              "contactType": "customer service",
+              "contactOption": "WhatsApp",
+              "availableLanguage": "Spanish"
+            },
+            {
+              "@type": "ContactPoint",
+              "telephone": "+595972108110",
+              "contactType": "customer service",
+              "availableLanguage": "Spanish"
+            }
+          ],
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Barrio San Rafael",
+            "addressLocality": "Lambare",
+            "addressRegion": "Central",
+            "addressCountry": "PY"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -25.3239364,
+            "longitude": -57.6169139
+          },
+          "hasMap": "https://maps.app.goo.gl/PAEox1norUjsNfftV",
+          "openingHoursSpecification": [
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+              "opens": "09:00",
+              "closes": "19:00"
+            },
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": "Saturday",
+              "opens": "08:00",
+              "closes": "19:00"
+            }
+          ],
+          "areaServed": [
+            {"@type": "City", "name": "Asuncion"},
+            {"@type": "City", "name": "Lambare"},
+            {"@type": "AdministrativeArea", "name": "Departamento Central"},
+            {"@type": "Country", "name": "Paraguay"}
+          ],
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Alimentos y accesorios para mascotas",
+            "itemListElement": [
+              {"@type": "Offer", "itemOffered": {"@type": "Product", "name": "Alimento balanceado para perros"}},
+              {"@type": "Offer", "itemOffered": {"@type": "Product", "name": "Alimento balanceado para gatos"}},
+              {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Delivery a domicilio en Paraguay"}}
+            ]
+          },
+          "sameAs": [
+            "https://www.instagram.com/sosabulls",
+            "https://www.tiktok.com/@sosabulls"
+          ],
+          "currenciesAccepted": "PYG",
+          "paymentAccepted": "Cash, Transfer",
+          "priceRange": "$$"
         },
         {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": "Saturday",
-          "opens": "08:00",
-          "closes": "19:00"
+          "@type": "WebSite",
+          "@id": "https://sosabulls.com.py/#website",
+          "name": "Sosa BULLS",
+          "url": "https://sosabulls.com.py",
+          "publisher": {"@id": "https://sosabulls.com.py/#organization"},
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://sosabulls.com.py/buscar?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
         }
-      ],
-      "hasOfferCatalog": {
-        "@type": "OfferCatalog",
-        "name": "Alimentos y accesorios para mascotas",
-        "itemListElement": [
-          {"@type": "Offer", "itemOffered": {"@type": "Product", "name": "Alimento balanceado para perros"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Product", "name": "Alimento balanceado para gatos"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Delivery por WhatsApp"}}
-        ]
-      },
-      "areaServed": {"@type": "City", "name": "Lambare"},
-      "currenciesAccepted": "PYG",
-      "priceRange": "$$"
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "SOSA Bulls Balanceados",
-      "url": "https://sosabulls.com.py"
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "SOSA Bulls Balanceados",
-      "url": "https://sosabulls.com.py",
-      "logo": "https://sosabulls.com.py/logo.png",
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+595982316578",
-        "contactType": "customer service",
-        "availableLanguage": "Spanish"
-      }
+      ]
     }
     </script>
 

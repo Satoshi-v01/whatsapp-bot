@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getProveedores, crearProveedor, editarProveedor, getFacturas, crearFactura, editarFactura, registrarPago, getReportes } from '../services/proveedores'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { formatearFecha, formatearSoloFecha, fechaHoyPY, fechaInicioMesPY } from '../utils/fecha'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
 
@@ -36,13 +36,13 @@ function Proveedores() {
     const [fechaDesde, setFechaDesde] = useState('')
     const [fechaHasta, setFechaHasta] = useState('')
     const [modalLibroCompras, setModalLibroCompras] = useState(false)
-    const [libroComprasFechaDesde, setLibroComprasFechaDesde] = useState(new Date().toISOString().slice(0, 7) + '-01')
-    const [libroComprasFechaHasta, setLibroComprasFechaHasta] = useState(new Date().toISOString().slice(0, 10))
+    const [libroComprasFechaDesde, setLibroComprasFechaDesde] = useState(fechaInicioMesPY())
+    const [libroComprasFechaHasta, setLibroComprasFechaHasta] = useState(fechaHoyPY())
     const [exportandoLibroCompras, setExportandoLibroCompras] = useState(false)
 
     const [formProveedor, setFormProveedor] = useState({ nombre: '', ruc: '', telefono: '', email: '', banco: '', numero_cuenta: '', direccion: '', notas: '' })
-    const [formFactura, setFormFactura] = useState({ numero_factura: '', timbrado_proveedor: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', gravada_10: '', gravada_5: '', notas: '' })
-    const [formPago, setFormPago] = useState({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', fecha_pago: new Date().toISOString().slice(0,10), tipo_pago: 'parcial', notas: '' })
+    const [formFactura, setFormFactura] = useState({ numero_factura: '', timbrado_proveedor: '', fecha_emision: fechaHoyPY(), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', gravada_10: '', gravada_5: '', notas: '' })
+    const [formPago, setFormPago] = useState({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', fecha_pago: fechaHoyPY(), tipo_pago: 'parcial', notas: '' })
 
     const s = {
         bg: darkMode ? '#0f172a' : '#f6f6f8',
@@ -170,7 +170,7 @@ function Proveedores() {
         try {
             await crearFactura(modalFactura, formFactura)
             setModalFactura(null)
-            setFormFactura({ numero_factura: '', timbrado_proveedor: '', fecha_emision: new Date().toISOString().slice(0,10), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
+            setFormFactura({ numero_factura: '', timbrado_proveedor: '', fecha_emision: fechaHoyPY(), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
             await cargarDatos()
             if (pestana === 'facturas') await cargarFacturas()
         } catch (err) {
@@ -182,7 +182,7 @@ function Proveedores() {
         try {
             await registrarPago(modalPago.id, formPago)
             setModalPago(null)
-            setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', fecha_pago: new Date().toISOString().slice(0,10), tipo_pago: 'parcial', notas: '' })
+            setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', fecha_pago: fechaHoyPY(), tipo_pago: 'parcial', notas: '' })
             await cargarFacturas()
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar el pago.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
@@ -426,7 +426,7 @@ function Proveedores() {
                                             </td>
                                             <td style={{ padding: '12px 16px' }}>
                                                 {f.tipo === 'credito' && f.estado !== 'pagado' && (
-                                                    <button onClick={e => { e.stopPropagation(); setFormPago({ numero_recibo: '', monto: f.saldo, metodo_pago: 'efectivo', fecha_pago: new Date().toISOString().slice(0,10), tipo_pago: 'total', notas: '' }); setModalPago(f) }}
+                                                    <button onClick={e => { e.stopPropagation(); setFormPago({ numero_recibo: '', monto: f.saldo, metodo_pago: 'efectivo', fecha_pago: fechaHoyPY(), tipo_pago: 'total', notas: '' }); setModalPago(f) }}
                                                         style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                                                         💳 Pagar
                                                     </button>
@@ -842,7 +842,7 @@ function Proveedores() {
                             <button onClick={() => setModalLibroCompras(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
                         </div>
                         <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
-                            Exportá el libro de compras en formato SET con IVA discriminado.
+                            Exportá el libro de compras en formato DNIT con IVA discriminado.
                         </p>
                         <label style={labelStyle}>Fecha desde</label>
                         <input type="date" value={libroComprasFechaDesde} onChange={e => setLibroComprasFechaDesde(e.target.value)} style={{ ...inputStyle, marginBottom: '12px' }} />

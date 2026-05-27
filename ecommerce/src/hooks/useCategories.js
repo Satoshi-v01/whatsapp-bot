@@ -19,7 +19,7 @@ export function useCategories() {
           // solo tomamos el count si el slug coincide
           const enriched = CATEGORIES.map(cat => {
             const dbCat = data.find(c => c.slug === cat.slug)
-            return dbCat ? { ...cat, count: dbCat.count } : cat
+            return dbCat ? { ...cat, count: dbCat.count, imagen_url: dbCat.imagen_url || null } : cat
           })
           setCategories(enriched)
         }

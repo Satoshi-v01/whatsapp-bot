@@ -1,16 +1,39 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { formatPrice } from '@/utils/formatPrice'
-import StockBadge from './StockBadge'
-import ShimmerButton from './ShimmerButton'
+
+function IconPlus({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+  )
+}
+function IconCheck({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  )
+}
+function IconStar({ size = 13, filled = true }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? '#ffa601' : 'none'} stroke="#ffa601" strokeWidth="1.5" aria-hidden="true">
+      <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/>
+    </svg>
+  )
+}
+function IconHeart({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8Z"/>
+    </svg>
+  )
+}
 
 function PlaceholderImage({ nombre }) {
   return (
-    <div
-      className="w-full h-full flex flex-col items-center justify-center gap-2"
-      style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-primary)' }}
-    >
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--color-bg-elevated)', color: 'var(--color-primary)' }}>
       <svg width="48" height="48" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
         <ellipse cx="50" cy="65" rx="24" ry="20" />
         <circle cx="22" cy="38" r="11" />
@@ -18,209 +41,175 @@ function PlaceholderImage({ nombre }) {
         <circle cx="62" cy="26" r="11" />
         <circle cx="78" cy="38" r="11" />
       </svg>
-      <span
-        className="text-xs font-body text-center px-2 leading-tight"
-        style={{ color: 'var(--color-text-muted)' }}
-      >
-        {nombre}
-      </span>
+      <span style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: '0 8px', lineHeight: 1.3 }}>{nombre}</span>
     </div>
   )
 }
 
-function AddToCartButton({ stock, onClick }) {
-  const [adding, setAdding] = useState(false)
+function AddToCartBtn({ stock, onClick }) {
+  const [added, setAdded] = useState(false)
 
   async function handleClick(e) {
     e.preventDefault()
-    if (!stock || adding) return
-    setAdding(true)
+    if (!stock || added) return
+    setAdded(true)
     await onClick()
-    setTimeout(() => setAdding(false), 700)
+    setTimeout(() => setAdded(false), 1200)
   }
 
   if (stock === 0) {
     return (
-      <button
-        disabled
-        className="w-full py-3 rounded-xl text-sm font-bold font-body cursor-not-allowed min-h-[44px]"
-        style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-text-muted)' }}
-      >
-        Sin stock
-      </button>
+      <div style={{
+        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+        background: 'rgba(61,44,30,0.08)', display: 'grid', placeItems: 'center',
+        color: 'var(--color-text-muted)',
+      }} title="Sin stock">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </div>
     )
   }
 
   return (
-    <ShimmerButton
+    <button
       onClick={handleClick}
-      disabled={adding}
-      className="w-full py-3 rounded-xl text-sm font-bold font-body min-h-[44px] transition-colors duration-200"
-      style={{
-        backgroundColor: adding ? 'var(--color-primary-dark)' : 'var(--color-primary)',
-        color: 'white',
-        cursor: adding ? 'default' : 'pointer',
-      }}
-      shimmerColor="rgba(255,255,255,0.38)"
-      shimmerDuration="2.2s"
       aria-label="Agregar al carrito"
+      style={{
+        width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
+        background: added ? 'var(--color-primary-dark)' : 'var(--color-primary)',
+        color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0,
+        boxShadow: added ? '0 2px 0 rgba(217,139,0,0.3)' : '0 4px 0 rgba(217,139,0,0.4)',
+        transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s',
+        transform: added ? 'scale(0.95)' : 'scale(1)',
+      }}
     >
-      {adding ? (
-        <>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Agregado
-        </>
-      ) : (
-        'Agregar al carrito'
-      )}
-    </ShimmerButton>
+      {added ? <IconCheck size={16} /> : <IconPlus size={16} />}
+    </button>
   )
 }
 
-export default function ProductCard({ product, onAddToCart }) {
-  const { nombre, precio_venta, stock, imagen_url, es_novedad, slug } = product
+// Static 4-star display (puede evolucionar cuando el API tenga ratings)
+function StarRating({ rating = 4.8, reviews }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <IconStar size={13} />
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text)' }}>{rating}</span>
+      {reviews && <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>({reviews})</span>}
+    </div>
+  )
+}
+
+export default function ProductCard({ product, onAddToCart, eager = false }) {
+  const { nombre, precio_venta, precio_original, stock, imagen_url, es_novedad, slug, marca, rating, reviews } = product
+  const [hovered, setHovered] = useState(false)
   const outOfStock = stock === 0
 
-  // ── Spotlight cursor-tracking ──────────────────────────────
-  const cardRef = useRef(null)
-
-  const onMouseMove = useCallback((e) => {
-    const el = cardRef.current
-    if (!el) return
-    const { left, top } = el.getBoundingClientRect()
-    el.style.setProperty('--sx', `${e.clientX - left}px`)
-    el.style.setProperty('--sy', `${e.clientY - top}px`)
-  }, [])
-
-  const onMouseLeave = useCallback((e) => {
-    const el = cardRef.current
-    if (!el) return
-    el.style.setProperty('--sx', '-400px')
-    el.style.setProperty('--sy', '-400px')
-    e.currentTarget.style.boxShadow = 'var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.8)'
-  }, [])
-
   return (
-    <motion.article
-      ref={cardRef}
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      onMouseEnter={e => {
-        if (!outOfStock) e.currentTarget.style.boxShadow = 'var(--shadow-card-hover), inset 0 1px 0 rgba(255,255,255,0.8)'
-      }}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      whileHover={outOfStock ? {} : { y: -4 }}
-      className="relative flex flex-col rounded-2xl overflow-hidden border h-full"
+    <article
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        '--sx': '-400px',
-        '--sy': '-400px',
-        backgroundColor: 'var(--color-bg-card)',
-        borderColor: 'var(--color-border)',
-        borderWidth: '1.5px',
-        boxShadow: 'var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.8)',
-        opacity: outOfStock ? 0.72 : 1,
-        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+        background: '#fff', borderRadius: 18,
+        border: '1px solid rgba(61,44,30,0.06)',
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden', height: '100%',
+        transform: hovered && !outOfStock ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: hovered && !outOfStock
+          ? '0 12px 28px rgba(61,44,30,0.12)'
+          : '0 2px 8px rgba(61,44,30,0.06)',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        opacity: outOfStock ? 0.75 : 1,
       }}
     >
-      {/* ── Spotlight glow ── */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit]"
-        style={{
-          background: 'radial-gradient(420px circle at var(--sx) var(--sy), rgba(255,166,1,0.12), transparent 65%)',
-        }}
-      />
+      {/* ── Image ── */}
+      <Link to={`/producto/${slug}`} tabIndex={-1} aria-hidden="true" style={{ display: 'block', position: 'relative', aspectRatio: '1 / 1', background: 'var(--color-bg-elevated)', overflow: 'hidden', flexShrink: 0 }}>
+        {imagen_url ? (
+          <img
+            src={imagen_url}
+            alt={nombre}
+            loading={eager ? 'eager' : 'lazy'}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '8px' }}
+          />
+        ) : (
+          <PlaceholderImage nombre={nombre} />
+        )}
 
-      {/* ── Badge novedad ── */}
-      {es_novedad && (
-        <div
-          className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-        >
-          NUEVO
-        </div>
-      )}
+        {/* Badge */}
+        {es_novedad && (
+          <div style={{
+            position: 'absolute', top: 12, left: 12,
+            background: 'var(--color-primary)', color: '#fff',
+            padding: '4px 10px', borderRadius: 999,
+            fontSize: 11, fontWeight: 800, letterSpacing: 0.5,
+          }}>
+            Nuevo
+          </div>
+        )}
 
-      {/* ── Imagen ── */}
-      <Link
-        to={`/producto/${slug}`}
-        className="block cursor-pointer relative z-[2] group/img"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        <div
-          className="w-full overflow-hidden relative"
-          style={{ aspectRatio: '1 / 1', backgroundColor: 'var(--color-bg)' }}
+        {/* Heart */}
+        <button
+          aria-label="Agregar a favoritos"
+          onClick={e => e.preventDefault()}
+          style={{
+            position: 'absolute', top: 10, right: 10,
+            background: '#fff', border: 'none', borderRadius: '50%',
+            width: 34, height: 34, cursor: 'pointer', display: 'grid', placeItems: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)', color: 'var(--color-text-muted)',
+          }}
         >
-          {imagen_url ? (
-            <img
-              src={imagen_url}
-              alt={nombre}
-              className="w-full h-full object-cover transition-transform duration-350 group-hover/img:scale-107"
-              style={{ transition: 'transform 0.35s ease' }}
-              loading="lazy"
-            />
-          ) : (
-            <PlaceholderImage nombre={nombre} />
-          )}
-          {/* Overlay lupa al hacer hover */}
-          {imagen_url && (
-            <div
-              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity duration-250"
-              style={{
-                backgroundColor: 'rgba(26,18,8,0.28)',
-                backdropFilter: 'blur(1px)',
-                transition: 'opacity 0.25s ease',
-              }}
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)' }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-secondary)"
-                  strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  <line x1="11" y1="8" x2="11" y2="14" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-              </div>
-            </div>
-          )}
-        </div>
+          <IconHeart size={16} />
+        </button>
       </Link>
 
-      {/* ── Contenido ── */}
-      <div className="flex flex-col gap-2 p-4 flex-1 relative z-[2]">
-        <StockBadge stock={stock} />
+      {/* ── Content ── */}
+      <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
 
+        {/* Brand */}
+        {marca && (
+          <div style={{ fontSize: 11, color: 'var(--color-primary)', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {marca}
+          </div>
+        )}
+
+        {/* Name */}
         <Link
           to={`/producto/${slug}`}
-          className="font-body font-semibold text-sm leading-snug cursor-pointer hover:underline decoration-primary/50"
-          style={{ color: 'var(--color-text)' }}
+          style={{
+            fontSize: 14, color: 'var(--color-text)', fontWeight: 700, lineHeight: 1.3,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            overflow: 'hidden', minHeight: 36, textDecoration: 'none',
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}
         >
           {nombre}
         </Link>
 
-        <p
-          className="font-display text-xl mt-auto"
-          style={{ color: 'var(--color-primary)' }}
-          aria-label={`Precio: ${formatPrice(precio_venta)}`}
-        >
-          {formatPrice(precio_venta)}
-        </p>
+        {/* Stars */}
+        <StarRating rating={rating ?? 4.8} reviews={reviews} />
 
-        <AddToCartButton
-          stock={stock}
-          onClick={() => onAddToCart?.(product)}
-        />
+        {/* Price + Add to cart */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', gap: 8, paddingTop: 4 }}>
+          <div>
+            {precio_original && (
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textDecoration: 'line-through', lineHeight: 1 }}>
+                {formatPrice(precio_original)}
+              </div>
+            )}
+            <div style={{ fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 19, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3, lineHeight: 1.1 }}>
+              {formatPrice(precio_venta)}
+            </div>
+          </div>
+          <AddToCartBtn stock={stock} onClick={() => onAddToCart?.(product)} />
+        </div>
+
+        {/* Sin stock label */}
+        {outOfStock && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 4 }}>
+            Sin stock
+          </div>
+        )}
       </div>
-    </motion.article>
+    </article>
   )
 }

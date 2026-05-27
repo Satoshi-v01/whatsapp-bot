@@ -5,8 +5,8 @@ import { CartProvider } from '@/context/CartContext'
 import { AuthProvider } from '@/context/AuthContext'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import FloatingPaws from '@/components/ui/FloatingPaws'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
+import FloatingPaws from '@/components/ui/FloatingPaws'
 
 // Code splitting — cada pagina se carga solo cuando se navega a ella
 const Home     = lazy(() => import('@/pages/Home'))
@@ -15,8 +15,11 @@ const Product  = lazy(() => import('@/pages/Product'))
 const Cart     = lazy(() => import('@/pages/Cart'))
 const Search   = lazy(() => import('@/pages/Search'))
 const Login    = lazy(() => import('@/pages/Login'))
+const Registro = lazy(() => import('@/pages/Registro'))
 const Perfil   = lazy(() => import('@/pages/Perfil'))
-const NotFound = lazy(() => import('@/pages/NotFound'))
+const NotFound  = lazy(() => import('@/pages/NotFound'))
+const Nosotros  = lazy(() => import('@/pages/Nosotros'))
+const Contacto  = lazy(() => import('@/pages/Contacto'))
 
 function PageLoader() {
   return (
@@ -40,11 +43,6 @@ export default function App() {
     <HelmetProvider>
       <AuthProvider>
         <CartProvider>
-          {/* Fondo glow identico a landing */}
-          <div className="bg-glow" aria-hidden="true" />
-
-          <FloatingPaws />
-
           {/* Skip-to-content para teclado y lectores de pantalla */}
           <a
             href="#main-content"
@@ -54,11 +52,12 @@ export default function App() {
             Saltar al contenido principal
           </a>
 
+          <FloatingPaws />
+
           <div className="flex flex-col min-h-screen">
             <Navbar />
 
-            {/* padding-top compensa el navbar flotante dos filas (14px top + ~96px height + gap) */}
-            <main id="main-content" className="flex-1" style={{ paddingTop: '120px' }}>
+            <main id="main-content" className="flex-1">
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/"                element={<Home />} />
@@ -67,11 +66,14 @@ export default function App() {
                   <Route path="/carrito"         element={<Cart />} />
                   <Route path="/buscar"          element={<Search />} />
                   <Route path="/login"           element={<Login />} />
+                  <Route path="/registro"        element={<Registro />} />
                   <Route path="/perfil"          element={
                     <ProtectedRoute>
                       <Perfil />
                     </ProtectedRoute>
                   } />
+                  <Route path="/nosotros"        element={<Nosotros />} />
+                  <Route path="/contacto"        element={<Contacto />} />
                   <Route path="*"               element={<NotFound />} />
                 </Routes>
               </Suspense>

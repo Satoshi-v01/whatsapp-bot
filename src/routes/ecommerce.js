@@ -3,6 +3,26 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { autenticar } = require('../middleware/auth')
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
+
+// ─── Middleware auth clientes ecommerce ───────────────────────────
+function autenticarCliente(req, res, next) {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token requerido' })
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET)
+    if (decoded.tipo !== 'ecommerce') {
+      return res.status(401).json({ error: 'Token invalido' })
+    }
+    req.cliente = decoded
+    next()
+  } catch {
+    return res.status(401).json({ error: 'Token invalido o expirado' })
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 function toSlug(text) {
@@ -36,20 +56,40 @@ router.get('/banners', async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/categorias ───────────────────────────
+const SLUGS_VALIDOS = ['perros', 'gatos', 'accesorios', 'higiene', 'medicamentos', 'snacks', 'ofertas']
+
+// SQL helpers — descuento activo y vigente en la presentación
+const OFERTA_COND = `pr.descuento_activo = true AND pr.precio_descuento IS NOT NULL AND (pr.descuento_desde IS NULL OR pr.descuento_desde <= NOW()) AND (pr.descuento_hasta IS NULL OR pr.descuento_hasta >= NOW())`
+const PRECIO_EF   = `CASE WHEN ${OFERTA_COND} THEN pr.precio_descuento ELSE pr.precio_venta END`
+const PRECIO_OR   = `CASE WHEN ${OFERTA_COND} THEN pr.precio_venta ELSE NULL END`
+
 router.get('/categorias', async (req, res) => {
   try {
-    const resultado = await db.query(
-      `SELECT
-         p.ecommerce_categoria AS slug,
-         COUNT(DISTINCT p.id) FILTER (
-           WHERE pr.stock > 0 AND pr.disponible = true
-         ) AS count
-       FROM productos p
-       LEFT JOIN presentaciones pr ON pr.producto_id = p.id
-       WHERE p.ecommerce_categoria IS NOT NULL
-       GROUP BY p.ecommerce_categoria`
-    )
-    res.json(resultado.rows)
+    const [cats, imgs] = await Promise.all([
+      db.query(
+        `SELECT
+           p.ecommerce_categoria AS slug,
+           COUNT(DISTINCT p.id) FILTER (
+             WHERE pr.stock > 0 AND pr.disponible = true
+           ) AS count
+         FROM productos p
+         LEFT JOIN presentaciones pr ON pr.producto_id = p.id
+         WHERE p.ecommerce_categoria IS NOT NULL
+         GROUP BY p.ecommerce_categoria`
+      ),
+      db.query(
+        `SELECT clave, valor FROM tienda_config WHERE clave LIKE 'cat_imagen_%'`
+      ).catch(() => ({ rows: [] })),
+    ])
+    const imagenes = {}
+    imgs.rows.forEach(r => { imagenes[r.clave.replace('cat_imagen_', '')] = r.valor })
+    const catMap = {}
+    cats.rows.forEach(r => { catMap[r.slug] = r })
+    res.json(SLUGS_VALIDOS.map(slug => ({
+      slug,
+      count: catMap[slug]?.count ?? 0,
+      imagen_url: imagenes[slug] || null,
+    })))
   } catch (error) {
     manejarError(res, error)
   }
@@ -102,8 +142,12 @@ router.get('/productos', async (req, res) => {
     }
 
     if (categoria) {
-      condiciones.push(`p.ecommerce_categoria = $${i++}`)
-      valores.push(categoria.toLowerCase())
+      if (categoria.toLowerCase() === 'ofertas') {
+        condiciones.push(`(${OFERTA_COND})`)
+      } else {
+        condiciones.push(`p.ecommerce_categoria = $${i++}`)
+        valores.push(categoria.toLowerCase())
+      }
     }
 
     if (search) {
@@ -127,12 +171,12 @@ router.get('/productos', async (req, res) => {
     }
 
     if (precio_min) {
-      condiciones.push(`pr.precio_venta >= $${i++}`)
+      condiciones.push(`(${PRECIO_EF}) >= $${i++}`)
       valores.push(parseFloat(precio_min))
     }
 
     if (precio_max) {
-      condiciones.push(`pr.precio_venta <= $${i++}`)
+      condiciones.push(`(${PRECIO_EF}) <= $${i++}`)
       valores.push(parseFloat(precio_max))
     }
 
@@ -164,6 +208,8 @@ router.get('/productos', async (req, res) => {
            pr.id,
            pr.nombre AS presentacion_nombre,
            pr.precio_venta,
+           ${PRECIO_EF} AS precio_efectivo,
+           ${PRECIO_OR} AS precio_original,
            pr.stock,
            p.id AS producto_id,
            p.nombre AS nombre_base,
@@ -182,7 +228,8 @@ router.get('/productos', async (req, res) => {
          LEFT JOIN ordenes_pedido_items opi ON opi.presentacion_id = pr.id
          LEFT JOIN ordenes_pedido op ON op.id = opi.orden_id
          ${where}
-         GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.stock,
+         GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.precio_descuento, pr.descuento_activo,
+                  pr.descuento_desde, pr.descuento_hasta, pr.stock,
                   p.id, p.nombre, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, c.nombre
          ORDER BY ${orderVentas}
          LIMIT $${i} OFFSET $${i + 1}`,
@@ -191,9 +238,9 @@ router.get('/productos', async (req, res) => {
     } else {
       let orderBy
       switch (sort) {
-        case 'precio_asc':  orderBy = 'pr.precio_venta ASC';  break
-        case 'precio_desc': orderBy = 'pr.precio_venta DESC'; break
-        case 'nombre':      orderBy = 'p.nombre ASC';          break
+        case 'precio_asc':  orderBy = `(${PRECIO_EF}) ASC`;  break
+        case 'precio_desc': orderBy = `(${PRECIO_EF}) DESC`; break
+        case 'nombre':      orderBy = 'p.nombre ASC';         break
         default:            orderBy = 'p.nombre ASC'
       }
       itemsResult = await db.query(
@@ -201,6 +248,8 @@ router.get('/productos', async (req, res) => {
            pr.id,
            pr.nombre AS presentacion_nombre,
            pr.precio_venta,
+           ${PRECIO_EF} AS precio_efectivo,
+           ${PRECIO_OR} AS precio_original,
            pr.stock,
            p.id AS producto_id,
            p.nombre AS nombre_base,
@@ -223,7 +272,8 @@ router.get('/productos', async (req, res) => {
       id: row.id,
       nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
-      precio_venta: Number(row.precio_venta),
+      precio_venta: Number(row.precio_efectivo),
+      precio_original: row.precio_original ? Number(row.precio_original) : null,
       stock: Number(row.stock),
       imagen_url: row.imagen_url || null,
       es_novedad: row.es_novedad,
@@ -257,6 +307,8 @@ router.get('/productos/:slug', async (req, res) => {
          pr.id,
          pr.nombre AS presentacion_nombre,
          pr.precio_venta,
+         ${PRECIO_EF} AS precio_efectivo,
+         ${PRECIO_OR} AS precio_original,
          pr.stock,
          p.id AS producto_id,
          p.nombre AS nombre_base,
@@ -281,7 +333,8 @@ router.get('/productos/:slug', async (req, res) => {
       id: row.id,
       nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
-      precio_venta: Number(row.precio_venta),
+      precio_venta: Number(row.precio_efectivo),
+      precio_original: row.precio_original ? Number(row.precio_original) : null,
       stock: Number(row.stock),
       imagen_url: row.imagen_url || null,
       es_novedad: row.es_novedad,
@@ -310,7 +363,13 @@ router.get('/config', async (req, res) => {
 router.post('/pedidos', async (req, res) => {
   const client = await db.pool.connect()
   try {
-    const { items, cliente, notas, tipo_entrega = 'delivery' } = req.body
+    const {
+      items, cliente, notas, tipo_entrega = 'delivery',
+      zona_id, zona_nombre, zona_costo,
+      referencia, horario, contacto_entrega, metodo_pago,
+      quiere_factura = false, razon_social, ruc_factura,
+      maps_url,
+    } = req.body
 
     // Validaciones basicas
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -345,7 +404,7 @@ router.post('/pedidos', async (req, res) => {
         `INSERT INTO clientes (nombre, telefono, direccion, canal_origen)
          VALUES ($1, $2, $3, 'ecommerce')
          RETURNING id`,
-        [cliente.nombre.trim(), telefonoLimpio, cliente.direccion.trim()]
+        [cliente.nombre.trim(), telefonoLimpio, cliente.direccion?.trim() || null]
       )
       clienteId = nuevoCliente.rows[0].id
     }
@@ -397,13 +456,45 @@ router.post('/pedidos', async (req, res) => {
     )
     const numeroPedido = `ECO-${String(numeroResult.rows[0].siguiente).padStart(5, '0')}`
 
+    // Resolver zona si se proporcionó zona_id
+    let zonaResuelta = { nombre: zona_nombre || null, costo: zona_costo || 0, id: zona_id || null }
+    if (zona_id && !zona_nombre) {
+      const zonaRes = await client.query(
+        `SELECT nombre, costo FROM zonas_delivery WHERE id = $1`, [zona_id]
+      ).catch(() => ({ rows: [] }))
+      if (zonaRes.rows[0]) {
+        zonaResuelta = { nombre: zonaRes.rows[0].nombre, costo: Number(zonaRes.rows[0].costo), id: zona_id }
+      }
+    }
+
     // 4. Crear orden
     const ordenResult = await client.query(
       `INSERT INTO ordenes_pedido
-         (cliente_id, canal, estado, total, notas, numero_pedido, tipo_entrega)
-       VALUES ($1, 'pagina_web', 'pendiente', $2, $3, $4, $5)
+         (cliente_id, canal, estado, notas, numero_pedido, tipo_entrega,
+          modalidad, ubicacion, referencia, horario, contacto_entrega, metodo_pago,
+          zona_delivery, costo_delivery, zona_id,
+          quiere_factura, ruc_factura, razon_social, maps_url)
+       VALUES ($1, 'pagina_web', 'pendiente', $2, $3, $4,
+               $5, $6, $7, $8, $9, $10,
+               $11, $12, $13,
+               $14, $15, $16, $17)
        RETURNING id`,
-      [clienteId, total, notas?.trim() || null, numeroPedido, tipo_entrega]
+      [
+        clienteId, notas?.trim() || null, numeroPedido, tipo_entrega,
+        tipo_entrega,
+        cliente.direccion?.trim() || null,
+        referencia?.trim() || null,
+        horario?.trim() || null,
+        contacto_entrega?.trim() || null,
+        metodo_pago || null,
+        zonaResuelta.nombre,
+        zonaResuelta.costo,
+        zonaResuelta.id,
+        quiere_factura || false,
+        ruc_factura?.trim() || null,
+        razon_social?.trim() || null,
+        maps_url?.trim() || null,
+      ]
     )
     const ordenId = ordenResult.rows[0].id
 
@@ -419,43 +510,93 @@ router.post('/pedidos', async (req, res) => {
 
     await client.query('COMMIT')
 
-    // Obtener WhatsApp de la config para retiro
-    let whatsappRetiro = null
-    let mensajeRetiro = null
-    if (tipo_entrega === 'retiro') {
-      try {
-        const cfg = await db.query(`SELECT clave, valor FROM tienda_config WHERE clave IN ('whatsapp','mensaje_retiro')`)
-        const cfgMap = {}
-        cfg.rows.forEach(r => { cfgMap[r.clave] = r.valor })
-        whatsappRetiro = cfgMap.whatsapp || null
-        const itemsTexto = itemsVerificados.map((it, idx) => {
-          const orig = items[idx]
-          return `• x${it.cantidad} — Gs. ${it.precio_total.toLocaleString('es-PY')}`
-        }).join('\n')
-        mensajeRetiro = encodeURIComponent(
-          `Hola! Quiero retirar mi pedido *${numeroPedido}*\n${itemsTexto}\n*Total: Gs. ${total.toLocaleString('es-PY')}*`
-        )
-      } catch (_) {}
-    }
+    const presentacionIds = itemsVerificados.map(it => it.presentacion_id)
+    const nombresRes = await db.query(
+      `SELECT pr.id, p.nombre AS producto, pr.nombre AS presentacion
+       FROM presentaciones pr
+       JOIN productos p ON p.id = pr.producto_id
+       WHERE pr.id = ANY($1)`,
+      [presentacionIds]
+    ).catch(() => ({ rows: [] }))
+    const nombresMap = {}
+    nombresRes.rows.forEach(r => { nombresMap[r.id] = `${r.producto} ${r.presentacion}` })
 
-    const mensajeDelivery = `Tu pedido ${numeroPedido} fue recibido. Nos comunicaremos al ${telefonoLimpio} para coordinar la entrega.`
-    const mensajeRetiroTexto = `Tu pedido ${numeroPedido} fue registrado. Coordiná la retirada por WhatsApp.`
+    const BOT_NUMERO = '595982211934'
+    const gs = v => `Gs. ${Number(v).toLocaleString('es-PY')}`
+    const lineasItems = itemsVerificados.map(it =>
+      `• ${nombresMap[it.presentacion_id] || 'Producto'} x ${it.cantidad} — ${gs(it.precio_total)}`
+    ).join('\n')
+
+    const esDelivery = tipo_entrega === 'delivery'
+    const entregaTexto = esDelivery
+      ? `Delivery — ${zonaResuelta.nombre || 'sin zona'}` + (zonaResuelta.costo ? ` (${gs(zonaResuelta.costo)})` : '')
+      : 'Retiro en local'
+
+    const lineasDelivery = esDelivery ? [
+      `Dir: ${cliente.direccion?.trim() || '-'}`,
+      maps_url?.trim() ? `Maps: ${maps_url.trim()}` : null,
+      referencia?.trim() ? `Ref: ${referencia.trim()}` : null,
+      horario?.trim() ? `Horario: ${horario.trim()}` : null,
+      contacto_entrega?.trim() ? `Recibe: ${contacto_entrega.trim()}` : null,
+      metodo_pago ? `Pago: ${metodo_pago === 'transferencia' ? 'Transferencia bancaria' : 'Efectivo'}` : null,
+    ].filter(Boolean) : []
+
+    const lineaFactura = quiere_factura && razon_social
+      ? `Factura: ${razon_social.trim()}${ruc_factura ? ` - RUC/CI: ${ruc_factura.trim()}` : ''}`
+      : null
+
+    const notasLinea = notas?.trim() ? `Notas: ${notas.trim()}` : null
+
+    const totalConDelivery = esDelivery && zonaResuelta.costo
+      ? `${gs(total)} + ${gs(zonaResuelta.costo)} delivery = *${gs(total + zonaResuelta.costo)}*`
+      : `*${gs(total)}*`
+
+    const plantilla = [
+      `*PEDIDO WEB - ${numeroPedido}*`,
+      ``,
+      `Cliente: ${cliente.nombre.trim()}`,
+      `Tel: ${telefonoLimpio}`,
+      `Entrega: ${entregaTexto}`,
+      ...lineasDelivery,
+      ...(lineaFactura ? [lineaFactura] : []),
+      ...(notasLinea ? [notasLinea] : []),
+      ``,
+      `*Productos:*`,
+      lineasItems,
+      ``,
+      `*Total: ${totalConDelivery}*`,
+      ``,
+      `#PEDIDO_WEB#${numeroPedido}`,
+    ].join('\n')
+
+    const whatsappUrl = `https://wa.me/${BOT_NUMERO}?text=${encodeURIComponent(plantilla)}`
 
     res.status(201).json({
       pedido_id: ordenId,
       numero: numeroPedido,
       total,
       tipo_entrega,
-      mensaje: tipo_entrega === 'retiro' ? mensajeRetiroTexto : mensajeDelivery,
-      ...(tipo_entrega === 'retiro' && whatsappRetiro ? {
-        whatsapp_url: `https://wa.me/${whatsappRetiro.replace(/\D/g, '')}?text=${mensajeRetiro}`,
-      } : {}),
+      mensaje: `Tu pedido ${numeroPedido} fue registrado. Envialo por WhatsApp para que lo procesemos.`,
+      whatsapp_url: whatsappUrl,
     })
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {})
     manejarError(res, error)
   } finally {
     client.release()
+  }
+})
+
+// ─── GET /api/ecommerce/zonas ─────────────────────────────────
+router.get('/zonas', async (req, res) => {
+  try {
+    const resultado = await db.query(
+      `SELECT id, nombre, costo FROM zonas_delivery WHERE activa = true ORDER BY nombre ASC`
+    )
+    res.json(resultado.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
   }
 })
 
@@ -492,6 +633,39 @@ router.put('/admin/config', autenticar, async (req, res) => {
       )
     }
     res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/admin/categorias ──────────────────────
+router.get('/admin/categorias', autenticar, async (req, res) => {
+  try {
+    const resultado = await db.query(
+      `SELECT clave, valor FROM tienda_config WHERE clave LIKE 'cat_imagen_%'`
+    ).catch(() => ({ rows: [] }))
+    const imagenes = {}
+    resultado.rows.forEach(r => { imagenes[r.clave.replace('cat_imagen_', '')] = r.valor })
+    const cats = SLUGS_VALIDOS.map(slug => ({ slug, imagen_url: imagenes[slug] || null }))
+    res.json(cats)
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── PATCH /api/ecommerce/admin/categorias/:slug ──────────────
+router.patch('/admin/categorias/:slug', autenticar, async (req, res) => {
+  try {
+    const { slug } = req.params
+    if (!SLUGS_VALIDOS.includes(slug)) return res.status(400).json({ error: 'Slug invalido' })
+    const { imagen_url } = req.body
+    await db.query(
+      `INSERT INTO tienda_config (clave, valor, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (clave) DO UPDATE SET valor = $2, updated_at = NOW()`,
+      [`cat_imagen_${slug}`, imagen_url || '']
+    )
+    res.json({ ok: true, slug, imagen_url: imagen_url || null })
   } catch (error) {
     manejarError(res, error)
   }
@@ -680,8 +854,8 @@ router.get('/filtros', async (req, res) => {
       ),
       db.query(
         `SELECT
-           MIN(pr.precio_venta) AS precio_min,
-           MAX(pr.precio_venta) AS precio_max
+           MIN(${PRECIO_EF}) AS precio_min,
+           MAX(${PRECIO_EF}) AS precio_max
          FROM presentaciones pr
          JOIN productos p ON p.id = pr.producto_id
          ${where}`,
@@ -871,6 +1045,491 @@ router.post('/vincular-cliente', async (req, res) => {
     manejarError(res, error)
   } finally {
     client.release()
+  }
+})
+
+// ════════════════════════════════════════════════════════════════
+// AUTH CLIENTES ECOMMERCE
+// ════════════════════════════════════════════════════════════════
+
+// ─── POST /api/ecommerce/auth/register ───────────────────────────
+router.post('/auth/register', async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { nombre, email, password, telefono } = req.body
+    if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
+    if (!email?.trim()) return res.status(400).json({ error: 'El email es requerido' })
+    if (!password || password.length < 6) return res.status(400).json({ error: 'La contrasena debe tener al menos 6 caracteres' })
+
+    const emailLimpio = email.trim().toLowerCase()
+
+    // Verificar si el email ya tiene cuenta
+    const existeUsuario = await client.query(
+      `SELECT id FROM ecommerce_usuarios WHERE email = $1`,
+      [emailLimpio]
+    )
+    if (existeUsuario.rows.length > 0) {
+      return res.status(400).json({ error: 'Ya existe una cuenta con ese email' })
+    }
+
+    await client.query('BEGIN')
+
+    // Buscar cliente existente por telefono o email
+    let clienteId
+    const telefonoLimpio = telefono?.replace(/[^0-9+\s()-]/g, '').trim() || null
+
+    let clienteExistente = null
+    if (telefonoLimpio) {
+      const r = await client.query(`SELECT id FROM clientes WHERE telefono = $1 LIMIT 1`, [telefonoLimpio])
+      if (r.rows.length) clienteExistente = r.rows[0]
+    }
+    if (!clienteExistente) {
+      const r = await client.query(`SELECT id FROM clientes WHERE LOWER(email) = $1 LIMIT 1`, [emailLimpio])
+      if (r.rows.length) clienteExistente = r.rows[0]
+    }
+
+    if (clienteExistente) {
+      clienteId = clienteExistente.id
+    } else {
+      const nuevo = await client.query(
+        `INSERT INTO clientes (nombre, telefono, email, canal_origen)
+         VALUES ($1, $2, $3, 'ecommerce')
+         RETURNING id`,
+        [nombre.trim(), telefonoLimpio, emailLimpio]
+      )
+      clienteId = nuevo.rows[0].id
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10)
+    const usuarioResult = await client.query(
+      `INSERT INTO ecommerce_usuarios (cliente_id, email, password_hash)
+       VALUES ($1, $2, $3) RETURNING id`,
+      [clienteId, emailLimpio, passwordHash]
+    )
+
+    await client.query('COMMIT')
+
+    const token = jwt.sign(
+      { tipo: 'ecommerce', usuario_id: usuarioResult.rows[0].id, cliente_id: clienteId, email: emailLimpio },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    )
+
+    res.status(201).json({
+      token,
+      usuario: { id: usuarioResult.rows[0].id, email: emailLimpio, nombre: nombre.trim(), cliente_id: clienteId },
+    })
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
+// ─── POST /api/ecommerce/auth/login ──────────────────────────────
+router.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+    if (!email?.trim() || !password) {
+      return res.status(400).json({ error: 'Email y contrasena requeridos' })
+    }
+
+    const emailLimpio = email.trim().toLowerCase()
+    const result = await db.query(
+      `SELECT eu.id, eu.cliente_id, eu.email, eu.password_hash, eu.activo,
+              c.nombre
+       FROM ecommerce_usuarios eu
+       JOIN clientes c ON c.id = eu.cliente_id
+       WHERE eu.email = $1`,
+      [emailLimpio]
+    )
+
+    if (!result.rows.length) {
+      return res.status(401).json({ error: 'Email o contrasena incorrectos' })
+    }
+
+    const usuario = result.rows[0]
+    if (!usuario.activo) {
+      return res.status(401).json({ error: 'Cuenta desactivada' })
+    }
+
+    const passwordValida = await bcrypt.compare(password, usuario.password_hash)
+    if (!passwordValida) {
+      return res.status(401).json({ error: 'Email o contrasena incorrectos' })
+    }
+
+    await db.query(
+      `UPDATE ecommerce_usuarios SET ultimo_acceso = NOW() WHERE id = $1`,
+      [usuario.id]
+    )
+
+    const token = jwt.sign(
+      { tipo: 'ecommerce', usuario_id: usuario.id, cliente_id: usuario.cliente_id, email: emailLimpio },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    )
+
+    res.json({
+      token,
+      usuario: { id: usuario.id, email: emailLimpio, nombre: usuario.nombre, cliente_id: usuario.cliente_id },
+    })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/me ───────────────────────────────────────
+router.get('/me', autenticarCliente, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT eu.id AS usuario_id, eu.email, eu.created_at,
+              c.id AS cliente_id, c.nombre, c.telefono
+       FROM ecommerce_usuarios eu
+       JOIN clientes c ON c.id = eu.cliente_id
+       WHERE eu.id = $1`,
+      [req.cliente.usuario_id]
+    )
+    if (!result.rows.length) return res.status(404).json({ error: 'Usuario no encontrado' })
+    res.json(result.rows[0])
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── PATCH /api/ecommerce/mis-datos ──────────────────────────────
+router.patch('/mis-datos', autenticarCliente, async (req, res) => {
+  try {
+    const { nombre, telefono } = req.body
+    const sets = []
+    const vals = []
+    let i = 1
+    if (nombre?.trim()) { sets.push(`nombre = $${i++}`); vals.push(nombre.trim()) }
+    if (telefono?.trim()) { sets.push(`telefono = $${i++}`); vals.push(telefono.trim()) }
+    if (!sets.length) return res.json({ ok: true })
+    vals.push(req.cliente.cliente_id)
+    await db.query(`UPDATE clientes SET ${sets.join(', ')} WHERE id = $${i}`, vals)
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/ultimo-pedido-datos ──────────────────────
+router.get('/ultimo-pedido-datos', autenticarCliente, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT tipo_entrega, ubicacion, maps_url, referencia, horario,
+              contacto_entrega, metodo_pago, quiere_factura, ruc_factura,
+              razon_social, zona_id, zona_delivery
+       FROM ordenes_pedido
+       WHERE cliente_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [req.cliente.cliente_id]
+    )
+    if (!result.rows.length) return res.json(null)
+    const r = result.rows[0]
+    res.json({
+      tipo_entrega:     r.tipo_entrega || 'delivery',
+      direccion:        r.ubicacion    || '',
+      maps_url:         r.maps_url     || '',
+      referencia:       r.referencia   || '',
+      horario:          r.horario      || '',
+      contacto_entrega: r.contacto_entrega || '',
+      metodo_pago:      r.metodo_pago  || '',
+      quiere_factura:   r.quiere_factura || false,
+      razon_social:     r.razon_social || '',
+      ruc_factura:      r.ruc_factura  || '',
+      zona_id:          r.zona_id ? String(r.zona_id) : '',
+      zona_nombre:      r.zona_delivery || '',
+    })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ─── GET /api/ecommerce/mis-pedidos ──────────────────────────────
+router.get('/mis-pedidos', autenticarCliente, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT
+         op.id,
+         op.numero_pedido AS numero,
+         op.estado,
+         COALESCE(SUM(opi.precio_total), 0) + COALESCE(op.costo_delivery, 0) AS total,
+         op.tipo_entrega,
+         op.created_at AS fecha,
+         op.notas,
+         COALESCE(json_agg(
+           json_build_object(
+             'nombre', p.nombre || ' — ' || pr.nombre,
+             'cantidad', opi.cantidad,
+             'precio', opi.precio_unitario
+           ) ORDER BY opi.id
+         ) FILTER (WHERE opi.id IS NOT NULL), '[]') AS items
+       FROM ordenes_pedido op
+       LEFT JOIN ordenes_pedido_items opi ON opi.orden_id = op.id
+       LEFT JOIN presentaciones pr ON pr.id = opi.presentacion_id
+       LEFT JOIN productos p ON p.id = pr.producto_id
+       WHERE op.cliente_id = $1
+       GROUP BY op.id, op.numero_pedido, op.estado, op.tipo_entrega, op.created_at, op.notas, op.costo_delivery
+       ORDER BY op.created_at DESC
+       LIMIT 50`,
+      [req.cliente.cliente_id]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ════════════════════════════════════════════════════════════════
+// MASCOTAS
+// ════════════════════════════════════════════════════════════════
+
+router.get('/mascotas', autenticarCliente, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM ecommerce_mascotas WHERE cliente_id = $1 ORDER BY created_at ASC`,
+      [req.cliente.cliente_id]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+router.post('/mascotas', autenticarCliente, async (req, res) => {
+  try {
+    const { nombre, especie = 'perro', raza, peso_kg, fecha_nacimiento, notas } = req.body
+    if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
+    const result = await db.query(
+      `INSERT INTO ecommerce_mascotas (cliente_id, nombre, especie, raza, peso_kg, fecha_nacimiento, notas)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [req.cliente.cliente_id, nombre.trim(), especie, raza || null, peso_kg || null, fecha_nacimiento || null, notas || null]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+router.patch('/mascotas/:id', autenticarCliente, async (req, res) => {
+  try {
+    const { nombre, especie, raza, peso_kg, fecha_nacimiento, notas } = req.body
+    const result = await db.query(
+      `UPDATE ecommerce_mascotas SET
+         nombre = COALESCE($1, nombre),
+         especie = COALESCE($2, especie),
+         raza = COALESCE($3, raza),
+         peso_kg = COALESCE($4, peso_kg),
+         fecha_nacimiento = COALESCE($5, fecha_nacimiento),
+         notas = COALESCE($6, notas)
+       WHERE id = $7 AND cliente_id = $8 RETURNING *`,
+      [nombre?.trim() || null, especie || null, raza !== undefined ? raza || null : undefined,
+       peso_kg !== undefined ? peso_kg || null : undefined, fecha_nacimiento || null,
+       notas !== undefined ? notas || null : undefined, req.params.id, req.cliente.cliente_id]
+    )
+    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' })
+    res.json(result.rows[0])
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+router.delete('/mascotas/:id', autenticarCliente, async (req, res) => {
+  try {
+    await db.query(
+      `DELETE FROM ecommerce_mascotas WHERE id = $1 AND cliente_id = $2`,
+      [req.params.id, req.cliente.cliente_id]
+    )
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ════════════════════════════════════════════════════════════════
+// DIRECCIONES
+// ════════════════════════════════════════════════════════════════
+
+router.get('/direcciones', autenticarCliente, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM ecommerce_direcciones WHERE cliente_id = $1 ORDER BY es_principal DESC, created_at ASC`,
+      [req.cliente.cliente_id]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+router.post('/direcciones', autenticarCliente, async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { alias = 'Casa', calle, ciudad = 'Asuncion', barrio, referencia, es_principal = false } = req.body
+    if (!calle?.trim()) return res.status(400).json({ error: 'La calle es requerida' })
+    await client.query('BEGIN')
+    if (es_principal) {
+      await client.query(
+        `UPDATE ecommerce_direcciones SET es_principal = false WHERE cliente_id = $1`,
+        [req.cliente.cliente_id]
+      )
+    }
+    const result = await client.query(
+      `INSERT INTO ecommerce_direcciones (cliente_id, alias, calle, ciudad, barrio, referencia, es_principal)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [req.cliente.cliente_id, alias, calle.trim(), ciudad, barrio || null, referencia || null, es_principal]
+    )
+    await client.query('COMMIT')
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
+router.patch('/direcciones/:id', autenticarCliente, async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { alias, calle, ciudad, barrio, referencia, es_principal } = req.body
+    await client.query('BEGIN')
+    if (es_principal) {
+      await client.query(
+        `UPDATE ecommerce_direcciones SET es_principal = false WHERE cliente_id = $1`,
+        [req.cliente.cliente_id]
+      )
+    }
+    const result = await client.query(
+      `UPDATE ecommerce_direcciones SET
+         alias        = COALESCE($1, alias),
+         calle        = COALESCE($2, calle),
+         ciudad       = COALESCE($3, ciudad),
+         barrio       = COALESCE($4, barrio),
+         referencia   = COALESCE($5, referencia),
+         es_principal = COALESCE($6, es_principal)
+       WHERE id = $7 AND cliente_id = $8 RETURNING *`,
+      [alias || null, calle?.trim() || null, ciudad || null, barrio !== undefined ? barrio || null : undefined,
+       referencia !== undefined ? referencia || null : undefined, es_principal !== undefined ? es_principal : null,
+       req.params.id, req.cliente.cliente_id]
+    )
+    await client.query('COMMIT')
+    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' })
+    res.json(result.rows[0])
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
+router.delete('/direcciones/:id', autenticarCliente, async (req, res) => {
+  try {
+    await db.query(
+      `DELETE FROM ecommerce_direcciones WHERE id = $1 AND cliente_id = $2`,
+      [req.params.id, req.cliente.cliente_id]
+    )
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
+  }
+})
+
+// ════════════════════════════════════════════════════════════════
+// FICHAS DE FACTURACION
+// ════════════════════════════════════════════════════════════════
+
+router.get('/fichas-facturacion', autenticarCliente, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM ecommerce_fichas_facturacion WHERE cliente_id = $1 ORDER BY es_principal DESC, created_at ASC`,
+      [req.cliente.cliente_id]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+router.post('/fichas-facturacion', autenticarCliente, async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { alias, nombre, ruc, telefono, email, es_principal = false } = req.body
+    if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
+    await client.query('BEGIN')
+    if (es_principal) {
+      await client.query(
+        `UPDATE ecommerce_fichas_facturacion SET es_principal = false WHERE cliente_id = $1`,
+        [req.cliente.cliente_id]
+      )
+    }
+    const result = await client.query(
+      `INSERT INTO ecommerce_fichas_facturacion (cliente_id, alias, nombre, ruc, telefono, email, es_principal)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [req.cliente.cliente_id, alias || null, nombre.trim(), ruc || null, telefono || null, email || null, es_principal]
+    )
+    await client.query('COMMIT')
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
+router.patch('/fichas-facturacion/:id', autenticarCliente, async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { alias, nombre, ruc, telefono, email, es_principal } = req.body
+    await client.query('BEGIN')
+    if (es_principal) {
+      await client.query(
+        `UPDATE ecommerce_fichas_facturacion SET es_principal = false WHERE cliente_id = $1`,
+        [req.cliente.cliente_id]
+      )
+    }
+    const result = await client.query(
+      `UPDATE ecommerce_fichas_facturacion SET
+         alias        = COALESCE($1, alias),
+         nombre       = COALESCE($2, nombre),
+         ruc          = COALESCE($3, ruc),
+         telefono     = COALESCE($4, telefono),
+         email        = COALESCE($5, email),
+         es_principal = COALESCE($6, es_principal)
+       WHERE id = $7 AND cliente_id = $8 RETURNING *`,
+      [alias !== undefined ? alias || null : undefined, nombre?.trim() || null, ruc !== undefined ? ruc || null : undefined,
+       telefono !== undefined ? telefono || null : undefined, email !== undefined ? email || null : undefined,
+       es_principal !== undefined ? es_principal : null, req.params.id, req.cliente.cliente_id]
+    )
+    await client.query('COMMIT')
+    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' })
+    res.json(result.rows[0])
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
+router.delete('/fichas-facturacion/:id', autenticarCliente, async (req, res) => {
+  try {
+    await db.query(
+      `DELETE FROM ecommerce_fichas_facturacion WHERE id = $1 AND cliente_id = $2`,
+      [req.params.id, req.cliente.cliente_id]
+    )
+    res.json({ ok: true })
+  } catch (error) {
+    manejarError(res, error)
   }
 })
 

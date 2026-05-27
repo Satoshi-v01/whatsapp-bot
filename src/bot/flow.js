@@ -7,9 +7,9 @@ const { calcularPrecioEfectivo } = require('../services/precios')
 const { getCarrito, agregarAlCarrito, quitarDelCarrito, limpiarCarrito, calcularTotal, formatearCarrito } = require('../services/carrito')
 const { getZonasActivas, formatearListaZonas } = require('../services/zonas')
 const { verificarStockParaVenta } = require('../services/stock')
-const { esReset, esPedidoAgente, esSaludo, parsearSeleccion, limpiarParaBusqueda, mensajeMenuPrincipal } = require('./helpers')
+const { esReset, esPedidoAgente, esSaludo, necesitaAclararEspecie, parsearSeleccion, limpiarParaBusqueda, mensajeMenuPrincipal } = require('./helpers')
 const { recalcularStats } = require('../routes/clientes')
-const { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery } = require('../services/horario')
+const { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery, esRetiroHoy } = require('../services/horario')
 const db = require('../db/index')
 
 // ─────────────────────────────────────────────
@@ -18,6 +18,18 @@ const db = require('../db/index')
 async function enviarYGuardar(numero, texto) {
     await enviarMensaje(numero, texto)
     await guardarMensaje(numero, texto, 'bot')
+}
+
+function mensajeRetiro() {
+    const ahora = new Date()
+    const minutos = ahora.getHours() * 60 + ahora.getMinutes()
+    if (minutos < 18 * 60 + 30) {
+        return `🏪 *Retiro en tienda*\n⏰ Atendemos hasta las *19:00 hs*.\n\n`
+    }
+    if (minutos < 19 * 60) {
+        return `🏪 *Retiro en tienda*\n⏰ Ya estamos por cerrar (19:00 hs). Tu pedido quedará listo para *mañana*.\n\n`
+    }
+    return `🏪 *Retiro en tienda*\n🔒 Ya estamos cerrados por hoy. Tu pedido quedará listo para *mañana*.\n\n`
 }
 
 async function manejarPedidoWeb(numero, texto) {
@@ -78,7 +90,7 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
         'confirmando_pedido', 'datos_delivery', 'eligiendo_zona',
         'factura', 'ruc_factura', 'eligiendo_envio', 'eligiendo_cantidad',
         'agregando_mas', 'viendo_carrito', 'quitando_producto',
-        'confirmando_delivery_tarde', 'viendo_zonas_info'
+        'confirmando_delivery_tarde', 'viendo_zonas_info', 'aclarando_especie'
     ]
 
     if (!pasosLibres.includes(sesion.paso)) {
@@ -156,6 +168,7 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
         case 'factura':                     await manejarFactura(numero, texto, sesion); break
         case 'ruc_factura':                 await manejarRucFactura(numero, texto, sesion); break
         case 'datos_delivery':              await manejarDatosDelivery(numero, texto, sesion, tipoMensaje); break
+        case 'aclarando_especie':           await manejarAclarandoEspecie(numero, texto, sesion); break
         default:                            await manejarInicio(numero, texto, sesion); break
     }
 }
@@ -189,7 +202,7 @@ async function manejarSaludoCliente(numero, sesion) {
     // Al guardar factura, si el RUC ya existe en DB, asociar el número al cliente existente
     // Buscar cliente por número
     const clienteRes = await db.query(
-        `SELECT c.*, 
+        `SELECT c.*,
             v.presentacion_id as ultima_presentacion_id,
             pr.nombre as ultima_presentacion_nombre,
             p.nombre as ultimo_producto_nombre,
@@ -198,11 +211,18 @@ async function manejarSaludoCliente(numero, sesion) {
             v.created_at as ultima_compra_at
          FROM clientes c
          LEFT JOIN LATERAL (
-             SELECT v.presentacion_id, v.canal, v.created_at
-             FROM ventas v
-             WHERE v.cliente_id = c.id
-             AND v.estado != 'cancelado'
-             ORDER BY v.created_at DESC
+             SELECT presentacion_id, canal, created_at
+             FROM (
+                 SELECT v2.presentacion_id, v2.canal, v2.created_at
+                 FROM ventas v2
+                 WHERE v2.cliente_id = c.id AND v2.estado != 'cancelado'
+                 UNION ALL
+                 SELECT opi.presentacion_id, op.canal, op.created_at
+                 FROM ordenes_pedido op
+                 JOIN ordenes_pedido_items opi ON opi.orden_id = op.id
+                 WHERE op.cliente_id = c.id AND op.estado NOT IN ('cancelado', 'expirado')
+             ) src
+             ORDER BY created_at DESC
              LIMIT 1
          ) v ON true
          LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
@@ -327,7 +347,38 @@ async function manejarOfreciendoRepetir(numero, texto, sesion) {
 // ─────────────────────────────────────────────
 // BUSQUEDA DE PRODUCTOS
 // ─────────────────────────────────────────────
+async function manejarAclarandoEspecie(numero, texto, sesion) {
+    const t = texto.toLowerCase().trim()
+    const busquedaOriginal = sesion.datos.busqueda_pendiente || ''
+
+    let especie = null
+    if (t.includes('perro') || t.includes('can') || t === '1') especie = 'perros'
+    else if (t.includes('gato') || t.includes('felin') || t === '2') especie = 'gatos'
+
+    if (!especie) {
+        await enviarYGuardar(numero, `Respondé *1* para perros o *2* para gatos.`)
+        return
+    }
+
+    await actualizarSesion(numero, { paso: 'inicio', modo: 'bot', datos: { ...sesion.datos, busqueda_pendiente: null } })
+    await buscarYMostrarProductos(numero, `${busquedaOriginal} ${especie}`, sesion)
+}
+
 async function buscarYMostrarProductos(numero, texto, sesion) {
+    if (necesitaAclararEspecie(texto)) {
+        await actualizarSesion(numero, {
+            paso: 'aclarando_especie',
+            modo: 'bot',
+            datos: { ...sesion.datos, busqueda_pendiente: texto }
+        })
+        await enviarYGuardar(numero,
+            `¿Es para perros o para gatos?\n\n` +
+            `1. Perros\n` +
+            `2. Gatos`
+        )
+        return
+    }
+
     const palabras = limpiarParaBusqueda(texto)
 
     if (palabras.length === 0) {
@@ -352,6 +403,24 @@ async function buscarYMostrarProductos(numero, texto, sesion) {
     )
 
     if (resultado.rows.length === 0) {
+        // Verificar si el producto existe en inventario pero sin stock, o no existe en absoluto
+        const condicionesExistencia = palabras.map((_, i) =>
+            `(LOWER(p.nombre) ILIKE $${i + 1} OR LOWER(COALESCE(p.descripcion,'')) ILIKE $${i + 1} OR LOWER(COALESCE(m.nombre,'')) ILIKE $${i + 1})`
+        ).join(' OR ')
+        const existeRes = await db.query(
+            `SELECT COUNT(*) as total FROM productos p LEFT JOIN marcas m ON p.marca_id = m.id WHERE p.disponible = true AND (${condicionesExistencia})`,
+            valores
+        )
+        const existeEnInventario = parseInt(existeRes.rows[0].total) > 0
+
+        if (!existeEnInventario) {
+            // Producto no está en inventario — alertar agente en silencio
+            await db.query(
+                `UPDATE sesiones SET datos = datos || $1::jsonb WHERE cliente_numero = $2`,
+                [JSON.stringify({ alerta_busqueda_fallida: texto, alerta_busqueda_at: new Date().toISOString() }), numero]
+            )
+        }
+
         await enviarYGuardar(numero,
             `No encontré productos con "*${texto}*" 😅\n\n` +
             `Podés intentar con:\n` +
@@ -702,6 +771,7 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
         }
         await actualizarSesion(numero, { paso: 'factura', modo: 'bot', datos: { ...sesion.datos, modalidad: 'retiro' } })
         await enviarYGuardar(numero,
+            mensajeRetiro() +
             `🧾 *¿Necesitás factura?*\n\n` +
             `1. Sí, con factura\n` +
             `2. No, sin factura`
@@ -777,6 +847,69 @@ async function manejarEleccionEnvio(numero, texto, sesion) {
     }
 
     await enviarYGuardar(numero, `Respondé *1* para retiro en tienda o *2* para delivery.`)
+}
+
+// ─────────────────────────────────────────────
+// DELIVERY TARDE
+// ─────────────────────────────────────────────
+async function manejarConfirmandoDeliveryTarde(numero, texto, sesion) {
+    const t = texto.trim()
+
+    if (t === '2') {
+        await actualizarSesion(numero, { paso: 'factura', modo: 'bot', datos: { ...sesion.datos, modalidad: 'retiro' } })
+        await enviarYGuardar(numero,
+            mensajeRetiro() +
+            `🧾 *¿Necesitás factura?*\n\n` +
+            `1. Sí, con factura\n` +
+            `2. No, sin factura`
+        )
+        return
+    }
+
+    if (t !== '1') {
+        await enviarYGuardar(numero, `Respondé *1* para continuar con delivery (mañana) o *2* para retirar hoy en tienda.`)
+        return
+    }
+
+    // Continuar con delivery — flujo normal de zona/ubicación
+    const clienteRes = await db.query(
+        `SELECT direccion, referencia_delivery, ciudad FROM clientes WHERE telefono = $1`,
+        [numero]
+    )
+    const cliente = clienteRes.rows[0]
+
+    if (cliente?.direccion) {
+        await actualizarSesion(numero, {
+            paso: 'confirmando_ubicacion',
+            modo: 'bot',
+            datos: { ...sesion.datos, modalidad: 'delivery' }
+        })
+        await enviarYGuardar(numero,
+            `📍 Tu última ubicación registrada:\n` +
+            `*${cliente.direccion}*` +
+            `${cliente.referencia_delivery ? `\nReferencia: ${cliente.referencia_delivery}` : ''}\n\n` +
+            `¿Querés entregar en la misma dirección?\n` +
+            `1. Sí, misma dirección\n` +
+            `2. No, quiero poner una nueva`
+        )
+        return
+    }
+
+    const zonas = await getZonasActivas()
+    if (!zonas.length) {
+        await enviarYGuardar(numero, `Lo sentimos, por ahora no contamos con delivery disponible.\n\n¿Querés retirar en tienda? Respondé *2*.`)
+        return
+    }
+    const lista = await formatearListaZonas(zonas)
+    await actualizarSesion(numero, {
+        paso: 'eligiendo_zona',
+        modo: 'bot',
+        datos: { ...sesion.datos, modalidad: 'delivery', zonas }
+    })
+    await enviarYGuardar(numero,
+        `🚚 *Zonas de delivery disponibles:*\n\n${lista}\n\n` +
+        `Respondé con el número de tu zona.`
+    )
 }
 
 // ─────────────────────────────────────────────

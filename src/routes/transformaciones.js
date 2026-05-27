@@ -3,11 +3,12 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { registrarLog } = require('../middleware/auditoria')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 // ─────────────────────────────────────────────
 // GET historial de transformaciones
 // ─────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
     try {
         const resultado = await db.query(
             `SELECT t.*,
@@ -34,7 +35,7 @@ router.get('/', async (req, res) => {
 // ─────────────────────────────────────────────
 // POST registrar transformación (transacción atómica)
 // ─────────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { presentacion_origen_id, cantidad_origen, presentacion_destino_id, cantidad_destino, nota } = req.body

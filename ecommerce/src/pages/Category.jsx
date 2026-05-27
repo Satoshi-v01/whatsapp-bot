@@ -20,7 +20,7 @@ const CATEGORY_ICONS = {
 }
 
 const SORT_OPTIONS = [
-  { value: 'mas_vendido', label: 'Mas vendidos' },
+  { value: 'mas_vendido', label: 'Más vendidos' },
   { value: 'precio_asc',  label: 'Menor precio' },
   { value: 'precio_desc', label: 'Mayor precio' },
   { value: 'nombre',      label: 'A - Z' },
@@ -199,9 +199,31 @@ export default function Category() {
 
   const hasSidebar = !loadingFiltros && (marcas.length > 0 || precioMax > precioMin)
 
+  const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${SITE_URL}/` },
+          { '@type': 'ListItem', position: 2, name: pageTitle, item: `${SITE_URL}/categoria/${slug}` },
+        ],
+      },
+      {
+        '@type': 'CollectionPage',
+        name: `${pageTitle} — Sosa BULLS`,
+        url: `${SITE_URL}/categoria/${slug}`,
+        ...(category?.description && { description: category.description }),
+        isPartOf: { '@id': `${SITE_URL}/#website` },
+      },
+    ],
+  }
+
   return (
     <>
-      <SEOHead title={pageTitle} description={category?.description} />
+      <SEOHead title={category?.seoTitle ?? pageTitle} description={category?.description} schema={breadcrumbSchema} />
 
       <style>{`
         @media (min-width: 1024px) {

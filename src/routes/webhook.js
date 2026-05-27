@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
+const logger = require('../middleware/logger')
 
 router.get('/', (req, res) => {
     const mode = req.query['hub.mode']
@@ -34,6 +35,8 @@ router.post('/', async (req, res) => {
 
         const numero = mensaje.from
         const tipo = mensaje.type
+
+        logger.info(`[webhook] mensaje de ${numero} tipo=${tipo}${tipo === 'text' ? ` texto="${mensaje.text?.body}"` : ''}`)
 
         if (tipo === 'location') {
             const { latitude, longitude } = mensaje.location

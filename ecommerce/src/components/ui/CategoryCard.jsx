@@ -59,6 +59,7 @@ export default function CategoryCard({ slug, label, description, color = '#ffa60
       viewport={{ once: true, margin: '-20px' }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
       whileHover={{ y: -5, scale: 1.03 }}
+      style={{ height: '100%' }}
     >
       <Link
         to={`/categoria/${slug}`}
@@ -66,6 +67,7 @@ export default function CategoryCard({ slug, label, description, color = '#ffa60
         style={{
           display: 'flex',
           flexDirection: 'column',
+          height: '100%',
           borderRadius: 20,
           overflow: 'hidden',
           textDecoration: 'none',

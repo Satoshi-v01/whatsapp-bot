@@ -772,7 +772,7 @@ function Configuracion() {
                             {/* Timbrado y numeración */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>Timbrado SET</h3>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '20px' }}>Timbrado DNIT</h3>
                                     <label style={labelStyle}>Número de timbrado *</label>
                                     <input value={configFactura.timbrado || ''} onChange={e => setConfigFactura({ ...configFactura, timbrado: e.target.value })} style={inputStyle} placeholder="18138433" />
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

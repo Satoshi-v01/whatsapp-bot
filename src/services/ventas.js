@@ -1,5 +1,5 @@
 const db = require('../db/index')
-const { descontarStockFEFO } = require('../services/stock') // al inicio del archivo
+const { descontarStockFEFO } = require('../services/stock') 
 
 async function registrarVentaPresencial(datos) {
     const {

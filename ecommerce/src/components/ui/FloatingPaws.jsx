@@ -34,7 +34,7 @@ const PAW_CONFIGS = Array.from({ length: COUNT }, (_, i) => {
 
   const size     = 16 + r1 * 44                       // 16–60px
   const leftPct  = i * STRIP_W + r2 * STRIP_W * 0.85  // distribuido en franja
-  const duration = 12 + r3 * 16                        // 12–28s
+  const duration = 22 + r3 * 18                        // 22–40s
   const delay    = -(r1 * duration)                    // inicio aleatorio
 
   return { size, leftPct, duration, delay }
@@ -61,8 +61,8 @@ export default function FloatingPaws() {
       <style>{`
         @keyframes risePaw {
           0%   { opacity: 0;    transform: translateY(110vh) rotate(0deg); }
-          8%   { opacity: .18; }
-          88%  { opacity: .18; }
+          5%   { opacity: .18; }
+          93%  { opacity: .18; }
           100% { opacity: 0;    transform: translateY(-120px) rotate(720deg); }
         }
       `}</style>
