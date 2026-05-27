@@ -10,6 +10,7 @@ import { imprimirFactura, imprimirCierre } from '../utils/factura'
 import { useApp } from '../App'
 import api from '../services/api'
 import { formatearCalidad } from '../utils/formato'
+import { fechaHoyPY } from '../utils/fecha'
 
 
 function Caja() {
@@ -65,7 +66,7 @@ function Caja() {
     const [cargandoCierre, setCargandoCierre] = useState(false)
     const [gastos, setGastos] = useState([])
     const [nuevoGasto, setNuevoGasto] = useState({ descripcion: '', monto: '' })
-    const [fechaCierre, setFechaCierre] = useState(new Date().toISOString().slice(0, 10))
+    const [fechaCierre, setFechaCierre] = useState(fechaHoyPY())
 
     useEffect(() => {
         async function init() {

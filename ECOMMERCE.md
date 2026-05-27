@@ -2,12 +2,256 @@
 > Claude Code: leer este archivo AL INICIO de cada sesión antes de hacer cualquier cosa.
 > Actualizar AL FINAL de cada sesión con los cambios realizados.
 
+> **REGLA CRITICA — SUPABASE / BASE DE DATOS:**
+> NUNCA eliminar, modificar ni ejecutar operaciones destructivas en Supabase (Storage, DB, Auth, tablas, buckets, etc.) sin que el usuario lo pida EXPLICITAMENTE en esa sesion. Siempre preguntar antes. Incumplir esto puede causar perdida de datos de produccion.
+
 ---
 
 ## Estado general
-- **Fase actual:** FASE 6 completada — ecommerce funcional end-to-end
-- **Ultima sesion:** 2026-04-02
-- **Proximo paso:** Deploy — configurar servicio Render Static Site o Vercel apuntando a ecommerce/dist/
+- **Fase actual:** FASE 8 en curso — Categorias + Subcategorias + Filtros del ecommerce
+- **Ultima sesion:** 2026-04-03
+- **Proximo paso:** Usuario debe ejecutar el SQL de FASE 8 en Supabase, luego asignar `ecommerce_categoria` a los productos desde el dashboard (Tab Productos → editar producto)
+
+---
+
+## FASE 7 — Integración Dashboard ↔ Ecommerce
+
+> Nombre sugerido para la sección del dashboard: **"Tienda Web"**
+> Razón: genérico, claro, y deja espacio para crecer (no amarra el nombre a una tecnología).
+> Alternativas consideradas: "Ecommerce", "Mi Tienda", "Catálogo Online".
+
+### Arquitectura general del flujo
+
+```
+Cliente en ecommerce
+  → elige productos → llena formulario (delivery) o ingresa WhatsApp (retiro)
+  → POST /api/ecommerce/pedidos
+  → se genera Orden de Pedido (OP) en tabla ordenes_pedido (canal = 'ecommerce')
+  → OP visible en dashboard → Ordenes (misma página que ya existe)
+  → stock se descuenta del inventario (mismo sistema que bot de WhatsApp)
+```
+
+---
+
+### Módulos de la página "Tienda Web" en el dashboard
+
+#### 7.1 — Gestión de Productos Ecommerce
+
+- **Mismo flujo que el bot de WhatsApp** — usa los mismos endpoints de `/api/productos` que ya existen
+- Cada producto del ecommerce debe **vincularse con un producto del inventario** (tabla `productos` + `presentaciones`)
+- La vinculación se hace por `presentacion_id` — ya existe en el ecommerce backend
+- Al generar una OP desde el ecommerce, se usa ese `presentacion_id` para descontar stock
+- En el panel: listar productos del ecommerce, crear/editar/eliminar, asignar imagen, marcar como destacado/novedad
+- Al crear/editar: selector que busca productos del inventario y los vincula
+
+**Campos del producto ecommerce:**
+| Campo | Descripción |
+|---|---|
+| `nombre` | Nombre visible en la tienda |
+| `descripcion` | Texto de la página de producto |
+| `imagen_url` | URL de imagen (subida o externa) |
+| `slug` | URL amigable (auto-generado desde nombre) |
+| `presentacion_id` | Vinculo con inventario (stock, precio) |
+| `es_destacado` | Aparece en sección "Productos destacados" |
+| `es_novedad` | Badge "NUEVO" + sección novedades |
+| `disponible` | Activo/inactivo en la tienda |
+
+#### 7.2 — Gestión de Banners
+
+- Crear, editar, reordenar y eliminar banners del HeroBanner
+- Campos: `titulo`, `subtitulo`, `badge`, `cta_texto`, `cta_url`, `imagen_url`, `orden`, `activo`
+- Preview del banner directamente en el panel
+
+#### 7.3 — Pedidos Ecommerce
+
+- **No es una página nueva** — los pedidos del ecommerce ya caen en `ordenes_pedido` con `canal = 'ecommerce'`
+- La página existente **Ordenes** del dashboard ya los muestra (o debe filtrarse por canal)
+- En esa vista ya se puede gestionar: ver detalle, cambiar estado, asignar repartidor
+
+#### 7.5 — Estadisticas de Trafico Ecommerce
+
+Tab "Trafico" en la página Tienda Web del dashboard.
+
+**Datos disponibles (basados en `ordenes_pedido`):**
+- KPIs: total pedidos, ingresos, ticket promedio, nuevos clientes ecommerce
+- Estados de pedidos: pendiente / confirmado / entregado / cancelado
+- Grafico de barras: pedidos por dia (ultimos 7 / 30 / 90 dias)
+- Split delivery vs retiro (cantidad + monto)
+- Top 10 productos mas pedidos (unidades + total)
+
+**Endpoint:** `GET /api/ecommerce/admin/estadisticas?periodo=semana|mes|trimestre`
+
+> **Pendiente — Tracking de page views reales:**
+> Las estadisticas actuales son 100% basadas en ordenes confirmadas. Para rastrear visitas reales
+> (sesiones, bounce rate, productos vistos sin comprar, conversion) del ecommerce Next.js se necesita:
+> 1. Crear tabla `ecommerce_pageviews (id, path, referrer, session_id, created_at)`
+> 2. Agregar endpoint publico `POST /api/ecommerce/track` (sin auth)
+> 3. Llamar ese endpoint desde el ecommerce frontend en cada navegacion de pagina
+> Implementar cuando el frontend Next.js este listo para deploy.
+
+#### 7.4 — Configuración de la Tienda
+
+| Setting | Descripción |
+|---|---|
+| `nombre_tienda` | Nombre visible en navbar y SEO |
+| `whatsapp` | Número de WhatsApp para pedidos de retiro y CTA del footer |
+| `mensaje_retiro` | Mensaje pre-cargado en WhatsApp para retiro en local |
+| `delivery_activo` | Habilita/deshabilita opción delivery en checkout |
+| `retiro_activo` | Habilita/deshabilita opción retiro en local |
+| `zona_cobertura` | Texto libre: "Asunción y Gran Asunción" |
+| `horario` | Texto: "Lun-Sab 8:00 - 18:00" |
+
+---
+
+### Flujo de checkout (detallado)
+
+#### Opción A — Delivery
+1. Cliente agrega productos al carrito
+2. Selecciona "Envío a domicilio"
+3. Rellena formulario: nombre, teléfono, dirección, notas
+4. POST `/api/ecommerce/pedidos` con `tipo_entrega: 'delivery'`
+5. Se genera OP → canal `ecommerce`, tipo `delivery`
+6. Dashboard Ordenes muestra la OP → puede asignarse a repartidor
+
+#### Opción B — Retiro en local
+1. Cliente agrega productos al carrito
+2. Selecciona "Retirar en local"
+3. Se le pide solo nombre y teléfono (sin dirección)
+4. POST `/api/ecommerce/pedidos` con `tipo_entrega: 'retiro'`
+5. Se genera OP → canal `ecommerce`, tipo `retiro`
+6. Se abre WhatsApp con número configurado + mensaje pre-armado con detalle del pedido
+
+> **Nota:** La pasarela de pago se vinculará en una fase posterior. Por ahora el pago es contra entrega / coordinado por WhatsApp.
+
+---
+
+### Cambios de schema necesarios (migraciones pendientes)
+
+```sql
+-- Agregar tipo_entrega a ordenes_pedido si no existe
+ALTER TABLE ordenes_pedido ADD COLUMN IF NOT EXISTS tipo_entrega VARCHAR(20) DEFAULT 'delivery';
+
+-- Tabla configuración de la tienda
+CREATE TABLE IF NOT EXISTS tienda_config (
+  id SERIAL PRIMARY KEY,
+  clave VARCHAR(100) UNIQUE NOT NULL,
+  valor TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Settings iniciales
+INSERT INTO tienda_config (clave, valor) VALUES
+  ('whatsapp', '595981000000'),
+  ('nombre_tienda', 'Sosa Bulls'),
+  ('delivery_activo', 'true'),
+  ('retiro_activo', 'true'),
+  ('zona_cobertura', 'Asunción y Gran Asunción'),
+  ('horario', 'Lun-Sab 8:00 - 18:00'),
+  ('mensaje_retiro', 'Hola, quiero retirar mi pedido en el local.')
+ON CONFLICT (clave) DO NOTHING;
+```
+
+---
+
+### Tareas pendientes FASE 7
+
+- [x] 7.1 Página "Tienda Web" en dashboard — estructura y routing
+- [x] 7.1 Tab: Productos — listado, toggles disponible/novedad/destacado, editar imagen_url
+- [x] 7.1 Tab: Banners — CRUD con preview de imagen
+- [x] 7.2 Checkout ecommerce — elegir delivery vs retiro (Cart.jsx bug fix: tipoEntrega state + payload)
+- [x] 7.2 Backend: `tipo_entrega` en POST `/api/ecommerce/pedidos` (ya estaba)
+- [x] 7.2 Botón WhatsApp en confirmación de pedido retiro
+- [x] 7.3 Dashboard Ordenes — filtro por canal (Tienda Web / WhatsApp / Todos) + badge "Tienda Web" + fix tipo_entrega
+- [x] 7.4 Tab: Configuración — form de settings con guardado
+- [x] Migraciones SQL creadas en `src/db/migrations/ecommerce_fase7.sql` (pendiente ejecutar en Supabase)
+- [x] 7.5 Tab: Trafico — KPIs, pedidos por dia, delivery vs retiro, top productos (2026-04-03)
+- [ ] 7.5 Page view tracking — tabla ecommerce_pageviews + endpoint POST /api/ecommerce/track (pendiente frontend Next.js)
+- [ ] Pasarela de pago — FASE FUTURA
+
+---
+
+## FASE 8 — Categorias, Subcategorias y Filtros (2026-04-03)
+
+### Problema resuelto
+La tabla `categorias` del DB tenia entradas como "Gatito", "Gato Adulto", "Perro Cachorro" como categorias de primer nivel. El filtro del backend hacia `REGEXP_REPLACE(c.nombre) = 'perros'` que no encontraba nada. Los productos mostraban 0 resultados en todas las paginas de categoria.
+
+### Arquitectura nueva
+
+```
+productos
+  ├── ecommerce_categoria (varchar 50) — 'perros' | 'gatos' | 'medicamentos' | 'accesorios' | 'cuidado' | 'ofertas'
+  └── ecommerce_subcategoria_id (FK) → ecommerce_subcategorias.id
+
+ecommerce_subcategorias
+  ├── id, categoria_slug, nombre, slug, orden
+  └── Datos iniciales: Perros (6 subcats) + Gatos (5 subcats)
+
+// Las categorias del inventario (tabla categorias) NO se tocan — siguen siendo para el sistema ERP
+// El ecommerce usa sus propias columnas en productos para categorizacion web
+```
+
+### SQL de migracion (ejecutar en Supabase)
+```sql
+ALTER TABLE productos
+  ADD COLUMN IF NOT EXISTS ecommerce_categoria VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS ecommerce_subcategoria_id INTEGER;
+
+CREATE TABLE IF NOT EXISTS ecommerce_subcategorias (
+  id             SERIAL PRIMARY KEY,
+  categoria_slug VARCHAR(50)  NOT NULL,
+  nombre         VARCHAR(100) NOT NULL,
+  slug           VARCHAR(100) NOT NULL,
+  orden          INTEGER DEFAULT 0,
+  UNIQUE (categoria_slug, slug)
+);
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_productos_ecommerce_subcat') THEN
+    ALTER TABLE productos ADD CONSTRAINT fk_productos_ecommerce_subcat
+      FOREIGN KEY (ecommerce_subcategoria_id) REFERENCES ecommerce_subcategorias(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+INSERT INTO ecommerce_subcategorias (categoria_slug, nombre, slug, orden) VALUES
+  ('perros', 'Cachorro',        'cachorro', 1),
+  ('perros', 'Adulto',          'adulto',   2),
+  ('perros', 'Senior',          'senior',   3),
+  ('perros', 'Castrado',        'castrado', 4),
+  ('perros', 'Alimento Humedo', 'humedo',   5),
+  ('perros', 'Snacks',          'snacks',   6),
+  ('gatos',  'Gatito',          'gatito',   1),
+  ('gatos',  'Adulto',          'adulto',   2),
+  ('gatos',  'Castrado',        'castrado', 3),
+  ('gatos',  'Alimento Humedo', 'humedo',   4),
+  ('gatos',  'Snacks',          'snacks',   5)
+ON CONFLICT (categoria_slug, slug) DO NOTHING;
+```
+
+### Endpoints nuevos / modificados
+| Endpoint | Cambio |
+|---|---|
+| `GET /api/ecommerce/categorias` | Ahora cuenta por `p.ecommerce_categoria` en lugar de `categorias.nombre` |
+| `GET /api/ecommerce/subcategorias?categoria=perros` | **NUEVO** — devuelve subcategorias por slug de categoria |
+| `GET /api/ecommerce/productos?categoria=perros&subcategoria_id=3` | Filtro cambiado a `p.ecommerce_categoria` + `p.ecommerce_subcategoria_id = id` (antes era ILIKE) |
+| `GET /api/ecommerce/filtros?categoria=perros` | Filtro cambiado a `p.ecommerce_categoria` |
+| `PATCH /api/ecommerce/admin/productos/:id` | Acepta `ecommerce_categoria` y `ecommerce_subcategoria_id` |
+| `GET /api/ecommerce/admin/productos` | Retorna `ecommerce_categoria`, `ecommerce_subcategoria_id`, `ecommerce_subcategoria_nombre` |
+
+### Archivos modificados (Fase 8)
+| Archivo | Cambio |
+|---|---|
+| `src/routes/ecommerce.js` | Todos los endpoints actualizados (ver tabla arriba) |
+| `ecommerce/src/hooks/useSubcategories.js` | NUEVO — fetch de subcategorias por categoria slug |
+| `ecommerce/src/pages/Category.jsx` | Usa `useSubcategories`, `subcatId` (numero) en lugar de `subcat` (string), `subcategoria_id` param |
+| `dashboard/src/pages/TiendaWeb.jsx` | Modal editar producto: nuevo campo "Categoria web" + "Subcategoria web" con `SubcatSelect` dinamico |
+
+### Pendientes FASE 8
+- [ ] **CRITICO:** Usuario debe ejecutar el SQL de migracion en Supabase
+- [ ] **CRITICO:** Asignar `ecommerce_categoria` a todos los productos desde el dashboard (Tab Productos → boton editar → "Categoria web")
+- [ ] Agregar `icono` a `ecommerce_subcategorias` (columna para futura expansion de UI)
+- [ ] Subcategorias para Medicamentos, Accesorios, Cuidado, Ofertas (el usuario dijo "luego trabajamos eso")
+- [ ] Filtro por tamano de presentacion (raza grande/mediana/pequena) — mencionado por el usuario, pendiente definir como modelarlo (columna extra en productos o en presentaciones)
+- [ ] Bulk assign de ecommerce_categoria desde el dashboard (asignar a multiples productos a la vez)
 
 ---
 

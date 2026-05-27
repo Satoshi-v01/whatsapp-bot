@@ -152,6 +152,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
     const [productos, setProductos] = useState([])
     const [cargando, setCargando] = useState(true)
     const [buscar, setBuscar] = useState('')
+    const [filtrocat, setFiltrocat] = useState('') // '' = todas, 'sin' = sin categoria
     const [editando, setEditando] = useState(null)
     const [editForm, setEditForm] = useState({})
     const [guardando, setGuardando] = useState(false)
@@ -215,83 +216,123 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
 
     return (
         <div>
-            {/* Buscador */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            {/* Buscador + filtro categoria */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                 <input
                     placeholder="Buscar producto o presentación..."
                     value={buscar}
                     onChange={e => setBuscar(e.target.value)}
-                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                    style={{ ...inputStyle, marginBottom: 0, flex: '1 1 200px' }}
                 />
+                <select
+                    value={filtrocat}
+                    onChange={e => setFiltrocat(e.target.value)}
+                    style={{ ...inputStyle, marginBottom: 0, flex: '0 0 180px' }}
+                >
+                    <option value="">Todas las categorias</option>
+                    <option value="sin">Sin categoria web</option>
+                    <option value="perros">Perros</option>
+                    <option value="gatos">Gatos</option>
+                    <option value="medicamentos">Medicamentos</option>
+                    <option value="accesorios">Accesorios</option>
+                    <option value="cuidado">Cuidado</option>
+                    <option value="ofertas">Ofertas</option>
+                </select>
             </div>
 
             {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
 
             {cargando ? (
                 <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando productos...</p>
-            ) : productos.length === 0 ? (
-                <p style={{ color: s.textMuted, fontSize: 13 }}>No hay productos.</p>
-            ) : (
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr>
-                                <th style={thStyle}>Imagen</th>
-                                <th style={thStyle}>Producto</th>
-                                <th style={thStyle}>Presentación</th>
-                                <th style={thStyle}>Precio</th>
-                                <th style={thStyle}>Stock</th>
-                                <th style={{ ...thStyle, textAlign: 'center' }}>Disponible</th>
-                                <th style={{ ...thStyle, textAlign: 'center' }}>Novedad</th>
-                                <th style={{ ...thStyle, textAlign: 'center' }}>Destacado</th>
-                                <th style={thStyle}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {productos.map(prod => (
-                                <tr key={prod.presentacion_id} style={{ background: s.surface }}>
-                                    <td style={tdStyle}>
-                                        <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${s.border}` }}>
-                                            {prod.imagen_url ? (
-                                                <img src={prod.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
-                                                    <ellipse cx="50" cy="65" rx="24" ry="20" />
-                                                    <circle cx="22" cy="38" r="11" />
-                                                    <circle cx="42" cy="26" r="11" />
-                                                    <circle cx="62" cy="26" r="11" />
-                                                    <circle cx="78" cy="38" r="11" />
-                                                </svg>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <span style={{ fontWeight: 600, color: s.text }}>{prod.producto_nombre}</span>
-                                        {prod.categoria_nombre && <span style={{ display: 'block', fontSize: 11, color: s.textMuted }}>{prod.categoria_nombre}</span>}
-                                    </td>
-                                    <td style={{ ...tdStyle, color: s.textMuted }}>{prod.presentacion_nombre}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 600, color: s.text }}>Gs. {formatMiles(prod.precio_venta)}</td>
-                                    <td style={{ ...tdStyle, color: prod.stock <= 0 ? '#ef4444' : prod.stock <= 5 ? '#f59e0b' : '#22c55e', fontWeight: 600 }}>{prod.stock}</td>
-                                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                        <Toggle checked={prod.disponible} onChange={v => toggleCampo(prod, 'disponible', v)} />
-                                    </td>
-                                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                        <Toggle checked={prod.es_novedad} onChange={v => toggleCampo(prod, 'es_novedad', v)} />
-                                    </td>
-                                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                        <Toggle checked={prod.es_destacado} onChange={v => toggleCampo(prod, 'es_destacado', v)} />
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
-                                            Editar
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            ) : (() => {
+                const CAT_COLORS = {
+                    perros: '#ffa601', gatos: '#7c3aed', medicamentos: '#0ea5e9',
+                    accesorios: '#f97316', cuidado: '#10b981', ofertas: '#dc2626',
+                }
+                const filtered = productos.filter(prod => {
+                    if (!filtrocat) return true
+                    if (filtrocat === 'sin') return !prod.ecommerce_categoria
+                    return prod.ecommerce_categoria === filtrocat
+                })
+                if (filtered.length === 0) return <p style={{ color: s.textMuted, fontSize: 13 }}>No hay productos con este filtro.</p>
+                return (
+                    <div>
+                        <p style={{ fontSize: 12, color: s.textMuted, marginBottom: 10 }}>{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</p>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>Imagen</th>
+                                        <th style={thStyle}>Producto</th>
+                                        <th style={thStyle}>Presentación</th>
+                                        <th style={thStyle}>Cat. Web</th>
+                                        <th style={thStyle}>Precio</th>
+                                        <th style={thStyle}>Stock</th>
+                                        <th style={{ ...thStyle, textAlign: 'center' }}>Disp.</th>
+                                        <th style={{ ...thStyle, textAlign: 'center' }}>Nov.</th>
+                                        <th style={{ ...thStyle, textAlign: 'center' }}>Dest.</th>
+                                        <th style={thStyle}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filtered.map(prod => {
+                                        const catColor = CAT_COLORS[prod.ecommerce_categoria] || null
+                                        return (
+                                            <tr key={prod.presentacion_id} style={{ background: s.surface }}>
+                                                <td style={tdStyle}>
+                                                    <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${s.border}` }}>
+                                                        {prod.imagen_url ? (
+                                                            <img src={prod.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ) : (
+                                                            <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
+                                                                <ellipse cx="50" cy="65" rx="24" ry="20" />
+                                                                <circle cx="22" cy="38" r="11" />
+                                                                <circle cx="42" cy="26" r="11" />
+                                                                <circle cx="62" cy="26" r="11" />
+                                                                <circle cx="78" cy="38" r="11" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <span style={{ fontWeight: 600, color: s.text }}>{prod.producto_nombre}</span>
+                                                    {prod.categoria_nombre && <span style={{ display: 'block', fontSize: 11, color: s.textMuted }}>{prod.categoria_nombre}</span>}
+                                                </td>
+                                                <td style={{ ...tdStyle, color: s.textMuted, fontSize: 12 }}>{prod.presentacion_nombre}</td>
+                                                <td style={tdStyle}>
+                                                    {prod.ecommerce_categoria ? (
+                                                        <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: catColor ? `${catColor}18` : s.surfaceLow, color: catColor || s.textMuted, border: `1px solid ${catColor ? `${catColor}35` : s.border}`, whiteSpace: 'nowrap' }}>
+                                                            {prod.ecommerce_categoria}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: 11, color: s.textFaint }}>—</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ ...tdStyle, fontWeight: 600, color: s.text }}>Gs. {formatMiles(prod.precio_venta)}</td>
+                                                <td style={{ ...tdStyle, color: prod.stock <= 0 ? '#ef4444' : prod.stock <= 5 ? '#f59e0b' : '#22c55e', fontWeight: 600 }}>{prod.stock}</td>
+                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                    <Toggle checked={prod.disponible} onChange={v => toggleCampo(prod, 'disponible', v)} />
+                                                </td>
+                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                    <Toggle checked={prod.es_novedad} onChange={v => toggleCampo(prod, 'es_novedad', v)} />
+                                                </td>
+                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                    <Toggle checked={prod.es_destacado} onChange={v => toggleCampo(prod, 'es_destacado', v)} />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
+                                                        Editar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* Modal editar producto */}
             {editando && (
@@ -525,9 +566,10 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                         <div>
                             <label style={labelStyle}>Imagen del banner</label>
                             <div style={{ fontSize: 11, color: s.textMuted, background: s.surfaceLow, border: `1px solid ${s.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 8, lineHeight: 1.6 }}>
-                                <strong style={{ color: s.text }}>Tamano recomendado: 1920 x 600 px</strong> (relacion 16:5)<br />
-                                Minimo: 1280 x 340 px — Formato: JPG o WEBP — Peso max: 2 MB<br />
-                                <span style={{ color: '#f97316' }}>El texto se muestra sobre el lado izquierdo con fondo oscuro. Pone el sujeto a la derecha o al centro.</span>
+                                <strong style={{ color: s.text }}>Tamano recomendado: 900 × 540 px</strong> (relacion 16:9)<br />
+                                Minimo: 600 × 360 px — Formato: JPG, PNG o WEBP — Peso max: 2 MB<br />
+                                La imagen ocupa <strong style={{ color: s.text }}>solo el lado derecho</strong> del banner (columna derecha, aprox. 55% del ancho).<br />
+                                <span style={{ color: '#f97316' }}>Pone el producto centrado o ligeramente a la derecha. Evita texto en la imagen porque se superpone con el badge.</span>
                             </div>
                             <InputImagen
                                 value={form.imagen_url}
@@ -574,6 +616,169 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                     onCancelar={() => setConfirmarEliminar(null)}
                 />
             )}
+        </div>
+    )
+}
+
+// ════════════════════════════════════════════════════════════════
+// TAB — CATEGORÍAS
+// ════════════════════════════════════════════════════════════════
+const CAT_LABELS = {
+    perros:       'Perros',
+    gatos:        'Gatos',
+    medicamentos: 'Medicamentos',
+    accesorios:   'Accesorios',
+    cuidado:      'Cuidado',
+    ofertas:      'Ofertas',
+}
+const CAT_SLUGS = Object.keys(CAT_LABELS)
+
+function TabCategorias({ s, inputStyle, labelStyle, btnPrimario }) {
+    const [cats, setCats] = useState([])
+    const [cargando, setCargando] = useState(true)
+    const [guardando, setGuardando] = useState(null) // slug o null
+    const [error, setError] = useState('')
+    const [exito, setExito] = useState('')
+
+    useEffect(() => {
+        api.get('/ecommerce/admin/categorias')
+            .then(({ data }) => {
+                // Asegurar que todos los slugs esten presentes
+                const bySlug = {}
+                data.forEach(c => { bySlug[c.slug] = c })
+                setCats(CAT_SLUGS.map(slug => bySlug[slug] || { slug, imagen_url: null }))
+            })
+            .catch(() => {
+                setCats(CAT_SLUGS.map(slug => ({ slug, imagen_url: null })))
+                setError('No se pudieron cargar las categorías.')
+            })
+            .finally(() => setCargando(false))
+    }, [])
+
+    async function handleGuardar(slug, imagen_url) {
+        setGuardando(slug)
+        setError('')
+        setExito('')
+        try {
+            await api.patch(`/ecommerce/admin/categorias/${slug}`, { imagen_url })
+            setCats(prev => prev.map(c => c.slug === slug ? { ...c, imagen_url } : c))
+            setExito(`Imagen de ${CAT_LABELS[slug]} guardada.`)
+            setTimeout(() => setExito(''), 3000)
+        } catch {
+            setError('Error al guardar la imagen.')
+        } finally {
+            setGuardando(null)
+        }
+    }
+
+    if (cargando) return <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando categorías...</p>
+
+    return (
+        <div>
+            <p style={{ fontSize: 13, color: s.textMuted, marginBottom: 20, marginTop: 0 }}>
+                Cargá una imagen para cada categoría. Se muestra en los tiles de la tienda web.
+                Tamaño recomendado: <strong style={{ color: s.text }}>600 × 400 px</strong>.
+            </p>
+
+            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {exito && <p style={{ color: '#22c55e', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{exito}</p>}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+                {cats.map(cat => (
+                    <CatImageCard
+                        key={cat.slug}
+                        cat={cat}
+                        label={CAT_LABELS[cat.slug]}
+                        s={s}
+                        inputStyle={inputStyle}
+                        labelStyle={labelStyle}
+                        btnPrimario={btnPrimario}
+                        saving={guardando === cat.slug}
+                        onSave={imagen_url => handleGuardar(cat.slug, imagen_url)}
+                    />
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function CatImageCard({ cat, label, s, inputStyle, labelStyle, btnPrimario, saving, onSave }) {
+    const [url, setUrl] = useState(cat.imagen_url || '')
+    const inputRef = useRef(null)
+    const [subiendo, setSubiendo] = useState(false)
+    const [uploadError, setUploadError] = useState('')
+
+    async function handleArchivo(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        setSubiendo(true)
+        setUploadError('')
+        try {
+            const fd = new FormData()
+            fd.append('imagen', file)
+            const { data } = await api.post('/uploads/imagen', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            })
+            setUrl(data.url)
+        } catch (err) {
+            const msg = err?.response?.data?.error || 'Error al subir la imagen. Verificá la configuracion de Supabase Storage.'
+            setUploadError(msg)
+        } finally {
+            setSubiendo(false)
+        }
+    }
+
+    return (
+        <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffa601', flexShrink: 0 }} />
+                <span style={{ fontWeight: 700, fontSize: 14, color: s.text }}>{label}</span>
+            </div>
+
+            {/* Preview */}
+            <div style={{ width: '100%', height: 120, borderRadius: 8, background: s.surfaceLow, border: `1px solid ${s.border}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {url ? (
+                    <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                ) : (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={s.textFaint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                )}
+            </div>
+
+            {/* URL input */}
+            <div>
+                <label style={labelStyle}>URL de imagen</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                        type="text"
+                        value={url}
+                        onChange={e => setUrl(e.target.value)}
+                        placeholder="https://... o subí un archivo"
+                        style={{ ...inputStyle, marginBottom: 0, flex: 1, fontSize: 12 }}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => inputRef.current?.click()}
+                        disabled={subiendo}
+                        style={{ padding: '9px 10px', borderRadius: 8, border: `1px solid ${s.border}`, background: s.surfaceLow, color: s.text, cursor: subiendo ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, opacity: subiendo ? 0.7 : 1 }}
+                    >
+                        {subiendo ? '...' : 'Subir'}
+                    </button>
+                    <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleArchivo} />
+                </div>
+                {uploadError && (
+                    <p style={{ color: '#ef4444', fontSize: 11, marginTop: 6, marginBottom: 0 }}>{uploadError}</p>
+                )}
+            </div>
+
+            <button
+                onClick={() => onSave(url)}
+                disabled={saving || subiendo}
+                style={{ ...btnPrimario, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}
+            >
+                {saving ? 'Guardando...' : 'Guardar imagen'}
+            </button>
         </div>
     )
 }
@@ -877,6 +1082,7 @@ function TabTrafico({ s }) {
 // ════════════════════════════════════════════════════════════════
 const TABS = [
     { key: 'productos',     label: 'Productos' },
+    { key: 'categorias',    label: 'Categorias' },
     { key: 'banners',       label: 'Banners' },
     { key: 'configuracion', label: 'Configuración' },
     { key: 'trafico',       label: 'Trafico' },
@@ -952,6 +1158,7 @@ function TiendaWeb() {
             {/* Contenido */}
             <div style={{ background: s.surface, borderRadius: 12, padding: 24, border: `1px solid ${s.border}` }}>
                 {tab === 'productos'     && <TabProductos     {...sharedProps} />}
+                {tab === 'categorias'    && <TabCategorias    {...sharedProps} />}
                 {tab === 'banners'       && <TabBanners       {...sharedProps} />}
                 {tab === 'configuracion' && <TabConfiguracion {...sharedProps} />}
                 {tab === 'trafico'       && <TabTrafico       s={s} />}

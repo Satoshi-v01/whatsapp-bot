@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
+  base: '/ecommerce',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -16,8 +17,14 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
+        configure: (proxy) => { proxy.on('error', () => {}) },
+      },
+      '/uploads': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        configure: (proxy) => { proxy.on('error', () => {}) },
       },
     },
   },

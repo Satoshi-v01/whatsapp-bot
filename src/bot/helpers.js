@@ -1,23 +1,40 @@
-// src/bot/helpers.js
+﻿// src/bot/helpers.js
 
 const PALABRAS_RESET = ['empezar', 'reiniciar', 'volver', 'inicio', 'menu', 'menú', 'otra cosa', 'quiero otra', 'cancelar todo', 'reset']
 const PALABRAS_AGENTE = ['agente', 'humano', 'persona', 'asesor', 'hablar con alguien', 'operador', 'ayuda']
 const PALABRAS_SALUDO = ['hola', 'buenas', 'buen dia', 'buenos dias', 'buenas tardes', 'buenas noches', 'hi', 'hey', 'ola']
 const PALABRAS_IGNORAR = ['tenes', 'tienen', 'tenés', 'quiero', 'busco', 'me das', 'hay', 'tienes', 'dame', 'necesito', 'me gustaria', 'quisiera', 'por favor', 'porfavor', 'gracias', 'un', 'una', 'el', 'la', 'los', 'las', 'de', 'del', 'para', 'con', 'que', 'me', 'si', 'no']
 
+const PALABRAS_TIPO_SIN_ESPECIE = ['castrado', 'castrada', 'castrados', 'castradas', 'cachorro', 'cachorros', 'adulto', 'adultos', 'senior', 'puppy', 'gatito', 'gatitos', 'esterilizado', 'esterilizada']
+const PALABRAS_ESPECIE = ['perro', 'perros', 'gato', 'gatos', 'felino', 'felinos', 'canino', 'caninos', 'dog', 'cat']
+
+function normalizarTexto(texto) {
+    return texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+}
+
 function esReset(texto) {
-    const t = texto.toLowerCase().trim()
-    return PALABRAS_RESET.some(p => t.includes(p))
+    const t = normalizarTexto(texto)
+    return PALABRAS_RESET.some(p => t.includes(normalizarTexto(p)))
 }
 
 function esPedidoAgente(texto) {
-    const t = texto.toLowerCase().trim()
-    return PALABRAS_AGENTE.some(p => t.includes(p))
+    const t = normalizarTexto(texto)
+    return PALABRAS_AGENTE.some(p => t.includes(normalizarTexto(p)))
 }
 
 function esSaludo(texto) {
-    const t = texto.toLowerCase().trim()
-    return PALABRAS_SALUDO.some(s => t === s || t.startsWith(s + ' '))
+    const t = normalizarTexto(texto)
+    return PALABRAS_SALUDO.some(s => {
+        const sn = normalizarTexto(s)
+        return t === sn || t.startsWith(sn + ' ')
+    })
+}
+
+function necesitaAclararEspecie(texto) {
+    const t = normalizarTexto(texto)
+    const tieneTipo = PALABRAS_TIPO_SIN_ESPECIE.some(p => t.includes(normalizarTexto(p)))
+    const tieneEspecie = PALABRAS_ESPECIE.some(p => t.includes(p))
+    return tieneTipo && !tieneEspecie
 }
 
 function parsearSeleccion(texto) {
@@ -58,7 +75,7 @@ function mensajeMenuPrincipal(nombre = null) {
 }
 
 module.exports = {
-    esReset, esPedidoAgente, esSaludo,
+    esReset, esPedidoAgente, esSaludo, necesitaAclararEspecie,
     parsearSeleccion, limpiarParaBusqueda,
     mensajeMenuPrincipal,
     PALABRAS_SALUDO, PALABRAS_IGNORAR

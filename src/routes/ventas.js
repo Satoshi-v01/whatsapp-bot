@@ -83,13 +83,13 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
         if (periodo === 'recientes') {
             condiciones.push(`v.created_at >= NOW() - INTERVAL '24 hours'`)
         } else if (periodo === 'semanal') {
-            condiciones.push(`v.created_at >= DATE_TRUNC('week', NOW())`)
+            condiciones.push(`v.created_at >= DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`)
         } else if (periodo === 'mensual') {
-            condiciones.push(`v.created_at >= DATE_TRUNC('month', NOW())`)
+            condiciones.push(`v.created_at >= DATE_TRUNC('month', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`)
         } else if (periodo === 'anual') {
-            condiciones.push(`v.created_at >= DATE_TRUNC('year', NOW())`)
+            condiciones.push(`v.created_at >= DATE_TRUNC('year', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`)
         } else if (periodo === 'personalizado' && fecha_desde && fecha_hasta) {
-            condiciones.push(`v.created_at >= $${i} AND v.created_at <= $${i + 1}`)
+            condiciones.push(`v.created_at >= ($${i}::timestamp AT TIME ZONE 'America/Asuncion') AND v.created_at <= ($${i + 1}::timestamp AT TIME ZONE 'America/Asuncion')`)
             valores.push(fecha_desde, fecha_hasta)
             i += 2
         }
@@ -201,21 +201,21 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                     COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
-             WHERE v.created_at >= CURRENT_DATE AND v.estado != 'cancelado'`
+             WHERE v.created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' AND v.estado != 'cancelado'`
         )
 
         const resumenSemana = await db.query(
             `SELECT COUNT(*) as cantidad,
                     COALESCE(SUM(v.precio), 0) as total
              FROM ventas v
-             WHERE v.created_at >= DATE_TRUNC('week', NOW()) AND v.estado != 'cancelado'`
+             WHERE v.created_at >= DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' AND v.estado != 'cancelado'`
         )
 
         const resumenMes = await db.query(
             `SELECT COUNT(*) as cantidad,
                     COALESCE(SUM(v.precio), 0) as total
              FROM ventas v
-             WHERE v.created_at >= DATE_TRUNC('month', NOW()) AND v.estado != 'cancelado'`
+             WHERE v.created_at >= DATE_TRUNC('month', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' AND v.estado != 'cancelado'`
         )
 
         res.json({

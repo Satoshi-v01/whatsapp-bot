@@ -4,8 +4,11 @@ import {
     verificarEliminarMarca, confirmarEliminarMarca,
     crearCategoria, editarCategoria,
     verificarEliminarCategoria, confirmarEliminarCategoria,
+    getSubcategorias, crearSubcategoria, editarSubcategoria,
+    verificarEliminarSubcategoria, confirmarEliminarSubcategoria,
     crearProducto, editarProducto, agregarPresentacion,
-    actualizarStock, actualizarPrecio, actualizarCodigoBarras
+    actualizarStock, actualizarPrecio, actualizarCodigoBarras,
+    toggleDisponibleProducto
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -46,13 +49,19 @@ function Inventario() {
     const btnPrimario = { padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }
     const btnSecundario = { padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 
+    const [pestanaActiva, setPestanaActiva] = useState('balanceados')
     const [buscar, setBuscar] = useState('')
     const [modalCategorias, setModalCategorias] = useState(false)
-    const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: '', descripcion: '' })
+    const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: '', descripcion: '', seccion: '' })
     const [confirmEliminarCategoria, setConfirmEliminarCategoria] = useState(null)
     const [editandoCategoria, setEditandoCategoria] = useState(null)
+    const [modalSubcategorias, setModalSubcategorias] = useState(false)
+    const [nuevaSubcategoria, setNuevaSubcategoria] = useState({ nombre: '', descripcion: '' })
+    const [confirmEliminarSubcategoria, setConfirmEliminarSubcategoria] = useState(null)
+    const [editandoSubcategoria, setEditandoSubcategoria] = useState(null)
     const [productos, setProductos] = useState([])
     const [categorias, setCategorias] = useState([])
+    const [subcategorias, setSubcategorias] = useState([])
     const [marcas, setMarcas] = useState([])
     const [cargando, setCargando] = useState(true)
     const [productoExpandido, setProductoExpandido] = useState(null)
@@ -65,10 +74,10 @@ function Inventario() {
     const [nuevaMarca, setNuevaMarca] = useState('')
     const [errorMarca, setErrorMarca] = useState('')
     const [confirmEliminarMarca, setConfirmEliminarMarca] = useState(null)
-    const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '' })
+    const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' })
-    const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_compra: '', precio_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
-    const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '' })
+    const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_compra: '', precio_descuento: '', precio_compra_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
+    const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [modalStock, setModalStock] = useState(null)
@@ -88,8 +97,8 @@ function Inventario() {
     async function cargarDatos() {
         try {
             setCargando(true)
-            const [prods, cats, mrcs] = await Promise.all([getProductos(), getCategorias(), getMarcas()])
-            setProductos(prods); setCategorias(cats); setMarcas(mrcs)
+            const [prods, cats, mrcs, subs] = await Promise.all([getProductos(), getCategorias(), getMarcas(), getSubcategorias()])
+            setProductos(prods); setCategorias(cats); setMarcas(mrcs); setSubcategorias(subs)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -109,12 +118,12 @@ function Inventario() {
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la marca.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleCrearProducto() {
-        try { await crearProducto(nuevoProducto); setModalProducto(false); setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '' }); await cargarDatos() }
+        try { await crearProducto(nuevoProducto); setModalProducto(false); setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleCrearCategoria() {
         if (!nuevaCategoria.nombre.trim()) return
-        try { await crearCategoria(nuevaCategoria); setNuevaCategoria({ nombre: '', descripcion: '' }); await cargarDatos() }
+        try { await crearCategoria(nuevaCategoria); setNuevaCategoria({ nombre: '', descripcion: '', seccion: nuevaCategoria.seccion }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear la categoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleEditarCategoria(id, datos) {
@@ -132,6 +141,39 @@ function Inventario() {
     async function handleEditarProducto() {
         try { await editarProducto(modalEditarProducto.id, editarForm); setModalEditarProducto(null); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo editar el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
+    async function handleToggleDisponibleProducto(producto) {
+        const nuevaDisp = !producto.disponible
+        setModalConfirmar({
+            titulo: nuevaDisp ? 'Activar producto' : 'Desactivar producto',
+            mensaje: `¿${nuevaDisp ? 'Activar' : 'Desactivar'} "${producto.nombre}"? ${nuevaDisp ? 'Volverá a aparecer en el bot y tienda.' : 'No aparecerá en el bot ni tienda.'}`,
+            textoBoton: nuevaDisp ? 'Activar' : 'Desactivar',
+            colorBoton: nuevaDisp ? '#10b981' : '#ef4444',
+            onConfirmar: async () => {
+                try { await toggleDisponibleProducto(producto.id, nuevaDisp); setModalConfirmar(null); await cargarDatos() }
+                catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo cambiar el estado del producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+            }
+        })
+    }
+    async function handleCrearSubcategoria() {
+        if (!nuevaSubcategoria.nombre.trim()) return
+        try {
+            await crearSubcategoria({ ...nuevaSubcategoria, seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : null })
+            setNuevaSubcategoria({ nombre: '', descripcion: '' })
+            await cargarDatos()
+        } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
+    async function handleEditarSubcategoria(id, datos) {
+        try { await editarSubcategoria(id, datos); setEditandoSubcategoria(null); await cargarDatos() }
+        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo editar la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
+    async function handleEliminarSubcategoria(sub) {
+        try { const r = await verificarEliminarSubcategoria(sub.id); setConfirmEliminarSubcategoria({ ...sub, cantidad: r.productos_asociados }) }
+        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo verificar la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
+    async function handleConfirmarEliminarSubcategoria() {
+        try { await confirmarEliminarSubcategoria(confirmEliminarSubcategoria.id); setConfirmEliminarSubcategoria(null); await cargarDatos() }
+        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleAgregarPresentacion(productoId) {
         try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
@@ -237,11 +279,11 @@ function colorVencimiento(diasParaVencer) {
     }
 
     function abrirModalPrecio(pr) {
-        setPrecioForm({ precio_venta: pr.precio_venta || '', precio_compra: pr.precio_compra || '', precio_descuento: pr.precio_descuento || '', descuento_activo: pr.descuento_activo || false, descuento_desde: pr.descuento_desde ? pr.descuento_desde.slice(0, 16) : '', descuento_hasta: pr.descuento_hasta ? pr.descuento_hasta.slice(0, 16) : '', descuento_stock: pr.descuento_stock || '' })
+        setPrecioForm({ precio_venta: pr.precio_venta || '', precio_compra: pr.precio_compra || '', precio_descuento: pr.precio_descuento || '', precio_compra_descuento: pr.precio_compra_descuento || '', descuento_activo: pr.descuento_activo || false, descuento_desde: pr.descuento_desde ? pr.descuento_desde.slice(0, 16) : '', descuento_hasta: pr.descuento_hasta ? pr.descuento_hasta.slice(0, 16) : '', descuento_stock: pr.descuento_stock || '' })
         setModalPrecio(pr)
     }
     function abrirModalEditar(producto) {
-        setEditarForm({ nombre: producto.nombre, descripcion: producto.descripcion || '', calidad: producto.calidad, categoria_id: producto.categoria_id || '', marca_id: producto.marca_id || '', sku: producto.sku || '' })
+        setEditarForm({ nombre: producto.nombre, descripcion: producto.descripcion || '', calidad: producto.calidad || 'standard', categoria_id: producto.categoria_id || '', marca_id: producto.marca_id || '', sku: producto.sku || '', especie: producto.especie || '', seccion_inventario: producto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : ''), subcategoria_id: producto.subcategoria_id || '' })
         setModalEditarProducto(producto)
     }
     function abrirModalCodigoBarras(pr) {
@@ -264,23 +306,50 @@ function colorVencimiento(diasParaVencer) {
     const stockBajo = productos.reduce((sum, p) => sum + p.presentaciones.filter(pr => pr.stock <= 3 && pr.stock > 0).length, 0)
     const sinStock = productos.reduce((sum, p) => sum + p.presentaciones.filter(pr => pr.stock === 0).length, 0)
 
-    const productosFiltrados = productos.filter(p =>
-        p.nombre.toLowerCase().includes(buscar.toLowerCase()) ||
-        (p.marca_nombre && p.marca_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
-        (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
-        (p.sku && p.sku.toLowerCase().includes(buscar.toLowerCase()))
-    )
+    const PESTANAS = [
+        { id: 'balanceados', label: 'Balanceados' },
+        { id: 'accesorios',  label: 'Accesorios' },
+        { id: 'medicamentos', label: 'Medicamentos' },
+        { id: 'sin_categoria', label: 'Sin categoria' },
+    ]
 
-    // Agrupar por marca → categoría
+    const productosFiltrados = productos
+        .filter(p => pestanaActiva === 'sin_categoria' ? !p.seccion_inventario : p.seccion_inventario === pestanaActiva)
+        .filter(p =>
+            p.nombre.toLowerCase().includes(buscar.toLowerCase()) ||
+            (p.marca_nombre && p.marca_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
+            (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
+            (p.subcategoria_nombre && p.subcategoria_nombre.toLowerCase().includes(buscar.toLowerCase())) ||
+            (p.sku && p.sku.toLowerCase().includes(buscar.toLowerCase()))
+        )
+
+    function getAgrupadorSecundario(p) {
+        if (pestanaActiva === 'balanceados') return p.subcategoria_nombre || 'Sin Subcategoria'
+        if (pestanaActiva === 'sin_categoria') return 'Sin categoria asignada'
+        return p.categoria_nombre || 'Sin Categoria'
+    }
+
     const porMarca = {}
     productosFiltrados.forEach(p => {
         const marca = p.marca_nombre || 'Sin Marca'
-        const cat = p.categoria_nombre || 'Sin Categoría'
+        const sub = getAgrupadorSecundario(p)
         if (!porMarca[marca]) porMarca[marca] = {}
-        if (!porMarca[marca][cat]) porMarca[marca][cat] = []
-        porMarca[marca][cat].push(p)
+        if (!porMarca[marca][sub]) porMarca[marca][sub] = []
+        porMarca[marca][sub].push(p)
     })
     const marcasOrdenadas = Object.keys(porMarca).sort((a, b) => a === 'Sin Marca' ? 1 : b === 'Sin Marca' ? -1 : a.localeCompare(b))
+
+    const subcategoriasPestana = subcategorias.filter(s => s.seccion === pestanaActiva)
+    const categoriasPestana = categorias.filter(c => !c.seccion || c.seccion === pestanaActiva)
+    const catsPara = (sec) => categorias.filter(c => !c.seccion || c.seccion === sec)
+    const subcatsPara = (sec) => subcategorias.filter(s => s.seccion === sec)
+
+    const contadorPorPestana = {}
+    PESTANAS.forEach(t => {
+        contadorPorPestana[t.id] = t.id === 'sin_categoria'
+            ? productos.filter(p => !p.seccion_inventario).length
+            : productos.filter(p => p.seccion_inventario === t.id).length
+    })
 
     
     if (cargando) return (
@@ -300,8 +369,9 @@ function colorVencimiento(diasParaVencer) {
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
-                    <button onClick={() => setModalCategorias(true)} style={btnSecundario}>Categorías</button>
-                    <button onClick={() => setModalProducto(true)} style={btnPrimario}>+ Producto</button>
+                    <button onClick={() => { setNuevaCategoria({ nombre: '', descripcion: '', seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '' }); setModalCategorias(true) }} style={btnSecundario}>Categorías</button>
+                    {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
+                    <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} style={btnPrimario}>+ Producto</button>
                 </div>
             </div>
 
@@ -328,8 +398,22 @@ function colorVencimiento(diasParaVencer) {
                 ))}
             </div>
 
+            {/* Pestanas tipo Chrome */}
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '0', borderBottom: `2px solid ${s.border}`, marginBottom: '0' }}>
+                {PESTANAS.map(t => {
+                    const activa = pestanaActiva === t.id
+                    return (
+                        <button key={t.id} onClick={() => { setPestanaActiva(t.id); setBuscar('') }}
+                            style={{ padding: '10px 20px', border: 'none', borderBottom: activa ? '2px solid #1a1a2e' : '2px solid transparent', marginBottom: '-2px', background: activa ? s.surface : 'transparent', color: activa ? s.text : s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: activa ? '700' : '500', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s' }}>
+                            {t.label}
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 7px', borderRadius: '10px', background: activa ? (t.id === 'sin_categoria' ? '#dc2626' : '#1a1a2e') : (t.id === 'sin_categoria' && contadorPorPestana[t.id] > 0 ? '#fee2e2' : s.border), color: activa ? 'white' : (t.id === 'sin_categoria' && contadorPorPestana[t.id] > 0 ? '#dc2626' : s.textMuted) }}>{contadorPorPestana[t.id]}</span>
+                        </button>
+                    )
+                })}
+            </div>
+
             {/* Buscador */}
-            <div style={{ background: s.surface, borderRadius: '12px 12px 0 0', border: `1px solid ${s.border}`, borderBottom: 'none', padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ background: s.surface, borderRadius: '0 12px 0 0', border: `1px solid ${s.border}`, borderBottom: 'none', padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -355,7 +439,8 @@ function colorVencimiento(diasParaVencer) {
                     const catsPorMarca = porMarca[marca]
                     const totalStockMarca = Object.values(catsPorMarca).flat().reduce((acc, p) => acc + p.presentaciones.reduce((a, pr) => a + pr.stock, 0), 0)
                     const totalProdsMarca = Object.values(catsPorMarca).flat().length
-                    const catsOrdenadas = Object.keys(catsPorMarca).sort((a, b) => a === 'Sin Categoría' ? 1 : b === 'Sin Categoría' ? -1 : a.localeCompare(b))
+                    const sinLabel = pestanaActiva === 'balanceados' ? 'Sin Subcategoria' : 'Sin Categoria'
+                    const catsOrdenadas = Object.keys(catsPorMarca).sort((a, b) => a === sinLabel ? 1 : b === sinLabel ? -1 : a.localeCompare(b))
 
                     return (
                         <div key={marca} style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -389,7 +474,7 @@ function colorVencimiento(diasParaVencer) {
                             {expandida && catsOrdenadas.map((cat, catIdx) => (
                                 <div key={cat} style={{ borderTop: catIdx > 0 ? `1px solid ${s.borderLight}` : 'none' }}>
 
-                                    {/* Sub-header categoría */}
+                                    {/* Sub-header */}
                                     <div style={{ padding: '8px 20px 8px 72px', background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(26,26,127,0.025)', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${s.borderLight}` }}>
                                         <span style={{ fontSize: '10px', fontWeight: '700', color: '#3730a3', background: '#e0e7ff', padding: '2px 10px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{cat}</span>
                                         <span style={{ fontSize: '11px', color: s.textFaint }}>{catsPorMarca[cat].length} producto{catsPorMarca[cat].length !== 1 ? 's' : ''}</span>
@@ -399,7 +484,12 @@ function colorVencimiento(diasParaVencer) {
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: s.tableTh }}>
-                                                {['Producto', 'SKU', 'Calidad', 'Presentaciones', 'Acciones'].map(h => (
+                                                {(pestanaActiva === 'balanceados'
+                                                    ? ['Producto', 'SKU', 'Calidad', 'Especie', 'Presentaciones', 'Acciones']
+                                                    : pestanaActiva === 'accesorios'
+                                                    ? ['Producto', 'SKU', 'Especie', 'Presentaciones', 'Acciones']
+                                                    : ['Producto', 'SKU', 'Presentaciones', 'Acciones']
+                                                ).map(h => (
                                                     <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
                                                 ))}
                                             </tr>
@@ -419,7 +509,7 @@ function colorVencimiento(diasParaVencer) {
                                                         >
                                                             <td style={{ padding: '14px 16px' }}>
                                                                 <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{producto.nombre}</p>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                                                                     <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {stockTotal}</span>
                                                                     {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>{alertas} bajo stock</span>}
                                                                 </div>
@@ -429,9 +519,20 @@ function colorVencimiento(diasParaVencer) {
                                                                     ? <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', padding: '3px 8px', borderRadius: '6px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>{producto.sku}</span>
                                                                     : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
                                                             </td>
-                                                            <td style={{ padding: '14px 16px' }}>
-                                                                <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>{formatearCalidad(producto.calidad)}</span>
-                                                            </td>
+                                                            {pestanaActiva === 'balanceados' && (
+                                                                <td style={{ padding: '14px 16px' }}>
+                                                                    <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>{formatearCalidad(producto.calidad)}</span>
+                                                                </td>
+                                                            )}
+                                                            {(pestanaActiva === 'balanceados' || pestanaActiva === 'accesorios') && (
+                                                                <td style={{ padding: '14px 16px' }}>
+                                                                    {producto.especie ? (
+                                                                        <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px', background: producto.especie === 'perro' ? (darkMode ? '#1e3a5f' : '#dbeafe') : producto.especie === 'gato' ? (darkMode ? '#2d1b4e' : '#ede9fe') : (darkMode ? '#1a2e1a' : '#dcfce7'), color: producto.especie === 'perro' ? '#2563eb' : producto.especie === 'gato' ? '#7c3aed' : '#16a34a' }}>
+                                                                            {producto.especie === 'ambos' ? 'Perro/Gato' : producto.especie === 'otro' ? 'Otro' : producto.especie.charAt(0).toUpperCase() + producto.especie.slice(1)}
+                                                                        </span>
+                                                                    ) : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
+                                                                </td>
+                                                            )}
                                                             <td style={{ padding: '14px 16px' }}>
                                                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                                                     {producto.presentaciones.slice(0, 3).map(pr => (
@@ -444,6 +545,10 @@ function colorVencimiento(diasParaVencer) {
                                                             </td>
                                                             <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                                                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                                    <button onClick={e => { e.stopPropagation(); handleToggleDisponibleProducto(producto) }}
+                                                                        style={{ padding: '6px 10px', borderRadius: '8px', border: `1px solid ${producto.disponible ? s.border : '#fca5a5'}`, background: producto.disponible ? 'transparent' : (darkMode ? '#450a0a' : '#fef2f2'), color: producto.disponible ? s.textMuted : '#ef4444', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>
+                                                                        {producto.disponible ? 'Activo' : 'Inactivo'}
+                                                                    </button>
                                                                     <button onClick={e => { e.stopPropagation(); abrirModalEditar(producto) }}
                                                                         style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -460,7 +565,7 @@ function colorVencimiento(diasParaVencer) {
 
                                                         {expandido && (
                                                             <tr key={`${producto.id}-expand`}>
-                                                                <td colSpan={5} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
+                                                                <td colSpan={pestanaActiva === 'balanceados' ? 6 : pestanaActiva === 'accesorios' ? 5 : 4} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
                                                                     <div style={{ padding: '16px 20px' }}>
                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                                                             <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</p>
@@ -583,7 +688,21 @@ function colorVencimiento(diasParaVencer) {
             {modalProducto && (
                 <Modal s={s}>
                     <div style={{ width: '420px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: s.text }}>Nuevo producto</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Nuevo producto</h3>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '10px', background: nuevoProducto.seccion_inventario ? '#1a1a2e' : '#dc2626', color: 'white', textTransform: 'uppercase' }}>{nuevoProducto.seccion_inventario || 'Sin categoria'}</span>
+                        </div>
+                        {!nuevoProducto.seccion_inventario && (
+                            <div style={{ marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', background: darkMode ? '#450a0a' : '#fef2f2', border: '1px solid #fca5a5' }}>
+                                <label style={{ ...labelStyle, color: '#dc2626', marginBottom: '8px' }}>Categoria del producto</label>
+                                <select value={nuevoProducto.seccion_inventario} onChange={e => setNuevoProducto({ ...nuevoProducto, seccion_inventario: e.target.value })} style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}>
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="balanceados">Balanceados</option>
+                                    <option value="accesorios">Accesorios</option>
+                                    <option value="medicamentos">Medicamentos</option>
+                                </select>
+                            </div>
+                        )}
                         <label style={labelStyle}>Marca</label>
                         <select value={nuevoProducto.marca_id} onChange={e => setNuevoProducto({ ...nuevoProducto, marca_id: e.target.value })} style={inputStyle}>
                             <option value="">Sin marca</option>
@@ -595,18 +714,76 @@ function colorVencimiento(diasParaVencer) {
                         <input value={nuevoProducto.sku} onChange={e => setNuevoProducto({ ...nuevoProducto, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" style={inputStyle} />
                         <label style={labelStyle}>Descripción</label>
                         <input value={nuevoProducto.descripcion} onChange={e => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} style={inputStyle} />
-                        <label style={labelStyle}>Calidad</label>
-                        <select value={nuevoProducto.calidad} onChange={e => setNuevoProducto({ ...nuevoProducto, calidad: e.target.value })} style={inputStyle}>
-                            <option value="standard">Standard</option>
-                            <option value="premium">Premium</option>
-                            <option value="premium_special">Premium Special</option>
-                            <option value="super_premium">Super Premium</option>
-                        </select>
-                        <label style={labelStyle}>Categoría</label>
-                        <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
-                            <option value="">Sin categoría</option>
-                            {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                        </select>
+
+                        {/* Campos especificos por pestana */}
+                        {(nuevoProducto.seccion_inventario || pestanaActiva) === 'balanceados' && (
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Calidad</label>
+                                        <select value={nuevoProducto.calidad} onChange={e => setNuevoProducto({ ...nuevoProducto, calidad: e.target.value })} style={inputStyle}>
+                                            <option value="standard">Standard</option>
+                                            <option value="premium">Premium</option>
+                                            <option value="premium_special">Premium Special</option>
+                                            <option value="super_premium">Super Premium</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Especie</label>
+                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} style={inputStyle}>
+                                            <option value="">Sin especificar</option>
+                                            <option value="perro">Perro</option>
+                                            <option value="gato">Gato</option>
+                                            <option value="ambos">Perro y Gato</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <label style={labelStyle}>Subcategoria (tamaño)</label>
+                                <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} style={inputStyle}>
+                                    <option value="">Sin subcategoria</option>
+                                    {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
+                                </select>
+                            </>
+                        )}
+
+                        {(nuevoProducto.seccion_inventario || pestanaActiva) === 'accesorios' && (
+                            <>
+                                <label style={labelStyle}>Categoria</label>
+                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
+                                    <option value="">Sin categoria</option>
+                                    {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Especie</label>
+                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} style={inputStyle}>
+                                            <option value="">Sin especificar</option>
+                                            <option value="perro">Perro</option>
+                                            <option value="gato">Gato</option>
+                                            <option value="ambos">Perro y Gato</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Tamaño</label>
+                                        <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} style={inputStyle}>
+                                            <option value="">Sin tamaño</option>
+                                            {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {(nuevoProducto.seccion_inventario || pestanaActiva) === 'medicamentos' && (
+                            <>
+                                <label style={labelStyle}>Uso / Tipo</label>
+                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
+                                    <option value="">Sin tipo</option>
+                                    {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                </select>
+                            </>
+                        )}
+
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalProducto(false)} style={btnSecundario}>Cancelar</button>
                             <button onClick={handleCrearProducto} style={btnPrimario}>Crear producto</button>
@@ -618,7 +795,21 @@ function colorVencimiento(diasParaVencer) {
             {modalEditarProducto && (
                 <Modal s={s}>
                     <div style={{ width: '420px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: s.text }}>Editar producto</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Editar producto</h3>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '10px', background: editarForm.seccion_inventario ? '#1a1a2e' : '#dc2626', color: 'white', textTransform: 'uppercase' }}>{editarForm.seccion_inventario || 'Sin categoria'}</span>
+                        </div>
+                        {!editarForm.seccion_inventario && (
+                            <div style={{ marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', background: darkMode ? '#450a0a' : '#fef2f2', border: '1px solid #fca5a5' }}>
+                                <label style={{ ...labelStyle, color: '#dc2626', marginBottom: '8px' }}>Asignar categoria del producto</label>
+                                <select value={editarForm.seccion_inventario} onChange={e => setEditarForm({ ...editarForm, seccion_inventario: e.target.value })} style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}>
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="balanceados">Balanceados</option>
+                                    <option value="accesorios">Accesorios</option>
+                                    <option value="medicamentos">Medicamentos</option>
+                                </select>
+                            </div>
+                        )}
                         <label style={labelStyle}>Marca</label>
                         <select value={editarForm.marca_id} onChange={e => setEditarForm({ ...editarForm, marca_id: e.target.value })} style={inputStyle}>
                             <option value="">Sin marca</option>
@@ -630,18 +821,75 @@ function colorVencimiento(diasParaVencer) {
                         <input value={editarForm.sku} onChange={e => setEditarForm({ ...editarForm, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" style={inputStyle} />
                         <label style={labelStyle}>Descripción</label>
                         <input value={editarForm.descripcion} onChange={e => setEditarForm({ ...editarForm, descripcion: e.target.value })} style={inputStyle} />
-                        <label style={labelStyle}>Calidad</label>
-                        <select value={editarForm.calidad} onChange={e => setEditarForm({ ...editarForm, calidad: e.target.value })} style={inputStyle}>
-                            <option value="standard">Standard</option>
-                            <option value="premium">Premium</option>
-                            <option value="premium_special">Premium Special</option>
-                            <option value="super_premium">Super Premium</option>
-                        </select>
-                        <label style={labelStyle}>Categoría</label>
-                        <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
-                            <option value="">Sin categoría</option>
-                            {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                        </select>
+
+                        {(editarForm.seccion_inventario || pestanaActiva) === 'balanceados' && (
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Calidad</label>
+                                        <select value={editarForm.calidad} onChange={e => setEditarForm({ ...editarForm, calidad: e.target.value })} style={inputStyle}>
+                                            <option value="standard">Standard</option>
+                                            <option value="premium">Premium</option>
+                                            <option value="premium_special">Premium Special</option>
+                                            <option value="super_premium">Super Premium</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Especie</label>
+                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} style={inputStyle}>
+                                            <option value="">Sin especificar</option>
+                                            <option value="perro">Perro</option>
+                                            <option value="gato">Gato</option>
+                                            <option value="ambos">Perro y Gato</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <label style={labelStyle}>Subcategoria (tamaño)</label>
+                                <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} style={inputStyle}>
+                                    <option value="">Sin subcategoria</option>
+                                    {subcatsPara(editarForm.seccion_inventario).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
+                                </select>
+                            </>
+                        )}
+
+                        {(editarForm.seccion_inventario || pestanaActiva) === 'accesorios' && (
+                            <>
+                                <label style={labelStyle}>Categoria</label>
+                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
+                                    <option value="">Sin categoria</option>
+                                    {catsPara(editarForm.seccion_inventario).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Especie</label>
+                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} style={inputStyle}>
+                                            <option value="">Sin especificar</option>
+                                            <option value="perro">Perro</option>
+                                            <option value="gato">Gato</option>
+                                            <option value="ambos">Perro y Gato</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Tamaño</label>
+                                        <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} style={inputStyle}>
+                                            <option value="">Sin tamaño</option>
+                                            {subcatsPara(editarForm.seccion_inventario).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {(editarForm.seccion_inventario || pestanaActiva) === 'medicamentos' && (
+                            <>
+                                <label style={labelStyle}>Uso / Tipo</label>
+                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
+                                    <option value="">Sin tipo</option>
+                                    {catsPara(editarForm.seccion_inventario).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                </select>
+                            </>
+                        )}
+
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalEditarProducto(null)} style={btnSecundario}>Cancelar</button>
                             <button onClick={handleEditarProducto} style={btnPrimario}>Guardar cambios</button>
@@ -741,6 +989,57 @@ function colorVencimiento(diasParaVencer) {
                 </Modal>
             )}
 
+            {modalSubcategorias && (
+                <Modal s={s}>
+                    <div style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <div>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Subcategorias — {pestanaActiva}</h3>
+                                <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>
+                                    {pestanaActiva === 'balanceados' ? 'Mini, Maxi, Cachorro, Senior...' : pestanaActiva === 'accesorios' ? 'XS, S, M, L, XL...' : 'Tamaños o variantes'}
+                                </p>
+                            </div>
+                            <button onClick={() => { setModalSubcategorias(false); setEditandoSubcategoria(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                        </div>
+                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+                            <label style={labelStyle}>Nueva subcategoria</label>
+                            <input placeholder="Nombre" value={nuevaSubcategoria.nombre} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, nombre: e.target.value })} style={inputStyle} />
+                            <input placeholder="Descripción (opcional)" value={nuevaSubcategoria.descripcion} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, descripcion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+                            <button onClick={handleCrearSubcategoria} style={{ ...btnPrimario, marginTop: '12px', width: '100%', justifyContent: 'center' }}>+ Agregar subcategoria</button>
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {subcategoriasPestana.map(sub => (
+                                <div key={sub.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {editandoSubcategoria === sub.id ? (
+                                        <>
+                                            <input defaultValue={sub.nombre} id={`sub-edit-${sub.id}`} style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
+                                            <button onClick={() => handleEditarSubcategoria(sub.id, { nombre: document.getElementById(`sub-edit-${sub.id}`).value })} style={{ ...btnPrimario, padding: '6px 12px' }}>Guardar</button>
+                                            <button onClick={() => setEditandoSubcategoria(null)} style={{ ...btnSecundario, padding: '6px 12px' }}>Cancelar</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{sub.nombre}</p>
+                                                {sub.descripcion && <p style={{ fontSize: '11px', color: s.textMuted }}>{sub.descripcion}</p>}
+                                            </div>
+                                            <button onClick={() => setEditandoSubcategoria(sub.id)} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            </button>
+                                            <button onClick={() => handleEliminarSubcategoria(sub)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                            {subcategoriasPestana.length === 0 && (
+                                <p style={{ textAlign: 'center', padding: '24px', color: s.textMuted, fontSize: '13px' }}>No hay subcategorias para {pestanaActiva} aún.</p>
+                            )}
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {modalCategorias && (
                 <Modal s={s}>
                     <div style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
@@ -751,30 +1050,54 @@ function colorVencimiento(diasParaVencer) {
                         <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
                             <label style={labelStyle}>Nueva categoría</label>
                             <input placeholder="Nombre" value={nuevaCategoria.nombre} onChange={e => setNuevaCategoria({ ...nuevaCategoria, nombre: e.target.value })} style={inputStyle} />
-                            <input placeholder="Descripción (opcional)" value={nuevaCategoria.descripcion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, descripcion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+                            <input placeholder="Descripción (opcional)" value={nuevaCategoria.descripcion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, descripcion: e.target.value })} style={inputStyle} />
+                            <label style={labelStyle}>Sección</label>
+                            <select value={nuevaCategoria.seccion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, seccion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                <option value="">General (todas las secciones)</option>
+                                <option value="balanceados">Balanceados</option>
+                                <option value="accesorios">Accesorios</option>
+                                <option value="medicamentos">Medicamentos</option>
+                            </select>
                             <button onClick={handleCrearCategoria} style={{ ...btnPrimario, marginTop: '12px', width: '100%', justifyContent: 'center' }}>+ Agregar categoría</button>
                         </div>
                         <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {categorias.map(cat => (
+                            {categorias.map(cat => {
+                                const seccionColor = cat.seccion === 'balanceados' ? { bg: '#e0e7ff', color: '#3730a3' } : cat.seccion === 'accesorios' ? { bg: '#dcfce7', color: '#166534' } : cat.seccion === 'medicamentos' ? { bg: '#fce7f3', color: '#9d174d' } : { bg: s.border, color: s.textMuted }
+                                const seccionLabel = cat.seccion ? cat.seccion.charAt(0).toUpperCase() + cat.seccion.slice(1) : 'General'
+                                return (
                                 <div key={cat.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     {editandoCategoria === cat.id ? (
-                                        <>
-                                            <input defaultValue={cat.nombre} id={`cat-edit-${cat.id}`} style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
-                                            <button onClick={() => handleEditarCategoria(cat.id, { nombre: document.getElementById(`cat-edit-${cat.id}`).value })} style={{ ...btnPrimario, padding: '6px 12px' }}>Guardar</button>
-                                            <button onClick={() => setEditandoCategoria(null)} style={{ ...btnSecundario, padding: '6px 12px' }}>Cancelar</button>
-                                        </>
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <input defaultValue={cat.nombre} id={`cat-edit-${cat.id}`} style={{ ...inputStyle, marginBottom: 0 }} />
+                                            <select defaultValue={cat.seccion || ''} id={`cat-edit-seccion-${cat.id}`} style={{ ...inputStyle, marginBottom: 0 }}>
+                                                <option value="">General (todas las secciones)</option>
+                                                <option value="balanceados">Balanceados</option>
+                                                <option value="accesorios">Accesorios</option>
+                                                <option value="medicamentos">Medicamentos</option>
+                                            </select>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                <button onClick={() => handleEditarCategoria(cat.id, { nombre: document.getElementById(`cat-edit-${cat.id}`).value, seccion: document.getElementById(`cat-edit-seccion-${cat.id}`).value || null })} style={{ ...btnPrimario, padding: '6px 12px', flex: 1, justifyContent: 'center' }}>Guardar</button>
+                                                <button onClick={() => setEditandoCategoria(null)} style={{ ...btnSecundario, padding: '6px 12px' }}>Cancelar</button>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <>
                                             <div style={{ flex: 1 }}>
-                                                <p style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{cat.nombre}</p>
-                                                {cat.descripcion && <p style={{ fontSize: '11px', color: s.textMuted }}>{cat.descripcion}</p>}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <p style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{cat.nombre}</p>
+                                                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '10px', background: seccionColor.bg, color: seccionColor.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{seccionLabel}</span>
+                                                </div>
+                                                {cat.descripcion && <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>{cat.descripcion}</p>}
                                             </div>
-                                            <button onClick={() => setEditandoCategoria(cat.id)} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>✏️</button>
+                                            <button onClick={() => setEditandoCategoria(cat.id)} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            </button>
                                             <button onClick={() => handleEliminarCategoria(cat)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                         </>
                                     )}
                                 </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     </div>
                 </Modal>
@@ -1029,6 +1352,28 @@ function colorVencimiento(diasParaVencer) {
                     </Modal>
                 )
             })()}
+
+            {confirmEliminarSubcategoria && (
+                <Modal s={s} zIndex={1100}>
+                    <div style={{ width: '400px' }}>
+                        <h3 style={{ marginBottom: '12px', color: confirmEliminarSubcategoria.cantidad > 0 ? '#ef4444' : s.text }}>
+                            {confirmEliminarSubcategoria.cantidad > 0 ? 'Atención' : 'Eliminar subcategoria'}
+                        </h3>
+                        {confirmEliminarSubcategoria.cantidad > 0 ? (
+                            <>
+                                <p style={{ fontSize: '13px', marginBottom: '12px', color: s.text }}>La subcategoria <strong>{confirmEliminarSubcategoria.nombre}</strong> tiene <strong>{confirmEliminarSubcategoria.cantidad}</strong> productos asociados.</p>
+                                <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#991b1b' }}>Eliminar esta subcategoria desvinculará todos sus productos.</div>
+                            </>
+                        ) : (
+                            <p style={{ fontSize: '13px', marginBottom: '16px', color: s.text }}>¿Eliminar la subcategoria <strong>{confirmEliminarSubcategoria.nombre}</strong>?</p>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setConfirmEliminarSubcategoria(null)} style={btnSecundario}>Cancelar</button>
+                            <button onClick={handleConfirmarEliminarSubcategoria} style={{ ...btnPrimario, background: '#ef4444' }}>Eliminar igual</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
             {modalConfirmar && (
                 <ModalConfirmar
