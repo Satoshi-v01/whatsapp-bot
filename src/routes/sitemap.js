@@ -4,8 +4,12 @@ const db = require('../db/index')
 const router = express.Router()
 
 const BASE_URL = 'https://sosabulls.com.py'
+const ECO = `${BASE_URL}/ecommerce`
 
 const CATEGORIAS = ['perros', 'gatos', 'accesorios', 'medicamentos', 'cuidado', 'ofertas']
+
+// Fecha fija para páginas estáticas — evita que Google ignore lastmod por ser siempre "hoy"
+const STATIC_LASTMOD = '2026-05-27'
 
 function toSlug(text) {
     return String(text)
@@ -16,26 +20,27 @@ function toSlug(text) {
         .replace(/^-|-$/g, '')
 }
 
-function url(loc, lastmod, changefreq, priority) {
-    return `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+function url(loc, lastmod) {
+    return `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`
 }
 
 router.get('/sitemap.xml', async (req, res) => {
-    const hoy = new Date().toISOString().split('T')[0]
-
     const urls = []
 
-    // Páginas estáticas
-    urls.push(url(`${BASE_URL}/`,          hoy, 'weekly',  '1.0'))
-    urls.push(url(`${BASE_URL}/nosotros`,  hoy, 'monthly', '0.6'))
-    urls.push(url(`${BASE_URL}/contacto`,  hoy, 'monthly', '0.6'))
+    // Landing
+    urls.push(url(`${BASE_URL}/`,         STATIC_LASTMOD))
+    urls.push(url(`${BASE_URL}/nosotros`, STATIC_LASTMOD))
+    urls.push(url(`${BASE_URL}/contacto`, STATIC_LASTMOD))
 
-    // Categorías
+    // Ecommerce SPA raiz
+    urls.push(url(`${ECO}/`, STATIC_LASTMOD))
+
+    // Categorías — prefijo /ecommerce/categoria/
     for (const slug of CATEGORIAS) {
-        urls.push(url(`${BASE_URL}/categoria/${slug}`, hoy, 'daily', '0.8'))
+        urls.push(url(`${ECO}/categoria/${slug}`, STATIC_LASTMOD))
     }
 
-    // Productos activos
+    // Productos activos — lastmod real desde la DB
     try {
         const result = await db.query(`
             SELECT
@@ -54,8 +59,8 @@ router.get('/sitemap.xml', async (req, res) => {
             const slug = `${toSlug(row.nombre_base)}-${toSlug(row.presentacion_nombre)}-${row.id}`
             const lastmod = row.updated_at
                 ? new Date(row.updated_at).toISOString().split('T')[0]
-                : hoy
-            urls.push(url(`${BASE_URL}/producto/${slug}`, lastmod, 'weekly', '0.7'))
+                : STATIC_LASTMOD
+            urls.push(url(`${ECO}/producto/${slug}`, lastmod))
         }
     } catch (err) {
         // Si falla la query de productos seguimos con el sitemap parcial
