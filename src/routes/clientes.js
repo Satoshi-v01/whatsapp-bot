@@ -3,6 +3,7 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { registrarLog } = require('../middleware/auditoria')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 async function recalcularStats(cliente_id) {
     try {
@@ -11,7 +12,7 @@ async function recalcularStats(cliente_id) {
 }
 
 // 1. Buscar/listar clientes
-router.get('/', async (req, res) => {
+router.get('/', autenticar, verificarPermiso('clientes', 'ver'), async (req, res) => {
     try {
         const { buscar, tipo, origen, estado_actividad } = req.query
         let condiciones = ['c.activo = true']
@@ -52,7 +53,7 @@ router.get('/', async (req, res) => {
 })
 
 // 2. Buscar cliente por teléfono (para el bot)
-router.get('/telefono/:telefono', async (req, res) => {
+router.get('/telefono/:telefono', autenticar, verificarPermiso('clientes', 'ver'), async (req, res) => {
     try {
         const { telefono } = req.params
         const resultado = await db.query(
@@ -66,7 +67,7 @@ router.get('/telefono/:telefono', async (req, res) => {
 })
 
 // 3. Ver perfil completo de un cliente
-router.get('/:id', async (req, res) => {
+router.get('/:id', autenticar, verificarPermiso('clientes', 'ver'), async (req, res) => {
     try {
         const { id } = req.params
         const cliente = await db.query(
@@ -114,7 +115,7 @@ router.get('/:id', async (req, res) => {
 })
 
 // 4. Crear cliente
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('clientes', 'crear'), async (req, res) => {
     try {
         const { tipo, nombre, ruc, telefono, email, direccion, ciudad, notas, origen } = req.body
         if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' })
@@ -136,7 +137,7 @@ router.post('/', async (req, res) => {
 })
 
 // 5. Editar cliente
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', autenticar, verificarPermiso('clientes', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
         const { tipo, nombre, ruc, telefono, email, direccion, ciudad, notas, activo } = req.body
@@ -164,7 +165,7 @@ router.patch('/:id', async (req, res) => {
 })
 
 // 6. Buscar cliente por RUC o nombre para autocompletar
-router.get('/buscar/autocomplete', async (req, res) => {
+router.get('/buscar/autocomplete', autenticar, verificarPermiso('clientes', 'ver'), async (req, res) => {
     try {
         const { q } = req.query
         if (!q || q.length < 2) return res.json([])
@@ -191,7 +192,7 @@ router.get('/buscar/autocomplete', async (req, res) => {
 })
 
 // Cuenta corriente — ventas a crédito pendientes de un cliente
-router.get('/:id/cuenta-corriente', async (req, res) => {
+router.get('/:id/cuenta-corriente', autenticar, verificarPermiso('clientes', 'ver'), async (req, res) => {
     try {
         const { id } = req.params
 
@@ -238,7 +239,7 @@ router.get('/:id/cuenta-corriente', async (req, res) => {
 })
 
 // Registrar pago cuenta corriente
-router.post('/:id/cuenta-corriente/pagos', async (req, res) => {
+router.post('/:id/cuenta-corriente/pagos', autenticar, verificarPermiso('clientes', 'editar'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { id } = req.params

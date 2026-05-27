@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import { getSesiones, tomarSesion, responderSesion, devolverBot, cerrarConversacion } from '../services/sesiones'
 import ModalConfirmar from '../components/ModalConfirmar'
@@ -17,6 +18,8 @@ function Chat() {
     const inputRef = useRef(null)
     const mensajesRef = useRef(null)
     const { darkMode } = useApp()
+    const [searchParams] = useSearchParams()
+    const numeroParam = searchParams.get('numero')
 
     const s = {
         bg: darkMode ? '#0b141a' : '#f8fafc',
@@ -48,12 +51,15 @@ function Chat() {
         if (sesionActiva) {
             const actualizada = sesiones.find(s => s.cliente_numero === sesionActiva.cliente_numero)
             if (actualizada) setSesionActiva(actualizada)
+        } else if (numeroParam && sesiones.length > 0) {
+            const target = sesiones.find(s => s.cliente_numero === numeroParam)
+            if (target) setSesionActiva(target)
         }
     }, [sesiones])
 
     useEffect(() => {
         if (!sesionActiva) return
-        cargarMensajes(sesionActiva.cliente_numero)
+        cargarMensajes(sesionActiva.cliente_numero, true)
         const intervalo = setInterval(() => cargarMensajes(sesionActiva.cliente_numero), 3000)
         return () => clearInterval(intervalo)
     }, [sesionActiva?.cliente_numero])
@@ -68,18 +74,18 @@ function Chat() {
         }
     }
 
-    async function cargarMensajes(numero) {
+    async function cargarMensajes(numero, inicial = false) {
         try {
             const res = await api.get(`/sesiones/${numero}/mensajes`)
             setMensajes(res.data)
 
-                if (mensajesRef.current) {
+            if (mensajesRef.current) {
                 const el = mensajesRef.current
                 const estaAlFondo = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-                if (estaAlFondo) {
+                if (inicial || estaAlFondo) {
                     setTimeout(() => {
-                        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-                    }, 100)
+                        el.scrollTo({ top: el.scrollHeight, behavior: inicial ? 'instant' : 'smooth' })
+                    }, 50)
                 }
             }
         } catch (err) {}

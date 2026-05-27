@@ -52,4 +52,11 @@ async function estaAbiertoParaDelivery() {
     }
 }
 
-module.exports = { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery }
+// Retiro en tienda: cierra a las 19:00, pero desde las 18:30 ya no da tiempo
+function esRetiroHoy() {
+    const ahora = new Date()
+    const minutos = ahora.getHours() * 60 + ahora.getMinutes()
+    return minutos < (18 * 60 + 30) // antes de las 18:30
+}
+
+module.exports = { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery, esRetiroHoy }

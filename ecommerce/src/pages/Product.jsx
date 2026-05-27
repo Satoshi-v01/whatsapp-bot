@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import SEOHead from '@/components/seo/SEOHead'
 import StockBadge from '@/components/ui/StockBadge'
+import ProductCard from '@/components/ui/ProductCard'
 import { useProduct } from '@/hooks/useProduct'
+import { useProducts } from '@/hooks/useProducts'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice } from '@/utils/formatPrice'
 import { CATEGORIES } from '@/constants/categories'
@@ -34,7 +36,8 @@ function ProductImage({ src, alt }) {
       src={src}
       alt={alt}
       onError={() => setErrored(true)}
-      className="w-full h-full object-cover"
+      className="w-full h-full object-contain"
+      style={{ padding: '16px' }}
     />
   )
 }
@@ -77,15 +80,116 @@ function QuantitySelector({ value, max, onChange }) {
 function ProductSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-pulse">
-      <div className="rounded-2xl bg-gray-200" style={{ aspectRatio: '1/1' }} />
+      <div className="rounded-2xl" style={{ aspectRatio: '1/1', backgroundColor: 'var(--color-border)' }} />
       <div className="flex flex-col gap-4 pt-2">
-        <div className="h-8 bg-gray-200 rounded w-3/4" />
-        <div className="h-4 bg-gray-200 rounded w-1/4" />
-        <div className="h-6 bg-gray-200 rounded w-1/3 mt-2" />
-        <div className="h-20 bg-gray-200 rounded mt-2" />
-        <div className="h-12 bg-gray-200 rounded-xl mt-4" />
+        <div className="h-8 rounded w-3/4" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-4 rounded w-1/4" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-6 rounded w-1/3 mt-2" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-20 rounded mt-2" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="h-12 rounded-xl mt-4" style={{ backgroundColor: 'var(--color-border)' }} />
       </div>
     </div>
+  )
+}
+
+// ─── Grupo de productos dentro de la seccion ─────────────────
+function ProductGroup({ title, products, excludeSlug, limit = 4 }) {
+  const filtered = products.filter(p => p.slug !== excludeSlug).slice(0, limit)
+  if (filtered.length === 0) return null
+  return (
+    <div>
+      <h3 style={{
+        fontFamily: 'Montserrat, system-ui, sans-serif',
+        fontSize: 'clamp(16px, 2vw, 20px)',
+        fontWeight: 800,
+        color: 'var(--color-text)',
+        margin: '0 0 16px',
+        letterSpacing: -0.2,
+      }}>
+        {title}
+      </h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+      </div>
+    </div>
+  )
+}
+
+// ─── Seccion principal de complementarios ────────────────────
+function ComplementarySection({ categoriaSlug, excludeSlug }) {
+  const isPerros = categoriaSlug === 'perros'
+  const isGatos  = categoriaSlug === 'gatos'
+  const isEspecie = isPerros || isGatos
+  const especieLabel = isPerros ? 'perros' : 'gatos'
+
+  const paramsSame = useMemo(() => ({
+    categoria: categoriaSlug,
+    solo_disponibles: true,
+    sort: 'mas_vendido',
+    limit: 8,
+  }), [categoriaSlug])
+
+  const paramsAcc = useMemo(() => ({
+    categoria: 'accesorios',
+    solo_disponibles: true,
+    sort: 'mas_vendido',
+    limit: 4,
+  }), [])
+
+  const { products: sameCat, loading: loadingSame } = useProducts(paramsSame)
+  const { products: accesorios, loading: loadingAcc }  = useProducts(paramsAcc)
+
+  if (loadingSame || (isEspecie && loadingAcc)) return null
+
+  const hasSame = sameCat.filter(p => p.slug !== excludeSlug).length > 0
+  const hasAcc  = isEspecie && accesorios.length > 0
+
+  if (!hasSame && !hasAcc) return null
+
+  return (
+    <section className="section-padding !pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+      <div className="container-base">
+        <div style={{ marginBottom: 28 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 800, letterSpacing: 2,
+            color: 'var(--color-primary)', textTransform: 'uppercase',
+            marginBottom: 6, fontFamily: 'Inter, system-ui, sans-serif',
+          }}>
+            Completar pedido
+          </div>
+          <h2 style={{
+            fontFamily: 'Montserrat, system-ui, sans-serif',
+            fontSize: 'clamp(22px, 3vw, 30px)',
+            fontWeight: 800,
+            color: 'var(--color-text)',
+            margin: 0,
+            letterSpacing: -0.3,
+          }}>
+            {isEspecie
+              ? `Snacks y accesorios para ${especieLabel}`
+              : 'Productos similares'}
+          </h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+          {hasSame && (
+            <ProductGroup
+              title={isEspecie ? `Snacks y alimentos para ${especieLabel}` : 'Más productos'}
+              products={sameCat}
+              excludeSlug={excludeSlug}
+            />
+          )}
+          {hasAcc && (
+            <ProductGroup
+              title={`Accesorios para ${especieLabel}`}
+              products={accesorios}
+              excludeSlug={excludeSlug}
+              limit={4}
+            />
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -115,7 +219,7 @@ export default function Product() {
           Producto no encontrado
         </h1>
         <p style={{ color: 'var(--color-text-muted)' }}>
-          Este producto no existe o fue removido del catalogo.
+          Este producto no existe o fue removido del catálogo.
         </p>
         <Link to="/" className="btn-primary">
           Volver al inicio
@@ -131,7 +235,7 @@ export default function Product() {
           Error al cargar el producto
         </h1>
         <p style={{ color: 'var(--color-text-muted)' }}>
-          No se pudo obtener la informacion. Intentalo nuevamente.
+          No se pudo obtener la información. Intentalo nuevamente.
         </p>
         <button onClick={() => navigate(-1)} className="btn-outline">
           Volver
@@ -140,9 +244,68 @@ export default function Product() {
     )
   }
 
-  const { nombre, descripcion, precio_venta, stock, imagen_url, categoria_slug, es_novedad } = product
+  const { id, nombre, descripcion, precio_venta, stock, imagen_url, categoria_slug, es_novedad, marca } = product
   const category = CATEGORIES.find(c => c.slug === categoria_slug)
   const outOfStock = stock === 0
+
+  const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
+
+  const nextYear = new Date()
+  nextYear.setFullYear(nextYear.getFullYear() + 1)
+  const priceValidUntil = nextYear.toISOString().split('T')[0]
+
+  const schema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${SITE_URL}/producto/${slug}#webpage`,
+        url: `${SITE_URL}/producto/${slug}`,
+        name: `${nombre} — Sosa BULLS`,
+        isPartOf: { '@id': `${SITE_URL}/#website` },
+        breadcrumb: { '@id': `${SITE_URL}/producto/${slug}#breadcrumb` },
+        mainEntity: { '@id': `${SITE_URL}/producto/${slug}#product` },
+        inLanguage: 'es-PY',
+      },
+      {
+        '@type': 'Product',
+        '@id': `${SITE_URL}/producto/${slug}#product`,
+        name: nombre,
+        description: descripcion ?? `${nombre} disponible en Sosa BULLS. Envio a domicilio en Paraguay.`,
+        sku: String(id),
+        ...(marca && { brand: { '@type': 'Brand', name: marca } }),
+        ...(imagen_url && { image: { '@type': 'ImageObject', url: imagen_url, contentUrl: imagen_url } }),
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: 'PYG',
+          price: precio_venta,
+          priceValidUntil,
+          availability: outOfStock
+            ? 'https://schema.org/OutOfStock'
+            : 'https://schema.org/InStock',
+          url: `${SITE_URL}/producto/${slug}`,
+          seller: { '@id': `${SITE_URL}/#organization` },
+          shippingDetails: {
+            '@type': 'OfferShippingDetails',
+            shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'PY' },
+            deliveryTime: {
+              '@type': 'ShippingDeliveryTime',
+              handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 2, unitCode: 'DAY' },
+            },
+          },
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${SITE_URL}/producto/${slug}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${SITE_URL}/` },
+          { '@type': 'ListItem', position: 2, name: category?.label ?? categoria_slug, item: `${SITE_URL}/categoria/${categoria_slug}` },
+          { '@type': 'ListItem', position: 3, name: nombre, item: `${SITE_URL}/producto/${slug}` },
+        ],
+      },
+    ],
+  }
 
   function handleAddToCart() {
     addItem({ ...product, cantidad: qty })
@@ -154,14 +317,15 @@ export default function Product() {
     <>
       <SEOHead
         title={nombre}
-        description={descripcion ?? `Compra ${nombre} en Sosa Bulls. Envio a domicilio en Paraguay.`}
+        description={descripcion ?? `Compra ${nombre} en Sosa BULLS. Envío a domicilio en Paraguay.`}
         image={imagen_url}
         type="product"
+        schema={schema}
       />
 
       <main>
         {/* Breadcrumb */}
-        <nav aria-label="Ruta de navegacion" className="container-base px-4 md:px-6 pt-6 pb-2">
+        <nav aria-label="Ruta de navegación" className="container-base px-4 md:px-6 pt-6 pb-2">
           <ol className="flex items-center gap-2 text-sm flex-wrap" style={{ color: 'var(--color-text-muted)' }}>
             <li>
               <Link to="/" style={{ color: 'var(--color-primary)' }} className="hover:underline transition-colors duration-150">
@@ -312,11 +476,6 @@ export default function Product() {
                         max={stock}
                         onChange={setQty}
                       />
-                      {stock <= 10 && (
-                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          ({stock} disponibles)
-                        </span>
-                      )}
                     </div>
 
                     <motion.button
@@ -360,6 +519,10 @@ export default function Product() {
             </div>
           </div>
         </section>
+
+        {categoria_slug && (
+          <ComplementarySection categoriaSlug={categoria_slug} excludeSlug={slug} />
+        )}
       </main>
     </>
   )

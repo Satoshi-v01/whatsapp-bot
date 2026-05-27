@@ -6,20 +6,32 @@ const { manejarError } = require('../middleware/validar')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const { recalcularStats } = require('./clientes')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 
 
 // GET /ordenes — listar órdenes
-router.get('/', async (req, res) => {
+router.get('/', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
     try {
-        const { estado, canal, limite = 50 } = req.query
+        const { estado, canal, limite = 50, fecha_desde, fecha_hasta, buscar } = req.query
 
         let condiciones = []
         let valores = []
         let i = 1
 
         if (estado) { condiciones.push(`op.estado = $${i++}`); valores.push(estado) }
-        if (canal) { condiciones.push(`op.canal = $${i++}`); valores.push(canal) }
+        if (canal) {
+            const canales = canal.split(',').filter(Boolean)
+            if (canales.length === 1) { condiciones.push(`op.canal = $${i++}`); valores.push(canales[0]) }
+            else { condiciones.push(`op.canal = ANY($${i++})`); valores.push(canales) }
+        }
+        if (fecha_desde) { condiciones.push(`op.created_at >= $${i++}`); valores.push(fecha_desde) }
+        if (fecha_hasta) { condiciones.push(`op.created_at < ($${i++}::date + INTERVAL '1 day')`); valores.push(fecha_hasta) }
+        if (buscar) {
+            const like = `%${buscar}%`
+            condiciones.push(`(c.nombre ILIKE $${i++} OR op.numero_pedido ILIKE $${i++})`)
+            valores.push(like, like)
+        }
 
         const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''
 
@@ -60,8 +72,28 @@ router.get('/', async (req, res) => {
 })
 
 
+// GET /ordenes/stats/resumen — para el dashboard
+router.get('/stats/resumen', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `SELECT
+                COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes,
+                COUNT(*) FILTER (WHERE estado = 'confirmada') as confirmadas,
+                COUNT(*) FILTER (WHERE estado = 'expirada') as expiradas,
+                COUNT(*) FILTER (WHERE estado = 'cancelada') as canceladas,
+                COUNT(*) FILTER (WHERE estado = 'pendiente' AND expira_at < NOW() + INTERVAL '30 minutes') as por_expirar
+             FROM ordenes_pedido
+             WHERE created_at >= NOW() - INTERVAL '24 hours'`
+        )
+        res.json(resultado.rows[0])
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+
 // GET /ordenes/:id — detalle de una orden
-router.get('/:id', async (req, res) => {
+router.get('/:id', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
     try {
         const resultado = await db.query(
             `SELECT
@@ -101,7 +133,7 @@ router.get('/:id', async (req, res) => {
 
 
 // POST /ordenes — crear orden (desde dashboard/caja)
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('ventas', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const {
@@ -182,7 +214,7 @@ router.post('/', async (req, res) => {
 
 
 // POST /ordenes/:id/confirmar — confirmar y convertir a venta
-router.post('/:id/confirmar', async (req, res) => {
+router.post('/:id/confirmar', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { id } = req.params
@@ -317,7 +349,7 @@ router.post('/:id/confirmar', async (req, res) => {
 
 
 // PATCH /ordenes/:id/cancelar
-router.patch('/:id/cancelar', async (req, res) => {
+router.patch('/:id/cancelar', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     try {
         const { motivo } = req.body
         const resultado = await db.query(
@@ -343,26 +375,6 @@ router.patch('/:id/cancelar', async (req, res) => {
         }
 
         res.json({ ok: true, orden: resultado.rows[0] })
-    } catch (error) {
-        manejarError(res, error)
-    }
-})
-
-
-// GET /ordenes/stats/resumen — para el dashboard
-router.get('/stats/resumen', async (req, res) => {
-    try {
-        const resultado = await db.query(
-            `SELECT
-                COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes,
-                COUNT(*) FILTER (WHERE estado = 'confirmada') as confirmadas,
-                COUNT(*) FILTER (WHERE estado = 'expirada') as expiradas,
-                COUNT(*) FILTER (WHERE estado = 'cancelada') as canceladas,
-                COUNT(*) FILTER (WHERE estado = 'pendiente' AND expira_at < NOW() + INTERVAL '30 minutes') as por_expirar
-             FROM ordenes_pedido
-             WHERE created_at >= NOW() - INTERVAL '24 hours'`
-        )
-        res.json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
     }

@@ -5,7 +5,7 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import * as XLSX from 'xlsx'
 import { getLibroVentas } from '../services/ventas'
-import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { formatearFecha, formatearSoloFecha, fechaHoyPY, fechaInicioMesPY } from '../utils/fecha'
 
 function Ventas() {
     const [datos, setDatos] = useState(null)
@@ -16,8 +16,8 @@ function Ventas() {
     const [ventaDetalle, setVentaDetalle] = useState(null)
     const { darkMode } = useApp()
     const [modalLibro, setModalLibro] = useState(false)
-    const [libroFechaDesde, setLibroFechaDesde] = useState(new Date().toISOString().slice(0, 7) + '-01')
-    const [libroFechaHasta, setLibroFechaHasta] = useState(new Date().toISOString().slice(0, 10))
+    const [libroFechaDesde, setLibroFechaDesde] = useState(fechaInicioMesPY())
+    const [libroFechaHasta, setLibroFechaHasta] = useState(fechaHoyPY())
     const [exportandoLibro, setExportandoLibro] = useState(false)
 
     const s = {
@@ -211,7 +211,7 @@ function Ventas() {
     const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
 
     return (
-        <div className="page-scroll" style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
+        <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
                 <div>
@@ -348,23 +348,7 @@ function Ventas() {
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '12px', color: s.textMuted }}>
-                                                    {(() => {
-                                                        const items = venta.items
-                                                        if (items && items.length > 0) {
-                                                            const p = items[0]
-                                                            return (
-                                                                <>
-                                                                    <span>{p.marca_nombre ? `${p.marca_nombre} — ` : ''}{p.producto_nombre} {p.presentacion_nombre}</span>
-                                                                    {items.length > 1 && (
-                                                                        <span style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '10px', background: '#e0e7ff', color: '#3730a3', fontSize: '10px', fontWeight: '700' }}>
-                                                                            +{items.length - 1} más
-                                                                        </span>
-                                                                    )}
-                                                                </>
-                                                            )
-                                                        }
-                                                        return <span>{venta.marca_nombre ? `${venta.marca_nombre} — ` : ''}{venta.producto_nombre} {venta.presentacion_nombre}</span>
-                                                    })()}
+                                                    {venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '13px', color: s.textMuted }}>{formatearFecha(venta.created_at)}</td>
                                                 <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -464,45 +448,17 @@ function Ventas() {
                             </div>
                         </div>
                         <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px' }}>
-                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                                Productos {ventaDetalle.items?.length > 1 ? `(${ventaDetalle.items.length})` : ''}
-                            </p>
-                            {ventaDetalle.items && ventaDetalle.items.length > 0 ? (
-                                <>
-                                    {ventaDetalle.items.map((item, idx) => (
-                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: '10px', marginBottom: '10px', borderBottom: idx < ventaDetalle.items.length - 1 ? `1px solid ${s.border}` : 'none' }}>
-                                            <div>
-                                                <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{item.marca_nombre ? `${item.marca_nombre} — ` : ''}{item.producto_nombre}</p>
-                                                <p style={{ fontSize: '12px', color: s.textMuted }}>{item.presentacion_nombre} · x{item.cantidad}</p>
-                                            </div>
-                                            <span style={{ fontSize: '13px', fontWeight: '700', color: s.text, whiteSpace: 'nowrap', marginLeft: '12px' }}>{formatearGs(item.precio_total)}</span>
-                                        </div>
-                                    ))}
-                                    {ventaDetalle.costo_delivery > 0 && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: `1px solid ${s.border}` }}>
-                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Delivery {ventaDetalle.zona_delivery ? `— ${ventaDetalle.zona_delivery}` : ''}</span>
-                                            <span style={{ fontSize: '12px', fontWeight: '600', color: s.textMuted }}>{formatearGs(ventaDetalle.costo_delivery)}</span>
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: `2px solid ${s.border}` }}>
-                                        <span style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>Total</span>
-                                        <span style={{ fontSize: '15px', fontWeight: '800', color: s.text }}>{formatearGs(ventaDetalle.precio)}</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.marca_nombre && `${ventaDetalle.marca_nombre} — `}{ventaDetalle.producto_nombre}</p>
-                                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '2px' }}>{ventaDetalle.presentacion_nombre}</p>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` }}>
-                                        <span style={{ fontSize: '13px', color: s.textMuted }}>Cantidad</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{ventaDetalle.cantidad}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                                        <span style={{ fontSize: '13px', color: s.textMuted }}>Total</span>
-                                        <span style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>{formatearGs(ventaDetalle.precio)}</span>
-                                    </div>
-                                </>
-                            )}
+                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Producto</p>
+                            <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.marca_nombre && `${ventaDetalle.marca_nombre} — `}{ventaDetalle.producto_nombre}</p>
+                            <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '2px' }}>{ventaDetalle.presentacion_nombre}</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` }}>
+                                <span style={{ fontSize: '13px', color: s.textMuted }}>Cantidad</span>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{ventaDetalle.cantidad}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                                <span style={{ fontSize: '13px', color: s.textMuted }}>Total</span>
+                                <span style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>{formatearGs(ventaDetalle.precio)}</span>
+                            </div>
                             {ventaDetalle.ganancia > 0 && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
                                     <span style={{ fontSize: '13px', color: s.textMuted }}>Ganancia</span>
@@ -565,7 +521,7 @@ function Ventas() {
                             <button onClick={() => setModalLibro(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
                         </div>
                         <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
-                            Exportá el libro de ventas en formato SET con IVA discriminado.
+                            Exportá el libro de ventas en formato DNIT con IVA discriminado.
                         </p>
                         <label style={labelStyle}>Fecha desde</label>
                         <input type="date" value={libroFechaDesde} onChange={e => setLibroFechaDesde(e.target.value)}

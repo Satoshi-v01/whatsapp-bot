@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 // Listar zonas activas (público — bot + web)
 router.get('/', async (req, res) => {
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
 })
 
 // Listar todas las zonas (dashboard)
-router.get('/todas', async (req, res) => {
+router.get('/todas', autenticar, verificarPermiso('configuracion', 'ver'), async (req, res) => {
     try {
         const resultado = await db.query(
             `SELECT * FROM zonas_delivery ORDER BY nombre ASC`
@@ -28,7 +29,7 @@ router.get('/todas', async (req, res) => {
 })
 
 // Crear zona
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('configuracion', 'crear'), async (req, res) => {
     try {
         const { nombre, costo } = req.body
         if (!nombre || costo === undefined) {
@@ -45,7 +46,7 @@ router.post('/', async (req, res) => {
 })
 
 // Editar zona
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', autenticar, verificarPermiso('configuracion', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
         const { nombre, costo, activa } = req.body
@@ -66,7 +67,7 @@ router.patch('/:id', async (req, res) => {
 })
 
 // Eliminar zona
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', autenticar, verificarPermiso('configuracion', 'eliminar'), async (req, res) => {
     try {
         const { id } = req.params
         await db.query(`DELETE FROM zonas_delivery WHERE id = $1`, [id])

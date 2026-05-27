@@ -8,6 +8,7 @@ import { useApp } from '../App'
 import { getUsuarios } from '../services/usuarios'
 import { asignarRepartidor } from '../services/deliveries'
 import { formatearCalidad } from '../utils/formato'
+import { fechaHoyPY } from '../utils/fecha'
 
 function Delivery() {
     const [deliveries, setDeliveries] = useState([])
@@ -19,7 +20,7 @@ function Delivery() {
     const [notaTexto, setNotaTexto] = useState('')
     const [enviandoNota, setEnviandoNota] = useState(false)
     const [repartidores, setRepartidores] = useState([])
-    const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().slice(0, 10))
+    const [fechaFiltro, setFechaFiltro] = useState(fechaHoyPY())
     const { darkMode, puedo } = useApp()
     
     const s = {
@@ -114,7 +115,7 @@ function Delivery() {
 
     function formatearFecha(fecha) {
         if (!fecha) return '—'
-        return new Date(fecha).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        return new Date(fecha).toLocaleString('es-PY', { timeZone: 'America/Asuncion', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     }
 
     const conteos = {}
@@ -443,10 +444,15 @@ function Delivery() {
                                         </div>
                                     ))}
                                 </div>
-                                {detalle.ubicacion?.includes('maps.google.com') && (
-                                    <a href={detalle.ubicacion.replace(/^.*?(https:\/\/)/, 'https://')} target="_blank" rel="noreferrer"
-                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '14px', padding: '9px 14px', borderRadius: '8px', background: '#1a1a2e', color: 'white', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Ver en Google Maps
+                                {(detalle.maps_url || detalle.ubicacion?.includes('maps.google.com') || detalle.ubicacion?.startsWith('http')) && (
+                                    <a
+                                        href={detalle.maps_url || detalle.ubicacion}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginTop: '14px', padding: '10px 16px', borderRadius: '8px', background: '#16a34a', color: 'white', fontSize: '13px', fontWeight: '700', textDecoration: 'none', width: '100%', justifyContent: 'center' }}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        Abrir en Google Maps
                                     </a>
                                 )}
                             </div>

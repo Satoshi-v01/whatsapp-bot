@@ -17,9 +17,9 @@
   --color-primary-darker:#c07600;
   --color-primary-light: #fff3d6;
 
-  --color-bg:          #fffbf4;
-  --color-bg-elevated: #fff8ee;
-  --color-bg-card:     rgba(255, 255, 255, 0.92);
+  --color-bg:          #fdf6ec;
+  --color-bg-elevated: #f6ecd9;
+  --color-bg-card:     #ffffff;
   --color-text:        #1a1208;
   --color-text-muted:  #8b6f47;
   --color-text-faint:  #c4a882;
@@ -69,7 +69,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', system-ui, sans-serif;
+  font-family: 'Montserrat', system-ui, sans-serif;
   line-height: 1.15;
   color: var(--color-text);
   letter-spacing: -0.3px;
@@ -187,28 +187,32 @@ h1, h2, h3, h4, h5, h6 {
     background: var(--color-primary);
     color: white;
     font-size: 15px;
-    box-shadow: var(--shadow-brand);
+    font-family: 'Montserrat', system-ui, sans-serif;
+    box-shadow: 0 6px 0 rgba(217,139,0,0.45);
+    text-decoration: none;
   }
   .btn-primary:hover {
     background: var(--color-primary-dark);
     transform: translateY(-2px);
-    box-shadow: 0 10px 34px rgba(255,166,1,0.45);
+    box-shadow: 0 8px 0 rgba(217,139,0,0.35);
   }
   .btn-primary:active { transform: translateY(0); }
 
   .btn-outline {
-    @apply inline-flex items-center gap-2 font-display font-semibold
+    @apply inline-flex items-center gap-2 font-display font-bold
            transition-all duration-200 ease-out cursor-pointer;
-    padding: 13px 28px;
+    padding: 11px 24px;
     border-radius: var(--radius-pill);
     background: transparent;
     color: var(--color-text);
     font-size: 15px;
-    border: 2px solid rgba(26,18,8,0.13);
+    border: 2px solid rgba(61,44,30,0.2);
+    font-family: 'Montserrat', system-ui, sans-serif;
+    text-decoration: none;
   }
   .btn-outline:hover {
     border-color: var(--color-primary);
-    color: var(--color-primary-darker);
+    color: var(--color-primary-dark);
     transform: translateY(-2px);
   }
 

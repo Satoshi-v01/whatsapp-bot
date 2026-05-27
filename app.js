@@ -1,4 +1,4 @@
-require('dotenv').config()
+﻿require('dotenv').config()
 process.env.TZ = 'America/Asuncion'
 const path = require('path')
 const express = require('express')
@@ -28,6 +28,7 @@ const auditoriaRoutes = require('./src/routes/auditoria')
 const transformacionesRoutes = require('./src/routes/transformaciones')
 const ecommerceRoutes = require('./src/routes/ecommerce')
 const uploadsRoutes = require('./src/routes/uploads')
+const sitemapRoutes = require('./src/routes/sitemap')
 
 const app = express()
 
@@ -157,16 +158,159 @@ const staticAssetHeaders = (res, filePath) => {
 }
 
 // Servir dashboard estático
+// GET /dashboard sin trailing slash sirve el index directamente — evita el doble redirect
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard/dist/index.html'))
+})
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard/dist'), { setHeaders: staticAssetHeaders }))
 app.get('/dashboard/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard/dist/index.html'))
 })
+
+// robots.txt — sirve el del ecommerce (tiene allowlist de AI crawlers)
+app.get('/robots.txt', (req, res) => {
+    res.setHeader('Content-Type', 'text/plain')
+    res.setHeader('Cache-Control', 'public, max-age=86400')
+    res.sendFile(path.join(__dirname, 'ecommerce/public/robots.txt'))
+})
+
+// Sitemap dinámico — sitemapRoutes es el handler correcto (tiene lastmod y /nosotros, /contacto)
+app.use(sitemapRoutes)
 
 // Landing page pública en /
 app.use(express.static(path.join(__dirname, 'landing'), { setHeaders: staticAssetHeaders }))
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'landing/index.html'))
 })
+
+// Ecommerce SPA en /ecommerce — assets estáticos con prefijo
+app.use('/ecommerce', express.static(path.join(__dirname, 'ecommerce/dist'), { setHeaders: staticAssetHeaders }))
+
+// SSR meta-injection: Googlebot ve title/description/schema reales desde la DB
+// React hidrata normalmente en el cliente y Helmet toma el control
+const fs = require('fs')
+const SITE = 'https://sosabulls.com.py'
+const ECO_INDEX = path.join(__dirname, 'ecommerce/dist/index.html')
+
+function toSlugSsr(text) {
+    return String(text).toLowerCase().normalize('NFD')
+        .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+const CAT_META = {
+    perros:       { title: 'Alimento para Perros en Paraguay — Envio a Domicilio',           desc: 'Compra alimento balanceado para perros en Paraguay. Cachorro, adulto, senior, raza grande y pequeña. Marcas premium con delivery a Asuncion y todo el pais.' },
+    gatos:        { title: 'Alimento para Gatos en Paraguay — Royal Canin, Pro Plan y mas',  desc: 'Alimento para gatos, arena sanitaria y accesorios. Royal Canin, Pro Plan, Whiskas y mas. Delivery a Asuncion y todo Paraguay.' },
+    medicamentos: { title: 'Antiparasitarios y Vitaminas para Mascotas — Paraguay',           desc: 'Antiparasitarios, vitaminas y suplementos para perros y gatos en Paraguay. Productos veterinarios originales con envio a domicilio.' },
+    accesorios:   { title: 'Accesorios para Mascotas — Correas, Camas, Comederos',            desc: 'Correas, camas, comederos, bebederos y juguetes para perros y gatos en Paraguay. Envio a domicilio en Asuncion y todo el pais.' },
+    cuidado:      { title: 'Cuidado e Higiene para Mascotas — Shampoos y Grooming',           desc: 'Shampoos, cepillos, toallitas y productos de grooming e higiene para mascotas en Paraguay.' },
+    ofertas:      { title: 'Ofertas en Alimentos y Accesorios para Mascotas',                 desc: 'Promociones y descuentos en alimentos balanceados y accesorios para mascotas en Paraguay.' },
+}
+
+async function serveEco(req, res) {
+    let html
+    try { html = fs.readFileSync(ECO_INDEX, 'utf-8') } catch { return res.status(500).end() }
+
+    const canonical  = `${SITE}${req.path}`
+    let title        = 'Sosa BULLS — Tienda de Mascotas en Paraguay'
+    let desc         = 'Alimentos balanceados, accesorios y medicamentos para perros y gatos. Envio a domicilio en Asuncion, Gran Asuncion y todo Paraguay. Tienda fisica en Lambare.'
+    let img          = `${SITE}/logo.png`
+    let extraSchema  = ''
+
+    const productMatch  = req.path.match(/^\/ecommerce\/producto\/(.+)$/)
+    const catMatch      = req.path.match(/^\/ecommerce\/categoria\/([^/]+)/)
+
+    if (productMatch) {
+        const idMatch = productMatch[1].match(/-(\d+)$/)
+        if (idMatch) {
+            try {
+                const { rows } = await query(
+                    `SELECT pr.id, pr.nombre, pr.precio_venta, pr.stock, pr.imagen_url,
+                            p.descripcion, p.categoria_slug
+                     FROM presentaciones pr
+                     JOIN productos p ON p.id = pr.producto_id
+                     WHERE pr.id = $1 AND pr.disponible = true`,
+                    [parseInt(idMatch[1])]
+                )
+                if (rows.length) {
+                    const p = rows[0]
+                    title = `${p.nombre} — Sosa BULLS`
+                    desc  = p.descripcion || `Compra ${p.nombre} en Sosa BULLS. Envio a domicilio en Paraguay.`
+                    if (p.imagen_url) img = p.imagen_url
+                    const priceValidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    extraSchema = JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@graph': [
+                            {
+                                '@type': 'Product',
+                                '@id': `${canonical}#product`,
+                                name: p.nombre,
+                                description: desc,
+                                sku: String(p.id),
+                                ...(img !== `${SITE}/logo.png` && { image: { '@type': 'ImageObject', url: img, contentUrl: img } }),
+                                offers: {
+                                    '@type': 'Offer',
+                                    priceCurrency: 'PYG',
+                                    price: p.precio_venta,
+                                    priceValidUntil,
+                                    availability: p.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                                    url: canonical,
+                                    seller: { '@id': `${SITE}/#organization` },
+                                },
+                            },
+                            {
+                                '@type': 'BreadcrumbList',
+                                itemListElement: [
+                                    { '@type': 'ListItem', position: 1, name: 'Inicio',           item: `${SITE}/` },
+                                    { '@type': 'ListItem', position: 2, name: p.categoria_slug,   item: `${SITE}/categoria/${p.categoria_slug}` },
+                                    { '@type': 'ListItem', position: 3, name: p.nombre,            item: canonical },
+                                ],
+                            },
+                        ],
+                    })
+                }
+            } catch { /* DB error no bloquea el render */ }
+        }
+    } else if (catMatch) {
+        const cat = CAT_META[catMatch[1]]
+        if (cat) { title = `${cat.title} — Sosa BULLS`; desc = cat.desc }
+    }
+
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    const inject = [
+        `<link rel="canonical" href="${canonical}" />`,
+        `<meta property="og:title" content="${esc(title)}" />`,
+        `<meta property="og:description" content="${esc(desc)}" />`,
+        `<meta property="og:image" content="${img}" />`,
+        `<meta property="og:url" content="${canonical}" />`,
+        `<meta name="twitter:card" content="summary_large_image" />`,
+        `<meta name="twitter:title" content="${esc(title)}" />`,
+        `<meta name="twitter:description" content="${esc(desc)}" />`,
+        `<meta name="twitter:image" content="${img}" />`,
+        extraSchema ? `<script type="application/ld+json">${extraSchema}</script>` : '',
+    ].join('\n  ')
+
+    html = html
+        .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
+        .replace(/(<meta name="description" content=")[^"]*(")/,  `$1${esc(desc)}$2`)
+        .replace('</head>', `  ${inject}\n</head>`)
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.send(html)
+}
+
+app.get('/ecommerce',                    serveEco)
+app.get('/ecommerce/categoria/*splat',   serveEco)
+app.get('/ecommerce/producto/*splat',    serveEco)
+app.get('/ecommerce/nosotros',           serveEco)
+app.get('/ecommerce/contacto',           serveEco)
+app.get('/ecommerce/carrito',            (req, res) => res.sendFile(ECO_INDEX))
+app.get('/ecommerce/buscar',             (req, res) => res.sendFile(ECO_INDEX))
+app.get('/ecommerce/login',              (req, res) => res.sendFile(ECO_INDEX))
+app.get('/ecommerce/registro',           (req, res) => res.sendFile(ECO_INDEX))
+app.get('/ecommerce/perfil',             (req, res) => res.sendFile(ECO_INDEX))
+app.get('/ecommerce/*splat',             (req, res) => res.sendFile(ECO_INDEX))
 
 app.get('/test-db', async (req, res) => {
   try {
@@ -195,7 +339,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
     logger.error('Uncaught Exception:', error)
-    process.exit(1)
+    // No exitamos — Render/nodemon reinician si es fatal
 })
 
 const PORT = process.env.PORT || 8080

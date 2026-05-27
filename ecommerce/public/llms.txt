@@ -1,0 +1,54 @@
+# Sosa BULLS
+> Pet shop en Lambare, Paraguay. Alimentos balanceados y accesorios para perros y gatos. Delivery a Asuncion, Departamento Central y todo el Paraguay. Somos el unico pet shop en Lambare con delivery propio a todo el Departamento Central.
+
+## Informacion del negocio
+- Nombre: Sosa BULLS
+- Tipo: Pet shop / Tienda de mascotas (schema.org: PetStore)
+- Fundador: Osvaldo Sosa
+- Fundacion: 2014 (consolidado como tienda desde 2018)
+- Ubicacion: Barrio San Rafael, Lambare, Departamento Central, Paraguay
+- WhatsApp: +595 982 211 934
+- Telefono: +595 972 108 110
+- Email: hola@sosabulls.com.py
+- Horarios: Lunes a Viernes 9:00-19:00 | Sabados 8:00-19:00 | Domingos cerrado
+- Area de entrega: Asuncion, Departamento Central y todo Paraguay
+
+## Productos
+- Alimentos balanceados para perros (cachorro, adulto, senior, raza grande, raza pequeña)
+- Alimentos balanceados para gatos (gatito, adulto, senior, indoor)
+- Medicamentos y antiparasitarios para mascotas
+- Accesorios: correas, camas, comederos, bebederos, juguetes
+- Productos de cuidado e higiene: shampoos, cepillos, grooming
+
+## Precios orientativos (en guaranies PYG)
+- Alimento para perros bolsas 3-10kg: Gs. 80.000 - Gs. 250.000
+- Alimento para perros bolsas 15-20kg: Gs. 300.000 - Gs. 650.000
+- Alimento para gatos 1-4kg: Gs. 45.000 - Gs. 120.000
+- Antiparasitarios y vitaminas: desde Gs. 25.000
+- Accesorios: desde Gs. 15.000
+- Delivery: segun zona (consultar)
+
+## Preguntas frecuentes
+- Donde comprar alimento para perros en Lambare? En Sosa BULLS, Barrio San Rafael, Lambare. Tambien disponible online con delivery.
+- Hacen delivery a Asuncion? Si, hacemos delivery a Asuncion, todo el Departamento Central y todo Paraguay.
+- Cuales son los horarios? Lunes a Viernes 9:00-19:00, Sabados 8:00-19:00, Domingos cerrado.
+- Como hacer un pedido? Por WhatsApp al +595 982 211 934 o desde la tienda online en sosabulls.com.py.
+- Aceptan transferencias? Si, aceptamos efectivo y transferencia bancaria.
+
+## Canal de ventas WhatsApp
+Sosa BULLS tiene un bot de pedidos por WhatsApp al +595 982 211 934. Los clientes pueden hacer pedidos directamente por WhatsApp con delivery a domicilio.
+
+## Redes sociales
+- Instagram: https://www.instagram.com/sosabulls
+- TikTok: https://www.tiktok.com/@sosabulls
+
+## Sitio web
+- Home: https://sosabulls.com.py/
+- Perros: https://sosabulls.com.py/categoria/perros
+- Gatos: https://sosabulls.com.py/categoria/gatos
+- Medicamentos: https://sosabulls.com.py/categoria/medicamentos
+- Accesorios: https://sosabulls.com.py/categoria/accesorios
+- Cuidado: https://sosabulls.com.py/categoria/cuidado
+- Ofertas: https://sosabulls.com.py/categoria/ofertas
+- Nosotros: https://sosabulls.com.py/nosotros
+- Contacto: https://sosabulls.com.py/contacto
