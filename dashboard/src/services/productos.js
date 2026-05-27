@@ -5,8 +5,8 @@ export async function getProductos() {
     return res.data
 }
 
-export async function getCategorias() {
-    const res = await api.get('/productos/categorias')
+export async function getCategorias(seccion) {
+    const res = await api.get('/productos/categorias', seccion ? { params: { seccion } } : undefined)
     return res.data
 }
 
@@ -80,6 +80,11 @@ export async function actualizarDisponible(presentacionId, disponible) {
     return res.data
 }
 
+export async function toggleDisponibleProducto(id, disponible) {
+    const res = await api.patch(`/productos/${id}/disponible`, { disponible })
+    return res.data
+}
+
 export async function actualizarCodigoBarras(id, codigo_barras) {
     const res = await api.patch(`/productos/presentaciones/${id}/codigos`, { codigo_barras })
     return res.data
@@ -87,5 +92,30 @@ export async function actualizarCodigoBarras(id, codigo_barras) {
 
 export async function buscarPorCodigoBarras(codigo) {
     const res = await api.get(`/productos/codigo-barras/${encodeURIComponent(codigo)}`)
+    return res.data
+}
+
+export async function getSubcategorias(seccion) {
+    const res = await api.get('/productos/subcategorias', seccion ? { params: { seccion } } : undefined)
+    return res.data
+}
+
+export async function crearSubcategoria(datos) {
+    const res = await api.post('/productos/subcategorias', datos)
+    return res.data
+}
+
+export async function editarSubcategoria(id, datos) {
+    const res = await api.patch(`/productos/subcategorias/${id}`, datos)
+    return res.data
+}
+
+export async function verificarEliminarSubcategoria(id) {
+    const res = await api.delete(`/productos/subcategorias/${id}`)
+    return res.data
+}
+
+export async function confirmarEliminarSubcategoria(id) {
+    const res = await api.delete(`/productos/subcategorias/${id}/confirmar`)
     return res.data
 }

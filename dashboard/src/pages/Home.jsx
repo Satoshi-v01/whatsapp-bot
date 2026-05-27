@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getResumen, getVentasSemana, getTopProductos } from '../services/estadisticas'
 import { getReportes } from '../services/proveedores'
+import { getResumenOrdenes } from '../services/ordenes'
 import { useNavigate } from 'react-router-dom'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -11,6 +12,7 @@ function Home() {
     const [ventasSemana, setVentasSemana] = useState([])
     const [topProductos, setTopProductos] = useState([])
     const [reportesProveedores, setReportesProveedores] = useState(null)
+    const [ordenesResumen, setOrdenesResumen] = useState(null)
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const navigate = useNavigate()
@@ -37,16 +39,18 @@ function Home() {
 
     async function cargarDatos() {
         try {
-            const [res, semana, top, reportes] = await Promise.all([
+            const [res, semana, top, reportes, ordenes] = await Promise.all([
                 getResumen(),
                 getVentasSemana(),
                 getTopProductos(),
-                getReportes({ periodo: 'mes' }).catch(() => null)
+                getReportes({ periodo: 'mes' }).catch(() => null),
+                getResumenOrdenes().catch(() => null)
             ])
             setResumen(res)
-            setVentasSemana(semana)
-            setTopProductos(top)
+            setVentasSemana(Array.isArray(semana) ? semana : [])
+            setTopProductos(Array.isArray(top) ? top : [])
             setReportesProveedores(reportes)
+            setOrdenesResumen(ordenes)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos del resumen.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -67,6 +71,7 @@ function Home() {
     const tarjetas = [
         { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `Ganancia: ${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: '#10b981', accentBg: darkMode ? '#052e16' : '#f0fdf4', accentText: '#10b981', icono: 'trend', ruta: '/dashboard/ventas' },
         { label: 'Pendientes de pago', valor: resumen?.pendientes || 0, sub: 'requieren confirmación', color: '#f59e0b', accentBg: darkMode ? '#451a03' : '#fffbeb', accentText: '#f59e0b', icono: 'clock', ruta: '/dashboard/ventas?estado=pendiente_pago' },
+        { label: 'Ordenes pendientes', valor: ordenesResumen?.pendientes ?? '—', sub: 'sin confirmar', color: ordenesResumen?.pendientes > 0 ? '#f59e0b' : '#10b981', accentBg: ordenesResumen?.pendientes > 0 ? (darkMode ? '#451a03' : '#fffbeb') : (darkMode ? '#052e16' : '#f0fdf4'), accentText: ordenesResumen?.pendientes > 0 ? '#f59e0b' : '#10b981', icono: 'bag', ruta: '/dashboard/ordenes' },
         { label: 'Deliveries activos', valor: resumen?.deliveries || 0, sub: 'en proceso', color: '#3b82f6', accentBg: darkMode ? '#0c1a3a' : '#eff6ff', accentText: '#3b82f6', icono: 'truck', ruta: '/dashboard/delivery' },
         { label: 'Chats esperando', valor: resumen?.esperando_agente || 0, sub: 'requieren atención', color: '#ef4444', accentBg: darkMode ? '#450a0a' : '#fef2f2', accentText: '#ef4444', icono: 'chat', ruta: '/dashboard/chat' },
     ]
@@ -183,7 +188,7 @@ function Home() {
             )}
 
             {/* Tarjetas métricas */}
-            <div className="home-tarjetas" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div className="home-tarjetas" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
                 {tarjetas.map((t, i) => (
                     <div key={i} onClick={() => navigate(t.ruta)}
                         style={{ background: s.surface, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
@@ -194,6 +199,7 @@ function Home() {
                             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: t.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.accentText }}>
                                 {t.icono === 'trend' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>}
                                 {t.icono === 'clock' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+                                {t.icono === 'bag' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>}
                                 {t.icono === 'truck' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>}
                                 {t.icono === 'chat' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>}
                             </div>

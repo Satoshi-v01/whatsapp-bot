@@ -1,14 +1,8 @@
-// AuthContext — STUB de desarrollo
-// Cuando se integre Supabase (paso 1 y 2) se reemplaza el interior
-// de este archivo pero la API exportada NO cambia:
-//   { user, loading, signIn, signOut, isAuthenticated }
-//
-// Shape del user (espeja Supabase Auth):
-//   { id, email, user_metadata: { full_name, avatar_url } }
-
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import api from '@/services/api'
 
-const SESSION_KEY = 'sb_dev_session'
+const TOKEN_KEY = 'eco_token'
+const USER_KEY  = 'eco_user'
 
 const AuthContext = createContext(null)
 
@@ -16,57 +10,60 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Al montar: recuperar sesion guardada
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(SESSION_KEY)
+      const raw = localStorage.getItem(USER_KEY)
       if (raw) setUser(JSON.parse(raw))
     } catch {
-      // nada
+      localStorage.removeItem(USER_KEY)
+      localStorage.removeItem(TOKEN_KEY)
     }
     setLoading(false)
   }, [])
 
-  // signIn — stub: acepta cualquier email/password
-  // Al integrar Supabase: supabase.auth.signInWithPassword({ email, password })
   const signIn = useCallback(async (email, password) => {
-    if (!email?.trim() || !password?.trim()) {
-      return { error: 'Completa email y contraseña' }
-    }
-
-    const mockUser = {
-      id: 'dev-' + Math.random().toString(36).slice(2),
-      email: email.trim().toLowerCase(),
-      user_metadata: {
-        full_name: email.split('@')[0].replace(/[._-]/g, ' '),
-        avatar_url: null,
-      },
-    }
-
     try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(mockUser))
-    } catch {
-      // nada
+      const { data } = await api.post('/api/ecommerce/auth/login', { email, password })
+      localStorage.setItem(TOKEN_KEY, data.token)
+      localStorage.setItem(USER_KEY, JSON.stringify(data.usuario))
+      setUser(data.usuario)
+      return { error: null }
+    } catch (err) {
+      return { error: err.response?.data?.error ?? 'Error al iniciar sesion' }
     }
-    setUser(mockUser)
-    return { error: null }
   }, [])
 
-  // signOut
-  // Al integrar Supabase: supabase.auth.signOut()
-  const signOut = useCallback(async () => {
+  const signUp = useCallback(async ({ nombre, email, password, telefono }) => {
     try {
-      localStorage.removeItem(SESSION_KEY)
-    } catch {
-      // nada
+      const { data } = await api.post('/api/ecommerce/auth/register', { nombre, email, password, telefono })
+      localStorage.setItem(TOKEN_KEY, data.token)
+      localStorage.setItem(USER_KEY, JSON.stringify(data.usuario))
+      setUser(data.usuario)
+      return { error: null }
+    } catch (err) {
+      return { error: err.response?.data?.error ?? 'Error al crear la cuenta' }
     }
+  }, [])
+
+  const signOut = useCallback(async () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
     setUser(null)
+  }, [])
+
+  // Actualiza el nombre en el estado local tras editar datos
+  const actualizarUsuario = useCallback((cambios) => {
+    setUser(prev => {
+      const nuevo = { ...prev, ...cambios }
+      localStorage.setItem(USER_KEY, JSON.stringify(nuevo))
+      return nuevo
+    })
   }, [])
 
   const isAuthenticated = Boolean(user)
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, isAuthenticated, actualizarUsuario }}>
       {children}
     </AuthContext.Provider>
   )

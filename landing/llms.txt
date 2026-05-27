@@ -1,0 +1,36 @@
+# Sosa BULLS
+> Pet shop en Lambare, Paraguay. Alimentos balanceados y accesorios para perros y gatos. Delivery a Asuncion, Departamento Central y todo el Paraguay.
+
+## Informacion del negocio
+- Nombre: Sosa BULLS
+- Tipo: Pet shop / Tienda de mascotas
+- Fundador: Osvaldo Sosa
+- Fundacion: 2014 (consolidado como tienda desde 2018)
+- Ubicacion: Barrio San Rafael, Lambare, Departamento Central, Paraguay
+- WhatsApp: +595 982 211 934
+- Telefono: +595 972 108 110
+- Email: hola@sosabulls.com.py
+- Horarios: Lunes a Viernes 9:00-19:00 | Sabados 8:00-19:00 | Domingos cerrado
+- Area de entrega: Asuncion, Departamento Central y todo Paraguay
+
+## Productos
+- Alimentos balanceados para perros (cachorro, adulto, senior, raza grande, raza pequeña)
+- Alimentos balanceados para gatos (gatito, adulto, senior, indoor)
+- Medicamentos y antiparasitarios para mascotas
+- Accesorios: correas, camas, comederos, bebederos, juguetes
+- Productos de cuidado e higiene: shampoos, cepillos, grooming
+
+## Redes sociales
+- Instagram: https://www.instagram.com/sosabulls
+- TikTok: https://www.tiktok.com/@sosabulls
+
+## Sitio web
+- Home: https://sosabulls.com.py/
+- Perros: https://sosabulls.com.py/categoria/perros
+- Gatos: https://sosabulls.com.py/categoria/gatos
+- Medicamentos: https://sosabulls.com.py/categoria/medicamentos
+- Accesorios: https://sosabulls.com.py/categoria/accesorios
+- Cuidado: https://sosabulls.com.py/categoria/cuidado
+- Ofertas: https://sosabulls.com.py/categoria/ofertas
+- Nosotros: https://sosabulls.com.py/nosotros
+- Contacto: https://sosabulls.com.py/contacto

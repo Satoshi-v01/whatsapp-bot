@@ -196,9 +196,17 @@ function Ordenes() {
                                         {cfg.label}
                                     </span>
                                 </div>
-                                <p style={{ fontSize: '12px', color: s.text, fontWeight: '600', marginBottom: '2px' }}>
-                                    {o.cliente_nombre || o.cliente_numero || 'Sin nombre'}
-                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                    <p style={{ fontSize: '12px', color: s.text, fontWeight: '600' }}>
+                                        {o.cliente_nombre || o.cliente_numero || 'Sin nombre'}
+                                    </p>
+                                    {o.comprobante_url && (
+                                        <span title="Comprobante recibido" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '1px 6px', borderRadius: '20px', fontSize: '9px', fontWeight: '700', background: '#d1fae5', color: '#065f46' }}>
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            Comprobante
+                                        </span>
+                                    )}
+                                </div>
                                 <p style={{ fontSize: '11px', color: s.textMuted, marginBottom: '4px' }}>
                                     {o.items?.filter(i => i.producto_nombre).slice(0, 2).map(i => `${i.producto_nombre} x${i.cantidad}`).join(', ')}
                                     {o.items?.length > 2 && ` +${o.items.length - 2} mas`}
@@ -324,6 +332,20 @@ function Ordenes() {
                             {(ordenSeleccionada.tipo_entrega || ordenSeleccionada.modalidad) === 'delivery' && (
                                 <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, padding: '18px', marginBottom: '16px' }}>
                                     <p style={{ fontSize: '11px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Datos de entrega</p>
+
+                                    {/* Boton Maps — lo mas importante para el repartidor */}
+                                    {(ordenSeleccionada.maps_url || ordenSeleccionada.ubicacion?.startsWith('http')) && (
+                                        <a
+                                            href={ordenSeleccionada.maps_url || ordenSeleccionada.ubicacion}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginBottom: '14px', padding: '10px 16px', borderRadius: '8px', background: '#16a34a', color: 'white', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            Abrir en Google Maps
+                                        </a>
+                                    )}
+
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         {[
                                             { label: 'Ubicacion', val: ordenSeleccionada.ubicacion },
@@ -342,9 +364,42 @@ function Ordenes() {
 
                             {/* Notas */}
                             {ordenSeleccionada.notas && (
-                                <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, padding: '18px' }}>
+                                <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, padding: '18px', marginBottom: '16px' }}>
                                     <p style={{ fontSize: '11px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Notas</p>
                                     <p style={{ fontSize: '13px', color: s.text }}>{ordenSeleccionada.notas}</p>
+                                </div>
+                            )}
+
+                            {/* Comprobante de transferencia */}
+                            {ordenSeleccionada.comprobante_url ? (
+                                <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid #6ee7b7`, padding: '18px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#065f46" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        </div>
+                                        <p style={{ fontSize: '11px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comprobante de transferencia</p>
+                                    </div>
+                                    <a href={ordenSeleccionada.comprobante_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                                        <img
+                                            src={ordenSeleccionada.comprobante_url}
+                                            alt="Comprobante de transferencia"
+                                            style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', border: `1px solid ${s.border}`, cursor: 'zoom-in', display: 'block' }}
+                                        />
+                                    </a>
+                                    <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '8px', textAlign: 'center' }}>
+                                        Click en la imagen para abrir en tamaño completo
+                                    </p>
+                                </div>
+                            ) : ordenSeleccionada.metodo_pago === 'transferencia' && (
+                                <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid #fde68a`, padding: '18px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                        </div>
+                                        <p style={{ fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                                            Esperando comprobante de transferencia
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </div>

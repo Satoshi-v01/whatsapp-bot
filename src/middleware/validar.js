@@ -39,6 +39,7 @@ function validarId(req, res, next) {
 }
 
 function manejarError(res, error) {
+    console.error('[error]', error.message, error.code || '')
     if (process.env.NODE_ENV === 'production') {
         res.status(500).json({ error: 'Error interno del servidor' })
     } else {

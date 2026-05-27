@@ -94,11 +94,12 @@ export default function ProductGrid({ products = [], loading, error, skeletonCou
         </div>
       )}
 
-      {!loading && !error && (showHero ? rest : products).map(product => (
+      {!loading && !error && (showHero ? rest : products).map((product, i) => (
         <div key={product.id} role="listitem" className="h-full">
           <ProductCard
             product={product}
             onAddToCart={() => addItem(product)}
+            eager={i < (showHero ? 5 : 6)}
           />
         </div>
       ))}

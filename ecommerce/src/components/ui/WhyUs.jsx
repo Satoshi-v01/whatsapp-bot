@@ -42,26 +42,26 @@ const IconCard = () => (
 const REASONS = [
   {
     icon: IconTruck,
-    title: 'Envio a domicilio',
-    description: 'Llevamos tus pedidos a cualquier punto de Asuncion y Gran Asuncion.',
+    title: 'Envío a domicilio',
+    description: 'Llevamos tus pedidos a cualquier punto de Asunción y Gran Asunción.',
     accent: '#ffa601',
   },
   {
     icon: IconShield,
     title: 'Productos originales',
-    description: 'Solo trabajamos con marcas y distribuidores autorizados. Cero adulteraciones.',
+    description: 'Solo trabajamos con distribuidores autorizados. Cero adulteraciones.',
     accent: '#3d9b6c',
   },
   {
     icon: IconChat,
     title: 'Asesoramiento personalizado',
-    description: 'Nuestro equipo te ayuda a elegir el mejor alimento segun la raza y edad de tu mascota.',
+    description: 'Nuestro equipo te ayuda a elegir el mejor alimento según la raza y edad de tu mascota.',
     accent: '#6b8cff',
   },
   {
     icon: IconCard,
     title: 'Pagos flexibles',
-    description: 'Efectivo, transferencia y proximamente tarjeta. Facilitamos tu compra.',
+    description: 'Efectivo, transferencia y tarjeta. Facilitamos tu compra.',
     accent: '#e08900',
   },
 ]
@@ -81,7 +81,7 @@ export default function WhyUs() {
     <section
       aria-labelledby="why-us-title"
       className="section-padding"
-      style={{ backgroundColor: '#1a1208' }}
+      style={{ backgroundColor: '#3d2c1e' }}
     >
       <div className="container-base">
         {/* Encabezado */}
@@ -90,7 +90,7 @@ export default function WhyUs() {
             id="why-us-title"
             className="font-display text-3xl md:text-4xl mb-3 text-white"
           >
-            Por que elegirnos
+            ¿Por qué elegirnos?
           </h2>
           <div className="flex justify-center mb-4">
             <div
@@ -100,7 +100,7 @@ export default function WhyUs() {
             />
           </div>
           <p style={{ color: 'rgba(255,255,255,0.6)' }} className="text-lg max-w-xl mx-auto">
-            Mas de 5 anos siendo la tienda de confianza de las familias paraguayas y sus mascotas.
+            La tienda de confianza de las familias paraguayas y sus mascotas.
           </p>
         </div>
 

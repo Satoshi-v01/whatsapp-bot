@@ -2,9 +2,10 @@ const express = require('express')
 const router = express.Router()
 const { getCarrito, agregarAlCarrito, quitarDelCarrito, limpiarCarrito, formatearCarrito } = require('../services/carrito')
 const { manejarError } = require('../middleware/validar')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 // Ver carrito
-router.get('/:cliente_numero', async (req, res) => {
+router.get('/:cliente_numero', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
     try {
         const carrito = await getCarrito(req.params.cliente_numero)
         res.json({ carrito })
@@ -14,7 +15,7 @@ router.get('/:cliente_numero', async (req, res) => {
 })
 
 // Agregar al carrito
-router.post('/:cliente_numero/agregar', async (req, res) => {
+router.post('/:cliente_numero/agregar', autenticar, verificarPermiso('ventas', 'crear'), async (req, res) => {
     try {
         const { presentacion_id, presentacion_nombre, producto_nombre, precio, cantidad = 1 } = req.body
         if (!presentacion_id || !precio) {
@@ -31,7 +32,7 @@ router.post('/:cliente_numero/agregar', async (req, res) => {
 })
 
 // Quitar del carrito
-router.delete('/:cliente_numero/quitar/:presentacion_id', async (req, res) => {
+router.delete('/:cliente_numero/quitar/:presentacion_id', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     try {
         const carrito = await quitarDelCarrito(req.params.cliente_numero, parseInt(req.params.presentacion_id))
         res.json({ carrito })
@@ -41,7 +42,7 @@ router.delete('/:cliente_numero/quitar/:presentacion_id', async (req, res) => {
 })
 
 // Limpiar carrito
-router.delete('/:cliente_numero/limpiar', async (req, res) => {
+router.delete('/:cliente_numero/limpiar', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     try {
         await limpiarCarrito(req.params.cliente_numero)
         res.json({ ok: true })

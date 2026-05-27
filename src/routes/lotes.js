@@ -2,11 +2,12 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 // ─────────────────────────────────────────────
 // GET lotes de una presentación
 // ─────────────────────────────────────────────
-router.get('/presentacion/:id', async (req, res) => {
+router.get('/presentacion/:id', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
     try {
         const resultado = await db.query(
             `SELECT l.*,
@@ -32,7 +33,7 @@ router.get('/presentacion/:id', async (req, res) => {
 // ─────────────────────────────────────────────
 // GET todos los lotes con alertas
 // ─────────────────────────────────────────────
-router.get('/alertas', async (req, res) => {
+router.get('/alertas', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
     try {
         const { dias = 30 } = req.query
 
@@ -81,7 +82,7 @@ router.get('/alertas', async (req, res) => {
 // ─────────────────────────────────────────────
 // POST crear lote
 // ─────────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { presentacion_id, numero_lote, fecha_vencimiento, stock_inicial } = req.body
@@ -117,7 +118,7 @@ router.post('/', async (req, res) => {
 // ─────────────────────────────────────────────
 // PATCH editar lote
 // ─────────────────────────────────────────────
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
         const { numero_lote, fecha_vencimiento, stock_actual } = req.body
         const resultado = await db.query(
@@ -139,7 +140,7 @@ router.patch('/:id', async (req, res) => {
 // ─────────────────────────────────────────────
 // DELETE (desactivar) lote
 // ─────────────────────────────────────────────
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', autenticar, verificarPermiso('inventario', 'eliminar'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         await client.query('BEGIN')

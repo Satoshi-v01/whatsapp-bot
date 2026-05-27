@@ -2,6 +2,9 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
+
+router.use(autenticar, verificarPermiso('reportes', 'ver'))
 
 // Resumen del día
 router.get('/resumen', async (req, res) => {
@@ -108,7 +111,7 @@ router.get('/top-productos', async (req, res) => {
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
-             WHERE v.created_at >= DATE_TRUNC('month', NOW())
+             WHERE v.created_at >= DATE_TRUNC('month', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'
              AND v.estado != 'cancelado'
              GROUP BY p.nombre, pr.nombre
              ORDER BY cantidad_vendida DESC
@@ -123,26 +126,42 @@ router.get('/top-productos', async (req, res) => {
 // Notificaciones activas
 router.get('/notificaciones', async (req, res) => {
     try {
-        const chats = await db.query(
-            `SELECT cliente_numero, ultimo_mensaje 
-             FROM sesiones WHERE modo = 'esperando_agente'
-             ORDER BY ultimo_mensaje ASC`
-        )
-
-        const stockBajo = await db.query(
-            `SELECT p.nombre as producto, pr.nombre as presentacion, pr.stock
-             FROM presentaciones pr
-             JOIN productos p ON pr.producto_id = p.id
-             WHERE pr.stock <= 3 AND pr.disponible = true
-             ORDER BY pr.stock ASC`
-        )
+        const [chats, stockBajo, busquedasFallidas] = await Promise.all([
+            db.query(
+                `SELECT cliente_numero, ultimo_mensaje FROM sesiones WHERE modo = 'esperando_agente' ORDER BY ultimo_mensaje ASC`
+            ),
+            db.query(
+                `SELECT p.nombre as producto, pr.nombre as presentacion, pr.stock
+                 FROM presentaciones pr
+                 JOIN productos p ON pr.producto_id = p.id
+                 WHERE pr.stock <= 3 AND pr.disponible = true
+                 ORDER BY pr.stock ASC`
+            ),
+            db.query(
+                `SELECT cliente_numero,
+                        datos->>'alerta_busqueda_fallida' as busqueda,
+                        (datos->>'alerta_busqueda_at')::timestamptz as at
+                 FROM sesiones
+                 WHERE datos->>'alerta_busqueda_fallida' IS NOT NULL
+                 AND (datos->>'alerta_busqueda_at')::timestamptz > NOW() - INTERVAL '4 hours'
+                 ORDER BY (datos->>'alerta_busqueda_at')::timestamptz DESC`
+            )
+        ])
 
         const notificaciones = [
             ...chats.rows.map(c => ({
                 tipo: 'agente',
                 mensaje: `${c.cliente_numero} requiere un agente`,
                 tiempo: c.ultimo_mensaje,
+                numero: c.cliente_numero,
                 urgente: true
+            })),
+            ...busquedasFallidas.rows.map(r => ({
+                tipo: 'producto_ausente',
+                mensaje: `"${r.busqueda}" — producto no encontrado en inventario`,
+                tiempo: r.at,
+                numero: r.cliente_numero,
+                urgente: false
             })),
             ...stockBajo.rows.map(s => ({
                 tipo: 'stock',
@@ -426,16 +445,17 @@ router.get('/comparativas', async (req, res) => {
     try {
         const { periodo = 'mes' } = req.query
 
+        const PY = `NOW() AT TIME ZONE 'America/Asuncion'`
         let intervaloActual, intervaloAnterior
         if (periodo === 'semana') {
-            intervaloActual = `DATE_TRUNC('week', NOW())`
-            intervaloAnterior = `DATE_TRUNC('week', NOW()) - INTERVAL '7 days'`
+            intervaloActual = `DATE_TRUNC('week', ${PY}) AT TIME ZONE 'America/Asuncion'`
+            intervaloAnterior = `DATE_TRUNC('week', ${PY}) AT TIME ZONE 'America/Asuncion' - INTERVAL '7 days'`
         } else if (periodo === 'anual') {
-            intervaloActual = `DATE_TRUNC('year', NOW())`
-            intervaloAnterior = `DATE_TRUNC('year', NOW()) - INTERVAL '1 year'`
+            intervaloActual = `DATE_TRUNC('year', ${PY}) AT TIME ZONE 'America/Asuncion'`
+            intervaloAnterior = `DATE_TRUNC('year', ${PY}) AT TIME ZONE 'America/Asuncion' - INTERVAL '1 year'`
         } else {
-            intervaloActual = `DATE_TRUNC('month', NOW())`
-            intervaloAnterior = `DATE_TRUNC('month', NOW()) - INTERVAL '1 month'`
+            intervaloActual = `DATE_TRUNC('month', ${PY}) AT TIME ZONE 'America/Asuncion'`
+            intervaloAnterior = `DATE_TRUNC('month', ${PY}) AT TIME ZONE 'America/Asuncion' - INTERVAL '1 month'`
         }
 
         // Ventas período actual vs anterior
@@ -486,8 +506,8 @@ router.get('/comparativas', async (req, res) => {
         const hoy = await db.query(
             `SELECT COALESCE(SUM(precio), 0) as total, COUNT(*) as cantidad
              FROM ventas
-             WHERE created_at >= CURRENT_DATE
-             AND created_at < CURRENT_DATE + INTERVAL '1 day'
+             WHERE created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'
+             AND created_at < DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' + INTERVAL '1 day'
              AND estado != 'cancelado'`
         )
         const promedioDiario = await db.query(

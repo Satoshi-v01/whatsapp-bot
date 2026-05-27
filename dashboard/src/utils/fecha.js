@@ -38,3 +38,12 @@ export function formatearHora(fecha) {
         minute: '2-digit'
     })
 }
+
+export function fechaHoyPY() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' })
+}
+
+export function fechaInicioMesPY() {
+    const d = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' }))
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}

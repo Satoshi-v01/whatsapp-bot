@@ -17,6 +17,7 @@ import Configuracion from './pages/Configuracion'
 import Repartidor from './pages/Repartidor'
 import Auditoria from './pages/Auditoria'
 import TiendaWeb from './pages/TiendaWeb'
+import HistorialPedidos from './pages/HistorialPedidos'
 import './App.css'
 
 export const AppContext = createContext({})
@@ -151,6 +152,9 @@ function App() {
                                     } />
                                     <Route path="/dashboard/ordenes" element={
                                         <RutaProtegida modulo="ordenes"><Ordenes /></RutaProtegida>
+                                    } />
+                                    <Route path="/dashboard/historial-pedidos" element={
+                                        <RutaProtegida modulo="ventas"><HistorialPedidos /></RutaProtegida>
                                     } />
                                     <Route path="/dashboard/tienda-web" element={
                                         <RutaProtegida modulo="inventario"><TiendaWeb /></RutaProtegida>

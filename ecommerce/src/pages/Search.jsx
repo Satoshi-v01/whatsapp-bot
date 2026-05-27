@@ -29,7 +29,7 @@ export default function Search() {
 
   return (
     <>
-      <SEOHead title={q ? `Busqueda: ${q}` : 'Buscar'} />
+      <SEOHead title={q ? `Búsqueda: ${q}` : 'Buscar'} noindex />
 
       <main style={{ background: '#fffbf4', minHeight: '100vh' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px 64px' }}>
@@ -69,8 +69,8 @@ export default function Search() {
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', opacity: 0.6 }}>
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <p style={{ fontSize: 15, fontWeight: 600, marginTop: 12, color: 'var(--color-text)' }}>Ingresa una busqueda</p>
-                <p style={{ fontSize: 13, marginTop: 4 }}>o explora nuestras categorias</p>
+                <p style={{ fontSize: 15, fontWeight: 600, marginTop: 12, color: 'var(--color-text)' }}>Ingresá una búsqueda</p>
+                <p style={{ fontSize: 13, marginTop: 4 }}>o explorá nuestras categorías</p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
                 {CATEGORIES.map(cat => (

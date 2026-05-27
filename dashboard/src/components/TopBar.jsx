@@ -1,22 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { getNotificaciones } from '../services/estadisticas'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { getResumenOrdenes } from '../services/ordenes'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../App'
-
-const PAGE_TITLES = {
-    '/dashboard/inicio':       'Inicio',
-    '/dashboard/caja':         'Caja',
-    '/dashboard/ordenes':      'Órdenes',
-    '/dashboard/chat':         'Chat',
-    '/dashboard/delivery':     'Delivery',
-    '/dashboard/ventas':       'Ventas',
-    '/dashboard/inventario':   'Inventario',
-    '/dashboard/proveedores':  'Proveedores',
-    '/dashboard/clientes':     'Clientes',
-    '/dashboard/reportes':     'Reportes',
-    '/dashboard/auditoria':    'Auditoría',
-    '/dashboard/configuracion':'Configuración',
-}
 
 /* ── Micro SVG icons ── */
 function IcoSun() {
@@ -75,16 +61,33 @@ function TopBar({ usuario, onLogout }) {
         try { return JSON.parse(localStorage.getItem('notif_leidas') || '[]') } catch { return [] }
     })
     const [popupAgente, setPopupAgente]     = useState(null)
+    const [popupOrden, setPopupOrden]       = useState(null)
     const navigate                          = useNavigate()
-    const location                          = useLocation()
     const prevChatsEsperando                = useRef(0)
     const prevNotifCount                    = useRef(0)
+    const prevOrdenesCount                  = useRef(null)
     const audioCtxRef                       = useRef(null)
-    const { darkMode, toggleDarkMode, toggleMobileSidebar } = useApp()
+    const notifRef                          = useRef(null)
+    const perfilRef                         = useRef(null)
+    const { darkMode, toggleDarkMode }      = useApp()
+
+    // Cerrar dropdowns al hacer click fuera
+    useEffect(() => {
+        function handleOutside(e) {
+            if (menuNotif && notifRef.current && !notifRef.current.contains(e.target)) {
+                setMenuNotif(false)
+            }
+            if (menuPerfil && perfilRef.current && !perfilRef.current.contains(e.target)) {
+                setMenuPerfil(false)
+            }
+        }
+        document.addEventListener('mousedown', handleOutside)
+        return () => document.removeEventListener('mousedown', handleOutside)
+    }, [menuNotif, menuPerfil])
 
     useEffect(() => {
         cargarNotificaciones()
-        const intervalo = setInterval(cargarNotificaciones, 10000)
+        const intervalo = setInterval(cargarNotificaciones, 60000)
         return () => clearInterval(intervalo)
     }, [])
 
@@ -95,11 +98,22 @@ function TopBar({ usuario, onLogout }) {
         }
     }, [popupAgente])
 
+    useEffect(() => {
+        if (popupOrden) {
+            const timer = setTimeout(() => setPopupOrden(null), 8000)
+            return () => clearTimeout(timer)
+        }
+    }, [popupOrden])
+
     async function cargarNotificaciones() {
         try {
-            const datos   = await getNotificaciones()
+            const [datos, ordenStats] = await Promise.all([
+                getNotificaciones(),
+                getResumenOrdenes().catch(() => null)
+            ])
             const lista   = datos.notificaciones || []
             const chats   = datos.chats_esperando || 0
+            const pendientes = ordenStats?.pendientes || 0
 
             if (chats > prevChatsEsperando.current) {
                 const nuevoChat = lista.find(n => n.tipo === 'agente')
@@ -108,19 +122,17 @@ function TopBar({ usuario, onLogout }) {
                 reproducirSonido('normal')
             }
 
+            if (prevOrdenesCount.current !== null && pendientes > prevOrdenesCount.current) {
+                const nuevas = pendientes - prevOrdenesCount.current
+                setPopupOrden({ cantidad: nuevas, total: pendientes })
+                reproducirSonido('orden')
+            }
+
             prevChatsEsperando.current = chats
             prevNotifCount.current     = lista.length
+            prevOrdenesCount.current   = pendientes
             setNotificaciones(lista)
             setChatsEsperando(chats)
-            // Limpiar leidas obsoletas (notificaciones que ya no existen)
-            const claves = new Set(lista.map(n => `${n.tipo}-${n.mensaje}`))
-            setLeidas(prev => {
-                const limpias = prev.filter(k => claves.has(k))
-                if (limpias.length !== prev.length) {
-                    try { localStorage.setItem('notif_leidas', JSON.stringify(limpias)) } catch {}
-                }
-                return limpias
-            })
         } catch (err) {}
     }
 
@@ -140,6 +152,13 @@ function TopBar({ usuario, onLogout }) {
                 gain.gain.setValueAtTime(0.4, ctx.currentTime)
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
                 osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5)
+            } else if (tipo === 'orden') {
+                osc.frequency.setValueAtTime(523, ctx.currentTime)
+                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.12)
+                osc.frequency.setValueAtTime(784, ctx.currentTime + 0.24)
+                gain.gain.setValueAtTime(0.35, ctx.currentTime)
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
+                osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.45)
             } else {
                 osc.frequency.value = 660
                 gain.gain.setValueAtTime(0.2, ctx.currentTime)
@@ -151,22 +170,24 @@ function TopBar({ usuario, onLogout }) {
 
     function marcarLeida(notif) {
         setLeidas(prev => {
-            const nueva = [...prev, `${notif.tipo}-${notif.mensaje}`]
-            try { localStorage.setItem('notif_leidas', JSON.stringify(nueva)) } catch {}
-            return nueva
+            const next = [...prev, `${notif.tipo}-${notif.mensaje}`]
+            localStorage.setItem('notif_leidas', JSON.stringify(next))
+            return next
         })
     }
     function handleClickNotif(notif) {
         marcarLeida(notif)
         setMenuNotif(false)
-        if (notif.tipo === 'agente') navigate('/chat')
-        else if (notif.tipo === 'stock') navigate('/inventario')
+        if (notif.tipo === 'agente' || notif.tipo === 'producto_ausente') {
+            navigate(notif.numero ? `/dashboard/chat?numero=${encodeURIComponent(notif.numero)}` : '/dashboard/chat')
+        } else if (notif.tipo === 'stock') navigate('/dashboard/inventario')
+        else if (notif.tipo === 'orden') navigate('/dashboard/ordenes')
     }
     function marcarTodasLeidas() {
         setLeidas(prev => {
-            const nueva = [...new Set([...prev, ...notificaciones.map(n => `${n.tipo}-${n.mensaje}`)])]
-            try { localStorage.setItem('notif_leidas', JSON.stringify(nueva)) } catch {}
-            return nueva
+            const next = [...new Set([...prev, ...notificaciones.map(n => `${n.tipo}-${n.mensaje}`)])]
+            localStorage.setItem('notif_leidas', JSON.stringify(next))
+            return next
         })
     }
 
@@ -181,6 +202,12 @@ function TopBar({ usuario, onLogout }) {
         if (tipo === 'stock') return (
             <svg {...base} viewBox="0 0 24 24" style={{ color }}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         )
+        if (tipo === 'producto_ausente') return (
+            <svg {...base} viewBox="0 0 24 24" style={{ color: '#8b5cf6' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="12"/><line x1="11" y1="16" x2="11.01" y2="16"/></svg>
+        )
+        if (tipo === 'orden') return (
+            <svg {...base} viewBox="0 0 24 24" style={{ color: '#f59e0b' }}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        )
         return (
             <svg {...base} viewBox="0 0 24 24" style={{ color }}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
         )
@@ -193,14 +220,16 @@ function TopBar({ usuario, onLogout }) {
         return `hace ${Math.floor(diff / 86400)} d`
     }
 
-    const paginaTitulo = PAGE_TITLES[location.pathname] || 'Dashboard'
-
     return (
         <>
+            <style>{`
+                @keyframes pulseRed{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
+                @keyframes pulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 6px rgba(245,158,11,0)}}
+            `}</style>
+
             {/* Popup urgente de agente */}
             {popupAgente && (
                 <div className="agent-popup">
-                    <style>{`@keyframes pulseRed{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}`}</style>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulseRed 1.2s infinite' }} />
@@ -215,37 +244,43 @@ function TopBar({ usuario, onLogout }) {
                         {popupAgente.mensaje}
                     </p>
                     <button
-                        onClick={() => { setPopupAgente(null); navigate('/chat') }}
+                        onClick={() => { setPopupAgente(null); navigate('/dashboard/chat') }}
                         style={{ width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-ui)' }}>
                         Ir al chat →
                     </button>
                 </div>
             )}
 
+            {/* Popup nueva orden */}
+            {popupOrden && (
+                <div className="agent-popup" style={{ borderLeftColor: '#f59e0b', bottom: popupAgente ? '210px' : '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', animation: 'pulseAmber 1.2s infinite' }} />
+                            <p style={{ fontSize: '12px', fontWeight: '800', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                {popupOrden.cantidad === 1 ? 'Nueva orden' : `${popupOrden.cantidad} nuevas ordenes`}
+                            </p>
+                        </div>
+                        <button onClick={() => setPopupOrden(null)}
+                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
+                    </div>
+                    <p style={{ fontSize: '13px', color: '#e2e8f0', marginBottom: '14px', lineHeight: 1.5 }}>
+                        {popupOrden.cantidad === 1
+                            ? 'Hay una nueva orden de compra pendiente de confirmacion.'
+                            : `Hay ${popupOrden.cantidad} nuevas ordenes pendientes de confirmacion.`}
+                        {' '}Total pendientes: <strong style={{ color: '#fde68a' }}>{popupOrden.total}</strong>
+                    </p>
+                    <button
+                        onClick={() => { setPopupOrden(null); navigate('/dashboard/ordenes') }}
+                        style={{ width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#1a1a2e', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-ui)' }}>
+                        Ver ordenes →
+                    </button>
+                </div>
+            )}
+
             <header className="topbar">
 
-                {/* Hamburger — solo mobile */}
-                <button
-                    className="tb-btn tb-hamburger"
-                    onClick={toggleMobileSidebar}
-                    aria-label="Abrir menú"
-                >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="3" y1="6"  x2="21" y2="6"/>
-                        <line x1="3" y1="12" x2="21" y2="12"/>
-                        <line x1="3" y1="18" x2="21" y2="18"/>
-                    </svg>
-                </button>
-
-                {/* Título de página — izquierda */}
-                <div className="tb-page-title">
-                    <span className="tb-page-name">{paginaTitulo}</span>
-                </div>
-
-                {/* Acciones — derecha */}
-                <div className="tb-actions">
-
-                {/* Toggle dark mode */}
+                {/* Toggle dark mode — izquierda */}
                 <button
                     className="tb-btn"
                     onClick={toggleDarkMode}
@@ -254,108 +289,111 @@ function TopBar({ usuario, onLogout }) {
                     {darkMode ? <IcoSun /> : <IcoMoon />}
                 </button>
 
-                {/* Campana de notificaciones */}
-                <div style={{ position: 'relative' }}>
-                    <button
-                        className="tb-btn"
-                        onClick={() => { setMenuNotif(!menuNotif); setMenuPerfil(false) }}
-                        title="Notificaciones"
-                    >
-                        <IcoBell />
-                        {sinLeer > 0 && (
-                            <span className="tb-badge">{sinLeer > 9 ? '9+' : sinLeer}</span>
-                        )}
-                    </button>
+                {/* Grupo derecho: campana + perfil */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
 
-                    {menuNotif && (
-                        <div className="tb-dropdown" style={{ width: '340px' }}>
-                            <div className="tb-dropdown-header tb-dropdown-row">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text)' }}>Notificaciones</span>
-                                    {chatsEsperando > 0 && (
-                                        <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: 'var(--r-full)', background: '#fee2e2', color: '#ef4444' }}>
-                                            {chatsEsperando} chat{chatsEsperando > 1 ? 's' : ''} esperando
-                                        </span>
+                    {/* Campana de notificaciones */}
+                    <div ref={notifRef} style={{ position: 'relative' }}>
+                        <button
+                            className="tb-btn"
+                            onClick={() => { setMenuNotif(v => !v); setMenuPerfil(false) }}
+                            title="Notificaciones"
+                        >
+                            <IcoBell />
+                            {sinLeer > 0 && (
+                                <span className="tb-badge">{sinLeer > 9 ? '9+' : sinLeer}</span>
+                            )}
+                        </button>
+
+                        {menuNotif && (
+                            <div className="tb-dropdown" style={{ width: '340px' }}>
+                                <div className="tb-dropdown-header tb-dropdown-row">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text)' }}>Notificaciones</span>
+                                        {chatsEsperando > 0 && (
+                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: 'var(--r-full)', background: '#fee2e2', color: '#ef4444' }}>
+                                                {chatsEsperando} chat{chatsEsperando > 1 ? 's' : ''} esperando
+                                            </span>
+                                        )}
+                                    </div>
+                                    {sinLeer > 0 && (
+                                        <button onClick={marcarTodasLeidas}
+                                            style={{ fontSize: '11px', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: '500' }}>
+                                            Marcar todas leídas
+                                        </button>
                                     )}
                                 </div>
-                                {sinLeer > 0 && (
-                                    <button onClick={marcarTodasLeidas}
-                                        style={{ fontSize: '11px', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: '500' }}>
-                                        Marcar todas leídas
-                                    </button>
-                                )}
-                            </div>
 
-                            {notificaciones.length === 0 ? (
-                                <p style={{ padding: '24px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
-                                    Sin notificaciones pendientes
-                                </p>
-                            ) : (
-                                <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
-                                    {notificaciones.map((notif, i) => {
-                                        const key      = `${notif.tipo}-${notif.mensaje}`
-                                        const esLeida  = leidas.includes(key)
-                                        const esAgente = notif.tipo === 'agente'
-                                        return (
-                                            <div key={i}
-                                                className={`notif-item${!esLeida ? (esAgente ? ' urgent' : ' unread') : ''}`}
-                                                onClick={() => handleClickNotif(notif)}
-                                            >
-                                                <span style={{ flexShrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center' }}>{iconoTipo(notif.tipo)}</span>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <p style={{ fontSize: '12.5px', color: 'var(--text)', lineHeight: '1.5', fontWeight: esAgente ? '600' : '400' }}>
-                                                        {notif.mensaje}
-                                                    </p>
-                                                    <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '3px' }}>
-                                                        {tiempoRelativo(notif.tiempo)}
-                                                    </p>
+                                {notificaciones.length === 0 ? (
+                                    <p style={{ padding: '24px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                                        Sin notificaciones pendientes
+                                    </p>
+                                ) : (
+                                    <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                                        {notificaciones.map((notif, i) => {
+                                            const key      = `${notif.tipo}-${notif.mensaje}`
+                                            const esLeida  = leidas.includes(key)
+                                            const esAgente = notif.tipo === 'agente'
+                                            return (
+                                                <div key={i}
+                                                    className={`notif-item${!esLeida ? (esAgente ? ' urgent' : ' unread') : ''}`}
+                                                    onClick={() => handleClickNotif(notif)}
+                                                >
+                                                    <span style={{ flexShrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center' }}>{iconoTipo(notif.tipo)}</span>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <p style={{ fontSize: '12.5px', color: 'var(--text)', lineHeight: '1.5', fontWeight: esAgente ? '600' : '400' }}>
+                                                            {notif.mensaje}
+                                                        </p>
+                                                        <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '3px' }}>
+                                                            {tiempoRelativo(notif.tiempo)}
+                                                        </p>
+                                                    </div>
+                                                    {!esLeida && (
+                                                        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: esAgente ? '#ef4444' : 'var(--accent-blue)', flexShrink: 0, marginTop: '5px' }} />
+                                                    )}
                                                 </div>
-                                                {!esLeida && (
-                                                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: esAgente ? '#ef4444' : 'var(--accent-blue)', flexShrink: 0, marginTop: '5px' }} />
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Perfil */}
-                <div style={{ position: 'relative' }}>
-                    <button
-                        className="tb-profile-btn"
-                        onClick={() => { setMenuPerfil(!menuPerfil); setMenuNotif(false) }}
-                    >
-                        <div className="tb-avatar">
-                            {usuario?.nombre?.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="tb-name">{usuario?.nombre}</span>
-                        <span className="tb-chevron"><IcoChevronDown /></span>
-                    </button>
-
-                    {menuPerfil && (
-                        <div className="tb-dropdown tb-profile-dropdown">
-                            <div className="tb-profile-info">
-                                <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>{usuario?.nombre}</p>
-                                <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>{usuario?.email}</p>
-                                {usuario?.rol_nombre && (
-                                    <span className="tb-role-badge">{usuario.rol_nombre}</span>
+                                            )
+                                        })}
+                                    </div>
                                 )}
                             </div>
-                            <button
-                                className="tb-logout-btn"
-                                onClick={() => { setMenuPerfil(false); onLogout() }}
-                            >
-                                <IcoLogout />
-                                Cerrar sesión
-                            </button>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
 
-                </div>{/* .tb-actions */}
+                    {/* Perfil */}
+                    <div ref={perfilRef} style={{ position: 'relative' }}>
+                        <button
+                            className="tb-profile-btn"
+                            onClick={() => { setMenuPerfil(v => !v); setMenuNotif(false) }}
+                        >
+                            <div className="tb-avatar">
+                                {usuario?.nombre?.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="tb-name">{usuario?.nombre}</span>
+                            <span className="tb-chevron"><IcoChevronDown /></span>
+                        </button>
+
+                        {menuPerfil && (
+                            <div className="tb-dropdown tb-profile-dropdown">
+                                <div className="tb-profile-info">
+                                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>{usuario?.nombre}</p>
+                                    <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>{usuario?.email}</p>
+                                    {usuario?.rol_nombre && (
+                                        <span className="tb-role-badge">{usuario.rol_nombre}</span>
+                                    )}
+                                </div>
+                                <button
+                                    className="tb-logout-btn"
+                                    onClick={() => { setMenuPerfil(false); onLogout() }}
+                                >
+                                    <IcoLogout />
+                                    Cerrar sesión
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                </div>
             </header>
         </>
     )
