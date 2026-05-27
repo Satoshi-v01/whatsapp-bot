@@ -295,23 +295,56 @@ function Chat() {
                                                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                                                 border: esCliente ? `1px solid ${s.borderLight}` : esBot ? `1px solid rgba(99,102,241,0.2)` : 'none'
                                             }}>
-                                                {msg.texto?.startsWith('[imagen:') ? (
-                                                    <div style={{ 
-                                                        padding: '8px', 
-                                                        background: s.surfaceLow, 
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px'
-                                                    }}>
-                                                        <span style={{ color: s.textMuted, display: 'flex' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-                                                        <span style={{ fontSize: '12px', color: s.textMuted }}>
-                                                            Imagen enviada por el cliente
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <p style={{ whiteSpace: 'pre-wrap' }}>{msg.texto}</p>
-                                                )}
+                                                {(() => {
+                                                    const texto = msg.texto || ''
+                                                    const imgMatch = texto.match(/^\[imagen:\s*(.+)\]$/)
+                                                    const audioMatch = texto.match(/^\[audio:\s*(.+)\]$/)
+
+                                                    if (imgMatch) {
+                                                        const mediaId = imgMatch[1].trim()
+                                                        return (
+                                                            <div>
+                                                                <img
+                                                                    src={`/api/media/${mediaId}`}
+                                                                    alt="imagen del cliente"
+                                                                    style={{ maxWidth: '240px', maxHeight: '280px', borderRadius: '10px', display: 'block', cursor: 'pointer' }}
+                                                                    onClick={() => window.open(`/api/media/${mediaId}`, '_blank')}
+                                                                    onError={e => {
+                                                                        e.target.style.display = 'none'
+                                                                        e.target.nextSibling.style.display = 'flex'
+                                                                    }}
+                                                                />
+                                                                <div style={{ display: 'none', padding: '8px', background: s.surfaceLow, borderRadius: '8px', alignItems: 'center', gap: '8px' }}>
+                                                                    <span style={{ color: s.textMuted, display: 'flex' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+                                                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Imagen (no disponible)</span>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    }
+
+                                                    if (audioMatch) {
+                                                        const mediaId = audioMatch[1].trim()
+                                                        return (
+                                                            <div style={{ minWidth: '200px' }}>
+                                                                <audio controls style={{ width: '100%', height: '36px' }}>
+                                                                    <source src={`/api/media/${mediaId}`} />
+                                                                </audio>
+                                                                <span style={{ fontSize: '11px', color: s.textMuted }}>Nota de voz</span>
+                                                            </div>
+                                                        )
+                                                    }
+
+                                                    if (texto === '[audio]') {
+                                                        return (
+                                                            <div style={{ padding: '6px 8px', background: s.surfaceLow, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ color: s.textMuted, display: 'flex' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>
+                                                                <span style={{ fontSize: '12px', color: s.textMuted }}>Nota de voz (sin ID)</span>
+                                                            </div>
+                                                        )
+                                                    }
+
+                                                    return <p style={{ whiteSpace: 'pre-wrap' }}>{texto}</p>
+                                                })()}
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '4px' }}>
                                                     <span style={{ fontSize: '10px', opacity: 0.5 }}>{formatearHora(msg.created_at)}</span>
                                                     {!esCliente && <span style={{ fontSize: '10px', opacity: 0.6 }}>✓✓</span>}

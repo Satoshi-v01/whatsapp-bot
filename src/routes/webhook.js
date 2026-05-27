@@ -53,7 +53,15 @@ router.post('/', async (req, res) => {
             return res.status(200).send('OK')
         }
 
-        if (tipo === 'audio' || tipo === 'video' || tipo === 'document' || tipo === 'sticker') {
+        if (tipo === 'audio') {
+            const audioId = mensaje.audio?.id || ''
+            const textoGuardado = audioId ? `[audio: ${audioId}]` : '[audio]'
+            await guardarMensaje(numero, textoGuardado, 'cliente')
+            await procesarMensaje(numero, audioId, 'audio')
+            return res.status(200).send('OK')
+        }
+
+        if (tipo === 'video' || tipo === 'document' || tipo === 'sticker') {
             await guardarMensaje(numero, `[${tipo}]`, 'cliente')
             await procesarMensaje(numero, '', tipo)
             return res.status(200).send('OK')
