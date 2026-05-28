@@ -8,7 +8,8 @@ import {
     verificarEliminarSubcategoria, confirmarEliminarSubcategoria,
     crearProducto, editarProducto, agregarPresentacion,
     actualizarStock, actualizarPrecio, actualizarCodigoBarras,
-    toggleDisponibleProducto, eliminarPresentacion, eliminarProducto
+    toggleDisponibleProducto, eliminarPresentacion, eliminarProducto,
+    getSecciones, crearSeccion, editarSeccion, eliminarSeccion
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -83,8 +84,16 @@ function Inventario() {
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
     const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
+    const [secciones, setSecciones] = useState([])
+    const [modalSecciones, setModalSecciones] = useState(false)
+    const [nuevaSeccion, setNuevaSeccion] = useState({ nombre: '', color: '#6366f1' })
+    const [editandoSeccion, setEditandoSeccion] = useState(null)
     const [marcasExpandidas, setMarcasExpandidas] = useState({})
     const toggleMarca = (marca) => setMarcasExpandidas(prev => ({ ...prev, [marca]: !prev[marca] }))
+
+    function toSlug(texto) {
+        return texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+    }
     const [modalFraccionar, setModalFraccionar] = useState(null) // { producto, presentacion }
     const [fraccionForm, setFraccionForm] = useState({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', nota: '' })
     const [fraccionando, setFraccionando] = useState(false)
@@ -97,8 +106,13 @@ function Inventario() {
     async function cargarDatos() {
         try {
             setCargando(true)
-            const [prods, cats, mrcs, subs] = await Promise.all([getProductos(), getCategorias(), getMarcas(), getSubcategorias()])
+            const [prods, cats, mrcs, subs, secs] = await Promise.all([getProductos(), getCategorias(), getMarcas(), getSubcategorias(), getSecciones()])
             setProductos(prods); setCategorias(cats); setMarcas(mrcs); setSubcategorias(subs)
+            setSecciones(secs.length > 0 ? secs : [
+                { id: 1, slug: 'balanceados', nombre: 'Balanceados', color: '#1a1a2e', orden: 1 },
+                { id: 2, slug: 'accesorios',  nombre: 'Accesorios',  color: '#0ea5e9', orden: 2 },
+                { id: 3, slug: 'medicamentos',nombre: 'Medicamentos', color: '#10b981', orden: 3 },
+            ])
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -210,6 +224,44 @@ function Inventario() {
                     await cargarDatos()
                 } catch (err) {
                     setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                }
+            }
+        })
+    }
+
+    async function handleCrearSeccion() {
+        const slug = toSlug(nuevaSeccion.nombre)
+        if (!nuevaSeccion.nombre.trim()) return
+        try {
+            await crearSeccion({ nombre: nuevaSeccion.nombre.trim(), slug, color: nuevaSeccion.color, orden: secciones.length + 1 })
+            setNuevaSeccion({ nombre: '', color: '#6366f1' })
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear la sección.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        }
+    }
+    async function handleEditarSeccion(sec) {
+        try {
+            await editarSeccion(sec.id, { nombre: sec.nombre, color: sec.color })
+            setEditandoSeccion(null)
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo editar la sección.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        }
+    }
+    function handleEliminarSeccion(sec) {
+        setModalConfirmar({
+            titulo: 'Eliminar sección',
+            mensaje: `¿Eliminar la sección "${sec.nombre}"? Solo se puede si no tiene productos asignados.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await eliminarSeccion(sec.id)
+                    setModalConfirmar(null)
+                    if (pestanaActiva === sec.slug) setPestanaActiva(secciones[0]?.slug || 'balanceados')
+                    await cargarDatos()
+                } catch (err) {
+                    setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
                 }
             }
         })
@@ -342,10 +394,8 @@ function colorVencimiento(diasParaVencer) {
     const sinStock = productos.reduce((sum, p) => sum + p.presentaciones.filter(pr => pr.stock === 0).length, 0)
 
     const PESTANAS = [
-        { id: 'balanceados', label: 'Balanceados' },
-        { id: 'accesorios',  label: 'Accesorios' },
-        { id: 'medicamentos', label: 'Medicamentos' },
-        { id: 'sin_categoria', label: 'Sin categoria' },
+        ...secciones.map(s => ({ id: s.slug, label: s.nombre, color: s.color })),
+        { id: 'sin_categoria', label: 'Sin categoria', color: '#dc2626' },
     ]
 
     const productosFiltrados = productos
@@ -373,6 +423,8 @@ function colorVencimiento(diasParaVencer) {
         porMarca[marca][sub].push(p)
     })
     const marcasOrdenadas = Object.keys(porMarca).sort((a, b) => a === 'Sin Marca' ? 1 : b === 'Sin Marca' ? -1 : a.localeCompare(b))
+
+    const colorSeccionActiva = PESTANAS.find(t => t.id === pestanaActiva)?.color || '#1a1a2e'
 
     const subcategoriasPestana = subcategorias.filter(s => s.seccion === pestanaActiva)
     const categoriasPestana = categorias.filter(c => !c.seccion || c.seccion === pestanaActiva)
@@ -403,6 +455,7 @@ function colorVencimiento(diasParaVencer) {
                     <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px' }}>Gestioná productos, precios y stock.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setModalSecciones(true)} style={btnSecundario}>Secciones</button>
                     <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
                     <button onClick={() => { setNuevaCategoria({ nombre: '', descripcion: '', seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '' }); setModalCategorias(true) }} style={btnSecundario}>Categorías</button>
                     {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
@@ -437,11 +490,15 @@ function colorVencimiento(diasParaVencer) {
             <div style={{ display: 'flex', gap: '4px', marginBottom: '0', borderBottom: `2px solid ${s.border}`, marginBottom: '0' }}>
                 {PESTANAS.map(t => {
                     const activa = pestanaActiva === t.id
+                    const color = t.color || '#1a1a2e'
+                    const esSinCat = t.id === 'sin_categoria'
+                    const contadorAlerta = esSinCat && contadorPorPestana[t.id] > 0
                     return (
                         <button key={t.id} onClick={() => { setPestanaActiva(t.id); setBuscar('') }}
-                            style={{ padding: '10px 20px', border: 'none', borderBottom: activa ? '2px solid #1a1a2e' : '2px solid transparent', marginBottom: '-2px', background: activa ? s.surface : 'transparent', color: activa ? s.text : s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: activa ? '700' : '500', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s' }}>
+                            style={{ padding: '10px 20px', border: 'none', borderBottom: activa ? `2px solid ${color}` : '2px solid transparent', marginBottom: '-2px', background: activa ? s.surface : 'transparent', color: activa ? s.text : s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: activa ? '700' : '500', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s' }}>
+                            {!esSinCat && <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0, opacity: activa ? 1 : 0.4 }} />}
                             {t.label}
-                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 7px', borderRadius: '10px', background: activa ? (t.id === 'sin_categoria' ? '#dc2626' : '#1a1a2e') : (t.id === 'sin_categoria' && contadorPorPestana[t.id] > 0 ? '#fee2e2' : s.border), color: activa ? 'white' : (t.id === 'sin_categoria' && contadorPorPestana[t.id] > 0 ? '#dc2626' : s.textMuted) }}>{contadorPorPestana[t.id]}</span>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 7px', borderRadius: '10px', background: activa ? color : (contadorAlerta ? '#fee2e2' : s.border), color: activa ? 'white' : (contadorAlerta ? '#dc2626' : s.textMuted) }}>{contadorPorPestana[t.id]}</span>
                         </button>
                     )
                 })}
@@ -702,6 +759,87 @@ function colorVencimiento(diasParaVencer) {
 
             {/* ===== MODALES ===== */}
 
+            {modalSecciones && (
+                <Modal s={s}>
+                    <div style={{ width: '460px', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <div>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Secciones de inventario</h3>
+                                <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>Las secciones son las pestañas principales del inventario.</p>
+                            </div>
+                            <button onClick={() => { setModalSecciones(false); setEditandoSeccion(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                        </div>
+
+                        {/* Crear nueva seccion */}
+                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+                            <label style={labelStyle}>Nueva sección</label>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                <input
+                                    value={nuevaSeccion.nombre}
+                                    onChange={e => setNuevaSeccion({ ...nuevaSeccion, nombre: e.target.value })}
+                                    placeholder="Ej: Reptiles, Aves, Peces..."
+                                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                                />
+                                <input
+                                    type="color"
+                                    value={nuevaSeccion.color}
+                                    onChange={e => setNuevaSeccion({ ...nuevaSeccion, color: e.target.value })}
+                                    title="Color de la sección"
+                                    style={{ width: '42px', height: '42px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+                                />
+                            </div>
+                            {nuevaSeccion.nombre && (
+                                <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '8px' }}>
+                                    Slug: <strong style={{ color: s.text, fontFamily: 'monospace' }}>{toSlug(nuevaSeccion.nombre)}</strong>
+                                </p>
+                            )}
+                            <button onClick={handleCrearSeccion} disabled={!nuevaSeccion.nombre.trim()} style={{ ...btnPrimario, width: '100%', justifyContent: 'center', opacity: nuevaSeccion.nombre.trim() ? 1 : 0.5 }}>
+                                + Agregar sección
+                            </button>
+                        </div>
+
+                        {/* Lista de secciones */}
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {secciones.map(sec => (
+                                <div key={sec.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    {editandoSeccion?.id === sec.id ? (
+                                        <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <input
+                                                value={editandoSeccion.nombre}
+                                                onChange={e => setEditandoSeccion({ ...editandoSeccion, nombre: e.target.value })}
+                                                style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                                            />
+                                            <input
+                                                type="color"
+                                                value={editandoSeccion.color}
+                                                onChange={e => setEditandoSeccion({ ...editandoSeccion, color: e.target.value })}
+                                                style={{ width: '38px', height: '38px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+                                            />
+                                            <button onClick={() => handleEditarSeccion(editandoSeccion)} style={{ ...btnPrimario, padding: '8px 12px', fontSize: '12px' }}>Guardar</button>
+                                            <button onClick={() => setEditandoSeccion(null)} style={{ ...btnSecundario, padding: '8px 10px', fontSize: '12px' }}>✕</button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: sec.color, flexShrink: 0, border: `2px solid ${sec.color}40` }} />
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontSize: '13px', fontWeight: '600', color: s.text, margin: 0 }}>{sec.nombre}</p>
+                                                <p style={{ fontSize: '11px', color: s.textFaint, margin: 0, fontFamily: 'monospace' }}>{sec.slug} · {contadorPorPestana[sec.slug] || 0} productos</p>
+                                            </div>
+                                            <button onClick={() => setEditandoSeccion({ ...sec })} style={{ ...btnSecundario, padding: '5px 10px', fontSize: '12px' }}>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            </button>
+                                            <button onClick={() => handleEliminarSeccion(sec)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {modalMarca && (
                 <Modal s={s}>
                     <div style={{ width: '400px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
@@ -739,9 +877,7 @@ function colorVencimiento(diasParaVencer) {
                                 <label style={{ ...labelStyle, color: '#dc2626', marginBottom: '8px' }}>Categoria del producto</label>
                                 <select value={nuevoProducto.seccion_inventario} onChange={e => setNuevoProducto({ ...nuevoProducto, seccion_inventario: e.target.value })} style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}>
                                     <option value="">-- Seleccionar --</option>
-                                    <option value="balanceados">Balanceados</option>
-                                    <option value="accesorios">Accesorios</option>
-                                    <option value="medicamentos">Medicamentos</option>
+                                    {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                                 </select>
                             </div>
                         )}
@@ -846,9 +982,7 @@ function colorVencimiento(diasParaVencer) {
                                 <label style={{ ...labelStyle, color: '#dc2626', marginBottom: '8px' }}>Asignar categoria del producto</label>
                                 <select value={editarForm.seccion_inventario} onChange={e => setEditarForm({ ...editarForm, seccion_inventario: e.target.value })} style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}>
                                     <option value="">-- Seleccionar --</option>
-                                    <option value="balanceados">Balanceados</option>
-                                    <option value="accesorios">Accesorios</option>
-                                    <option value="medicamentos">Medicamentos</option>
+                                    {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                                 </select>
                             </div>
                         )}
@@ -1096,9 +1230,7 @@ function colorVencimiento(diasParaVencer) {
                             <label style={labelStyle}>Sección</label>
                             <select value={nuevaCategoria.seccion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, seccion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
                                 <option value="">General (todas las secciones)</option>
-                                <option value="balanceados">Balanceados</option>
-                                <option value="accesorios">Accesorios</option>
-                                <option value="medicamentos">Medicamentos</option>
+                                {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                             </select>
                             <button onClick={handleCrearCategoria} style={{ ...btnPrimario, marginTop: '12px', width: '100%', justifyContent: 'center' }}>+ Agregar categoría</button>
                         </div>
@@ -1113,9 +1245,7 @@ function colorVencimiento(diasParaVencer) {
                                             <input defaultValue={cat.nombre} id={`cat-edit-${cat.id}`} style={{ ...inputStyle, marginBottom: 0 }} />
                                             <select defaultValue={cat.seccion || ''} id={`cat-edit-seccion-${cat.id}`} style={{ ...inputStyle, marginBottom: 0 }}>
                                                 <option value="">General (todas las secciones)</option>
-                                                <option value="balanceados">Balanceados</option>
-                                                <option value="accesorios">Accesorios</option>
-                                                <option value="medicamentos">Medicamentos</option>
+                                                {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                                             </select>
                                             <div style={{ display: 'flex', gap: '6px' }}>
                                                 <button onClick={() => handleEditarCategoria(cat.id, { nombre: document.getElementById(`cat-edit-${cat.id}`).value, seccion: document.getElementById(`cat-edit-seccion-${cat.id}`).value || null })} style={{ ...btnPrimario, padding: '6px 12px', flex: 1, justifyContent: 'center' }}>Guardar</button>

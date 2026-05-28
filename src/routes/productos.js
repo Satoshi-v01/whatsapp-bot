@@ -205,6 +205,72 @@ router.delete('/subcategorias/:id', autenticar, verificarPermiso('inventario', '
     }
 })
 
+// ─── Secciones de inventario ─────────────────────────────────
+router.get('/secciones', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
+    try {
+        const r = await db.query(`SELECT * FROM secciones_inventario ORDER BY orden ASC, id ASC`)
+        res.json(r.rows)
+    } catch (error) {
+        if (error.code === '42P01') return res.json([])
+        manejarError(res, error)
+    }
+})
+
+router.post('/secciones', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
+    try {
+        const { nombre, slug, color = '#1a1a2e', orden = 0 } = req.body
+        if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
+        if (!slug?.trim()) return res.status(400).json({ error: 'El slug es requerido' })
+        if (!/^[a-z0-9_-]+$/.test(slug)) return res.status(400).json({ error: 'El slug solo puede tener letras minusculas, numeros, guiones y guiones bajos' })
+        const r = await db.query(
+            `INSERT INTO secciones_inventario (nombre, slug, color, orden) VALUES ($1, $2, $3, $4) RETURNING *`,
+            [nombre.trim(), slug.trim(), color, orden]
+        )
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'seccion', entidad_id: r.rows[0].id, descripcion: `Sección creada: ${nombre}`, dato_nuevo: r.rows[0], ip: req.ip }).catch(() => {})
+        res.status(201).json(r.rows[0])
+    } catch (error) {
+        if (error.code === '23505') return res.status(409).json({ error: 'Ya existe una sección con ese slug' })
+        manejarError(res, error)
+    }
+})
+
+router.patch('/secciones/:id', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
+    try {
+        const { nombre, color, orden } = req.body
+        const r = await db.query(
+            `UPDATE secciones_inventario SET
+               nombre = COALESCE($1, nombre),
+               color  = COALESCE($2, color),
+               orden  = COALESCE($3, orden)
+             WHERE id = $4 RETURNING *`,
+            [nombre?.trim() || null, color || null, orden ?? null, req.params.id]
+        )
+        if (!r.rows.length) return res.status(404).json({ error: 'Sección no encontrada' })
+        res.json(r.rows[0])
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+router.delete('/secciones/:id', autenticar, verificarPermiso('inventario', 'eliminar'), async (req, res) => {
+    try {
+        const seccion = await db.query(`SELECT * FROM secciones_inventario WHERE id = $1`, [req.params.id])
+        if (!seccion.rows.length) return res.status(404).json({ error: 'Sección no encontrada' })
+        const slug = seccion.rows[0].slug
+        const enUso = await db.query(`SELECT COUNT(*) AS c FROM productos WHERE seccion_inventario = $1`, [slug])
+        if (parseInt(enUso.rows[0].c) > 0) {
+            return res.status(409).json({ error: `No se puede eliminar: hay ${enUso.rows[0].c} producto(s) en esta sección. Movalos primero.` })
+        }
+        await db.query(`DELETE FROM secciones_inventario WHERE id = $1`, [req.params.id])
+        await db.query(`UPDATE categorias SET seccion = NULL WHERE seccion = $1`, [slug])
+        await db.query(`UPDATE subcategorias SET seccion = NULL WHERE seccion = $1`, [slug])
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'inventario', entidad: 'seccion', entidad_id: parseInt(req.params.id), descripcion: `Sección eliminada: ${slug}`, dato_anterior: seccion.rows[0], ip: req.ip }).catch(() => {})
+        res.json({ ok: true })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // Buscar presentación por código de barras — ANTES de /:id
 router.get('/codigo-barras/:codigo', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
     try {
