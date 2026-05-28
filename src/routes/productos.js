@@ -441,4 +441,78 @@ router.patch('/presentaciones/:id/codigos', autenticar, verificarPermiso('invent
     }
 })
 
+// Eliminar presentacion
+router.delete('/presentaciones/:id', autenticar, verificarPermiso('inventario', 'eliminar'), async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { id } = req.params
+        const pr = await client.query(`SELECT pr.*, p.nombre as producto_nombre FROM presentaciones pr JOIN productos p ON p.id = pr.producto_id WHERE pr.id = $1`, [id])
+        if (!pr.rows.length) return res.status(404).json({ error: 'Presentación no encontrada' })
+
+        const enVentas = await client.query(
+            `SELECT COUNT(*) as c FROM detalle_ventas WHERE presentacion_id = $1
+             UNION ALL
+             SELECT COUNT(*) as c FROM ordenes_pedido_items WHERE presentacion_id = $1`,
+            [id]
+        )
+        const totalEnVentas = enVentas.rows.reduce((sum, r) => sum + parseInt(r.c), 0)
+        if (totalEnVentas > 0) {
+            return res.status(409).json({ error: `No se puede eliminar: esta presentación tiene ${totalEnVentas} movimiento(s) en ventas/pedidos.` })
+        }
+
+        await client.query('BEGIN')
+        await client.query(`DELETE FROM lotes WHERE presentacion_id = $1`, [id])
+        await client.query(`DELETE FROM presentaciones WHERE id = $1`, [id])
+        await client.query('COMMIT')
+
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'inventario', entidad: 'presentacion', entidad_id: parseInt(id), descripcion: `Presentación eliminada: ${pr.rows[0].nombre} — ${pr.rows[0].producto_nombre}`, dato_anterior: pr.rows[0], ip: req.ip }).catch(() => {})
+        res.json({ ok: true })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
+// Eliminar producto completo
+router.delete('/:id', autenticar, verificarPermiso('inventario', 'eliminar'), async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { id } = req.params
+        const producto = await client.query(`SELECT * FROM productos WHERE id = $1`, [id])
+        if (!producto.rows.length) return res.status(404).json({ error: 'Producto no encontrado' })
+
+        const presentaciones = await client.query(`SELECT id FROM presentaciones WHERE producto_id = $1`, [id])
+        const ids = presentaciones.rows.map(r => r.id)
+
+        if (ids.length > 0) {
+            const enVentas = await client.query(
+                `SELECT (SELECT COUNT(*) FROM detalle_ventas WHERE presentacion_id = ANY($1)) +
+                        (SELECT COUNT(*) FROM ordenes_pedido_items WHERE presentacion_id = ANY($1)) AS total`,
+                [ids]
+            )
+            if (parseInt(enVentas.rows[0].total) > 0) {
+                return res.status(409).json({ error: `No se puede eliminar: el producto tiene movimientos en ventas/pedidos.` })
+            }
+        }
+
+        await client.query('BEGIN')
+        if (ids.length > 0) {
+            await client.query(`DELETE FROM lotes WHERE presentacion_id = ANY($1)`, [ids])
+            await client.query(`DELETE FROM presentaciones WHERE producto_id = $1`, [id])
+        }
+        await client.query(`DELETE FROM productos WHERE id = $1`, [id])
+        await client.query('COMMIT')
+
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'inventario', entidad: 'producto', entidad_id: parseInt(id), descripcion: `Producto eliminado: ${producto.rows[0].nombre}`, dato_anterior: producto.rows[0], ip: req.ip }).catch(() => {})
+        res.json({ ok: true })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
 module.exports = router

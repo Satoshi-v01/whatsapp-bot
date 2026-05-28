@@ -386,4 +386,40 @@ router.post('/:id/facturas', async (req, res) => {
     }
 })
 
+// Eliminar proveedor (con cascada de facturas y pagos)
+router.delete('/:id', autenticar, verificarPermiso('proveedores', 'eliminar'), async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { id } = req.params
+        const proveedor = await client.query(`SELECT * FROM proveedores WHERE id = $1`, [id])
+        if (!proveedor.rows.length) return res.status(404).json({ error: 'Proveedor no encontrado' })
+
+        const facturasPendientes = await client.query(
+            `SELECT COUNT(*) as c FROM facturas_compra WHERE proveedor_id = $1 AND estado IN ('pendiente','pagado_parcial') AND activo = true`,
+            [id]
+        )
+        if (parseInt(facturasPendientes.rows[0].c) > 0) {
+            return res.status(409).json({ error: `No se puede eliminar: el proveedor tiene ${facturasPendientes.rows[0].c} factura(s) pendiente(s) de pago.` })
+        }
+
+        await client.query('BEGIN')
+        const facturas = await client.query(`SELECT id FROM facturas_compra WHERE proveedor_id = $1`, [id])
+        const factIds = facturas.rows.map(r => r.id)
+        if (factIds.length > 0) {
+            await client.query(`DELETE FROM pagos_facturas WHERE factura_id = ANY($1)`, [factIds])
+            await client.query(`DELETE FROM facturas_compra WHERE proveedor_id = $1`, [id])
+        }
+        await client.query(`DELETE FROM proveedores WHERE id = $1`, [id])
+        await client.query('COMMIT')
+
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'proveedores', entidad: 'proveedor', entidad_id: parseInt(id), descripcion: `Proveedor eliminado: ${proveedor.rows[0].nombre}`, dato_anterior: proveedor.rows[0], ip: req.ip }).catch(() => {})
+        res.json({ ok: true })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
 module.exports = router

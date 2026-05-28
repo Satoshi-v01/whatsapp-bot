@@ -296,5 +296,21 @@ router.post('/:id/cuenta-corriente/pagos', autenticar, verificarPermiso('cliente
     }
 })
 
+// Eliminar cliente (soft delete)
+router.delete('/:id', autenticar, verificarPermiso('clientes', 'eliminar'), async (req, res) => {
+    try {
+        const { id } = req.params
+        const cliente = await db.query(`SELECT * FROM clientes WHERE id = $1 AND activo = true`, [id])
+        if (!cliente.rows.length) return res.status(404).json({ error: 'Cliente no encontrado' })
+
+        await db.query(`UPDATE clientes SET activo = false, updated_at = NOW() WHERE id = $1`, [id])
+
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'clientes', entidad: 'cliente', entidad_id: parseInt(id), descripcion: `Cliente eliminado: ${cliente.rows[0].nombre}`, dato_anterior: cliente.rows[0], ip: req.ip }).catch(() => {})
+        res.json({ ok: true })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 module.exports = router
 module.exports.recalcularStats = recalcularStats

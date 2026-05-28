@@ -735,6 +735,61 @@ router.delete('/admin/banners/:id', autenticar, async (req, res) => {
   }
 })
 
+// ─── GET /api/ecommerce/admin/pedidos ─────────────────────────
+router.get('/admin/pedidos', autenticar, async (req, res) => {
+  try {
+    const { estado, limit = 50, offset = 0 } = req.query
+    const conds = [`op.canal = 'pagina_web'`]
+    const vals = []
+    let i = 1
+    if (estado) { conds.push(`op.estado = $${i++}`); vals.push(estado) }
+
+    const resultado = await db.query(
+      `SELECT op.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+              COALESCE(json_agg(json_build_object(
+                'nombre', p.nombre || ' — ' || pr.nombre,
+                'cantidad', opi.cantidad,
+                'precio', opi.precio_unitario
+              ) ORDER BY opi.id) FILTER (WHERE opi.id IS NOT NULL), '[]') AS items
+       FROM ordenes_pedido op
+       LEFT JOIN clientes c ON c.id = op.cliente_id
+       LEFT JOIN ordenes_pedido_items opi ON opi.orden_id = op.id
+       LEFT JOIN presentaciones pr ON pr.id = opi.presentacion_id
+       LEFT JOIN productos p ON p.id = pr.producto_id
+       WHERE ${conds.join(' AND ')}
+       GROUP BY op.id, c.nombre, c.telefono
+       ORDER BY op.created_at DESC
+       LIMIT $${i} OFFSET $${i + 1}`,
+      [...vals, parseInt(limit), parseInt(offset)]
+    )
+    res.json(resultado.rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+// ─── DELETE /api/ecommerce/admin/pedidos/:id ──────────────────
+router.delete('/admin/pedidos/:id', autenticar, async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const orden = await client.query(`SELECT id, numero_pedido FROM ordenes_pedido WHERE id = $1 AND canal = 'pagina_web'`, [req.params.id])
+    if (!orden.rows.length) return res.status(404).json({ error: 'Pedido no encontrado' })
+
+    await client.query('BEGIN')
+    await client.query(`DELETE FROM ordenes_pedido_items WHERE orden_id = $1`, [req.params.id])
+    await client.query(`DELETE FROM ordenes_pedido WHERE id = $1`, [req.params.id])
+    await client.query('COMMIT')
+
+    res.json({ ok: true })
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
 // ─── GET /api/ecommerce/admin/productos ───────────────────────
 // Lista presentaciones con campos editables para el ecommerce
 router.get('/admin/productos', autenticar, async (req, res) => {
