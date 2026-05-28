@@ -119,3 +119,13 @@ export async function confirmarEliminarSubcategoria(id) {
     const res = await api.delete(`/productos/subcategorias/${id}/confirmar`)
     return res.data
 }
+
+export async function eliminarPresentacion(id) {
+    const res = await api.delete(`/productos/presentaciones/${id}`)
+    return res.data
+}
+
+export async function eliminarProducto(id) {
+    const res = await api.delete(`/productos/${id}`)
+    return res.data
+}

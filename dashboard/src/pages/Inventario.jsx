@@ -8,7 +8,7 @@ import {
     verificarEliminarSubcategoria, confirmarEliminarSubcategoria,
     crearProducto, editarProducto, agregarPresentacion,
     actualizarStock, actualizarPrecio, actualizarCodigoBarras,
-    toggleDisponibleProducto
+    toggleDisponibleProducto, eliminarPresentacion, eliminarProducto
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -178,6 +178,41 @@ function Inventario() {
     async function handleAgregarPresentacion(productoId) {
         try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+    }
+
+    function handleEliminarPresentacion(pr, producto) {
+        setModalConfirmar({
+            titulo: 'Eliminar presentacion',
+            mensaje: `¿Eliminar "${pr.nombre}" de ${producto.nombre}? Esta accion no se puede deshacer.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await eliminarPresentacion(pr.id)
+                    setModalConfirmar(null)
+                    await cargarDatos()
+                } catch (err) {
+                    setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar la presentacion.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                }
+            }
+        })
+    }
+
+    function handleEliminarProducto(producto) {
+        setModalConfirmar({
+            titulo: 'Eliminar producto',
+            mensaje: `¿Eliminar "${producto.nombre}" y todas sus presentaciones? Esta accion no se puede deshacer.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await eliminarProducto(producto.id)
+                    setModalConfirmar(null)
+                    setProductoExpandido(null)
+                    await cargarDatos()
+                } catch (err) {
+                    setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                }
+            }
+        })
     }
 
     function abrirModalFraccionar(producto, pr) {
@@ -554,6 +589,10 @@ function colorVencimiento(diasParaVencer) {
                                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                                                         Editar
                                                                     </button>
+                                                                    <button onClick={e => { e.stopPropagation(); handleEliminarProducto(producto) }}
+                                                                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #fca5a5', background: darkMode ? '#450a0a' : '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                                    </button>
                                                                     <span style={{ color: s.textFaint, display: 'flex', alignItems: 'center' }}>
                                                                         {expandido
                                                                             ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -630,6 +669,9 @@ function colorVencimiento(diasParaVencer) {
                                                                                                     <button onClick={() => abrirModalCodigoBarras(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cod.</button>
                                                                                                     <button onClick={() => abrirModalLotes(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Lotes</button>
                                                                                                     <button onClick={() => abrirModalFraccionar(producto, pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Fraccionar</button>
+                                                                                                    <button onClick={e => { e.stopPropagation(); handleEliminarPresentacion(pr, producto) }} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                                                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                                                                    </button>
                                                                                                 </div>
                                                                                             </td>
                                                                                         </tr>

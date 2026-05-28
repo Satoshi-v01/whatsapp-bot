@@ -53,3 +53,8 @@ export async function getReportes(params = {}) {
     const res = await api.get(`/proveedores/reportes/resumen?${query}`)
     return res.data
 }
+
+export async function eliminarProveedor(id) {
+    const res = await api.delete(`/proveedores/${id}`)
+    return res.data
+}

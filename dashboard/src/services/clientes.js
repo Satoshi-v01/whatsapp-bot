@@ -25,3 +25,8 @@ export async function editarCliente(id, datos) {
     const res = await api.patch(`/clientes/${id}`, datos)
     return res.data
 }
+
+export async function eliminarCliente(id) {
+    const res = await api.delete(`/clientes/${id}`)
+    return res.data
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getClientes, getCliente, crearCliente, editarCliente } from '../services/clientes'
+import { getClientes, getCliente, crearCliente, editarCliente, eliminarCliente } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import api from '../services/api'
@@ -407,6 +407,23 @@ function Clientes() {
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <button onClick={() => setClienteSeleccionado(null)} style={{ ...btnSecundario, fontSize: '12px', padding: '8px 14px' }}>← Volver</button>
                                         <button onClick={abrirModalEditar} style={{ ...btnSecundario, fontSize: '12px', padding: '8px 14px' }}>✏️ Editar</button>
+                                        <button onClick={() => {
+                                            setModalConfirmar({
+                                                titulo: 'Eliminar cliente',
+                                                mensaje: `¿Eliminar a "${clienteSeleccionado.nombre}"? El historial de ventas se conserva pero el cliente no aparecera en listados.`,
+                                                textoBoton: 'Eliminar', colorBoton: '#ef4444',
+                                                onConfirmar: async () => {
+                                                    try {
+                                                        await eliminarCliente(clienteSeleccionado.id)
+                                                        setModalConfirmar(null)
+                                                        setClienteSeleccionado(null)
+                                                        await cargarClientes()
+                                                    } catch (err) {
+                                                        setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar el cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                                                    }
+                                                }
+                                            })
+                                        }} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: darkMode ? '#450a0a' : '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Eliminar</button>
                                     </div>
                                 </div>
 

@@ -157,6 +157,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
     const [editForm, setEditForm] = useState({})
     const [guardando, setGuardando] = useState(false)
     const [error, setError] = useState('')
+    const [confirmarEliminar, setConfirmarEliminar] = useState(null)
 
     const cargar = useCallback(async () => {
         setCargando(true)
@@ -192,6 +193,23 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
             disponible: prod.disponible,
             ecommerce_categoria: prod.ecommerce_categoria || '',
             ecommerce_subcategoria_id: prod.ecommerce_subcategoria_id || '',
+        })
+    }
+
+    async function handleEliminarProducto(prod) {
+        setConfirmarEliminar({
+            titulo: 'Eliminar presentacion',
+            mensaje: `¿Eliminar "${prod.producto_nombre} — ${prod.presentacion_nombre}" del inventario? Esta accion no se puede deshacer y fallara si el producto tiene ventas registradas.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await api.delete(`/productos/presentaciones/${prod.presentacion_id}`)
+                    setConfirmarEliminar(null)
+                    await cargar()
+                } catch (err) {
+                    setConfirmarEliminar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setConfirmarEliminar(null) })
+                }
+            }
         })
     }
 
@@ -320,9 +338,14 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                                     <Toggle checked={prod.es_destacado} onChange={v => toggleCampo(prod, 'es_destacado', v)} />
                                                 </td>
                                                 <td style={tdStyle}>
-                                                    <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
-                                                        Editar
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                        <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
+                                                            Editar
+                                                        </button>
+                                                        <button onClick={() => handleEliminarProducto(prod)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )
@@ -333,6 +356,17 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                     </div>
                 )
             })()}
+
+            {confirmarEliminar && (
+                <ModalConfirmar
+                    titulo={confirmarEliminar.titulo}
+                    mensaje={confirmarEliminar.mensaje}
+                    textoBoton={confirmarEliminar.textoBoton}
+                    colorBoton={confirmarEliminar.colorBoton}
+                    onConfirmar={confirmarEliminar.onConfirmar}
+                    onCancelar={() => setConfirmarEliminar(null)}
+                />
+            )}
 
             {/* Modal editar producto */}
             {editando && (
@@ -1080,6 +1114,119 @@ function TabTrafico({ s }) {
                     </table>
                 )}
             </div>
+        </div>
+    )
+}
+
+// ════════════════════════════════════════════════════════════════
+// TAB — PEDIDOS WEB
+// ════════════════════════════════════════════════════════════════
+function TabPedidos({ s, btnSecundario, sharedProps }) {
+    const [pedidos, setPedidos] = useState([])
+    const [cargando, setCargando] = useState(true)
+    const [filtroEstado, setFiltroEstado] = useState('')
+    const [confirmar, setConfirmar] = useState(null)
+
+    const cargar = useCallback(async () => {
+        setCargando(true)
+        try {
+            const params = filtroEstado ? { estado: filtroEstado } : {}
+            const { data } = await api.get('/ecommerce/admin/pedidos', { params })
+            setPedidos(data)
+        } catch { setPedidos([]) }
+        finally { setCargando(false) }
+    }, [filtroEstado])
+
+    useEffect(() => { cargar() }, [cargar])
+
+    async function handleEliminar(pedido) {
+        setConfirmar({
+            titulo: 'Eliminar pedido',
+            mensaje: `¿Eliminar pedido ${pedido.numero_pedido}? Esta accion no se puede deshacer.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await api.delete(`/ecommerce/admin/pedidos/${pedido.id}`)
+                    setConfirmar(null)
+                    await cargar()
+                } catch (err) {
+                    setConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setConfirmar(null) })
+                }
+            }
+        })
+    }
+
+    const ESTADOS = { pendiente: { label: 'Pendiente', color: '#f59e0b', bg: '#fffbeb' }, confirmado: { label: 'Confirmado', color: '#3b82f6', bg: '#eff6ff' }, entregado: { label: 'Entregado', color: '#10b981', bg: '#f0fdf4' }, cancelado: { label: 'Cancelado', color: '#6b7280', bg: '#f9fafb' } }
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: s.text }}>Pedidos de la tienda web</h3>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${s.border}`, background: s.inputBg || s.surface, color: s.text, fontSize: 13 }}>
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="entregado">Entregado</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                    <button onClick={cargar} style={{ ...btnSecundario, padding: '8px 14px', fontSize: 12 }}>↻</button>
+                </div>
+            </div>
+
+            {cargando ? (
+                <p style={{ color: s.textMuted, fontSize: 13, padding: '24px 0', textAlign: 'center' }}>Cargando pedidos...</p>
+            ) : pedidos.length === 0 ? (
+                <p style={{ color: s.textMuted, fontSize: 13, padding: '48px 0', textAlign: 'center' }}>No hay pedidos{filtroEstado ? ` con estado "${filtroEstado}"` : ''}.</p>
+            ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr style={{ background: s.tableTh || s.surfaceLow }}>
+                            {['N° Pedido', 'Cliente', 'Entrega', 'Estado', 'Fecha', ''].map(h => (
+                                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {pedidos.map(p => {
+                            const est = ESTADOS[p.estado] || ESTADOS.pendiente
+                            return (
+                                <tr key={p.id} style={{ borderTop: `1px solid ${s.borderLight || s.border}` }}>
+                                    <td style={{ padding: '10px 12px', fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: s.text }}>{p.numero_pedido}</td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: s.text }}>{p.cliente_nombre || '—'}</p>
+                                        <p style={{ margin: 0, fontSize: 11, color: s.textMuted }}>{p.cliente_telefono || ''}</p>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', fontSize: 12, color: s.textMuted }}>{p.tipo_entrega === 'delivery' ? 'Delivery' : 'Retiro'}</td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: est.bg, color: est.color }}>{est.label}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', fontSize: 12, color: s.textMuted }}>{new Date(p.created_at).toLocaleDateString('es-PY')}</td>
+                                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                        <button onClick={() => handleEliminar(p)}
+                                            style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                            Eliminar
+                                        </button>
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            )}
+
+            {confirmar && (
+                <ModalConfirmar
+                    titulo={confirmar.titulo}
+                    mensaje={confirmar.mensaje}
+                    textoBoton={confirmar.textoBoton}
+                    colorBoton={confirmar.colorBoton}
+                    onConfirmar={confirmar.onConfirmar}
+                    onCancelar={() => setConfirmar(null)}
+                />
+            )}
         </div>
     )
 }

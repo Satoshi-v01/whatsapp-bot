@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getProveedores, crearProveedor, editarProveedor, getFacturas, crearFactura, editarFactura, registrarPago, getReportes } from '../services/proveedores'
+import { getProveedores, crearProveedor, editarProveedor, getFacturas, crearFactura, editarFactura, registrarPago, getReportes, eliminarProveedor } from '../services/proveedores'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha, formatearSoloFecha, fechaHoyPY, fechaInicioMesPY } from '../utils/fecha'
@@ -312,6 +312,23 @@ function Proveedores() {
                                             <button onClick={() => abrirModalEditar(p)}
                                                 style={{ padding: '7px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px' }}>
                                                 ✏️ Editar
+                                            </button>
+                                            <button onClick={() => setModalConfirmar({
+                                                titulo: 'Eliminar proveedor',
+                                                mensaje: `¿Eliminar "${p.nombre}"? Se eliminaran todas sus facturas pagadas. No se puede eliminar si tiene facturas pendientes.`,
+                                                textoBoton: 'Eliminar', colorBoton: '#ef4444',
+                                                onConfirmar: async () => {
+                                                    try {
+                                                        await eliminarProveedor(p.id)
+                                                        setModalConfirmar(null)
+                                                        await cargarDatos()
+                                                    } catch (err) {
+                                                        setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo eliminar el proveedor.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                                                    }
+                                                }
+                                            })}
+                                                style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #fca5a5', background: darkMode ? '#450a0a' : '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                                                Eliminar
                                             </button>
                                             <button onClick={() => { setModalFactura(p.id) }}
                                                 style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
