@@ -120,6 +120,26 @@ export async function confirmarEliminarSubcategoria(id) {
     return res.data
 }
 
+export async function getSecciones() {
+    const res = await api.get('/productos/secciones')
+    return res.data
+}
+
+export async function crearSeccion(datos) {
+    const res = await api.post('/productos/secciones', datos)
+    return res.data
+}
+
+export async function editarSeccion(id, datos) {
+    const res = await api.patch(`/productos/secciones/${id}`, datos)
+    return res.data
+}
+
+export async function eliminarSeccion(id) {
+    const res = await api.delete(`/productos/secciones/${id}`)
+    return res.data
+}
+
 export async function eliminarPresentacion(id) {
     const res = await api.delete(`/productos/presentaciones/${id}`)
     return res.data
