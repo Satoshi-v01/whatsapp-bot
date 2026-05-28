@@ -218,13 +218,15 @@ router.get('/secciones', autenticar, verificarPermiso('inventario', 'ver'), asyn
 
 router.post('/secciones', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
-        const { nombre, slug, color = '#1a1a2e', orden = 0 } = req.body
+        const { nombre, slug, color = '#1a1a2e', orden = 0, tipo = 'generico' } = req.body
         if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
         if (!slug?.trim()) return res.status(400).json({ error: 'El slug es requerido' })
         if (!/^[a-z0-9_-]+$/.test(slug)) return res.status(400).json({ error: 'El slug solo puede tener letras minusculas, numeros, guiones y guiones bajos' })
+        const tiposValidos = ['generico', 'con_especie', 'con_calidad_especie']
+        if (!tiposValidos.includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' })
         const r = await db.query(
-            `INSERT INTO secciones_inventario (nombre, slug, color, orden) VALUES ($1, $2, $3, $4) RETURNING *`,
-            [nombre.trim(), slug.trim(), color, orden]
+            `INSERT INTO secciones_inventario (nombre, slug, color, orden, tipo) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [nombre.trim(), slug.trim(), color, orden, tipo]
         )
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'seccion', entidad_id: r.rows[0].id, descripcion: `Sección creada: ${nombre}`, dato_nuevo: r.rows[0], ip: req.ip }).catch(() => {})
         res.status(201).json(r.rows[0])
@@ -236,14 +238,15 @@ router.post('/secciones', autenticar, verificarPermiso('inventario', 'editar'), 
 
 router.patch('/secciones/:id', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
-        const { nombre, color, orden } = req.body
+        const { nombre, color, orden, tipo } = req.body
         const r = await db.query(
             `UPDATE secciones_inventario SET
                nombre = COALESCE($1, nombre),
                color  = COALESCE($2, color),
-               orden  = COALESCE($3, orden)
-             WHERE id = $4 RETURNING *`,
-            [nombre?.trim() || null, color || null, orden ?? null, req.params.id]
+               orden  = COALESCE($3, orden),
+               tipo   = COALESCE($4, tipo)
+             WHERE id = $5 RETURNING *`,
+            [nombre?.trim() || null, color || null, orden ?? null, tipo || null, req.params.id]
         )
         if (!r.rows.length) return res.status(404).json({ error: 'Sección no encontrada' })
         res.json(r.rows[0])

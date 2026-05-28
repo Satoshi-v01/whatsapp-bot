@@ -86,7 +86,7 @@ function Inventario() {
     const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
     const [secciones, setSecciones] = useState([])
     const [modalSecciones, setModalSecciones] = useState(false)
-    const [nuevaSeccion, setNuevaSeccion] = useState({ nombre: '', color: '#6366f1' })
+    const [nuevaSeccion, setNuevaSeccion] = useState({ nombre: '', color: '#6366f1', tipo: 'generico' })
     const [editandoSeccion, setEditandoSeccion] = useState(null)
     const [marcasExpandidas, setMarcasExpandidas] = useState({})
     const toggleMarca = (marca) => setMarcasExpandidas(prev => ({ ...prev, [marca]: !prev[marca] }))
@@ -109,9 +109,9 @@ function Inventario() {
             const [prods, cats, mrcs, subs, secs] = await Promise.all([getProductos(), getCategorias(), getMarcas(), getSubcategorias(), getSecciones()])
             setProductos(prods); setCategorias(cats); setMarcas(mrcs); setSubcategorias(subs)
             setSecciones(secs.length > 0 ? secs : [
-                { id: 1, slug: 'balanceados', nombre: 'Balanceados', color: '#1a1a2e', orden: 1 },
-                { id: 2, slug: 'accesorios',  nombre: 'Accesorios',  color: '#0ea5e9', orden: 2 },
-                { id: 3, slug: 'medicamentos',nombre: 'Medicamentos', color: '#10b981', orden: 3 },
+                { id: 1, slug: 'balanceados',  nombre: 'Balanceados',  color: '#1a1a2e', orden: 1, tipo: 'con_calidad_especie' },
+                { id: 2, slug: 'accesorios',   nombre: 'Accesorios',   color: '#0ea5e9', orden: 2, tipo: 'con_especie' },
+                { id: 3, slug: 'medicamentos', nombre: 'Medicamentos', color: '#10b981', orden: 3, tipo: 'generico' },
             ])
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
@@ -233,8 +233,8 @@ function Inventario() {
         const slug = toSlug(nuevaSeccion.nombre)
         if (!nuevaSeccion.nombre.trim()) return
         try {
-            await crearSeccion({ nombre: nuevaSeccion.nombre.trim(), slug, color: nuevaSeccion.color, orden: secciones.length + 1 })
-            setNuevaSeccion({ nombre: '', color: '#6366f1' })
+            await crearSeccion({ nombre: nuevaSeccion.nombre.trim(), slug, color: nuevaSeccion.color, tipo: nuevaSeccion.tipo, orden: secciones.length + 1 })
+            setNuevaSeccion({ nombre: '', color: '#6366f1', tipo: 'generico' })
             await cargarDatos()
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear la sección.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
@@ -409,7 +409,7 @@ function colorVencimiento(diasParaVencer) {
         )
 
     function getAgrupadorSecundario(p) {
-        if (pestanaActiva === 'balanceados') return p.subcategoria_nombre || 'Sin Subcategoria'
+        if (tipoActivo === 'con_calidad_especie') return p.subcategoria_nombre || 'Sin Subcategoria'
         if (pestanaActiva === 'sin_categoria') return 'Sin categoria asignada'
         return p.categoria_nombre || 'Sin Categoria'
     }
@@ -425,6 +425,8 @@ function colorVencimiento(diasParaVencer) {
     const marcasOrdenadas = Object.keys(porMarca).sort((a, b) => a === 'Sin Marca' ? 1 : b === 'Sin Marca' ? -1 : a.localeCompare(b))
 
     const colorSeccionActiva = PESTANAS.find(t => t.id === pestanaActiva)?.color || '#1a1a2e'
+    const tipoActivo = secciones.find(s => s.slug === pestanaActiva)?.tipo || 'generico'
+    const getTipoSeccion = (slug) => secciones.find(s => s.slug === slug)?.tipo || 'generico'
 
     const subcategoriasPestana = subcategorias.filter(s => s.seccion === pestanaActiva)
     const categoriasPestana = categorias.filter(c => !c.seccion || c.seccion === pestanaActiva)
@@ -531,7 +533,7 @@ function colorVencimiento(diasParaVencer) {
                     const catsPorMarca = porMarca[marca]
                     const totalStockMarca = Object.values(catsPorMarca).flat().reduce((acc, p) => acc + p.presentaciones.reduce((a, pr) => a + pr.stock, 0), 0)
                     const totalProdsMarca = Object.values(catsPorMarca).flat().length
-                    const sinLabel = pestanaActiva === 'balanceados' ? 'Sin Subcategoria' : 'Sin Categoria'
+                    const sinLabel = tipoActivo === 'con_calidad_especie' ? 'Sin Subcategoria' : 'Sin Categoria'
                     const catsOrdenadas = Object.keys(catsPorMarca).sort((a, b) => a === sinLabel ? 1 : b === sinLabel ? -1 : a.localeCompare(b))
 
                     return (
@@ -576,9 +578,9 @@ function colorVencimiento(diasParaVencer) {
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: s.tableTh }}>
-                                                {(pestanaActiva === 'balanceados'
+                                                {(tipoActivo === 'con_calidad_especie'
                                                     ? ['Producto', 'SKU', 'Calidad', 'Especie', 'Presentaciones', 'Acciones']
-                                                    : pestanaActiva === 'accesorios'
+                                                    : tipoActivo === 'con_especie'
                                                     ? ['Producto', 'SKU', 'Especie', 'Presentaciones', 'Acciones']
                                                     : ['Producto', 'SKU', 'Presentaciones', 'Acciones']
                                                 ).map(h => (
@@ -611,12 +613,12 @@ function colorVencimiento(diasParaVencer) {
                                                                     ? <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', padding: '3px 8px', borderRadius: '6px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>{producto.sku}</span>
                                                                     : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
                                                             </td>
-                                                            {pestanaActiva === 'balanceados' && (
+                                                            {tipoActivo === 'con_calidad_especie' && (
                                                                 <td style={{ padding: '14px 16px' }}>
                                                                     <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>{formatearCalidad(producto.calidad)}</span>
                                                                 </td>
                                                             )}
-                                                            {(pestanaActiva === 'balanceados' || pestanaActiva === 'accesorios') && (
+                                                            {(tipoActivo === 'con_calidad_especie' || tipoActivo === 'con_especie') && (
                                                                 <td style={{ padding: '14px 16px' }}>
                                                                     {producto.especie ? (
                                                                         <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px', background: producto.especie === 'perro' ? (darkMode ? '#1e3a5f' : '#dbeafe') : producto.especie === 'gato' ? (darkMode ? '#2d1b4e' : '#ede9fe') : (darkMode ? '#1a2e1a' : '#dcfce7'), color: producto.especie === 'perro' ? '#2563eb' : producto.especie === 'gato' ? '#7c3aed' : '#16a34a' }}>
@@ -661,7 +663,7 @@ function colorVencimiento(diasParaVencer) {
 
                                                         {expandido && (
                                                             <tr key={`${producto.id}-expand`}>
-                                                                <td colSpan={pestanaActiva === 'balanceados' ? 6 : pestanaActiva === 'accesorios' ? 5 : 4} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
+                                                                <td colSpan={tipoActivo === 'con_calidad_especie' ? 6 : tipoActivo === 'con_especie' ? 5 : 4} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
                                                                     <div style={{ padding: '16px 20px' }}>
                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                                                             <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</p>
@@ -788,6 +790,12 @@ function colorVencimiento(diasParaVencer) {
                                     style={{ width: '42px', height: '42px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
                                 />
                             </div>
+                            <label style={labelStyle}>Comportamiento</label>
+                            <select value={nuevaSeccion.tipo} onChange={e => setNuevaSeccion({ ...nuevaSeccion, tipo: e.target.value })} style={{ ...inputStyle, marginBottom: '8px' }}>
+                                <option value="generico">Genérico — solo categoría (como Medicamentos)</option>
+                                <option value="con_especie">Con especie — categoría + especie (como Accesorios)</option>
+                                <option value="con_calidad_especie">Con calidad y especie — subcategoría + calidad + especie (como Balanceados)</option>
+                            </select>
                             {nuevaSeccion.nombre && (
                                 <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '8px' }}>
                                     Slug: <strong style={{ color: s.text, fontFamily: 'monospace' }}>{toSlug(nuevaSeccion.nombre)}</strong>
@@ -803,20 +811,29 @@ function colorVencimiento(diasParaVencer) {
                             {secciones.map(sec => (
                                 <div key={sec.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     {editandoSeccion?.id === sec.id ? (
-                                        <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <input
-                                                value={editandoSeccion.nombre}
-                                                onChange={e => setEditandoSeccion({ ...editandoSeccion, nombre: e.target.value })}
-                                                style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
-                                            />
-                                            <input
-                                                type="color"
-                                                value={editandoSeccion.color}
-                                                onChange={e => setEditandoSeccion({ ...editandoSeccion, color: e.target.value })}
-                                                style={{ width: '38px', height: '38px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
-                                            />
-                                            <button onClick={() => handleEditarSeccion(editandoSeccion)} style={{ ...btnPrimario, padding: '8px 12px', fontSize: '12px' }}>Guardar</button>
-                                            <button onClick={() => setEditandoSeccion(null)} style={{ ...btnSecundario, padding: '8px 10px', fontSize: '12px' }}>✕</button>
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input
+                                                    value={editandoSeccion.nombre}
+                                                    onChange={e => setEditandoSeccion({ ...editandoSeccion, nombre: e.target.value })}
+                                                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                                                />
+                                                <input
+                                                    type="color"
+                                                    value={editandoSeccion.color}
+                                                    onChange={e => setEditandoSeccion({ ...editandoSeccion, color: e.target.value })}
+                                                    style={{ width: '38px', height: '38px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+                                                />
+                                            </div>
+                                            <select value={editandoSeccion.tipo} onChange={e => setEditandoSeccion({ ...editandoSeccion, tipo: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                                <option value="generico">Genérico (como Medicamentos)</option>
+                                                <option value="con_especie">Con especie (como Accesorios)</option>
+                                                <option value="con_calidad_especie">Con calidad y especie (como Balanceados)</option>
+                                            </select>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                <button onClick={() => handleEditarSeccion(editandoSeccion)} style={{ ...btnPrimario, padding: '8px 12px', fontSize: '12px', flex: 1, justifyContent: 'center' }}>Guardar</button>
+                                                <button onClick={() => setEditandoSeccion(null)} style={{ ...btnSecundario, padding: '8px 10px', fontSize: '12px' }}>✕</button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <>
@@ -893,8 +910,8 @@ function colorVencimiento(diasParaVencer) {
                         <label style={labelStyle}>Descripción</label>
                         <input value={nuevoProducto.descripcion} onChange={e => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} style={inputStyle} />
 
-                        {/* Campos especificos por pestana */}
-                        {(nuevoProducto.seccion_inventario || pestanaActiva) === 'balanceados' && (
+                        {/* Campos especificos por tipo de seccion */}
+                        {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_calidad_especie' && (
                             <>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
                                     <div>
@@ -924,7 +941,7 @@ function colorVencimiento(diasParaVencer) {
                             </>
                         )}
 
-                        {(nuevoProducto.seccion_inventario || pestanaActiva) === 'accesorios' && (
+                        {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_especie' && (
                             <>
                                 <label style={labelStyle}>Categoria</label>
                                 <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
@@ -952,11 +969,11 @@ function colorVencimiento(diasParaVencer) {
                             </>
                         )}
 
-                        {(nuevoProducto.seccion_inventario || pestanaActiva) === 'medicamentos' && (
+                        {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'generico' && (nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) && (
                             <>
-                                <label style={labelStyle}>Uso / Tipo</label>
+                                <label style={labelStyle}>Categoría</label>
                                 <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
-                                    <option value="">Sin tipo</option>
+                                    <option value="">Sin categoría</option>
                                     {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
                             </>
@@ -998,7 +1015,7 @@ function colorVencimiento(diasParaVencer) {
                         <label style={labelStyle}>Descripción</label>
                         <input value={editarForm.descripcion} onChange={e => setEditarForm({ ...editarForm, descripcion: e.target.value })} style={inputStyle} />
 
-                        {(editarForm.seccion_inventario || pestanaActiva) === 'balanceados' && (
+                        {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_calidad_especie' && (
                             <>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
                                     <div>
@@ -1028,7 +1045,7 @@ function colorVencimiento(diasParaVencer) {
                             </>
                         )}
 
-                        {(editarForm.seccion_inventario || pestanaActiva) === 'accesorios' && (
+                        {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_especie' && (
                             <>
                                 <label style={labelStyle}>Categoria</label>
                                 <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
@@ -1056,12 +1073,12 @@ function colorVencimiento(diasParaVencer) {
                             </>
                         )}
 
-                        {(editarForm.seccion_inventario || pestanaActiva) === 'medicamentos' && (
+                        {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'generico' && (editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) && (
                             <>
-                                <label style={labelStyle}>Uso / Tipo</label>
+                                <label style={labelStyle}>Categoría</label>
                                 <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
-                                    <option value="">Sin tipo</option>
-                                    {catsPara(editarForm.seccion_inventario).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                    <option value="">Sin categoría</option>
+                                    {catsPara(editarForm.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
                             </>
                         )}
@@ -1172,7 +1189,7 @@ function colorVencimiento(diasParaVencer) {
                             <div>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Subcategorias — {pestanaActiva}</h3>
                                 <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>
-                                    {pestanaActiva === 'balanceados' ? 'Mini, Maxi, Cachorro, Senior...' : pestanaActiva === 'accesorios' ? 'XS, S, M, L, XL...' : 'Tamaños o variantes'}
+                                    {tipoActivo === 'con_calidad_especie' ? 'Mini, Maxi, Cachorro, Senior...' : tipoActivo === 'con_especie' ? 'XS, S, M, L, XL...' : 'Tamaños o variantes'}
                                 </p>
                             </div>
                             <button onClick={() => { setModalSubcategorias(false); setEditandoSubcategoria(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
