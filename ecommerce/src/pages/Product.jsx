@@ -201,6 +201,11 @@ export default function Product() {
   const { addItem } = useCart()
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const [selectedPres, setSelectedPres] = useState(null)
+
+  // Seleccionar primera presentación con stock cuando carga
+  const presentaciones = product?.presentaciones || []
+  const presActual = selectedPres || presentaciones.find(p => p.stock > 0) || presentaciones[0] || null
 
   if (loading) {
     return (
@@ -244,9 +249,11 @@ export default function Product() {
     )
   }
 
-  const { id, nombre, descripcion, precio_venta, stock, imagen_url, categoria_slug, es_novedad, marca } = product
+  const { id, nombre, descripcion, imagen_url, categoria_slug, es_novedad, marca } = product
+  const precio_venta = presActual?.precio_venta || product.precio_desde || 0
+  const stock = presActual?.stock || 0
   const category = CATEGORIES.find(c => c.slug === categoria_slug)
-  const outOfStock = stock === 0
+  const outOfStock = !presActual || stock === 0
 
   const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
 
@@ -308,7 +315,17 @@ export default function Product() {
   }
 
   function handleAddToCart() {
-    addItem({ ...product, cantidad: qty })
+    if (!presActual) return
+    addItem({
+      id: presActual.id,
+      nombre: presentaciones.length > 1 ? `${nombre} — ${presActual.nombre}` : nombre,
+      precio_venta: presActual.precio_venta,
+      stock: presActual.stock,
+      imagen_url,
+      slug,
+      marca,
+      cantidad: qty,
+    })
     setAdded(true)
     setTimeout(() => setAdded(false), 1800)
   }
@@ -442,6 +459,37 @@ export default function Product() {
                 >
                   {nombre}
                 </h1>
+
+                {/* Selector de presentaciones */}
+                {presentaciones.length > 1 && (
+                  <div>
+                    <p className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                      Presentación:
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {presentaciones.map(pr => (
+                        <button
+                          key={pr.id}
+                          onClick={() => { setSelectedPres(pr); setQty(1) }}
+                          disabled={!pr.disponible || pr.stock === 0}
+                          style={{
+                            padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 700,
+                            border: `2px solid ${presActual?.id === pr.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                            background: presActual?.id === pr.id ? 'var(--color-primary)' : '#fff',
+                            color: presActual?.id === pr.id ? '#fff' : (!pr.disponible || pr.stock === 0) ? 'var(--color-text-muted)' : 'var(--color-text)',
+                            cursor: (!pr.disponible || pr.stock === 0) ? 'not-allowed' : 'pointer',
+                            opacity: (!pr.disponible || pr.stock === 0) ? 0.45 : 1,
+                            textDecoration: (!pr.disponible || pr.stock === 0) ? 'line-through' : 'none',
+                            transition: 'all 0.15s',
+                            fontFamily: 'Inter, system-ui, sans-serif',
+                          }}
+                        >
+                          {pr.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Precio */}
                 <p

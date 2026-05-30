@@ -16,20 +16,6 @@ function IconCheck({ size = 16 }) {
     </svg>
   )
 }
-function IconStar({ size = 13, filled = true }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? '#ffa601' : 'none'} stroke="#ffa601" strokeWidth="1.5" aria-hidden="true">
-      <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/>
-    </svg>
-  )
-}
-function IconHeart({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8Z"/>
-    </svg>
-  )
-}
 
 function PlaceholderImage({ nombre }) {
   return (
@@ -57,7 +43,7 @@ function AddToCartBtn({ stock, onClick }) {
     setTimeout(() => setAdded(false), 1200)
   }
 
-  if (stock === 0) {
+  if (!stock || stock === 0) {
     return (
       <div style={{
         width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
@@ -89,21 +75,25 @@ function AddToCartBtn({ stock, onClick }) {
   )
 }
 
-// Static 4-star display (puede evolucionar cuando el API tenga ratings)
-function StarRating({ rating = 4.8, reviews }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <IconStar size={13} />
-      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text)' }}>{rating}</span>
-      {reviews && <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>({reviews})</span>}
-    </div>
-  )
-}
-
 export default function ProductCard({ product, onAddToCart, eager = false }) {
-  const { nombre, precio_venta, precio_original, stock, imagen_url, es_novedad, slug, marca, rating, reviews } = product
+  const { nombre, imagen_url, es_novedad, slug, marca, presentaciones = [], rating, reviews } = product
+
   const [hovered, setHovered] = useState(false)
-  const outOfStock = stock === 0
+  const [selectedPres, setSelectedPres] = useState(() => presentaciones.find(p => p.stock > 0) || presentaciones[0] || null)
+
+  const precio = selectedPres?.precio_venta || product.precio_desde || 0
+  const stock = selectedPres?.stock || 0
+  const outOfStock = !selectedPres || stock === 0
+
+  const cartItem = selectedPres ? {
+    id: selectedPres.id,
+    nombre: presentaciones.length > 1 ? `${nombre} — ${selectedPres.nombre}` : nombre,
+    precio_venta: selectedPres.precio_venta,
+    stock: selectedPres.stock,
+    imagen_url,
+    slug,
+    marca,
+  } : null
 
   return (
     <article
@@ -122,7 +112,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
         opacity: outOfStock ? 0.75 : 1,
       }}
     >
-      {/* ── Image ── */}
+      {/* ── Imagen ── */}
       <Link to={`/producto/${slug}`} tabIndex={-1} aria-hidden="true" style={{ display: 'block', position: 'relative', aspectRatio: '1 / 1', background: 'var(--color-bg-elevated)', overflow: 'hidden', flexShrink: 0 }}>
         {imagen_url ? (
           <img
@@ -134,8 +124,6 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
         ) : (
           <PlaceholderImage nombre={nombre} />
         )}
-
-        {/* Badge */}
         {es_novedad && (
           <div style={{
             position: 'absolute', top: 12, left: 12,
@@ -146,33 +134,17 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
             Nuevo
           </div>
         )}
-
-        {/* Heart */}
-        <button
-          aria-label="Agregar a favoritos"
-          onClick={e => e.preventDefault()}
-          style={{
-            position: 'absolute', top: 10, right: 10,
-            background: '#fff', border: 'none', borderRadius: '50%',
-            width: 34, height: 34, cursor: 'pointer', display: 'grid', placeItems: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)', color: 'var(--color-text-muted)',
-          }}
-        >
-          <IconHeart size={16} />
-        </button>
       </Link>
 
-      {/* ── Content ── */}
+      {/* ── Contenido ── */}
       <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
 
-        {/* Brand */}
         {marca && (
           <div style={{ fontSize: 11, color: 'var(--color-primary)', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {marca}
           </div>
         )}
 
-        {/* Name */}
         <Link
           to={`/producto/${slug}`}
           style={{
@@ -185,25 +157,40 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
           {nombre}
         </Link>
 
-        {/* Stars */}
-        <StarRating rating={rating ?? 4.8} reviews={reviews} />
-
-        {/* Price + Add to cart */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', gap: 8, paddingTop: 4 }}>
-          <div>
-            {precio_original && (
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textDecoration: 'line-through', lineHeight: 1 }}>
-                {formatPrice(precio_original)}
-              </div>
-            )}
-            <div style={{ fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 19, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3, lineHeight: 1.1 }}>
-              {formatPrice(precio_venta)}
-            </div>
+        {/* Pills de presentaciones */}
+        {presentaciones.length > 1 && (
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
+            {presentaciones.map(pr => (
+              <button
+                key={pr.id}
+                onClick={e => { e.preventDefault(); setSelectedPres(pr) }}
+                disabled={pr.stock === 0}
+                style={{
+                  padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                  border: `2px solid ${selectedPres?.id === pr.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  background: selectedPres?.id === pr.id ? 'var(--color-primary)' : 'transparent',
+                  color: selectedPres?.id === pr.id ? '#fff' : pr.stock === 0 ? 'var(--color-text-muted)' : 'var(--color-text)',
+                  cursor: pr.stock === 0 ? 'not-allowed' : 'pointer',
+                  opacity: pr.stock === 0 ? 0.4 : 1,
+                  transition: 'all 0.15s',
+                  textDecoration: pr.stock === 0 ? 'line-through' : 'none',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                }}
+              >
+                {pr.nombre}
+              </button>
+            ))}
           </div>
-          <AddToCartBtn stock={stock} onClick={() => onAddToCart?.(product)} />
+        )}
+
+        {/* Precio + agregar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', gap: 8, paddingTop: 4 }}>
+          <div style={{ fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 19, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3, lineHeight: 1.1 }}>
+            {formatPrice(precio)}
+          </div>
+          <AddToCartBtn stock={stock} onClick={() => cartItem && onAddToCart?.(cartItem)} />
         </div>
 
-        {/* Sin stock label */}
         {outOfStock && (
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 4 }}>
             Sin stock
