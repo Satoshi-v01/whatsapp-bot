@@ -15,6 +15,11 @@ export async function actualizarEstadoVenta(id, estado) {
     return res.data
 }
 
+export async function anularVenta(id) {
+    const res = await api.post(`/ventas/${id}/anular`)
+    return res.data
+}
+
 export async function registrarVentaPresencial(datos) {
     const res = await api.post('/ventas/presencial', datos)
     return res.data
