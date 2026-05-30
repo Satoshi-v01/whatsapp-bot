@@ -404,7 +404,11 @@ function colorVencimiento(diasParaVencer) {
     function margen(pr) {
         const { precio } = calcularPrecioEfectivo(pr)
         if (!precio || !pr.precio_compra) return null
-        return Math.round(((precio - pr.precio_compra) / precio) * 100)
+        const ganancia = precio - pr.precio_compra
+        return {
+            markup: Math.round((ganancia / pr.precio_compra) * 100),
+            margenVenta: Math.round((ganancia / precio) * 100),
+        }
     }
 
     const totalProductos = productos.length
@@ -724,11 +728,15 @@ function colorVencimiento(diasParaVencer) {
                                                                                             </td>
                                                                                             <td style={{ padding: '10px 12px' }}>
                                                                                                 {mg !== null ? (
-                                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                                        <span style={{ fontSize: '13px', fontWeight: '700', color: mg >= 20 ? '#10b981' : mg >= 10 ? '#f59e0b' : '#ef4444' }}>{mg}%</span>
-                                                                                                        <div style={{ width: '48px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
-                                                                                                            <div style={{ width: `${Math.min(mg, 100)}%`, height: '100%', background: mg >= 20 ? '#10b981' : mg >= 10 ? '#f59e0b' : '#ef4444', borderRadius: '2px' }} />
+                                                                                                    <div>
+                                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                                                                                            <span style={{ fontSize: '12px', fontWeight: '700', color: mg.markup >= 20 ? '#10b981' : mg.markup >= 10 ? '#f59e0b' : '#ef4444' }}>{mg.markup}%</span>
+                                                                                                            <div style={{ width: '40px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
+                                                                                                                <div style={{ width: `${Math.min(mg.markup, 100)}%`, height: '100%', background: mg.markup >= 20 ? '#10b981' : mg.markup >= 10 ? '#f59e0b' : '#ef4444', borderRadius: '2px' }} />
+                                                                                                            </div>
+                                                                                                            <span style={{ fontSize: '10px', color: s.textFaint }}>ganancia</span>
                                                                                                         </div>
+                                                                                                        <div style={{ fontSize: '10px', color: s.textFaint }}>{mg.margenVenta}% venta</div>
                                                                                                     </div>
                                                                                                 ) : <span style={{ color: s.textFaint }}>—</span>}
                                                                                             </td>
