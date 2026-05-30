@@ -7,7 +7,7 @@ const { manejarError } = require('../middleware/validar')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 // 1. Ver todas las conversaciones activas
-router.get('/', autenticar, verificarPermiso('sesiones', 'ver'), async (req, res) => {
+router.get('/', autenticar, verificarPermiso('chat', 'ver'), async (req, res) => {
     try {
         const resultado = await db.query(
             `SELECT s.*, u.nombre as agente_nombre
@@ -22,7 +22,7 @@ router.get('/', autenticar, verificarPermiso('sesiones', 'ver'), async (req, res
 })
 
 // 2. Ver una conversación específica
-router.get('/:numero', autenticar, verificarPermiso('sesiones', 'ver'), async (req, res) => {
+router.get('/:numero', autenticar, verificarPermiso('chat', 'ver'), async (req, res) => {
     try {
         const { numero } = req.params
         const resultado = await db.query(
@@ -38,7 +38,7 @@ router.get('/:numero', autenticar, verificarPermiso('sesiones', 'ver'), async (r
     }
 })
 
-router.get('/:numero/mensajes', autenticar, verificarPermiso('sesiones', 'ver'), async (req, res) => {
+router.get('/:numero/mensajes', autenticar, verificarPermiso('chat', 'ver'), async (req, res) => {
     try {
         const { numero } = req.params
         const { obtenerMensajes } = require('../services/mensajes')
@@ -50,7 +50,7 @@ router.get('/:numero/mensajes', autenticar, verificarPermiso('sesiones', 'ver'),
 })
 
 // 3. Tomar el control de una conversación
-router.patch('/:numero/tomar', autenticar, verificarPermiso('sesiones', 'gestionar'), async (req, res) => {
+router.patch('/:numero/tomar', autenticar, verificarPermiso('chat', 'gestionar'), async (req, res) => {
     try {
         const { numero } = req.params
         const { agente_id } = req.body
@@ -76,7 +76,7 @@ router.patch('/:numero/tomar', autenticar, verificarPermiso('sesiones', 'gestion
     }
 })
 
-router.patch('/:numero/cerrar', autenticar, verificarPermiso('sesiones', 'gestionar'), async (req, res) => {
+router.patch('/:numero/cerrar', autenticar, verificarPermiso('chat', 'gestionar'), async (req, res) => {
     try {
         const { numero } = req.params
 
@@ -95,7 +95,7 @@ router.patch('/:numero/cerrar', autenticar, verificarPermiso('sesiones', 'gestio
 })
 
 // 4. El agente responde al cliente
-router.post('/:numero/responder', autenticar, verificarPermiso('sesiones', 'gestionar'), async (req, res) => {
+router.post('/:numero/responder', autenticar, verificarPermiso('chat', 'gestionar'), async (req, res) => {
     try {
         const { numero } = req.params
         const { texto } = req.body
@@ -119,7 +119,7 @@ router.post('/:numero/responder', autenticar, verificarPermiso('sesiones', 'gest
 })
 
 // 5. Devolver el control al bot
-router.patch('/:numero/devolver', autenticar, verificarPermiso('sesiones', 'gestionar'), async (req, res) => {
+router.patch('/:numero/devolver', autenticar, verificarPermiso('chat', 'gestionar'), async (req, res) => {
     try {
         const { numero } = req.params
 
