@@ -214,6 +214,9 @@ router.get('/productos', async (req, res) => {
            pr.stock,
            p.id AS producto_id,
            p.nombre AS nombre_base,
+           p.especie,
+           p.calidad,
+           m.nombre AS marca_nombre,
            COALESCE(p.descripcion, '') AS descripcion,
            COALESCE(p.imagen_url, '') AS imagen_url,
            COALESCE(p.es_novedad, false) AS es_novedad,
@@ -226,12 +229,13 @@ router.get('/productos', async (req, res) => {
          FROM presentaciones pr
          JOIN productos p ON p.id = pr.producto_id
          LEFT JOIN categorias c ON c.id = p.categoria_id
+         LEFT JOIN marcas m ON m.id = p.marca_id
          LEFT JOIN ordenes_pedido_items opi ON opi.presentacion_id = pr.id
          LEFT JOIN ordenes_pedido op ON op.id = opi.orden_id
          ${where}
          GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.precio_tarjeta, pr.precio_descuento, pr.descuento_activo,
                   pr.descuento_desde, pr.descuento_hasta, pr.stock,
-                  p.id, p.nombre, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, c.nombre
+                  p.id, p.nombre, p.especie, p.calidad, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, c.nombre, m.nombre
          ORDER BY ${orderVentas}
          LIMIT $${i} OFFSET $${i + 1}`,
         [...valores, limitInt, offsetInt]
@@ -253,6 +257,9 @@ router.get('/productos', async (req, res) => {
            pr.stock,
            p.id AS producto_id,
            p.nombre AS nombre_base,
+           p.especie,
+           p.calidad,
+           m.nombre AS marca_nombre,
            COALESCE(p.descripcion, '') AS descripcion,
            COALESCE(p.imagen_url, '') AS imagen_url,
            COALESCE(p.es_novedad, false) AS es_novedad,
@@ -261,6 +268,7 @@ router.get('/productos', async (req, res) => {
          FROM presentaciones pr
          JOIN productos p ON p.id = pr.producto_id
          LEFT JOIN categorias c ON c.id = p.categoria_id
+         LEFT JOIN marcas m ON m.id = p.marca_id
          ${where}
          ORDER BY ${orderBy}
          LIMIT $${i} OFFSET $${i + 1}`,
@@ -270,7 +278,7 @@ router.get('/productos', async (req, res) => {
 
     const items = itemsResult.rows.map(row => ({
       id: row.id,
-      nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
+      nombre: [row.especie, row.marca_nombre, row.calidad, row.presentacion_nombre].filter(Boolean).join(' ') || `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
       precio_venta: Number(row.precio_web),
       precio_original: row.precio_original ? Number(row.precio_original) : null,
@@ -311,6 +319,9 @@ router.get('/productos/:slug', async (req, res) => {
          pr.stock,
          p.id AS producto_id,
          p.nombre AS nombre_base,
+         p.especie,
+         p.calidad,
+         m.nombre AS marca_nombre,
          COALESCE(p.descripcion, '') AS descripcion,
          COALESCE(p.imagen_url, '') AS imagen_url,
          COALESCE(p.es_novedad, false) AS es_novedad,
@@ -319,6 +330,7 @@ router.get('/productos/:slug', async (req, res) => {
        FROM presentaciones pr
        JOIN productos p ON p.id = pr.producto_id
        LEFT JOIN categorias c ON c.id = p.categoria_id
+       LEFT JOIN marcas m ON m.id = p.marca_id
        WHERE pr.id = $1 AND pr.disponible = true`,
       [presentacionId]
     )
@@ -330,7 +342,7 @@ router.get('/productos/:slug', async (req, res) => {
     const row = resultado.rows[0]
     res.json({
       id: row.id,
-      nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
+      nombre: [row.especie, row.marca_nombre, row.calidad, row.presentacion_nombre].filter(Boolean).join(' ') || `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
       precio_venta: Number(row.precio_web),
       precio_original: row.precio_original ? Number(row.precio_original) : null,
