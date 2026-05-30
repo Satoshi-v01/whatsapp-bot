@@ -38,7 +38,7 @@ router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, r
 router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
-        const { presentacion_origen_id, cantidad_origen, presentacion_destino_id, cantidad_destino, nota } = req.body
+        const { presentacion_origen_id, cantidad_origen, presentacion_destino_id, cantidad_destino, precio_venta, precio_compra, nota } = req.body
         const usuario_id = req.usuario?.id
         const usuario_nombre = req.usuario?.nombre
 
@@ -82,11 +82,19 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
             [cantidad_origen, presentacion_origen_id]
         )
 
-        // Sumar stock destino
-        await client.query(
-            `UPDATE presentaciones SET stock = stock + $1, updated_at = NOW() WHERE id = $2`,
-            [cantidad_destino, presentacion_destino_id]
-        )
+        // Sumar stock destino (y actualizar precios si se enviaron)
+        if (precio_venta || precio_compra) {
+            const campos = ['stock = stock + $1', 'updated_at = NOW()']
+            const vals = [cantidad_destino, presentacion_destino_id]
+            if (precio_venta) { campos.push(`precio_venta = $${vals.length + 1}`); vals.push(precio_venta) }
+            if (precio_compra) { campos.push(`precio_compra = $${vals.length + 1}`); vals.push(precio_compra) }
+            await client.query(`UPDATE presentaciones SET ${campos.join(', ')} WHERE id = $2`, vals)
+        } else {
+            await client.query(
+                `UPDATE presentaciones SET stock = stock + $1, updated_at = NOW() WHERE id = $2`,
+                [cantidad_destino, presentacion_destino_id]
+            )
+        }
 
         // Registrar transformación
         const transRes = await client.query(

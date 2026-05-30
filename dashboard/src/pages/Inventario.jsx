@@ -268,7 +268,7 @@ function Inventario() {
     }
 
     function abrirModalFraccionar(producto, pr) {
-        setFraccionForm({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', nota: '' })
+        setFraccionForm({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', precio_venta: '', precio_compra: '', nota: '' })
         setModalFraccionar({ producto, presentacion: pr })
     }
 
@@ -276,7 +276,7 @@ function Inventario() {
         if (!fraccionForm.presentacion_destino_id) return setModalConfirmar({ titulo: 'Error', mensaje: 'Seleccioná la presentación destino.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         const cantOrigen = parseInt(fraccionForm.cantidad_origen)
         const cantDestino = parseInt(fraccionForm.cantidad_destino)
-        if (!cantOrigen || cantOrigen < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad a transformar debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        if (!cantOrigen || cantOrigen < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad a fraccionar debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         if (!cantDestino || cantDestino < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad resultante debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         try {
             setFraccionando(true)
@@ -285,12 +285,14 @@ function Inventario() {
                 cantidad_origen: cantOrigen,
                 presentacion_destino_id: parseInt(fraccionForm.presentacion_destino_id),
                 cantidad_destino: cantDestino,
+                precio_venta: fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null,
+                precio_compra: fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null,
                 nota: fraccionForm.nota || null
             })
             setModalFraccionar(null)
             await cargarDatos()
         } catch (err) {
-            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar la transformación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar el fraccionamiento.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally {
             setFraccionando(false)
         }
@@ -1457,21 +1459,21 @@ function colorVencimiento(diasParaVencer) {
                 const destino = otrasPresent.find(p => p.id === parseInt(fraccionForm.presentacion_destino_id))
                 return (
                     <Modal s={s} zIndex={2000}>
-                        <div style={{ width: '460px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <div style={{ width: '480px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Fraccionar stock</h3>
                                 <button onClick={() => setModalFraccionar(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
                             </div>
-                            <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>{producto.nombre}</p>
+                            <p style={{ fontSize: '13px', fontWeight: '600', color: '#6d28d9', marginBottom: '18px' }}>{producto.nombre}</p>
 
                             {/* Origen */}
                             <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Origen</p>
+                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Origen — {pr.nombre}</p>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{pr.nombre}</span>
-                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Stock: <strong style={{ color: cantOrigen > pr.stock ? '#ef4444' : '#10b981' }}>{pr.stock - cantOrigen >= 0 ? pr.stock - cantOrigen : pr.stock}</strong> / {pr.stock}</span>
+                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Stock disponible: <strong style={{ color: s.text }}>{pr.stock}</strong></span>
+                                    {cantOrigen > 0 && <span style={{ fontSize: '12px', color: s.textMuted }}>Quedará: <strong style={{ color: cantOrigen > pr.stock ? '#ef4444' : '#10b981' }}>{pr.stock - cantOrigen >= 0 ? pr.stock - cantOrigen : '—'}</strong></span>}
                                 </div>
-                                <label style={labelStyle}>Cantidad a transformar</label>
+                                <label style={labelStyle}>Cantidad a fraccionar</label>
                                 <input
                                     type="number" min="1" max={pr.stock}
                                     value={fraccionForm.cantidad_origen}
@@ -1484,23 +1486,25 @@ function colorVencimiento(diasParaVencer) {
 
                             {/* Destino */}
                             <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Destino</p>
-                                <label style={labelStyle}>Presentación destino</label>
+                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Producto fraccionado</p>
                                 {otrasPresent.length === 0 ? (
                                     <p style={{ fontSize: '12.5px', color: '#f59e0b', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px' }}>
                                         Este producto solo tiene una presentación. Agregá otra presentación primero para poder fraccionar.
                                     </p>
                                 ) : (
-                                    <select
-                                        value={fraccionForm.presentacion_destino_id}
-                                        onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
-                                        style={{ ...inputStyle, marginBottom: '10px' }}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {otrasPresent.map(p => (
-                                            <option key={p.id} value={p.id}>{p.nombre} (stock actual: {p.stock})</option>
-                                        ))}
-                                    </select>
+                                    <>
+                                        <label style={labelStyle}>Presentación destino</label>
+                                        <select
+                                            value={fraccionForm.presentacion_destino_id}
+                                            onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
+                                            style={{ ...inputStyle, marginBottom: '10px' }}
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            {otrasPresent.map(p => (
+                                                <option key={p.id} value={p.id}>{p.nombre} (stock actual: {p.stock})</option>
+                                            ))}
+                                        </select>
+                                    </>
                                 )}
                                 {destino && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -1514,8 +1518,30 @@ function colorVencimiento(diasParaVencer) {
                                     value={fraccionForm.cantidad_destino}
                                     onChange={e => setFraccionForm({ ...fraccionForm, cantidad_destino: e.target.value })}
                                     placeholder="Unidades que se generan"
-                                    style={{ ...inputStyle, marginBottom: 0 }}
+                                    style={{ ...inputStyle, marginBottom: '10px' }}
                                 />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Precio de compra (opcional)</label>
+                                        <input
+                                            type="number" min="0"
+                                            value={fraccionForm.precio_compra}
+                                            onChange={e => setFraccionForm({ ...fraccionForm, precio_compra: e.target.value })}
+                                            placeholder="Gs. 0"
+                                            style={{ ...inputStyle, marginBottom: 0 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Precio de venta (opcional)</label>
+                                        <input
+                                            type="number" min="0"
+                                            value={fraccionForm.precio_venta}
+                                            onChange={e => setFraccionForm({ ...fraccionForm, precio_venta: e.target.value })}
+                                            placeholder="Gs. 0"
+                                            style={{ ...inputStyle, marginBottom: 0 }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Nota */}
@@ -1534,7 +1560,7 @@ function colorVencimiento(diasParaVencer) {
                                     disabled={fraccionando || cantOrigen > pr.stock || !fraccionForm.presentacion_destino_id || !cantOrigen || !cantDestino}
                                     style={{ ...btnPrimario, background: '#6d28d9', opacity: (fraccionando || cantOrigen > pr.stock || !fraccionForm.presentacion_destino_id || !cantOrigen || !cantDestino) ? 0.6 : 1, cursor: (fraccionando || cantOrigen > pr.stock) ? 'not-allowed' : 'pointer' }}
                                 >
-                                    {fraccionando ? 'Registrando...' : 'Confirmar transformación'}
+                                    {fraccionando ? 'Fraccionando...' : 'Confirmar fraccionamiento'}
                                 </button>
                             </div>
                         </div>
