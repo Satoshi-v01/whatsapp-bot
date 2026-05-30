@@ -706,7 +706,7 @@ function Reportes() {
                         <div>
                             <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text }}>Rentabilidad</h2>
                             <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>
-                                Margen promedio: <strong style={{ color: s.text }}>{rentabilidad.resumen?.margen_promedio_pct}%</strong> —
+                                M. ganancia: <strong style={{ color: s.text }}>{rentabilidad.resumen?.markup_promedio_pct}%</strong> · M. venta: <strong style={{ color: s.text }}>{rentabilidad.resumen?.margen_promedio_pct}%</strong> —
                                 Ganancia total: <strong style={{ color: '#10b981' }}>{formatearGs(rentabilidad.resumen?.ganancia_total)}</strong>
                             </p>
                         </div>
@@ -728,7 +728,7 @@ function Reportes() {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ background: s.surfaceLow }}>
-                                    {['#', 'Nombre', 'Unidades', 'Ingresos', 'Costo', 'Ganancia', 'Margen'].map(h => (
+                                    {['#', 'Nombre', 'Unidades', 'Ingresos', 'Costo', 'Ganancia', 'M. Ganancia', 'M. Venta'].map(h => (
                                         <th key={h} style={{ padding: '10px 16px', textAlign: h === '#' ? 'center' : 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                                     ))}
                                 </tr>
@@ -737,8 +737,9 @@ function Reportes() {
                                 {rentabilidad.detalle?.length === 0 ? (
                                     <tr><td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: s.textFaint }}>Sin datos</td></tr>
                                 ) : rentabilidad.detalle?.slice(0, 15).map((r, i) => {
+                                    const markup = parseFloat(r.markup_pct || 0)
                                     const margen = parseFloat(r.margen_pct || 0)
-                                    const colorMargen = margen >= 30 ? '#10b981' : margen >= 10 ? '#f59e0b' : '#ef4444'
+                                    const colorMarkup = markup >= 25 ? '#10b981' : markup >= 10 ? '#f59e0b' : '#ef4444'
                                     return (
                                         <tr key={i} style={{ borderTop: `1px solid ${s.borderLight}` }}
                                             onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
@@ -752,11 +753,12 @@ function Reportes() {
                                             <td style={{ padding: '10px 16px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <div style={{ flex: 1, height: '6px', background: s.barTrack, borderRadius: '3px', overflow: 'hidden', minWidth: '60px' }}>
-                                                        <div style={{ height: '100%', width: `${Math.min(margen, 100)}%`, background: colorMargen, borderRadius: '3px' }} />
+                                                        <div style={{ height: '100%', width: `${Math.min(markup, 100)}%`, background: colorMarkup, borderRadius: '3px' }} />
                                                     </div>
-                                                    <span style={{ fontSize: '12px', fontWeight: '700', color: colorMargen, minWidth: '40px' }}>{margen}%</span>
+                                                    <span style={{ fontSize: '12px', fontWeight: '700', color: colorMarkup, minWidth: '40px' }}>{markup}%</span>
                                                 </div>
                                             </td>
+                                            <td style={{ padding: '10px 16px', fontSize: '12px', color: s.textMuted }}>{margen}%</td>
                                         </tr>
                                     )
                                 })}
