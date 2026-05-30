@@ -17,10 +17,16 @@ router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, r
              ORDER BY p.nombre ASC`
         )
         const presentaciones = await db.query(
-            `SELECT id, producto_id, nombre, precio_venta, precio_compra,
-                    precio_descuento, descuento_activo, descuento_desde,
-                    descuento_hasta, descuento_stock, stock, disponible, codigo_barras
-             FROM presentaciones ORDER BY producto_id, nombre ASC`
+            `SELECT pr.id, pr.producto_id, pr.nombre, pr.precio_venta, pr.precio_compra,
+                    pr.precio_descuento, pr.descuento_activo, pr.descuento_desde,
+                    pr.descuento_hasta, pr.descuento_stock, pr.stock, pr.disponible, pr.codigo_barras,
+                    (SELECT MIN(l.fecha_vencimiento) FROM lotes l
+                     WHERE l.presentacion_id = pr.id AND l.activo = true AND l.stock_actual > 0
+                     AND l.fecha_vencimiento IS NOT NULL) as fecha_vencimiento_proxima,
+                    (SELECT COUNT(*) FROM lotes l
+                     WHERE l.presentacion_id = pr.id AND l.activo = true AND l.stock_actual > 0
+                     AND l.fecha_vencimiento IS NOT NULL) as lotes_con_vencimiento
+             FROM presentaciones pr ORDER BY pr.producto_id, pr.nombre ASC`
         )
         const resultado = productos.rows.map(producto => ({
             ...producto,

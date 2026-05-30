@@ -48,6 +48,7 @@ router.get('/resumen', async (req, res) => {
              ORDER BY pr.stock ASC`
         )
 
+
         const creditoPendiente = await db.query(
             `SELECT COALESCE(SUM(v.precio), 0) as total, COUNT(*) as cantidad
             FROM ventas v

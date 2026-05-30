@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getResumen, getVentasSemana, getTopProductos } from '../services/estadisticas'
 import { getReportes } from '../services/proveedores'
 import { getResumenOrdenes } from '../services/ordenes'
+import { getAlertasLotes } from '../services/lotes'
 import { useNavigate } from 'react-router-dom'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -13,6 +14,7 @@ function Home() {
     const [topProductos, setTopProductos] = useState([])
     const [reportesProveedores, setReportesProveedores] = useState(null)
     const [ordenesResumen, setOrdenesResumen] = useState(null)
+    const [alertasLotes, setAlertasLotes] = useState({ proximos_vencer: [], vencidos: [] })
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const navigate = useNavigate()
@@ -39,18 +41,20 @@ function Home() {
 
     async function cargarDatos() {
         try {
-            const [res, semana, top, reportes, ordenes] = await Promise.all([
+            const [res, semana, top, reportes, ordenes, alertas] = await Promise.all([
                 getResumen(),
                 getVentasSemana(),
                 getTopProductos(),
                 getReportes({ periodo: 'mes' }).catch(() => null),
-                getResumenOrdenes().catch(() => null)
+                getResumenOrdenes().catch(() => null),
+                getAlertasLotes(60).catch(() => ({ proximos_vencer: [], vencidos: [] }))
             ])
             setResumen(res)
             setVentasSemana(Array.isArray(semana) ? semana : [])
             setTopProductos(Array.isArray(top) ? top : [])
             setReportesProveedores(reportes)
             setOrdenesResumen(ordenes)
+            setAlertasLotes(alertas || { proximos_vencer: [], vencidos: [] })
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos del resumen.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -263,42 +267,110 @@ function Home() {
 
                 {/* Alertas de inventario */}
                 <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>Alertas de inventario</h3>
-                        {resumen?.stock_bajo?.length > 0 && (
-                            <span style={{ padding: '2px 10px', background: '#fee2e2', color: '#991b1b', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
-                                {resumen.stock_bajo.length} críticos
-                            </span>
-                        )}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            {resumen?.stock_bajo?.length > 0 && (
+                                <span style={{ padding: '2px 10px', background: '#fee2e2', color: '#991b1b', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
+                                    {resumen.stock_bajo.length} sin stock
+                                </span>
+                            )}
+                            {alertasLotes.vencidos.length > 0 && (
+                                <span style={{ padding: '2px 10px', background: '#fee2e2', color: '#991b1b', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
+                                    {alertasLotes.vencidos.length} vencidos
+                                </span>
+                            )}
+                            {alertasLotes.proximos_vencer.length > 0 && (
+                                <span style={{ padding: '2px 10px', background: '#fffbeb', color: '#92400e', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
+                                    {alertasLotes.proximos_vencer.length} a vencer
+                                </span>
+                            )}
+                        </div>
                     </div>
 
-                    {!resumen?.stock_bajo?.length ? (
+                    {!resumen?.stock_bajo?.length && !alertasLotes.proximos_vencer.length && !alertasLotes.vencidos.length ? (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textMuted, fontSize: '13px', flexDirection: 'column', gap: '8px' }}>
                             <span style={{ fontSize: '24px' }}>✅</span>
-                            <p>Todo el stock en orden</p>
+                            <p>Todo el inventario en orden</p>
                         </div>
                     ) : (
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '220px' }}>
-                            {resumen.stock_bajo.map((item, i) => (
-                                <div key={i} onClick={() => navigate('/dashboard/inventario')}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: item.stock === 0 ? '#fee2e2' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: item.stock === 0 ? '#ef4444' : '#f59e0b' }}>
-                                        {item.stock === 0
-                                            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                                            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                        }
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</p>
-                                        <p style={{ fontSize: '11px', color: s.textMuted }}>{item.presentacion}</p>
-                                    </div>
-                                    <span style={{ fontSize: '11px', fontWeight: '700', color: item.stock === 0 ? '#ef4444' : '#f59e0b', flexShrink: 0 }}>
-                                        {item.stock === 0 ? 'Sin stock' : `${item.stock} ud.`}
-                                    </span>
-                                </div>
-                            ))}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '280px' }}>
+                            {/* Stock bajo */}
+                            {resumen?.stock_bajo?.length > 0 && (
+                                <>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Stock bajo</p>
+                                    {resumen.stock_bajo.map((item, i) => (
+                                        <div key={i} onClick={() => navigate('/dashboard/inventario')}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: item.stock === 0 ? '#fee2e2' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: item.stock === 0 ? '#ef4444' : '#f59e0b' }}>
+                                                {item.stock === 0
+                                                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                                }
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</p>
+                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{item.presentacion}</p>
+                                            </div>
+                                            <span style={{ fontSize: '11px', fontWeight: '700', color: item.stock === 0 ? '#ef4444' : '#f59e0b', flexShrink: 0 }}>
+                                                {item.stock === 0 ? 'Sin stock' : `${item.stock} ud.`}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+
+                            {/* Lotes vencidos */}
+                            {alertasLotes.vencidos.length > 0 && (
+                                <>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: resumen?.stock_bajo?.length ? '8px' : '0', marginBottom: '2px' }}>Lotes vencidos</p>
+                                    {alertasLotes.vencidos.map((lote, i) => (
+                                        <div key={i} onClick={() => navigate('/dashboard/inventario')}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e220', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#ef4444' }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lote.producto_nombre}</p>
+                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{lote.presentacion_nombre} · {lote.stock_actual} ud. · Vencido hace {lote.dias_vencido}d</p>
+                                            </div>
+                                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#ef4444', flexShrink: 0 }}>Vencido</span>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+
+                            {/* Lotes próximos a vencer */}
+                            {alertasLotes.proximos_vencer.length > 0 && (
+                                <>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: (resumen?.stock_bajo?.length || alertasLotes.vencidos.length) ? '8px' : '0', marginBottom: '2px' }}>Próximos a vencer</p>
+                                    {alertasLotes.proximos_vencer.map((lote, i) => {
+                                        const dias = parseInt(lote.dias_para_vencer)
+                                        const color = dias <= 7 ? '#ef4444' : dias <= 30 ? '#f59e0b' : '#6366f1'
+                                        return (
+                                            <div key={i} onClick={() => navigate('/dashboard/inventario')}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
+                                                onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
+                                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
+                                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lote.producto_nombre}</p>
+                                                    <p style={{ fontSize: '11px', color: s.textMuted }}>{lote.presentacion_nombre} · {lote.stock_actual} ud.{lote.numero_lote ? ` · Lote ${lote.numero_lote}` : ''}</p>
+                                                </div>
+                                                <span style={{ fontSize: '11px', fontWeight: '700', color, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                                    {dias === 0 ? 'Hoy' : `${dias}d`}
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                                </>
+                            )}
                         </div>
                     )}
 
