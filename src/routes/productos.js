@@ -412,11 +412,11 @@ router.post('/:id/presentaciones', autenticar, verificarPermiso('inventario', 'c
 router.patch('/presentaciones/:id/precio', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
-        const { precio_venta, precio_compra, precio_descuento, precio_compra_descuento, descuento_activo, descuento_desde, descuento_hasta, descuento_stock } = req.body
+        const { precio_venta, precio_tarjeta, precio_compra, precio_descuento, precio_compra_descuento, descuento_activo, descuento_desde, descuento_hasta, descuento_stock } = req.body
         const anterior = await db.query(`SELECT * FROM presentaciones WHERE id = $1`, [id])
         const resultado = await db.query(
-            `UPDATE presentaciones SET precio_venta = COALESCE($1, precio_venta), precio_compra = COALESCE($2, precio_compra), precio_descuento = $3, precio_compra_descuento = $4, descuento_activo = COALESCE($5, descuento_activo), descuento_desde = $6, descuento_hasta = $7, descuento_stock = $8 WHERE id = $9 RETURNING *`,
-            [precio_venta, precio_compra, precio_descuento, precio_compra_descuento, descuento_activo, descuento_desde, descuento_hasta, descuento_stock, id]
+            `UPDATE presentaciones SET precio_venta = COALESCE($1, precio_venta), precio_tarjeta = $2, precio_compra = COALESCE($3, precio_compra), precio_descuento = $4, precio_compra_descuento = $5, descuento_activo = COALESCE($6, descuento_activo), descuento_desde = $7, descuento_hasta = $8, descuento_stock = $9 WHERE id = $10 RETURNING *`,
+            [precio_venta, precio_tarjeta || null, precio_compra, precio_descuento, precio_compra_descuento, descuento_activo, descuento_desde, descuento_hasta, descuento_stock, id]
         )
         if (resultado.rows.length === 0) return res.status(404).json({ error: 'Presentación no encontrada' })
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'presentacion', entidad_id: parseInt(id), descripcion: `Precio actualizado: ${resultado.rows[0].nombre} — Gs. ${anterior.rows[0]?.precio_venta?.toLocaleString()} → Gs. ${precio_venta?.toLocaleString()}`, dato_anterior: { precio_venta: anterior.rows[0]?.precio_venta, precio_compra: anterior.rows[0]?.precio_compra }, dato_nuevo: { precio_venta, precio_compra }, ip: req.ip }).catch(() => {})
