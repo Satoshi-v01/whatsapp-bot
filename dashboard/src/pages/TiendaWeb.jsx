@@ -159,6 +159,12 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
     const [error, setError] = useState('')
     const [confirmarEliminar, setConfirmarEliminar] = useState(null)
 
+    function nombreWeb(prod) {
+        return [prod.especie, prod.marca_nombre, prod.calidad, prod.presentacion_nombre]
+            .filter(Boolean)
+            .join(' ') || prod.producto_nombre
+    }
+
     const cargar = useCallback(async () => {
         setCargando(true)
         try {
@@ -313,7 +319,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                                     </div>
                                                 </td>
                                                 <td style={tdStyle}>
-                                                    <span style={{ fontWeight: 600, color: s.text }}>{prod.producto_nombre}</span>
+                                                    <span style={{ fontWeight: 600, color: s.text }}>{nombreWeb(prod)}</span>
                                                     {prod.categoria_nombre && <span style={{ display: 'block', fontSize: 11, color: s.textMuted }}>{prod.categoria_nombre}</span>}
                                                 </td>
                                                 <td style={{ ...tdStyle, color: s.textMuted, fontSize: 12 }}>{prod.presentacion_nombre}</td>
@@ -370,7 +376,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
 
             {/* Modal editar producto */}
             {editando && (
-                <Modal s={s} onClose={() => setEditando(null)} title={`${editando.producto_nombre} — ${editando.presentacion_nombre}`}>
+                <Modal s={s} onClose={() => setEditando(null)} title={nombreWeb(editando)}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
                             <label style={labelStyle}>Imagen</label>
