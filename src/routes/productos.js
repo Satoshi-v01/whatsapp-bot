@@ -647,10 +647,22 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                     const categorias = ['balanceados', 'accesorios', 'medicamentos', 'higiene', 'snacks']
                     const seccion = categorias.includes(fila.categoria) ? fila.categoria : null
 
+                    // Buscar subcategoría por nombre si se proporcionó
+                    let subcategoriaId = null
+                    if (fila.subcategoria?.trim()) {
+                        const subRes = await client.query(
+                            `SELECT id FROM subcategorias WHERE LOWER(nombre) = LOWER($1) LIMIT 1`,
+                            [fila.subcategoria.trim()]
+                        )
+                        if (subRes.rows.length > 0) subcategoriaId = subRes.rows[0].id
+                    }
+
+                    const sku = fila.sku?.trim() || null
+
                     const nuevoProd = await client.query(
-                        `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id)
-                         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-                        [nombre, calidad, especie, seccion, marcaId]
+                        `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id, sku, subcategoria_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                        [nombre, calidad, especie, seccion, marcaId, sku, subcategoriaId]
                     )
                     productoId = nuevoProd.rows[0].id
                     creados++
