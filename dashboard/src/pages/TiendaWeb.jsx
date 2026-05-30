@@ -159,10 +159,16 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
     const [error, setError] = useState('')
     const [confirmarEliminar, setConfirmarEliminar] = useState(null)
 
+    const ESPECIE_LABEL = { perro: 'Perro', gato: 'Gato', ambos: 'Perro y Gato' }
+    const CALIDAD_LABEL = { standard: 'Standard', premium: 'Premium', premium_special: 'Premium Special', super_premium: 'Super Premium' }
     function nombreWeb(prod) {
-        return [prod.especie, prod.marca_nombre, prod.calidad, prod.presentacion_nombre]
-            .filter(Boolean)
-            .join(' ') || prod.producto_nombre
+        const partes = [
+            ESPECIE_LABEL[prod.especie] || prod.especie || '',
+            prod.marca_nombre || '',
+            CALIDAD_LABEL[prod.calidad] || prod.calidad || '',
+            prod.presentacion_nombre || '',
+        ].filter(Boolean)
+        return partes.length ? partes.join(' ') : prod.producto_nombre
     }
 
     const cargar = useCallback(async () => {
