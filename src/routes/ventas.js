@@ -392,7 +392,66 @@ router.patch('/:id/estado', validarId, validarEstado, async (req, res) => {
 }
 })
 
-// 7. Registrar venta presencial (soporta multi-producto via items[])
+// 7. Anular venta — cambia estado a cancelado y devuelve stock
+router.post('/:id/anular', autenticar, verificarPermiso('ventas', 'cancelar'), async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { id } = req.params
+
+        const ventaRes = await client.query(`SELECT * FROM ventas WHERE id = $1`, [parseInt(id)])
+        if (!ventaRes.rows.length) return res.status(404).json({ error: 'Venta no encontrada' })
+        const venta = ventaRes.rows[0]
+
+        if (venta.estado === 'cancelado') {
+            return res.status(400).json({ error: 'La venta ya está anulada' })
+        }
+
+        // Obtener items para devolver stock
+        const itemsRes = await client.query(
+            `SELECT presentacion_id, cantidad FROM ventas_items WHERE venta_id = $1`,
+            [parseInt(id)]
+        )
+        const items = itemsRes.rows.length > 0
+            ? itemsRes.rows
+            : (venta.presentacion_id ? [{ presentacion_id: venta.presentacion_id, cantidad: venta.cantidad }] : [])
+
+        await client.query('BEGIN')
+
+        // Devolver stock a cada presentación
+        for (const item of items) {
+            await client.query(
+                `UPDATE presentaciones SET stock = stock + $1 WHERE id = $2`,
+                [parseInt(item.cantidad), parseInt(item.presentacion_id)]
+            )
+        }
+
+        await client.query(`UPDATE ventas SET estado = 'cancelado' WHERE id = $1`, [parseInt(id)])
+
+        await client.query('COMMIT')
+
+        registrarLog({
+            usuario_id: req.usuario?.id || null,
+            usuario_nombre: req.usuario?.nombre || 'Sistema',
+            accion: 'cancelar',
+            modulo: 'ventas',
+            entidad: 'venta',
+            entidad_id: parseInt(id),
+            descripcion: `Venta #${id} anulada — stock devuelto (${items.length} item/s)`,
+            dato_anterior: { estado: venta.estado },
+            dato_nuevo: { estado: 'cancelado' },
+            ip: req.ip
+        }).catch(() => {})
+
+        res.json({ ok: true })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
+// 8. Registrar venta presencial (soporta multi-producto via items[])
 router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {

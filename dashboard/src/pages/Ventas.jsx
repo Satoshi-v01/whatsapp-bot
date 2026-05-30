@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { getHistorial, actualizarEstadoVenta } from '../services/ventas'
+import { getHistorial, actualizarEstadoVenta, anularVenta } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import * as XLSX from 'xlsx'
@@ -161,6 +161,31 @@ function Ventas() {
                 onConfirmar: () => setModalConfirmar(null)
             })
         }
+    }
+
+    function confirmarAnular(venta) {
+        setModalConfirmar({
+            titulo: 'Anular venta',
+            mensaje: `¿Anular la venta #${venta.id} por Gs. ${parseInt(venta.precio).toLocaleString('es-PY')}? El stock de los productos volverá al inventario. Esta acción no se puede deshacer.`,
+            textoBoton: 'Anular venta',
+            colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try {
+                    await anularVenta(venta.id)
+                    setModalConfirmar(null)
+                    if (ventaDetalle?.id === venta.id) setVentaDetalle(prev => ({ ...prev, estado: 'cancelado' }))
+                    await cargarHistorial()
+                } catch (err) {
+                    setModalConfirmar({
+                        titulo: 'Error',
+                        mensaje: err.response?.data?.error || 'No se pudo anular la venta.',
+                        textoBoton: 'Cerrar',
+                        colorBoton: '#888',
+                        onConfirmar: () => setModalConfirmar(null)
+                    })
+                }
+            }
+        })
     }
 
    function formatearGs(numero) {
@@ -368,22 +393,34 @@ function Ventas() {
                                                 </td>
                                                 <td style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: s.textMuted }}>{labelCanal(venta.canal)}</td>
                                                 <td style={{ padding: '16px', textAlign: 'center' }}>
-                                                    <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
-                                                        style={{ padding: '3px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colEstado.bg, color: colEstado.color, border: 'none', cursor: 'pointer', textTransform: 'uppercase' }}>
-                                                        <option value="pendiente_pago">PENDIENTE</option>
-                                                        <option value="pagado">PAGADO</option>
-                                                        <option value="entregado">ENTREGADO</option>
-                                                        <option value="cancelado">CANCELADO</option>
-                                                    </select>
+                                                    {venta.estado === 'cancelado' ? (
+                                                        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colEstado.bg, color: colEstado.color, textTransform: 'uppercase' }}>ANULADA</span>
+                                                    ) : (
+                                                        <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
+                                                            style={{ padding: '3px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colEstado.bg, color: colEstado.color, border: 'none', cursor: 'pointer', textTransform: 'uppercase' }}>
+                                                            <option value="pendiente_pago">PENDIENTE</option>
+                                                            <option value="pagado">PAGADO</option>
+                                                            <option value="entregado">ENTREGADO</option>
+                                                        </select>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '16px', textAlign: 'right', fontWeight: '700', color: s.text, fontSize: '14px' }}>{formatearGs(venta.precio)}</td>
-                                                <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                <td style={{ padding: '16px 24px', textAlign: 'center', display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
                                                     <button onClick={() => setVentaDetalle(venta)}
                                                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
                                                         onMouseEnter={e => e.currentTarget.style.color = s.text}
                                                         onMouseLeave={e => e.currentTarget.style.color = s.textMuted}>
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                                     </button>
+                                                    {venta.estado !== 'cancelado' && (
+                                                        <button onClick={() => confirmarAnular(venta)}
+                                                            title="Anular venta"
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', opacity: 0.7 }}
+                                                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                                            onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}>
+                                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )
@@ -501,13 +538,26 @@ function Ventas() {
                         </div>
                         <div>
                             <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Estado</p>
-                            <select value={ventaDetalle.estado} onChange={e => cambiarEstado(ventaDetalle.id, e.target.value)}
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, fontSize: '13px', cursor: 'pointer', background: s.inputBg, color: s.text }}>
-                                <option value="pendiente_pago">Pendiente de pago</option>
-                                <option value="pagado">Pagado</option>
-                                <option value="entregado">Entregado</option>
-                                <option value="cancelado">Cancelado</option>
-                            </select>
+                            {ventaDetalle.estado === 'cancelado' ? (
+                                <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
+                                    VENTA ANULADA
+                                </div>
+                            ) : (
+                                <>
+                                    <select value={ventaDetalle.estado} onChange={e => cambiarEstado(ventaDetalle.id, e.target.value)}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, fontSize: '13px', cursor: 'pointer', background: s.inputBg, color: s.text, marginBottom: '10px' }}>
+                                        <option value="pendiente_pago">Pendiente de pago</option>
+                                        <option value="pagado">Pagado</option>
+                                        <option value="entregado">Entregado</option>
+                                    </select>
+                                    <button onClick={() => confirmarAnular(ventaDetalle)}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = 'white' }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ef4444' }}>
+                                        Anular venta
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
