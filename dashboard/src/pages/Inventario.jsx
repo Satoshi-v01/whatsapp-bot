@@ -147,11 +147,11 @@ function Inventario() {
     }
 
     function descargarTemplate() {
-        const encabezados = [['nombre_producto', 'marca', 'especie', 'calidad', 'categoria', 'presentacion', 'precio_compra', 'precio_venta', 'precio_tarjeta', 'stock']]
+        const encabezados = [['nombre_producto', 'marca', 'especie', 'calidad', 'categoria', 'subcategoria', 'sku', 'presentacion', 'precio_compra', 'precio_venta', 'precio_tarjeta', 'stock']]
         const ejemplos = [
-            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', '3kg', 155000, 190000, 202000, 10],
-            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', '15kg', 580000, 720000, 765000, 5],
-            ['Whiskas Adulto', 'Mars', 'gato', 'standard', 'balanceados', '500g', 18000, 25000, '', 20],
+            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', 'Adultos', 'PP-AD-3KG', '3kg', 155000, 190000, 202000, 10],
+            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', 'Adultos', 'PP-AD-15KG', '15kg', 580000, 720000, 765000, 5],
+            ['Whiskas Adulto', 'Mars', 'gato', 'standard', 'balanceados', '', 'WK-AD-500', '500g', 18000, 25000, '', 20],
         ]
         const ws = XLSX.utils.aoa_to_sheet([...encabezados, ...ejemplos])
         ws['!cols'] = encabezados[0].map((_, i) => ({ wch: i === 0 ? 28 : i <= 4 ? 16 : 14 }))
@@ -179,6 +179,8 @@ function Inventario() {
                         especie: String(norm.especie || norm.especie_animal || '').trim().toLowerCase(),
                         calidad: String(norm.calidad || norm.quality || '').trim().toLowerCase(),
                         categoria: String(norm.categoria || norm.category || '').trim().toLowerCase(),
+                        subcategoria: String(norm.subcategoria || norm.subcategory || norm.sub_categoria || '').trim(),
+                        sku: String(norm.sku || norm.codigo || norm.codigo_producto || '').trim(),
                         presentacion: String(norm.presentacion || norm.presentacion_nombre || norm.tamaño || norm.size || norm.kg || '').trim(),
                         precio_compra: parseInt(String(norm.precio_compra || norm.p_compra || norm.costo || '').replace(/[^0-9]/g, '')) || 0,
                         precio_venta: parseInt(String(norm.precio_venta || norm.p_venta || norm.precio || norm.precio_de_venta || '').replace(/[^0-9]/g, '')) || 0,
@@ -1849,7 +1851,7 @@ function colorVencimiento(diasParaVencer) {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                                     <thead>
                                         <tr style={{ background: s.surfaceLow }}>
-                                            {['Producto', 'Marca', 'Especie', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock'].map(h => (
+                                            {['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock'].map(h => (
                                                 <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `1px solid ${s.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
                                         </tr>
@@ -1859,7 +1861,8 @@ function colorVencimiento(diasParaVencer) {
                                             <tr key={i} style={{ borderBottom: `1px solid ${s.borderLight}` }}>
                                                 <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.nombre_producto}</td>
                                                 <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.marca || '—'}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.especie || '—'}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.subcategoria || '—'}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted, fontFamily: 'monospace' }}>{f.sku || '—'}</td>
                                                 <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.presentacion}</td>
                                                 <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
                                                 <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span style={{ color: '#ef4444' }}>Requerido</span>}</td>
