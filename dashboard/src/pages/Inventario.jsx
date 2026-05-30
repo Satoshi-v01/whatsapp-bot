@@ -268,27 +268,37 @@ function Inventario() {
     }
 
     function abrirModalFraccionar(producto, pr) {
-        setFraccionForm({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', precio_venta: '', precio_compra: '', nota: '' })
+        setFraccionForm({ modo_destino: 'existente', presentacion_destino_id: '', nombre_nuevo: '', cantidad_origen: '', cantidad_destino: '', precio_venta: '', precio_compra: '', nota: '' })
         setModalFraccionar({ producto, presentacion: pr })
     }
 
     async function handleConfirmarFraccion() {
-        if (!fraccionForm.presentacion_destino_id) return setModalConfirmar({ titulo: 'Error', mensaje: 'Seleccioná la presentación destino.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         const cantOrigen = parseInt(fraccionForm.cantidad_origen)
         const cantDestino = parseInt(fraccionForm.cantidad_destino)
         if (!cantOrigen || cantOrigen < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad a fraccionar debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         if (!cantDestino || cantDestino < 1) return setModalConfirmar({ titulo: 'Error', mensaje: 'Cantidad resultante debe ser mayor a 0.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        if (fraccionForm.modo_destino === 'existente' && !fraccionForm.presentacion_destino_id) return setModalConfirmar({ titulo: 'Error', mensaje: 'Seleccioná la presentación destino.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        if (fraccionForm.modo_destino === 'nueva' && !fraccionForm.nombre_nuevo.trim()) return setModalConfirmar({ titulo: 'Error', mensaje: 'Ingresá el nombre de la presentación fraccionada.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         try {
             setFraccionando(true)
-            await registrarTransformacion({
+            const payload = {
                 presentacion_origen_id: modalFraccionar.presentacion.id,
                 cantidad_origen: cantOrigen,
-                presentacion_destino_id: parseInt(fraccionForm.presentacion_destino_id),
                 cantidad_destino: cantDestino,
-                precio_venta: fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null,
-                precio_compra: fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null,
                 nota: fraccionForm.nota || null
-            })
+            }
+            if (fraccionForm.modo_destino === 'nueva') {
+                payload.nueva_presentacion = {
+                    nombre: fraccionForm.nombre_nuevo.trim(),
+                    precio_venta: fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null,
+                    precio_compra: fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null,
+                }
+            } else {
+                payload.presentacion_destino_id = parseInt(fraccionForm.presentacion_destino_id)
+                payload.precio_venta = fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null
+                payload.precio_compra = fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null
+            }
+            await registrarTransformacion(payload)
             setModalFraccionar(null)
             await cargarDatos()
         } catch (err) {
@@ -677,7 +687,7 @@ function colorVencimiento(diasParaVencer) {
                                                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                                             <thead>
                                                                                 <tr style={{ background: s.surface }}>
-                                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Acciones'].map(h => (
+                                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Vencimiento', 'Acciones'].map(h => (
                                                                                         <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                                                                                     ))}
                                                                                 </tr>
@@ -722,6 +732,22 @@ function colorVencimiento(diasParaVencer) {
                                                                                                         <div style={{ width: `${Math.min((pr.stock / 20) * 100, 100)}%`, height: '100%', background: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981', borderRadius: '2px' }} />
                                                                                                     </div>
                                                                                                 </div>
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                                {(() => {
+                                                                                                    if (!pr.fecha_vencimiento_proxima) return <span style={{ color: s.textFaint, fontSize: '11px' }}>—</span>
+                                                                                                    const dias = Math.ceil((new Date(pr.fecha_vencimiento_proxima) - new Date()) / (1000 * 60 * 60 * 24))
+                                                                                                    const color = dias < 0 ? '#ef4444' : dias <= 7 ? '#ef4444' : dias <= 30 ? '#f59e0b' : '#10b981'
+                                                                                                    const count = parseInt(pr.lotes_con_vencimiento) || 0
+                                                                                                    return (
+                                                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                                                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: `${color}20`, color, whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                                                                                                {dias < 0 ? 'Vencido' : dias === 0 ? 'Hoy' : `${dias}d`}
+                                                                                                            </span>
+                                                                                                            {count > 1 && <span style={{ fontSize: '10px', color: s.textFaint }}>{count} lotes</span>}
+                                                                                                        </div>
+                                                                                                    )
+                                                                                                })()}
                                                                                             </td>
                                                                                             <td style={{ padding: '10px 12px' }}>
                                                                                                 <div style={{ display: 'flex', gap: '4px' }}>
@@ -1457,9 +1483,12 @@ function colorVencimiento(diasParaVencer) {
                 const cantOrigen = parseInt(fraccionForm.cantidad_origen) || 0
                 const cantDestino = parseInt(fraccionForm.cantidad_destino) || 0
                 const destino = otrasPresent.find(p => p.id === parseInt(fraccionForm.presentacion_destino_id))
+                const modoNueva = fraccionForm.modo_destino === 'nueva'
+                const btnDisabled = fraccionando || cantOrigen > pr.stock || !cantOrigen || !cantDestino ||
+                    (modoNueva ? !fraccionForm.nombre_nuevo.trim() : !fraccionForm.presentacion_destino_id)
                 return (
                     <Modal s={s} zIndex={2000}>
-                        <div style={{ width: '480px' }}>
+                        <div style={{ width: '500px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Fraccionar stock</h3>
                                 <button onClick={() => setModalFraccionar(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
@@ -1486,10 +1515,34 @@ function colorVencimiento(diasParaVencer) {
 
                             {/* Destino */}
                             <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Producto fraccionado</p>
-                                {otrasPresent.length === 0 ? (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Producto fraccionado</p>
+                                    {/* Toggle existente / nueva */}
+                                    <div style={{ display: 'flex', borderRadius: '8px', border: `1px solid ${s.border}`, overflow: 'hidden', fontSize: '11px', fontWeight: '600' }}>
+                                        <button onClick={() => setFraccionForm({ ...fraccionForm, modo_destino: 'existente', nombre_nuevo: '' })}
+                                            style={{ padding: '5px 12px', border: 'none', cursor: 'pointer', background: !modoNueva ? '#6d28d9' : s.surface, color: !modoNueva ? 'white' : s.textMuted }}>
+                                            Existente
+                                        </button>
+                                        <button onClick={() => setFraccionForm({ ...fraccionForm, modo_destino: 'nueva', presentacion_destino_id: '' })}
+                                            style={{ padding: '5px 12px', border: 'none', cursor: 'pointer', background: modoNueva ? '#6d28d9' : s.surface, color: modoNueva ? 'white' : s.textMuted }}>
+                                            Nueva presentación
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {modoNueva ? (
+                                    <>
+                                        <label style={labelStyle}>Nombre de la presentación fraccionada</label>
+                                        <input
+                                            value={fraccionForm.nombre_nuevo}
+                                            onChange={e => setFraccionForm({ ...fraccionForm, nombre_nuevo: e.target.value })}
+                                            placeholder="Ej: Bolsa 1kg"
+                                            style={{ ...inputStyle }}
+                                        />
+                                    </>
+                                ) : otrasPresent.length === 0 ? (
                                     <p style={{ fontSize: '12.5px', color: '#f59e0b', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px' }}>
-                                        Este producto solo tiene una presentación. Agregá otra presentación primero para poder fraccionar.
+                                        Este producto no tiene otras presentaciones. Usá "Nueva presentación" para crear una al fraccionar.
                                     </p>
                                 ) : (
                                     <>
@@ -1501,17 +1554,18 @@ function colorVencimiento(diasParaVencer) {
                                         >
                                             <option value="">Seleccionar...</option>
                                             {otrasPresent.map(p => (
-                                                <option key={p.id} value={p.id}>{p.nombre} (stock actual: {p.stock})</option>
+                                                <option key={p.id} value={p.id}>{p.nombre} (stock: {p.stock})</option>
                                             ))}
                                         </select>
+                                        {destino && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: s.textMuted }}>Stock después:</span>
+                                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>{destino.stock + cantDestino}</span>
+                                            </div>
+                                        )}
                                     </>
                                 )}
-                                {destino && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <span style={{ fontSize: '12px', color: s.textMuted }}>Stock después:</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>{destino.stock + cantDestino}</span>
-                                    </div>
-                                )}
+
                                 <label style={labelStyle}>Cantidad resultante</label>
                                 <input
                                     type="number" min="1"
@@ -1522,7 +1576,7 @@ function colorVencimiento(diasParaVencer) {
                                 />
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div>
-                                        <label style={labelStyle}>Precio de compra (opcional)</label>
+                                        <label style={labelStyle}>Precio compra {modoNueva ? '' : '(opcional)'}</label>
                                         <input
                                             type="number" min="0"
                                             value={fraccionForm.precio_compra}
@@ -1532,7 +1586,7 @@ function colorVencimiento(diasParaVencer) {
                                         />
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Precio de venta (opcional)</label>
+                                        <label style={labelStyle}>Precio venta {modoNueva ? '' : '(opcional)'}</label>
                                         <input
                                             type="number" min="0"
                                             value={fraccionForm.precio_venta}
@@ -1542,6 +1596,12 @@ function colorVencimiento(diasParaVencer) {
                                         />
                                     </div>
                                 </div>
+                                {cantOrigen > 0 && cantDestino > 0 && fraccionForm.precio_venta && (
+                                    <p style={{ fontSize: '11px', color: '#10b981', marginTop: '8px', fontWeight: '600' }}>
+                                        Total fraccionado: Gs. {(cantDestino * parseInt(fraccionForm.precio_venta || 0)).toLocaleString('es-PY')}
+                                        {pr.precio_venta && ` (original: Gs. ${(cantOrigen * pr.precio_venta).toLocaleString('es-PY')})`}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Nota */}
@@ -1557,8 +1617,8 @@ function colorVencimiento(diasParaVencer) {
                                 <button onClick={() => setModalFraccionar(null)} style={btnSecundario}>Cancelar</button>
                                 <button
                                     onClick={handleConfirmarFraccion}
-                                    disabled={fraccionando || cantOrigen > pr.stock || !fraccionForm.presentacion_destino_id || !cantOrigen || !cantDestino}
-                                    style={{ ...btnPrimario, background: '#6d28d9', opacity: (fraccionando || cantOrigen > pr.stock || !fraccionForm.presentacion_destino_id || !cantOrigen || !cantDestino) ? 0.6 : 1, cursor: (fraccionando || cantOrigen > pr.stock) ? 'not-allowed' : 'pointer' }}
+                                    disabled={btnDisabled}
+                                    style={{ ...btnPrimario, background: '#6d28d9', opacity: btnDisabled ? 0.6 : 1, cursor: btnDisabled ? 'not-allowed' : 'pointer' }}
                                 >
                                     {fraccionando ? 'Fraccionando...' : 'Confirmar fraccionamiento'}
                                 </button>

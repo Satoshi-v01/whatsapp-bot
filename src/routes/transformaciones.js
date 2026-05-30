@@ -38,15 +38,15 @@ router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, r
 router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
-        const { presentacion_origen_id, cantidad_origen, presentacion_destino_id, cantidad_destino, precio_venta, precio_compra, nota } = req.body
+        const { presentacion_origen_id, cantidad_origen, cantidad_destino, precio_venta, precio_compra, nota,
+                presentacion_destino_id: destino_id_param, nueva_presentacion } = req.body
         const usuario_id = req.usuario?.id
         const usuario_nombre = req.usuario?.nombre
 
         if (!presentacion_origen_id) return res.status(400).json({ error: 'Presentación origen requerida' })
-        if (!presentacion_destino_id) return res.status(400).json({ error: 'Presentación destino requerida' })
-        if (!cantidad_origen || cantidad_origen < 1) return res.status(400).json({ error: 'Cantidad origen debe ser mayor a 0' })
-        if (!cantidad_destino || cantidad_destino < 1) return res.status(400).json({ error: 'Cantidad destino debe ser mayor a 0' })
-        if (presentacion_origen_id === presentacion_destino_id) return res.status(400).json({ error: 'Origen y destino no pueden ser la misma presentación' })
+        if (!destino_id_param && !nueva_presentacion) return res.status(400).json({ error: 'Presentación destino requerida' })
+        if (!cantidad_origen || cantidad_origen < 1) return res.status(400).json({ error: 'Cantidad a fraccionar debe ser mayor a 0' })
+        if (!cantidad_destino || cantidad_destino < 1) return res.status(400).json({ error: 'Cantidad resultante debe ser mayor a 0' })
 
         await client.query('BEGIN')
 
@@ -65,16 +65,49 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
             return res.status(400).json({ error: `Stock insuficiente. Disponible: ${origen.stock}` })
         }
 
-        // Verificar que destino existe
-        const destinoRes = await client.query(
-            `SELECT id, nombre, stock, producto_id FROM presentaciones WHERE id = $1 FOR UPDATE`,
-            [presentacion_destino_id]
-        )
-        if (destinoRes.rows.length === 0) {
-            await client.query('ROLLBACK')
-            return res.status(404).json({ error: 'Presentación destino no encontrada' })
+        // Resolver presentación destino (existente o nueva)
+        let presentacion_destino_id
+        let destino
+
+        if (nueva_presentacion) {
+            if (!nueva_presentacion.nombre?.trim()) {
+                await client.query('ROLLBACK')
+                return res.status(400).json({ error: 'El nombre de la presentación fraccionada es requerido' })
+            }
+            const nuevaRes = await client.query(
+                `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, stock, disponible)
+                 VALUES ($1, $2, $3, $4, 0, true) RETURNING *`,
+                [origen.producto_id, nueva_presentacion.nombre.trim(),
+                 nueva_presentacion.precio_venta || null,
+                 nueva_presentacion.precio_compra || null]
+            )
+            presentacion_destino_id = nuevaRes.rows[0].id
+            destino = nuevaRes.rows[0]
+        } else {
+            if (parseInt(destino_id_param) === parseInt(presentacion_origen_id)) {
+                await client.query('ROLLBACK')
+                return res.status(400).json({ error: 'Origen y destino no pueden ser la misma presentación' })
+            }
+            const destinoRes = await client.query(
+                `SELECT id, nombre, stock, producto_id FROM presentaciones WHERE id = $1 FOR UPDATE`,
+                [destino_id_param]
+            )
+            if (destinoRes.rows.length === 0) {
+                await client.query('ROLLBACK')
+                return res.status(404).json({ error: 'Presentación destino no encontrada' })
+            }
+            destino = destinoRes.rows[0]
+            presentacion_destino_id = destino.id
+
+            // Actualizar precios si se enviaron
+            if (precio_venta || precio_compra) {
+                const campos = ['updated_at = NOW()']
+                const vals = [presentacion_destino_id]
+                if (precio_venta) { campos.push(`precio_venta = $${vals.length + 1}`); vals.push(precio_venta) }
+                if (precio_compra) { campos.push(`precio_compra = $${vals.length + 1}`); vals.push(precio_compra) }
+                await client.query(`UPDATE presentaciones SET ${campos.join(', ')} WHERE id = $1`, vals)
+            }
         }
-        const destino = destinoRes.rows[0]
 
         // Descontar stock origen
         await client.query(
@@ -82,19 +115,11 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
             [cantidad_origen, presentacion_origen_id]
         )
 
-        // Sumar stock destino (y actualizar precios si se enviaron)
-        if (precio_venta || precio_compra) {
-            const campos = ['stock = stock + $1', 'updated_at = NOW()']
-            const vals = [cantidad_destino, presentacion_destino_id]
-            if (precio_venta) { campos.push(`precio_venta = $${vals.length + 1}`); vals.push(precio_venta) }
-            if (precio_compra) { campos.push(`precio_compra = $${vals.length + 1}`); vals.push(precio_compra) }
-            await client.query(`UPDATE presentaciones SET ${campos.join(', ')} WHERE id = $2`, vals)
-        } else {
-            await client.query(
-                `UPDATE presentaciones SET stock = stock + $1, updated_at = NOW() WHERE id = $2`,
-                [cantidad_destino, presentacion_destino_id]
-            )
-        }
+        // Sumar stock destino
+        await client.query(
+            `UPDATE presentaciones SET stock = stock + $1, updated_at = NOW() WHERE id = $2`,
+            [cantidad_destino, presentacion_destino_id]
+        )
 
         // Registrar transformación
         const transRes = await client.query(
