@@ -525,7 +525,7 @@ router.delete('/presentaciones/:id', autenticar, verificarPermiso('inventario', 
         if (!pr.rows.length) return res.status(404).json({ error: 'Presentación no encontrada' })
 
         const enVentas = await client.query(
-            `SELECT COUNT(*) as c FROM detalle_ventas WHERE presentacion_id = $1
+            `SELECT COUNT(*) as c FROM ventas_items WHERE presentacion_id = $1
              UNION ALL
              SELECT COUNT(*) as c FROM ordenes_pedido_items WHERE presentacion_id = $1`,
             [id]
