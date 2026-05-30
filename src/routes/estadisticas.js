@@ -358,7 +358,12 @@ router.get('/rentabilidad', async (req, res) => {
                     WHEN SUM(v.precio) > 0
                     THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(v.precio) * 100)::numeric, 1)
                     ELSE 0
-                END as margen_pct
+                END as margen_pct,
+                CASE
+                    WHEN SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) > 0
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) * 100)::numeric, 1)
+                    ELSE 0
+                END as markup_pct
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
@@ -381,7 +386,12 @@ router.get('/rentabilidad', async (req, res) => {
                     WHEN SUM(v.precio) > 0
                     THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(v.precio) * 100)::numeric, 1)
                     ELSE 0
-                END as margen_promedio_pct
+                END as margen_promedio_pct,
+                CASE
+                    WHEN SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) > 0
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) * 100)::numeric, 1)
+                    ELSE 0
+                END as markup_promedio_pct
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE v.created_at >= NOW() - ($1::interval)

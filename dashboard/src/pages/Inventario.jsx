@@ -1140,7 +1140,21 @@ function colorVencimiento(diasParaVencer) {
                         <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al efectivo" value={formatMiles(nuevaPresentacion.precio_tarjeta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_tarjeta: parseMiles(e.target.value) })} style={inputStyle} />
                         {nuevaPresentacion.precio_venta && nuevaPresentacion.precio_tarjeta && parseInt(nuevaPresentacion.precio_tarjeta) > parseInt(nuevaPresentacion.precio_venta) && (
                             <div style={{ padding: '8px 12px', background: darkMode ? '#1e3a5f' : '#eff6ff', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#1d4ed8', fontWeight: '600' }}>
-                                Recargo: {((parseInt(nuevaPresentacion.precio_tarjeta) - parseInt(nuevaPresentacion.precio_venta)) / parseInt(nuevaPresentacion.precio_venta) * 100).toFixed(2)}%
+                                Recargo tarjeta: {((parseInt(nuevaPresentacion.precio_tarjeta) - parseInt(nuevaPresentacion.precio_venta)) / parseInt(nuevaPresentacion.precio_venta) * 100).toFixed(2)}%
+                            </div>
+                        )}
+                        {nuevaPresentacion.precio_compra && nuevaPresentacion.precio_venta && (
+                            <div style={{ padding: '8px 12px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#166534', fontWeight: '600' }}>
+                                {(() => {
+                                    const c = parseInt(nuevaPresentacion.precio_compra), v = parseInt(nuevaPresentacion.precio_venta)
+                                    const t = nuevaPresentacion.precio_tarjeta ? parseInt(nuevaPresentacion.precio_tarjeta) : null
+                                    return (
+                                        <>
+                                            <span>Ef. — M. ganancia: {Math.round(((v-c)/c)*100)}% · M. venta: {Math.round(((v-c)/v)*100)}%</span>
+                                            {t > 0 && <span style={{ display: 'block', marginTop: '2px' }}>Tarjeta — M. ganancia: {Math.round(((t-c)/c)*100)}% · M. venta: {Math.round(((t-c)/t)*100)}%</span>}
+                                        </>
+                                    )
+                                })()}
                             </div>
                         )}
                         <label style={labelStyle}>Stock inicial</label>
@@ -1199,10 +1213,24 @@ function colorVencimiento(diasParaVencer) {
                         )}
                         {precioForm.precio_compra && precioForm.precio_venta && (
                             <div style={{ padding: '10px 14px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#166534', fontWeight: '600' }}>
-                                Margen efectivo: {Math.round(((parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)) / parseInt(precioForm.precio_venta)) * 100)}% · Ganancia: Gs. {(parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)).toLocaleString()}
-                                {precioForm.precio_tarjeta && parseInt(precioForm.precio_tarjeta) > 0 && (
-                                    <span style={{ marginLeft: 12 }}>| Margen tarjeta: {Math.round(((parseInt(precioForm.precio_tarjeta) - parseInt(precioForm.precio_compra)) / parseInt(precioForm.precio_tarjeta)) * 100)}%</span>
-                                )}
+                                {(() => {
+                                    const costo = parseInt(precioForm.precio_compra)
+                                    const venta = parseInt(precioForm.precio_venta)
+                                    const ganancia = venta - costo
+                                    const markupEf = Math.round((ganancia / costo) * 100)
+                                    const margenEf = Math.round((ganancia / venta) * 100)
+                                    const tarjeta = precioForm.precio_tarjeta ? parseInt(precioForm.precio_tarjeta) : null
+                                    return (
+                                        <>
+                                            <span>Efectivo — Ganancia: Gs. {ganancia.toLocaleString()} · M. ganancia: {markupEf}% · M. venta: {margenEf}%</span>
+                                            {tarjeta > 0 && (
+                                                <span style={{ display: 'block', marginTop: '4px', color: '#1d6b14' }}>
+                                                    Tarjeta — Ganancia: Gs. {(tarjeta - costo).toLocaleString()} · M. ganancia: {Math.round(((tarjeta - costo) / costo) * 100)}% · M. venta: {Math.round(((tarjeta - costo) / tarjeta) * 100)}%
+                                                </span>
+                                            )}
+                                        </>
+                                    )
+                                })()}
                             </div>
                         )}
                         <div style={{ borderTop: `1px solid ${s.borderLight}`, paddingTop: '16px', marginBottom: '12px' }}>
