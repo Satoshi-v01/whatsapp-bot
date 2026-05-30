@@ -393,12 +393,12 @@ router.post('/marcas', autenticar, verificarPermiso('inventario', 'editar'), asy
 router.post('/:id/presentaciones', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     try {
         const { id } = req.params
-        const { nombre, precio_venta, precio_compra, stock, codigo_barras } = req.body
+        const { nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras } = req.body
         if (!nombre || !precio_venta) return res.status(400).json({ error: 'Nombre y precio de venta son requeridos' })
         const resultado = await db.query(
-            `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, stock, codigo_barras)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [id, nombre, precio_venta, precio_compra || 0, stock || 0, codigo_barras || null]
+            `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [id, nombre, precio_venta, precio_tarjeta || null, precio_compra || 0, stock || 0, codigo_barras || null]
         )
         const producto = await db.query(`SELECT nombre FROM productos WHERE id = $1`, [id])
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'presentacion', entidad_id: resultado.rows[0].id, descripcion: `Presentación creada: ${nombre} — ${producto.rows[0]?.nombre} — Gs. ${precio_venta.toLocaleString()}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})

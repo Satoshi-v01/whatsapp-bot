@@ -76,7 +76,7 @@ function Inventario() {
     const [errorMarca, setErrorMarca] = useState('')
     const [confirmEliminarMarca, setConfirmEliminarMarca] = useState(null)
     const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
-    const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' })
+    const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '' })
     const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_tarjeta: '', precio_compra: '', precio_descuento: '', precio_compra_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
     const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
@@ -190,7 +190,7 @@ function Inventario() {
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleAgregarPresentacion(productoId) {
-        try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
+        try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
 
@@ -1127,8 +1127,15 @@ function colorVencimiento(diasParaVencer) {
                         <input placeholder="Ej: 3kg, 1KG, 15kg" value={nuevaPresentacion.nombre} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, nombre: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Precio de compra (Gs.)</label>
                         <input type="text" inputMode="numeric" placeholder="Ej: 50.000" value={formatMiles(nuevaPresentacion.precio_compra)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_compra: parseMiles(e.target.value) })} style={inputStyle} />
-                        <label style={labelStyle}>Precio de venta (Gs.)</label>
+                        <label style={labelStyle}>Precio efectivo / transferencia (Gs.)</label>
                         <input type="text" inputMode="numeric" placeholder="Ej: 75.000" value={formatMiles(nuevaPresentacion.precio_venta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_venta: parseMiles(e.target.value) })} style={inputStyle} />
+                        <label style={labelStyle}>Precio tarjeta (Gs.)</label>
+                        <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al efectivo" value={formatMiles(nuevaPresentacion.precio_tarjeta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_tarjeta: parseMiles(e.target.value) })} style={inputStyle} />
+                        {nuevaPresentacion.precio_venta && nuevaPresentacion.precio_tarjeta && parseInt(nuevaPresentacion.precio_tarjeta) > parseInt(nuevaPresentacion.precio_venta) && (
+                            <div style={{ padding: '8px 12px', background: darkMode ? '#1e3a5f' : '#eff6ff', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#1d4ed8', fontWeight: '600' }}>
+                                Recargo: {((parseInt(nuevaPresentacion.precio_tarjeta) - parseInt(nuevaPresentacion.precio_venta)) / parseInt(nuevaPresentacion.precio_venta) * 100).toFixed(2)}%
+                            </div>
+                        )}
                         <label style={labelStyle}>Stock inicial</label>
                         <input type="number" value={nuevaPresentacion.stock} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, stock: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Codigo de barras (opcional)</label>

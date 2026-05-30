@@ -259,8 +259,8 @@ async function manejarSaludoCliente(numero, sesion) {
 
     // Verificar stock de última compra
     const stockRes = await db.query(
-        `SELECT stock_disponible($1, $2) as disponible, 
-                precio_venta, nombre
+        `SELECT stock_disponible($1, $2) as disponible,
+                precio_venta, precio_tarjeta, nombre
          FROM presentaciones WHERE id = $1`,
         [cliente.ultima_presentacion_id, numero]
     )
@@ -286,6 +286,8 @@ async function manejarSaludoCliente(numero, sesion) {
         return
     }
 
+    const precioRepetir = pr.precio_tarjeta || pr.precio_venta
+
     // Tiene stock — ofrecer repetir
     await actualizarSesion(numero, {
         paso: 'ofreciendo_repetir',
@@ -296,7 +298,7 @@ async function manejarSaludoCliente(numero, sesion) {
             ultima_presentacion_nombre: cliente.ultima_presentacion_nombre,
             ultimo_producto_nombre: cliente.ultimo_producto_nombre,
             ultima_marca_nombre: cliente.ultima_marca_nombre,
-            ultimo_precio: parseInt(pr.precio_venta),
+            ultimo_precio: precioRepetir,
             ultimo_canal: cliente.ultimo_canal
         }
     })
@@ -305,7 +307,7 @@ async function manejarSaludoCliente(numero, sesion) {
         `¡Hola${nombre ? ', ' + nombre : ''}! 👋 Bienvenido de nuevo a Sosa Bulls 🐾\n\n` +
         `La última vez pediste:\n` +
         `*${nombreProducto}*\n` +
-        `Gs. ${parseInt(pr.precio_venta).toLocaleString('es-PY')}\n\n` +
+        `Gs. ${precioRepetir.toLocaleString('es-PY')}\n\n` +
         `¿Querés pedirlo de nuevo?\n` +
         `1. Sí, quiero el mismo\n` +
         `2. No, quiero ver otros productos`
