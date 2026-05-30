@@ -80,6 +80,7 @@ function Inventario() {
     const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_tarjeta: '', precio_compra: '', precio_descuento: '', precio_compra_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
     const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
+    const [guardando, setGuardando] = useState(false)
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
@@ -132,8 +133,11 @@ function Inventario() {
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la marca.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleCrearProducto() {
+        if (guardando) return
+        setGuardando(true)
         try { await crearProducto(nuevoProducto); setModalProducto(false); setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+        finally { setGuardando(false) }
     }
     async function handleCrearCategoria() {
         if (!nuevaCategoria.nombre.trim()) return
@@ -190,8 +194,11 @@ function Inventario() {
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleAgregarPresentacion(productoId) {
+        if (guardando) return
+        setGuardando(true)
         try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+        finally { setGuardando(false) }
     }
 
     function handleEliminarPresentacion(pr, producto) {
@@ -1009,7 +1016,7 @@ function colorVencimiento(diasParaVencer) {
 
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalProducto(false)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleCrearProducto} style={btnPrimario}>Crear producto</button>
+                            <button onClick={handleCrearProducto} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.6 : 1 }}>{guardando ? 'Creando...' : 'Crear producto'}</button>
                         </div>
                     </div>
                 </Modal>
@@ -1142,7 +1149,7 @@ function colorVencimiento(diasParaVencer) {
                         <input value={nuevaPresentacion.codigo_barras} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, codigo_barras: e.target.value })} placeholder="Escanea o ingresa manualmente" style={inputStyle} />
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalPresentacion(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={() => handleAgregarPresentacion(modalPresentacion)} style={btnPrimario}>Agregar</button>
+                            <button onClick={() => handleAgregarPresentacion(modalPresentacion)} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.6 : 1 }}>{guardando ? 'Agregando...' : 'Agregar'}</button>
                         </div>
                     </div>
                 </Modal>
