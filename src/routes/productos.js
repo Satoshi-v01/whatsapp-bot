@@ -563,7 +563,7 @@ router.delete('/:id', autenticar, verificarPermiso('inventario', 'eliminar'), as
 
         if (ids.length > 0) {
             const enVentas = await client.query(
-                `SELECT (SELECT COUNT(*) FROM detalle_ventas WHERE presentacion_id = ANY($1)) +
+                `SELECT (SELECT COUNT(*) FROM ventas_items WHERE presentacion_id = ANY($1)) +
                         (SELECT COUNT(*) FROM ordenes_pedido_items WHERE presentacion_id = ANY($1)) AS total`,
                 [ids]
             )
