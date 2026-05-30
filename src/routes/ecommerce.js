@@ -818,6 +818,8 @@ router.get('/admin/productos', autenticar, async (req, res) => {
          p.nombre AS producto_nombre,
          p.descripcion,
          p.imagen_url,
+         p.especie,
+         p.calidad,
          COALESCE(p.es_novedad, false) AS es_novedad,
          COALESCE(p.es_destacado, false) AS es_destacado,
          p.ecommerce_categoria,
