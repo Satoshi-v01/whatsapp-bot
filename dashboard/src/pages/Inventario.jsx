@@ -408,6 +408,9 @@ function colorVencimiento(diasParaVencer) {
             (p.sku && p.sku.toLowerCase().includes(buscar.toLowerCase()))
         )
 
+    const colorSeccionActiva = PESTANAS.find(t => t.id === pestanaActiva)?.color || '#1a1a2e'
+    const tipoActivo = secciones.find(s => s.slug === pestanaActiva)?.tipo || 'generico'
+
     function getAgrupadorSecundario(p) {
         if (tipoActivo === 'con_calidad_especie') return p.subcategoria_nombre || 'Sin Subcategoria'
         if (pestanaActiva === 'sin_categoria') return 'Sin categoria asignada'
@@ -423,9 +426,6 @@ function colorVencimiento(diasParaVencer) {
         porMarca[marca][sub].push(p)
     })
     const marcasOrdenadas = Object.keys(porMarca).sort((a, b) => a === 'Sin Marca' ? 1 : b === 'Sin Marca' ? -1 : a.localeCompare(b))
-
-    const colorSeccionActiva = PESTANAS.find(t => t.id === pestanaActiva)?.color || '#1a1a2e'
-    const tipoActivo = secciones.find(s => s.slug === pestanaActiva)?.tipo || 'generico'
     const getTipoSeccion = (slug) => secciones.find(s => s.slug === slug)?.tipo || 'generico'
 
     const subcategoriasPestana = subcategorias.filter(s => s.seccion === pestanaActiva)
