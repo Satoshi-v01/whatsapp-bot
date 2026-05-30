@@ -149,3 +149,7 @@ export async function eliminarProducto(id) {
     const res = await api.delete(`/productos/${id}`)
     return res.data
 }
+export async function importarProductos(filas) {
+    const res = await api.post('/productos/importar', { filas })
+    return res.data
+}
