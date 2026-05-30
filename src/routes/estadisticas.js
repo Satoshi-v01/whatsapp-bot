@@ -16,7 +16,7 @@ router.get('/resumen', async (req, res) => {
             `SELECT 
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - pr.precio_compra), 0) as ganancia
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE v.created_at >= $1
@@ -85,7 +85,7 @@ router.get('/ventas-semana', async (req, res) => {
                 DATE(v.created_at) as fecha,
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - pr.precio_compra), 0) as ganancia
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE v.created_at >= NOW() - INTERVAL '7 days'
@@ -108,7 +108,7 @@ router.get('/top-productos', async (req, res) => {
                 pr.nombre as presentacion,
                 COUNT(*) as cantidad_vendida,
                 SUM(v.precio) as total_generado,
-                SUM(v.precio - pr.precio_compra) as ganancia_generada
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_generada
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
@@ -208,7 +208,7 @@ router.get('/ventas-por-dia', async (req, res) => {
                 DATE(v.created_at AT TIME ZONE 'America/Asuncion') as fecha,
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE ${condiciones.join(' AND ')}
@@ -264,7 +264,7 @@ router.get('/ranking-productos', async (req, res) => {
                 p.nombre as producto, pr.nombre as presentacion, m.nombre as marca,
                 COUNT(*) as cantidad_vendida,
                 COALESCE(SUM(v.precio), 0) as total_generado,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia_generada
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_generada
              FROM ventas v
              JOIN presentaciones pr ON v.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
@@ -427,7 +427,7 @@ router.get('/metricas', async (req, res) => {
             `SELECT
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia,
+                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia,
                 COALESCE(AVG(v.precio), 0) as ticket_promedio,
                 FLOOR(COALESCE(SUM(v.precio), 0) / 11) as iva_total
              FROM ventas v
