@@ -590,4 +590,120 @@ router.delete('/:id', autenticar, verificarPermiso('inventario', 'eliminar'), as
     }
 })
 
+// Importar lista de precios desde Excel (ya parseado a JSON en el frontend)
+router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { filas } = req.body
+        if (!Array.isArray(filas) || filas.length === 0) {
+            return res.status(400).json({ error: 'No hay filas para importar' })
+        }
+
+        await client.query('BEGIN')
+
+        let creados = 0
+        let actualizados = 0
+        const errores = []
+
+        for (const [idx, fila] of filas.entries()) {
+            try {
+                const nombre = String(fila.nombre_producto || '').trim()
+                const nombrePres = String(fila.presentacion || '').trim()
+                if (!nombre || !nombrePres) {
+                    errores.push({ fila: idx + 2, mensaje: 'Falta nombre_producto o presentacion' })
+                    continue
+                }
+                const precioVenta = parseInt(fila.precio_venta) || 0
+                if (!precioVenta) {
+                    errores.push({ fila: idx + 2, mensaje: `${nombre} — ${nombrePres}: precio_venta requerido` })
+                    continue
+                }
+
+                // 1. Buscar o crear marca
+                let marcaId = null
+                if (fila.marca?.trim()) {
+                    const marcaExist = await client.query(`SELECT id FROM marcas WHERE LOWER(nombre) = LOWER($1)`, [fila.marca.trim()])
+                    if (marcaExist.rows.length > 0) {
+                        marcaId = marcaExist.rows[0].id
+                    } else {
+                        const nuevaMarca = await client.query(`INSERT INTO marcas (nombre) VALUES ($1) RETURNING id`, [fila.marca.trim()])
+                        marcaId = nuevaMarca.rows[0].id
+                    }
+                }
+
+                // 2. Buscar o crear producto
+                let productoId
+                const prodExist = await client.query(
+                    `SELECT id FROM productos WHERE LOWER(nombre) = LOWER($1) AND COALESCE(marca_id, 0) = COALESCE($2, 0)`,
+                    [nombre, marcaId]
+                )
+                if (prodExist.rows.length > 0) {
+                    productoId = prodExist.rows[0].id
+                } else {
+                    const calidades = ['standard', 'premium', 'premium_special', 'super_premium']
+                    const calidad = calidades.includes(fila.calidad) ? fila.calidad : 'standard'
+                    const especies = ['perro', 'gato', 'ambos']
+                    const especie = especies.includes(fila.especie) ? fila.especie : null
+                    const categorias = ['balanceados', 'accesorios', 'medicamentos', 'higiene', 'snacks']
+                    const seccion = categorias.includes(fila.categoria) ? fila.categoria : null
+
+                    const nuevoProd = await client.query(
+                        `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id)
+                         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                        [nombre, calidad, especie, seccion, marcaId]
+                    )
+                    productoId = nuevoProd.rows[0].id
+                    creados++
+                }
+
+                // 3. Buscar o crear presentación
+                const presExist = await client.query(
+                    `SELECT id FROM presentaciones WHERE producto_id = $1 AND LOWER(nombre) = LOWER($2)`,
+                    [productoId, nombrePres]
+                )
+                const precioCompra = parseInt(fila.precio_compra) || 0
+                const precioTarjeta = parseInt(fila.precio_tarjeta) || null
+                const stock = parseInt(fila.stock) || 0
+
+                if (presExist.rows.length > 0) {
+                    await client.query(
+                        `UPDATE presentaciones SET precio_venta = $1, precio_compra = $2, precio_tarjeta = $3
+                         WHERE id = $4`,
+                        [precioVenta, precioCompra, precioTarjeta, presExist.rows[0].id]
+                    )
+                    actualizados++
+                } else {
+                    await client.query(
+                        `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, precio_tarjeta, stock)
+                         VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [productoId, nombrePres, precioVenta, precioCompra, precioTarjeta, stock]
+                    )
+                    actualizados++
+                }
+            } catch (e) {
+                errores.push({ fila: idx + 2, mensaje: e.message })
+            }
+        }
+
+        await client.query('COMMIT')
+
+        registrarLog({
+            usuario_id: req.usuario?.id,
+            usuario_nombre: req.usuario?.nombre,
+            accion: 'crear',
+            modulo: 'inventario',
+            entidad: 'importacion',
+            descripcion: `Importación: ${creados} productos nuevos, ${actualizados} presentaciones, ${errores.length} errores`,
+            ip: req.ip
+        }).catch(() => {})
+
+        res.json({ creados, actualizados, errores })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
 module.exports = router

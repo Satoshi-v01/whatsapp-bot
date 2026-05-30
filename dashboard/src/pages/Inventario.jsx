@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import {
     getProductos, getCategorias, getMarcas, crearMarca,
     verificarEliminarMarca, confirmarEliminarMarca,
@@ -9,7 +10,8 @@ import {
     crearProducto, editarProducto, agregarPresentacion,
     actualizarStock, actualizarPrecio, actualizarCodigoBarras,
     toggleDisponibleProducto, eliminarPresentacion, eliminarProducto,
-    getSecciones, crearSeccion, editarSeccion, eliminarSeccion
+    getSecciones, crearSeccion, editarSeccion, eliminarSeccion,
+    importarProductos
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -82,6 +84,10 @@ function Inventario() {
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
     const [guardando, setGuardando] = useState(false)
     const [modalConfirmar, setModalConfirmar] = useState(null)
+    const [modalImportar, setModalImportar] = useState(null) // null | { filas, erroresValidacion }
+    const [importando, setImportando] = useState(false)
+    const [importResultado, setImportResultado] = useState(null)
+    const inputImportRef = useRef(null)
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
     const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
@@ -138,6 +144,75 @@ function Inventario() {
         try { await crearProducto(nuevoProducto); setModalProducto(false); setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
         finally { setGuardando(false) }
+    }
+
+    function descargarTemplate() {
+        const encabezados = [['nombre_producto', 'marca', 'especie', 'calidad', 'categoria', 'presentacion', 'precio_compra', 'precio_venta', 'precio_tarjeta', 'stock']]
+        const ejemplos = [
+            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', '3kg', 155000, 190000, 202000, 10],
+            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', '15kg', 580000, 720000, 765000, 5],
+            ['Whiskas Adulto', 'Mars', 'gato', 'standard', 'balanceados', '500g', 18000, 25000, '', 20],
+        ]
+        const ws = XLSX.utils.aoa_to_sheet([...encabezados, ...ejemplos])
+        ws['!cols'] = encabezados[0].map((_, i) => ({ wch: i === 0 ? 28 : i <= 4 ? 16 : 14 }))
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Lista de Precios')
+        XLSX.writeFile(wb, 'template_importacion.xlsx')
+    }
+
+    function handleSeleccionarExcel(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = ev => {
+            try {
+                const wb = XLSX.read(ev.target.result, { type: 'array' })
+                const ws = wb.Sheets[wb.SheetNames[0]]
+                const raw = XLSX.utils.sheet_to_json(ws, { defval: '' })
+                // Normalizar nombres de columnas
+                const filas = raw.map(row => {
+                    const norm = {}
+                    Object.entries(row).forEach(([k, v]) => { norm[k.toLowerCase().trim().replace(/\s+/g, '_')] = v })
+                    return {
+                        nombre_producto: String(norm.nombre_producto || norm.nombre || norm.product || '').trim(),
+                        marca: String(norm.marca || norm.brand || norm.fabricante || '').trim(),
+                        especie: String(norm.especie || norm.especie_animal || '').trim().toLowerCase(),
+                        calidad: String(norm.calidad || norm.quality || '').trim().toLowerCase(),
+                        categoria: String(norm.categoria || norm.category || '').trim().toLowerCase(),
+                        presentacion: String(norm.presentacion || norm.presentacion_nombre || norm.tamaño || norm.size || norm.kg || '').trim(),
+                        precio_compra: parseInt(String(norm.precio_compra || norm.p_compra || norm.costo || '').replace(/[^0-9]/g, '')) || 0,
+                        precio_venta: parseInt(String(norm.precio_venta || norm.p_venta || norm.precio || norm.precio_de_venta || '').replace(/[^0-9]/g, '')) || 0,
+                        precio_tarjeta: parseInt(String(norm.precio_tarjeta || norm.p_tarjeta || '').replace(/[^0-9]/g, '')) || null,
+                        stock: parseInt(String(norm.stock || norm.cantidad || '').replace(/[^0-9]/g, '')) || 0,
+                    }
+                }).filter(f => f.nombre_producto && f.presentacion)
+
+                if (filas.length === 0) {
+                    setModalConfirmar({ titulo: 'Archivo vacío', mensaje: 'No se encontraron filas válidas. Verificá que el archivo use el template correcto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                    return
+                }
+                setImportResultado(null)
+                setModalImportar({ filas })
+            } catch {
+                setModalConfirmar({ titulo: 'Error al leer el archivo', mensaje: 'No se pudo leer el Excel. Asegurate de usar el template descargado.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            }
+        }
+        reader.readAsArrayBuffer(file)
+        e.target.value = ''
+    }
+
+    async function handleConfirmarImport() {
+        if (!modalImportar?.filas?.length || importando) return
+        setImportando(true)
+        try {
+            const resultado = await importarProductos(modalImportar.filas)
+            setImportResultado(resultado)
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error en la importación', mensaje: err.response?.data?.error || 'No se pudo completar la importación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally {
+            setImportando(false)
+        }
     }
     async function handleCrearCategoria() {
         if (!nuevaCategoria.nombre.trim()) return
@@ -484,6 +559,9 @@ function colorVencimiento(diasParaVencer) {
                     <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
                     <button onClick={() => { setNuevaCategoria({ nombre: '', descripcion: '', seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '' }); setModalCategorias(true) }} style={btnSecundario}>Categorías</button>
                     {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
+                    <button onClick={descargarTemplate} style={btnSecundario}>⬇ Template</button>
+                    <button onClick={() => inputImportRef.current?.click()} style={btnSecundario}>⬆ Importar Excel</button>
+                    <input ref={inputImportRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcel} style={{ display: 'none' }} />
                     <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} style={btnPrimario}>+ Producto</button>
                 </div>
             </div>
@@ -1722,6 +1800,88 @@ function colorVencimiento(diasParaVencer) {
                     onCancelar={() => setModalConfirmar(null)}
                 />
             )}
+        {/* Modal importar Excel */}
+        {modalImportar && (
+            <Modal s={s} zIndex={3000}>
+                <div style={{ width: '720px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text, marginBottom: '2px' }}>
+                                {importResultado ? 'Importación completada' : 'Vista previa de importación'}
+                            </h3>
+                            <p style={{ fontSize: '12px', color: s.textMuted }}>
+                                {importResultado
+                                    ? `${importResultado.creados} productos nuevos · ${importResultado.actualizados} presentaciones cargadas · ${importResultado.errores.length} errores`
+                                    : `${modalImportar.filas.length} filas detectadas`}
+                            </p>
+                        </div>
+                        <button onClick={() => { setModalImportar(null); setImportResultado(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                    </div>
+
+                    {importResultado ? (
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                                {[
+                                    { label: 'Productos nuevos', val: importResultado.creados, color: '#10b981' },
+                                    { label: 'Presentaciones', val: importResultado.actualizados, color: '#3b82f6' },
+                                    { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
+                                ].map(k => (
+                                    <div key={k.label} style={{ padding: '14px', borderRadius: '10px', background: s.surfaceLow, textAlign: 'center', border: `1px solid ${s.border}` }}>
+                                        <p style={{ fontSize: '24px', fontWeight: '800', color: k.color }}>{k.val}</p>
+                                        <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '4px' }}>{k.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            {importResultado.errores.length > 0 && (
+                                <div style={{ background: '#fee2e2', borderRadius: '8px', padding: '12px', maxHeight: '160px', overflowY: 'auto' }}>
+                                    {importResultado.errores.map((e, i) => (
+                                        <p key={i} style={{ fontSize: '12px', color: '#991b1b', marginBottom: '4px' }}>Fila {e.fila}: {e.mensaje}</p>
+                                    ))}
+                                </div>
+                            )}
+                            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button onClick={() => { setModalImportar(null); setImportResultado(null) }} style={btnPrimario}>Cerrar</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${s.border}`, borderRadius: '8px', marginBottom: '16px' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                    <thead>
+                                        <tr style={{ background: s.surfaceLow }}>
+                                            {['Producto', 'Marca', 'Especie', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock'].map(h => (
+                                                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `1px solid ${s.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {modalImportar.filas.map((f, i) => (
+                                            <tr key={i} style={{ borderBottom: `1px solid ${s.borderLight}` }}>
+                                                <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.nombre_producto}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.marca || '—'}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.especie || '—'}</td>
+                                                <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.presentacion}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
+                                                <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span style={{ color: '#ef4444' }}>Requerido</span>}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_tarjeta ? `Gs. ${parseInt(f.precio_tarjeta).toLocaleString()}` : '—'}</td>
+                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.stock ?? 0}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setModalImportar(null)} style={btnSecundario}>Cancelar</button>
+                                <button onClick={handleConfirmarImport} disabled={importando} style={{ ...btnPrimario, opacity: importando ? 0.6 : 1 }}>
+                                    {importando ? 'Importando...' : `Confirmar importación (${modalImportar.filas.length} filas)`}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Modal>
+        )}
+
         </div>
     )
 }
