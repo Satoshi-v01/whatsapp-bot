@@ -297,30 +297,48 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filtered.map(prod => {
+                                    {(() => {
+                                        // Agrupar por producto
+                                        const grupos = []
+                                        const idx = {}
+                                        filtered.forEach(p => {
+                                            if (idx[p.producto_id] === undefined) {
+                                                idx[p.producto_id] = grupos.length
+                                                grupos.push([p])
+                                            } else {
+                                                grupos[idx[p.producto_id]].push(p)
+                                            }
+                                        })
+                                        return grupos.map(grupo => grupo.map((prod, pi) => {
                                         const catColor = CAT_COLORS[prod.ecommerce_categoria] || null
+                                        const esFirst = pi === 0
                                         return (
-                                            <tr key={prod.presentacion_id} style={{ background: s.surface }}>
+                                            <tr key={prod.presentacion_id} style={{ background: s.surface, borderTop: esFirst ? `2px solid ${s.border}` : undefined }}>
                                                 <td style={tdStyle}>
-                                                    <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${s.border}` }}>
-                                                        {prod.imagen_url ? (
-                                                            <img src={prod.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        ) : (
-                                                            <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
-                                                                <ellipse cx="50" cy="65" rx="24" ry="20" />
-                                                                <circle cx="22" cy="38" r="11" />
-                                                                <circle cx="42" cy="26" r="11" />
-                                                                <circle cx="62" cy="26" r="11" />
-                                                                <circle cx="78" cy="38" r="11" />
-                                                            </svg>
-                                                        )}
-                                                    </div>
+                                                    {esFirst ? (
+                                                        <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${s.border}` }}>
+                                                            {prod.imagen_url ? (
+                                                                <img src={prod.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            ) : (
+                                                                <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
+                                                                    <ellipse cx="50" cy="65" rx="24" ry="20" />
+                                                                    <circle cx="22" cy="38" r="11" />
+                                                                    <circle cx="42" cy="26" r="11" />
+                                                                    <circle cx="62" cy="26" r="11" />
+                                                                    <circle cx="78" cy="38" r="11" />
+                                                                </svg>
+                                                            )}
+                                                        </div>
+                                                    ) : null}
                                                 </td>
                                                 <td style={tdStyle}>
-                                                    <span style={{ fontWeight: 600, color: s.text }}>{nombreWeb(prod)}</span>
-                                                    {prod.categoria_nombre && <span style={{ display: 'block', fontSize: 11, color: s.textMuted }}>{prod.categoria_nombre}</span>}
+                                                    {esFirst && <span style={{ fontWeight: 600, color: s.text }}>{nombreWeb(prod)}</span>}
+                                                    {esFirst && prod.categoria_nombre && <span style={{ display: 'block', fontSize: 11, color: s.textMuted }}>{prod.categoria_nombre}</span>}
                                                 </td>
-                                                <td style={{ ...tdStyle, color: s.textMuted, fontSize: 12 }}>{prod.presentacion_nombre}</td>
+                                                <td style={{ ...tdStyle, color: s.textMuted, fontSize: 12, paddingLeft: esFirst ? undefined : 24 }}>
+                                                    {!esFirst && <span style={{ color: s.textFaint, marginRight: 4 }}>└</span>}
+                                                    {prod.presentacion_nombre}
+                                                </td>
                                                 <td style={tdStyle}>
                                                     {prod.ecommerce_categoria ? (
                                                         <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: catColor ? `${catColor}18` : s.surfaceLow, color: catColor || s.textMuted, border: `1px solid ${catColor ? `${catColor}35` : s.border}`, whiteSpace: 'nowrap' }}>
@@ -336,16 +354,18 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                                     <Toggle checked={prod.disponible} onChange={v => toggleCampo(prod, 'disponible', v)} />
                                                 </td>
                                                 <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                                    <Toggle checked={prod.es_novedad} onChange={v => toggleCampo(prod, 'es_novedad', v)} />
+                                                    {esFirst && <Toggle checked={prod.es_novedad} onChange={v => toggleCampo(prod, 'es_novedad', v)} />}
                                                 </td>
                                                 <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                                    <Toggle checked={prod.es_destacado} onChange={v => toggleCampo(prod, 'es_destacado', v)} />
+                                                    {esFirst && <Toggle checked={prod.es_destacado} onChange={v => toggleCampo(prod, 'es_destacado', v)} />}
                                                 </td>
                                                 <td style={tdStyle}>
                                                     <div style={{ display: 'flex', gap: 6 }}>
-                                                        <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
-                                                            Editar
-                                                        </button>
+                                                        {esFirst && (
+                                                            <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
+                                                                Editar
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => handleEliminarProducto(prod)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                                         </button>
@@ -353,7 +373,8 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                                 </td>
                                             </tr>
                                         )
-                                    })}
+                                        }))
+                                    })()}
                                 </tbody>
                             </table>
                         </div>

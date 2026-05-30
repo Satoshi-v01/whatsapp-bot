@@ -34,8 +34,8 @@ function toSlug(text) {
     .replace(/^-|-$/g, '')
 }
 
-function buildProductSlug(nombreProducto, nombrePresentacion, presentacionId) {
-  return `${toSlug(nombreProducto)}-${toSlug(nombrePresentacion)}-${presentacionId}`
+function buildProductSlug(nombre, id) {
+  return `${toSlug(nombre)}-${id}`
 }
 
 // ─── GET /api/ecommerce/banners ───────────────────────────────
@@ -116,6 +116,7 @@ router.get('/subcategorias', async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/productos ────────────────────────────
+// Retorna PRODUCTOS agrupados (cada producto con sus presentaciones)
 router.get('/productos', async (req, res) => {
   try {
     const {
@@ -135,158 +136,101 @@ router.get('/productos', async (req, res) => {
     const limitInt  = Math.min(parseInt(limit) || 20, 100)
     const offsetInt = parseInt(offset) || 0
 
-    const condiciones = ['pr.disponible = true']
+    const condiciones = []
     const valores = []
     let i = 1
 
-    if (solo_disponibles === 'true') {
-      condiciones.push(`pr.stock > 0`)
-    }
-
     if (categoria) {
       if (categoria.toLowerCase() === 'ofertas') {
-        condiciones.push(`(${OFERTA_COND})`)
+        condiciones.push(`EXISTS (SELECT 1 FROM presentaciones pr2 WHERE pr2.producto_id = p.id AND ${OFERTA_COND.replace(/pr\./g, 'pr2.')})`)
       } else {
         condiciones.push(`p.ecommerce_categoria = $${i++}`)
         valores.push(categoria.toLowerCase())
       }
     }
-
-    if (search) {
-      condiciones.push(`(p.nombre ILIKE $${i} OR p.descripcion ILIKE $${i})`)
-      valores.push(`%${search}%`)
-      i++
-    }
-
-    if (novedad === 'true') {
-      condiciones.push(`p.es_novedad = true`)
-    }
-
-    if (subcategoria_id) {
-      condiciones.push(`p.ecommerce_subcategoria_id = $${i++}`)
-      valores.push(parseInt(subcategoria_id))
-    }
-
-    if (marca_id) {
-      condiciones.push(`p.marca_id = $${i++}`)
-      valores.push(parseInt(marca_id))
-    }
-
-    if (precio_min) {
-      condiciones.push(`(${PRECIO_WEB}) >= $${i++}`)
-      valores.push(parseFloat(precio_min))
-    }
-
-    if (precio_max) {
-      condiciones.push(`(${PRECIO_WEB}) <= $${i++}`)
-      valores.push(parseFloat(precio_max))
-    }
+    if (search) { condiciones.push(`(p.nombre ILIKE $${i} OR p.descripcion ILIKE $${i})`); valores.push(`%${search}%`); i++ }
+    if (novedad === 'true') condiciones.push(`p.es_novedad = true`)
+    if (subcategoria_id) { condiciones.push(`p.ecommerce_subcategoria_id = $${i++}`); valores.push(parseInt(subcategoria_id)) }
+    if (marca_id) { condiciones.push(`p.marca_id = $${i++}`); valores.push(parseInt(marca_id)) }
 
     const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''
 
-    // Conteo total para paginacion
-    const countResult = await db.query(
-      `SELECT COUNT(*) AS total
-       FROM presentaciones pr
-       JOIN productos p ON p.id = pr.producto_id
-       LEFT JOIN categorias c ON c.id = p.categoria_id
-       ${where}`,
-      valores
-    )
+    const havingConds = []
+    if (solo_disponibles === 'true') havingConds.push(`COUNT(pr.id) FILTER (WHERE pr.disponible = true AND pr.stock > 0) > 0`)
+    if (precio_min) havingConds.push(`MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) >= ${parseFloat(precio_min)}`)
+    if (precio_max) havingConds.push(`MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) <= ${parseFloat(precio_max)}`)
+    const having = havingConds.length ? `HAVING ${havingConds.join(' AND ')}` : ''
 
-    // Queries con JOIN de ventas (para sorts que necesitan datos de ventas)
-    const usaVentas = sort === 'mas_vendido' || sort === 'destacados'
-
-    let itemsResult
-    if (usaVentas) {
-      // destacados: manuales primero (es_destacado DESC), luego por ventas
-      // mas_vendido: solo por ventas
-      const orderVentas = sort === 'destacados'
-        ? 'p.es_destacado DESC, total_vendido DESC, p.nombre ASC'
-        : 'total_vendido DESC, p.nombre ASC'
-
-      itemsResult = await db.query(
-        `SELECT
-           pr.id,
-           pr.nombre AS presentacion_nombre,
-           ${PRECIO_WEB} AS precio_web,
-           ${PRECIO_OR} AS precio_original,
-           pr.stock,
-           p.id AS producto_id,
-           p.nombre AS nombre_base,
-           p.especie,
-           p.calidad,
-           m.nombre AS marca_nombre,
-           COALESCE(p.descripcion, '') AS descripcion,
-           COALESCE(p.imagen_url, '') AS imagen_url,
-           COALESCE(p.es_novedad, false) AS es_novedad,
-           COALESCE(p.es_destacado, false) AS es_destacado,
-           LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
-           c.nombre AS categoria_nombre,
-           COALESCE(SUM(opi.cantidad) FILTER (
-             WHERE op.estado != 'cancelado'
-           ), 0) AS total_vendido
-         FROM presentaciones pr
-         JOIN productos p ON p.id = pr.producto_id
-         LEFT JOIN categorias c ON c.id = p.categoria_id
-         LEFT JOIN marcas m ON m.id = p.marca_id
-         LEFT JOIN ordenes_pedido_items opi ON opi.presentacion_id = pr.id
-         LEFT JOIN ordenes_pedido op ON op.id = opi.orden_id
-         ${where}
-         GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.precio_tarjeta, pr.precio_descuento, pr.descuento_activo,
-                  pr.descuento_desde, pr.descuento_hasta, pr.stock,
-                  p.id, p.nombre, p.especie, p.calidad, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, c.nombre, m.nombre
-         ORDER BY ${orderVentas}
-         LIMIT $${i} OFFSET $${i + 1}`,
-        [...valores, limitInt, offsetInt]
-      )
-    } else {
-      let orderBy
-      switch (sort) {
-        case 'precio_asc':  orderBy = `(${PRECIO_WEB}) ASC`;  break
-        case 'precio_desc': orderBy = `(${PRECIO_WEB}) DESC`; break
-        case 'nombre':      orderBy = 'p.nombre ASC';          break
-        default:            orderBy = 'p.nombre ASC'
-      }
-      itemsResult = await db.query(
-        `SELECT
-           pr.id,
-           pr.nombre AS presentacion_nombre,
-           ${PRECIO_WEB} AS precio_web,
-           ${PRECIO_OR} AS precio_original,
-           pr.stock,
-           p.id AS producto_id,
-           p.nombre AS nombre_base,
-           p.especie,
-           p.calidad,
-           m.nombre AS marca_nombre,
-           COALESCE(p.descripcion, '') AS descripcion,
-           COALESCE(p.imagen_url, '') AS imagen_url,
-           COALESCE(p.es_novedad, false) AS es_novedad,
-           LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
-           c.nombre AS categoria_nombre
-         FROM presentaciones pr
-         JOIN productos p ON p.id = pr.producto_id
-         LEFT JOIN categorias c ON c.id = p.categoria_id
-         LEFT JOIN marcas m ON m.id = p.marca_id
-         ${where}
-         ORDER BY ${orderBy}
-         LIMIT $${i} OFFSET $${i + 1}`,
-        [...valores, limitInt, offsetInt]
-      )
+    let orderBy
+    switch (sort) {
+      case 'precio_asc':  orderBy = `MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) ASC`;  break
+      case 'precio_desc': orderBy = `MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) DESC`; break
+      case 'destacados':  orderBy = `p.es_destacado DESC, p.nombre ASC`; break
+      case 'mas_vendido': orderBy = `total_vendido DESC, p.nombre ASC`; break
+      default:            orderBy = 'p.nombre ASC'
     }
 
+    const needsVentas = sort === 'mas_vendido' || sort === 'destacados'
+
+    const countResult = await db.query(
+      `SELECT COUNT(DISTINCT p.id) AS total
+       FROM productos p
+       JOIN presentaciones pr ON pr.producto_id = p.id AND pr.disponible = true
+       ${where}
+       ${having ? having.replace(/COUNT\(pr\.id\)[^,)]*/g, 'true') : ''}`,
+      valores
+    ).catch(() => db.query(`SELECT COUNT(DISTINCT p.id) AS total FROM productos p JOIN presentaciones pr ON pr.producto_id = p.id ${where}`, valores))
+
+    const itemsResult = await db.query(
+      `SELECT
+         p.id AS producto_id,
+         p.nombre AS nombre_base,
+         COALESCE(p.descripcion, '') AS descripcion,
+         COALESCE(p.imagen_url, '') AS imagen_url,
+         COALESCE(p.es_novedad, false) AS es_novedad,
+         COALESCE(p.es_destacado, false) AS es_destacado,
+         p.ecommerce_categoria,
+         m.nombre AS marca_nombre,
+         LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
+         ${needsVentas ? `COALESCE(SUM(opi.cantidad) FILTER (WHERE op.estado != 'cancelado'), 0) AS total_vendido,` : ''}
+         MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) AS precio_desde,
+         JSON_AGG(
+           JSON_BUILD_OBJECT(
+             'id', pr.id,
+             'nombre', pr.nombre,
+             'precio_venta', COALESCE(pr.precio_tarjeta, pr.precio_venta),
+             'stock', pr.stock
+           ) ORDER BY pr.nombre ASC
+         ) FILTER (WHERE pr.disponible = true AND pr.stock > 0) AS presentaciones
+       FROM productos p
+       JOIN presentaciones pr ON pr.producto_id = p.id AND pr.disponible = true
+       LEFT JOIN categorias c ON c.id = p.categoria_id
+       LEFT JOIN marcas m ON m.id = p.marca_id
+       ${needsVentas ? 'LEFT JOIN ordenes_pedido_items opi ON opi.presentacion_id = pr.id LEFT JOIN ordenes_pedido op ON op.id = opi.orden_id' : ''}
+       ${where}
+       GROUP BY p.id, p.nombre, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, p.ecommerce_categoria, c.nombre, m.nombre
+       ${having}
+       ORDER BY ${orderBy}
+       LIMIT $${i} OFFSET $${i + 1}`,
+      [...valores, limitInt, offsetInt]
+    )
+
     const items = itemsResult.rows.map(row => ({
-      id: row.id,
-      nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
+      id: row.producto_id,
+      nombre: row.nombre_base,
       descripcion: row.descripcion,
-      precio_venta: Number(row.precio_web),
-      precio_original: row.precio_original ? Number(row.precio_original) : null,
-      stock: Number(row.stock),
       imagen_url: row.imagen_url || null,
       es_novedad: row.es_novedad,
+      marca: row.marca_nombre || null,
       categoria_slug: row.categoria_slug,
-      slug: buildProductSlug(row.nombre_base, row.presentacion_nombre, row.id),
+      slug: buildProductSlug(row.nombre_base, row.producto_id),
+      precio_desde: Number(row.precio_desde || 0),
+      presentaciones: (row.presentaciones || []).map(pr => ({
+        id: pr.id,
+        nombre: pr.nombre,
+        precio_venta: Number(pr.precio_venta),
+        stock: Number(pr.stock),
+      })),
     }))
 
     res.json({
@@ -299,40 +243,41 @@ router.get('/productos', async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/productos/:slug ───────────────────────
+// Slug formato: nombre-{producto_id}
 router.get('/productos/:slug', async (req, res) => {
   try {
-    // El slug tiene formato: nombre-presentacion-{id}
-    // Extraemos el ID del final
     const parts = req.params.slug.split('-')
-    const presentacionId = parseInt(parts[parts.length - 1])
+    const productoId = parseInt(parts[parts.length - 1])
 
-    if (!presentacionId || isNaN(presentacionId)) {
+    if (!productoId || isNaN(productoId)) {
       return res.status(400).json({ error: 'Slug invalido' })
     }
 
     const resultado = await db.query(
       `SELECT
-         pr.id,
-         pr.nombre AS presentacion_nombre,
-         ${PRECIO_WEB} AS precio_web,
-         ${PRECIO_OR} AS precio_original,
-         pr.stock,
          p.id AS producto_id,
          p.nombre AS nombre_base,
-         p.especie,
-         p.calidad,
-         m.nombre AS marca_nombre,
          COALESCE(p.descripcion, '') AS descripcion,
          COALESCE(p.imagen_url, '') AS imagen_url,
          COALESCE(p.es_novedad, false) AS es_novedad,
+         m.nombre AS marca_nombre,
          LOWER(REGEXP_REPLACE(c.nombre, '[^a-zA-Z0-9]+', '-', 'g')) AS categoria_slug,
-         c.nombre AS categoria_nombre
-       FROM presentaciones pr
-       JOIN productos p ON p.id = pr.producto_id
+         JSON_AGG(
+           JSON_BUILD_OBJECT(
+             'id', pr.id,
+             'nombre', pr.nombre,
+             'precio_venta', COALESCE(pr.precio_tarjeta, pr.precio_venta),
+             'stock', pr.stock,
+             'disponible', pr.disponible
+           ) ORDER BY pr.nombre ASC
+         ) FILTER (WHERE pr.disponible = true) AS presentaciones
+       FROM productos p
+       JOIN presentaciones pr ON pr.producto_id = p.id
        LEFT JOIN categorias c ON c.id = p.categoria_id
        LEFT JOIN marcas m ON m.id = p.marca_id
-       WHERE pr.id = $1 AND pr.disponible = true`,
-      [presentacionId]
+       WHERE p.id = $1
+       GROUP BY p.id, p.nombre, p.descripcion, p.imagen_url, p.es_novedad, c.nombre, m.nombre`,
+      [productoId]
     )
 
     if (resultado.rows.length === 0) {
@@ -340,17 +285,24 @@ router.get('/productos/:slug', async (req, res) => {
     }
 
     const row = resultado.rows[0]
+    const presentaciones = (row.presentaciones || []).map(pr => ({
+      id: pr.id,
+      nombre: pr.nombre,
+      precio_venta: Number(pr.precio_venta),
+      stock: Number(pr.stock),
+      disponible: pr.disponible,
+    }))
+
     res.json({
-      id: row.id,
-      nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
+      id: row.producto_id,
+      nombre: row.nombre_base,
       descripcion: row.descripcion,
-      precio_venta: Number(row.precio_web),
-      precio_original: row.precio_original ? Number(row.precio_original) : null,
-      stock: Number(row.stock),
       imagen_url: row.imagen_url || null,
       es_novedad: row.es_novedad,
+      marca: row.marca_nombre || null,
       categoria_slug: row.categoria_slug,
-      slug: buildProductSlug(row.nombre_base, row.presentacion_nombre, row.id),
+      slug: buildProductSlug(row.nombre_base, row.producto_id),
+      presentaciones,
     })
   } catch (error) {
     manejarError(res, error)
