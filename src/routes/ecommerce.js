@@ -58,18 +58,6 @@ router.get('/banners', async (req, res) => {
 // ─── GET /api/ecommerce/categorias ───────────────────────────
 const SLUGS_VALIDOS = ['perros', 'gatos', 'accesorios', 'higiene', 'medicamentos', 'snacks', 'ofertas']
 
-const ESPECIE_LABEL = { perro: 'Perro', gato: 'Gato', ambos: 'Perro y Gato' }
-const CALIDAD_LABEL = { standard: 'Standard', premium: 'Premium', premium_special: 'Premium Special', super_premium: 'Super Premium' }
-const buildNombre = (row) => {
-    const partes = [
-        ESPECIE_LABEL[row.especie] || row.especie || '',
-        row.marca_nombre || '',
-        CALIDAD_LABEL[row.calidad] || row.calidad || '',
-        row.presentacion_nombre || '',
-    ].filter(Boolean)
-    return partes.length ? partes.join(' ') : `${row.nombre_base} — ${row.presentacion_nombre}`
-}
-
 // SQL helpers — descuento activo y vigente en la presentación
 const OFERTA_COND = `pr.descuento_activo = true AND pr.precio_descuento IS NOT NULL AND (pr.descuento_desde IS NULL OR pr.descuento_desde <= NOW()) AND (pr.descuento_hasta IS NULL OR pr.descuento_hasta >= NOW())`
 const PRECIO_EF   = `CASE WHEN ${OFERTA_COND} THEN pr.precio_descuento ELSE pr.precio_venta END`
@@ -290,7 +278,7 @@ router.get('/productos', async (req, res) => {
 
     const items = itemsResult.rows.map(row => ({
       id: row.id,
-      nombre: buildNombre(row),
+      nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
       precio_venta: Number(row.precio_web),
       precio_original: row.precio_original ? Number(row.precio_original) : null,
@@ -354,7 +342,7 @@ router.get('/productos/:slug', async (req, res) => {
     const row = resultado.rows[0]
     res.json({
       id: row.id,
-      nombre: buildNombre(row),
+      nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
       precio_venta: Number(row.precio_web),
       precio_original: row.precio_original ? Number(row.precio_original) : null,
