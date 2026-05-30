@@ -44,7 +44,7 @@ router.get('/resumen', async (req, res) => {
             `SELECT p.nombre, pr.nombre as presentacion, pr.stock
              FROM presentaciones pr
              JOIN productos p ON pr.producto_id = p.id
-             WHERE pr.stock <= 3 AND pr.disponible = true
+             WHERE pr.stock <= 3 AND pr.disponible = true AND p.disponible = true
              ORDER BY pr.stock ASC`
         )
 
