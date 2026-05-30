@@ -77,7 +77,7 @@ function Inventario() {
     const [confirmEliminarMarca, setConfirmEliminarMarca] = useState(null)
     const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_compra: '', stock: 0, codigo_barras: '' })
-    const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_compra: '', precio_descuento: '', precio_compra_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
+    const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_tarjeta: '', precio_compra: '', precio_descuento: '', precio_compra_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
     const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
     const [modalConfirmar, setModalConfirmar] = useState(null)
@@ -364,7 +364,7 @@ function colorVencimiento(diasParaVencer) {
     }
     async function handleGuardarPrecio() {
         try {
-            await actualizarPrecio(modalPrecio.id, { precio_venta: parseInt(precioForm.precio_venta) || null, precio_compra: parseInt(precioForm.precio_compra) || null, precio_descuento: precioForm.precio_descuento ? parseInt(precioForm.precio_descuento) : null, precio_compra_descuento: precioForm.precio_compra_descuento ? parseInt(precioForm.precio_compra_descuento) : null, descuento_activo: precioForm.descuento_activo, descuento_desde: precioForm.descuento_desde || null, descuento_hasta: precioForm.descuento_hasta || null, descuento_stock: precioForm.descuento_stock ? parseInt(precioForm.descuento_stock) : null })
+            await actualizarPrecio(modalPrecio.id, { precio_venta: parseInt(precioForm.precio_venta) || null, precio_tarjeta: precioForm.precio_tarjeta ? parseInt(precioForm.precio_tarjeta) : null, precio_compra: parseInt(precioForm.precio_compra) || null, precio_descuento: precioForm.precio_descuento ? parseInt(precioForm.precio_descuento) : null, precio_compra_descuento: precioForm.precio_compra_descuento ? parseInt(precioForm.precio_compra_descuento) : null, descuento_activo: precioForm.descuento_activo, descuento_desde: precioForm.descuento_desde || null, descuento_hasta: precioForm.descuento_hasta || null, descuento_stock: precioForm.descuento_stock ? parseInt(precioForm.descuento_stock) : null })
             setModalPrecio(null); await cargarDatos()
         } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo actualizar el precio.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
@@ -378,7 +378,7 @@ function colorVencimiento(diasParaVencer) {
     }
 
     function abrirModalPrecio(pr) {
-        setPrecioForm({ precio_venta: pr.precio_venta || '', precio_compra: pr.precio_compra || '', precio_descuento: pr.precio_descuento || '', precio_compra_descuento: pr.precio_compra_descuento || '', descuento_activo: pr.descuento_activo || false, descuento_desde: pr.descuento_desde ? pr.descuento_desde.slice(0, 16) : '', descuento_hasta: pr.descuento_hasta ? pr.descuento_hasta.slice(0, 16) : '', descuento_stock: pr.descuento_stock || '' })
+        setPrecioForm({ precio_venta: pr.precio_venta || '', precio_tarjeta: pr.precio_tarjeta || '', precio_compra: pr.precio_compra || '', precio_descuento: pr.precio_descuento || '', precio_compra_descuento: pr.precio_compra_descuento || '', descuento_activo: pr.descuento_activo || false, descuento_desde: pr.descuento_desde ? pr.descuento_desde.slice(0, 16) : '', descuento_hasta: pr.descuento_hasta ? pr.descuento_hasta.slice(0, 16) : '', descuento_stock: pr.descuento_stock || '' })
         setModalPrecio(pr)
     }
     function abrirModalEditar(producto) {
@@ -1172,11 +1172,23 @@ function colorVencimiento(diasParaVencer) {
                         <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>{modalPrecio.nombre}</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                             <div><label style={labelStyle}>P. compra (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra)} onChange={e => setPrecioForm({ ...precioForm, precio_compra: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                            <div><label style={labelStyle}>P. venta (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_venta)} onChange={e => setPrecioForm({ ...precioForm, precio_venta: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                            <div><label style={labelStyle}>P. efectivo / transferencia (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_venta)} onChange={e => setPrecioForm({ ...precioForm, precio_venta: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
                         </div>
+                        <div style={{ marginBottom: '12px' }}>
+                            <label style={labelStyle}>P. tarjeta (Gs.)</label>
+                            <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al precio efectivo" value={formatMiles(precioForm.precio_tarjeta)} onChange={e => setPrecioForm({ ...precioForm, precio_tarjeta: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} />
+                        </div>
+                        {precioForm.precio_venta && precioForm.precio_tarjeta && parseInt(precioForm.precio_tarjeta) > parseInt(precioForm.precio_venta) && (
+                            <div style={{ padding: '10px 14px', background: darkMode ? '#1e3a5f' : '#eff6ff', borderRadius: '8px', marginBottom: '8px', fontSize: '12px', color: '#1d4ed8', fontWeight: '600' }}>
+                                Recargo tarjeta: {((parseInt(precioForm.precio_tarjeta) - parseInt(precioForm.precio_venta)) / parseInt(precioForm.precio_venta) * 100).toFixed(2)}% · Diferencia: Gs. {(parseInt(precioForm.precio_tarjeta) - parseInt(precioForm.precio_venta)).toLocaleString()}
+                            </div>
+                        )}
                         {precioForm.precio_compra && precioForm.precio_venta && (
                             <div style={{ padding: '10px 14px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#166534', fontWeight: '600' }}>
-                                Margen: {Math.round(((parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)) / parseInt(precioForm.precio_venta)) * 100)}% · Ganancia: Gs. {(parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)).toLocaleString()}
+                                Margen efectivo: {Math.round(((parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)) / parseInt(precioForm.precio_venta)) * 100)}% · Ganancia: Gs. {(parseInt(precioForm.precio_venta) - parseInt(precioForm.precio_compra)).toLocaleString()}
+                                {precioForm.precio_tarjeta && parseInt(precioForm.precio_tarjeta) > 0 && (
+                                    <span style={{ marginLeft: 12 }}>| Margen tarjeta: {Math.round(((parseInt(precioForm.precio_tarjeta) - parseInt(precioForm.precio_compra)) / parseInt(precioForm.precio_tarjeta)) * 100)}%</span>
+                                )}
                             </div>
                         )}
                         <div style={{ borderTop: `1px solid ${s.borderLight}`, paddingTop: '16px', marginBottom: '12px' }}>

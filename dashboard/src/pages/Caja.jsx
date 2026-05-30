@@ -263,7 +263,10 @@ function Caja() {
         setLineas(prev => prev.filter(l => l.id !== lineaId))
     }
 
-    function calcularPrecioEfectivo(pr) {
+    function calcularPrecioCaja(pr, metodo = metodoPago) {
+        if (metodo === 'tarjeta') {
+            return { precio: pr.precio_tarjeta || pr.precio_venta, conDescuento: false }
+        }
         const ahora = new Date()
         if (pr.descuento_activo && pr.precio_descuento && new Date(pr.descuento_desde) <= ahora && new Date(pr.descuento_hasta) >= ahora)
             return { precio: pr.precio_descuento, conDescuento: true }
@@ -345,7 +348,7 @@ function Caja() {
     }
 
     const lineasValidas = lineas.filter(l => l.presentacionSeleccionada)
-    const subtotal = lineasValidas.reduce((sum, l) => sum + calcularPrecioEfectivo(l.presentacionSeleccionada).precio * l.cantidad, 0)
+    const subtotal = lineasValidas.reduce((sum, l) => sum + calcularPrecioCaja(l.presentacionSeleccionada).precio * l.cantidad, 0)
     const costoDelivery = canal === 'delivery' ? (formDelivery.costo_delivery || 0) : 0
     const total = subtotal + costoDelivery
     const iva = Math.floor(total / 11)
@@ -412,7 +415,7 @@ function Caja() {
                     const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
                         const linea = lineasValidas[i]
-                        const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
+                        const { precio } = calcularPrecioCaja(linea.presentacionSeleccionada)
                         const respuesta = await registrarVentaPresencial({
                             cliente_id: clienteSeleccionado?.id || null,
                             presentacion_id: linea.presentacionSeleccionada.id,
@@ -613,14 +616,20 @@ function Caja() {
                                             <>
                                                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
                                                     {linea.productoSeleccionado.presentaciones.filter(pr => pr.disponible && pr.stock > 0).map(pr => {
-                                                        const { precio, conDescuento } = calcularPrecioEfectivo(pr)
+                                                        const { precio, conDescuento } = calcularPrecioCaja(pr)
                                                         const activa = linea.presentacionSeleccionada?.id === pr.id
+                                                        const tieneDosPrecio = pr.precio_tarjeta && pr.precio_tarjeta !== pr.precio_venta
                                                         return (
                                                             <button key={pr.id} onClick={() => seleccionarPresentacion(linea.id, pr)}
                                                                 style={{ padding: '12px 16px', borderRadius: '10px', border: `2px solid ${activa ? '#1a1a2e' : s.border}`, background: activa ? (darkMode ? 'rgba(26,26,46,0.4)' : 'rgba(26,26,46,0.04)') : s.surfaceLow, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
                                                                 <p style={{ fontSize: '12px', fontWeight: '700', color: s.text, marginBottom: '4px' }}>{pr.nombre}</p>
                                                                 {conDescuento && <p style={{ fontSize: '11px', color: s.textFaint, textDecoration: 'line-through' }}>Gs. {pr.precio_venta.toLocaleString()}</p>}
                                                                 <p style={{ fontSize: '14px', fontWeight: '800', color: conDescuento ? '#10b981' : s.text }}>Gs. {precio.toLocaleString()}</p>
+                                                                {tieneDosPrecio && (
+                                                                    <p style={{ fontSize: '10px', color: metodoPago === 'tarjeta' ? '#93c5fd' : '#86efac', marginTop: '2px' }}>
+                                                                        {metodoPago === 'tarjeta' ? `Ef/Trans: Gs. ${pr.precio_venta.toLocaleString()}` : `Tarjeta: Gs. ${pr.precio_tarjeta.toLocaleString()}`}
+                                                                    </p>
+                                                                )}
                                                                 <p style={{ fontSize: '10px', color: pr.stock <= 3 ? '#ef4444' : s.textFaint, marginTop: '2px' }}>Stock: {pr.stock}</p>
                                                             </button>
                                                         )
@@ -634,7 +643,7 @@ function Caja() {
                                                             <button onClick={() => cambiarCantidad(linea.id, 1)} style={{ width: '40px', height: '40px', border: 'none', background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                                         </div>
                                                         <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {linea.presentacionSeleccionada.stock}</span>
-                                                        <p style={{ fontSize: '18px', fontWeight: '800', color: s.text }}>Gs. {(calcularPrecioEfectivo(linea.presentacionSeleccionada).precio * linea.cantidad).toLocaleString()}</p>
+                                                        <p style={{ fontSize: '18px', fontWeight: '800', color: s.text }}>Gs. {(calcularPrecioCaja(linea.presentacionSeleccionada).precio * linea.cantidad).toLocaleString()}</p>
                                                     </div>
                                                 )}
                                                 <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null } : l))}
@@ -859,11 +868,17 @@ function Caja() {
                                 <>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                                         {lineasValidas.map(linea => {
-                                            const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
+                                            const pr = linea.presentacionSeleccionada
+                                            const { precio } = calcularPrecioCaja(pr)
+                                            const tieneDosPrecio = pr.precio_tarjeta && pr.precio_tarjeta !== pr.precio_venta
+                                            const ahorro = tieneDosPrecio && metodoPago !== 'tarjeta' ? (pr.precio_tarjeta - pr.precio_venta) * linea.cantidad : 0
                                             return (
                                                 <div key={linea.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '13px' }}>
-                                                    <span style={{ color: '#94a3b8', flex: 1, lineHeight: '1.4' }}>{linea.productoSeleccionado.nombre} — {linea.presentacionSeleccionada.nombre} x{linea.cantidad}</span>
-                                                    <span style={{ fontWeight: '700', flexShrink: 0 }}>Gs. {(precio * linea.cantidad).toLocaleString()}</span>
+                                                    <span style={{ color: '#94a3b8', flex: 1, lineHeight: '1.4' }}>{linea.productoSeleccionado.nombre} — {pr.nombre} x{linea.cantidad}</span>
+                                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                        <span style={{ fontWeight: '700' }}>Gs. {(precio * linea.cantidad).toLocaleString()}</span>
+                                                        {ahorro > 0 && <p style={{ fontSize: '10px', color: '#86efac', marginTop: '1px' }}>-Gs. {ahorro.toLocaleString()}</p>}
+                                                    </div>
                                                 </div>
                                             )
                                         })}
@@ -875,6 +890,22 @@ function Caja() {
                                         )}
                                     </div>
                                     <div style={{ borderTop: '1px solid #1e293b', paddingTop: '16px', marginBottom: '20px' }}>
+                                        {(() => {
+                                            const ahorroTotal = metodoPago !== 'tarjeta'
+                                                ? lineasValidas.reduce((sum, l) => {
+                                                    const pr = l.presentacionSeleccionada
+                                                    return pr.precio_tarjeta && pr.precio_tarjeta !== pr.precio_venta
+                                                        ? sum + (pr.precio_tarjeta - pr.precio_venta) * l.cantidad
+                                                        : sum
+                                                }, 0)
+                                                : 0
+                                            return ahorroTotal > 0 ? (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '6px 10px', background: 'rgba(134,239,172,0.08)', borderRadius: '6px' }}>
+                                                    <span style={{ fontSize: '11px', color: '#86efac', fontWeight: '600' }}>Descuento {metodoPago === 'efectivo' ? 'efectivo' : 'transferencia'}</span>
+                                                    <span style={{ fontSize: '11px', color: '#86efac', fontWeight: '700' }}>-Gs. {ahorroTotal.toLocaleString()}</span>
+                                                </div>
+                                            ) : null
+                                        })()}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                             <span style={{ fontSize: '12px', color: '#475569' }}>IVA 10% incluido</span>
                                             <span style={{ fontSize: '12px', color: '#64748b' }}>Gs. {iva.toLocaleString()}</span>

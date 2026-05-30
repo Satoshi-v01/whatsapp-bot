@@ -62,6 +62,8 @@ const SLUGS_VALIDOS = ['perros', 'gatos', 'accesorios', 'higiene', 'medicamentos
 const OFERTA_COND = `pr.descuento_activo = true AND pr.precio_descuento IS NOT NULL AND (pr.descuento_desde IS NULL OR pr.descuento_desde <= NOW()) AND (pr.descuento_hasta IS NULL OR pr.descuento_hasta >= NOW())`
 const PRECIO_EF   = `CASE WHEN ${OFERTA_COND} THEN pr.precio_descuento ELSE pr.precio_venta END`
 const PRECIO_OR   = `CASE WHEN ${OFERTA_COND} THEN pr.precio_venta ELSE NULL END`
+// Precio web: usa precio_tarjeta si está cargado, sino el precio efectivo
+const PRECIO_WEB  = `COALESCE(pr.precio_tarjeta, ${PRECIO_EF})`
 
 router.get('/categorias', async (req, res) => {
   try {
@@ -171,12 +173,12 @@ router.get('/productos', async (req, res) => {
     }
 
     if (precio_min) {
-      condiciones.push(`(${PRECIO_EF}) >= $${i++}`)
+      condiciones.push(`(${PRECIO_WEB}) >= $${i++}`)
       valores.push(parseFloat(precio_min))
     }
 
     if (precio_max) {
-      condiciones.push(`(${PRECIO_EF}) <= $${i++}`)
+      condiciones.push(`(${PRECIO_WEB}) <= $${i++}`)
       valores.push(parseFloat(precio_max))
     }
 
@@ -207,8 +209,7 @@ router.get('/productos', async (req, res) => {
         `SELECT
            pr.id,
            pr.nombre AS presentacion_nombre,
-           pr.precio_venta,
-           ${PRECIO_EF} AS precio_efectivo,
+           ${PRECIO_WEB} AS precio_web,
            ${PRECIO_OR} AS precio_original,
            pr.stock,
            p.id AS producto_id,
@@ -228,7 +229,7 @@ router.get('/productos', async (req, res) => {
          LEFT JOIN ordenes_pedido_items opi ON opi.presentacion_id = pr.id
          LEFT JOIN ordenes_pedido op ON op.id = opi.orden_id
          ${where}
-         GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.precio_descuento, pr.descuento_activo,
+         GROUP BY pr.id, pr.nombre, pr.precio_venta, pr.precio_tarjeta, pr.precio_descuento, pr.descuento_activo,
                   pr.descuento_desde, pr.descuento_hasta, pr.stock,
                   p.id, p.nombre, p.descripcion, p.imagen_url, p.es_novedad, p.es_destacado, c.nombre
          ORDER BY ${orderVentas}
@@ -238,17 +239,16 @@ router.get('/productos', async (req, res) => {
     } else {
       let orderBy
       switch (sort) {
-        case 'precio_asc':  orderBy = `(${PRECIO_EF}) ASC`;  break
-        case 'precio_desc': orderBy = `(${PRECIO_EF}) DESC`; break
-        case 'nombre':      orderBy = 'p.nombre ASC';         break
+        case 'precio_asc':  orderBy = `(${PRECIO_WEB}) ASC`;  break
+        case 'precio_desc': orderBy = `(${PRECIO_WEB}) DESC`; break
+        case 'nombre':      orderBy = 'p.nombre ASC';          break
         default:            orderBy = 'p.nombre ASC'
       }
       itemsResult = await db.query(
         `SELECT
            pr.id,
            pr.nombre AS presentacion_nombre,
-           pr.precio_venta,
-           ${PRECIO_EF} AS precio_efectivo,
+           ${PRECIO_WEB} AS precio_web,
            ${PRECIO_OR} AS precio_original,
            pr.stock,
            p.id AS producto_id,
@@ -272,7 +272,7 @@ router.get('/productos', async (req, res) => {
       id: row.id,
       nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
-      precio_venta: Number(row.precio_efectivo),
+      precio_venta: Number(row.precio_web),
       precio_original: row.precio_original ? Number(row.precio_original) : null,
       stock: Number(row.stock),
       imagen_url: row.imagen_url || null,
@@ -306,8 +306,7 @@ router.get('/productos/:slug', async (req, res) => {
       `SELECT
          pr.id,
          pr.nombre AS presentacion_nombre,
-         pr.precio_venta,
-         ${PRECIO_EF} AS precio_efectivo,
+         ${PRECIO_WEB} AS precio_web,
          ${PRECIO_OR} AS precio_original,
          pr.stock,
          p.id AS producto_id,
@@ -333,7 +332,7 @@ router.get('/productos/:slug', async (req, res) => {
       id: row.id,
       nombre: `${row.nombre_base} — ${row.presentacion_nombre}`,
       descripcion: row.descripcion,
-      precio_venta: Number(row.precio_efectivo),
+      precio_venta: Number(row.precio_web),
       precio_original: row.precio_original ? Number(row.precio_original) : null,
       stock: Number(row.stock),
       imagen_url: row.imagen_url || null,
@@ -420,7 +419,7 @@ router.post('/pedidos', async (req, res) => {
       }
 
       const pr = await client.query(
-        `SELECT id, precio_venta, stock, disponible FROM presentaciones WHERE id = $1 FOR UPDATE`,
+        `SELECT id, precio_venta, precio_tarjeta, stock, disponible FROM presentaciones WHERE id = $1 FOR UPDATE`,
         [item.id]
       )
 
@@ -438,13 +437,14 @@ router.post('/pedidos', async (req, res) => {
         })
       }
 
-      const subtotal = Number(presentacion.precio_venta) * item.cantidad
+      const precioUnit = Number(presentacion.precio_tarjeta || presentacion.precio_venta)
+      const subtotal = precioUnit * item.cantidad
       total += subtotal
 
       itemsVerificados.push({
         presentacion_id: presentacion.id,
         cantidad: item.cantidad,
-        precio_unitario: Number(presentacion.precio_venta),
+        precio_unitario: precioUnit,
         precio_total: subtotal,
       })
     }

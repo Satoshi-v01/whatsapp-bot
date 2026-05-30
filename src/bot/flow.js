@@ -473,7 +473,7 @@ async function buscarYMostrarProductos(numero, texto, sesion) {
 // ─────────────────────────────────────────────
 async function mostrarPresentaciones(numero, productoId, productoNombre) {
     const resultado = await db.query(
-        `SELECT id, nombre, precio_venta, precio_descuento, descuento_activo,
+        `SELECT id, nombre, precio_venta, precio_tarjeta, precio_descuento, descuento_activo,
                 descuento_desde, descuento_hasta, descuento_stock, stock,
                 stock_disponible(id, $2) as disponible
          FROM presentaciones
@@ -489,11 +489,8 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
     }
 
     const lista = conStock.map((p, i) => {
-        const { precio, con_descuento } = calcularPrecioEfectivo(p)
-        const precioTexto = con_descuento
-            ? `~~Gs. ${p.precio_venta.toLocaleString('es-PY')}~~ *Gs. ${precio.toLocaleString('es-PY')}* 🏷️`
-            : `Gs. ${precio.toLocaleString('es-PY')}`
-        return `${i + 1}. ${p.nombre} — ${precioTexto}`
+        const precioDisplay = p.precio_tarjeta || calcularPrecioEfectivo(p).precio
+        return `${i + 1}. ${p.nombre} — Gs. ${precioDisplay.toLocaleString('es-PY')}`
     }).join('\n')
 
     await enviarYGuardar(numero,
@@ -529,7 +526,7 @@ async function manejarEleccionProducto(numero, texto, sesion) {
 // ─────────────────────────────────────────────
 async function manejarEleccionPresentacion(numero, texto, sesion) {
     const resultado = await db.query(
-        `SELECT id, nombre, precio_venta, precio_descuento, descuento_activo,
+        `SELECT id, nombre, precio_venta, precio_tarjeta, precio_descuento, descuento_activo,
                 descuento_desde, descuento_hasta, descuento_stock, stock,
                 stock_disponible(id, $2) as disponible
          FROM presentaciones
@@ -546,8 +543,9 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
     }
 
     const presentacion = conStock[sel.indice]
-    const { precio } = calcularPrecioEfectivo(presentacion)
+    const { precio: precioBase } = calcularPrecioEfectivo(presentacion)
     const disponible = parseInt(presentacion.disponible)
+    const precioTarjeta = presentacion.precio_tarjeta || precioBase
 
     await actualizarSesion(numero, {
         paso: 'eligiendo_cantidad',
@@ -557,7 +555,8 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
             presentacion_seleccionada: {
                 id: presentacion.id,
                 nombre: presentacion.nombre,
-                precio,
+                precio: precioBase,
+                precio_tarjeta: precioTarjeta,
                 stock: disponible
             }
         }
@@ -565,7 +564,7 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
 
     await enviarYGuardar(numero,
         `*${sesion.datos.producto_nombre} — ${presentacion.nombre}*\n` +
-        `Precio: Gs. ${precio.toLocaleString('es-PY')}\n\n` +
+        `Precio: Gs. ${precioTarjeta.toLocaleString('es-PY')}\n\n` +
         `¿Cuántas unidades querés?\n` +
         `_(Respondé con un número, ej: 1, 2, 3...)_`
     )
@@ -599,6 +598,7 @@ async function manejarEleccionCantidad(numero, texto, sesion) {
         presentacion_nombre: pr.nombre,
         producto_nombre: sesion.datos.producto_nombre,
         precio: pr.precio,
+        precio_tarjeta: pr.precio_tarjeta || pr.precio,
         cantidad
     })
 
@@ -1257,7 +1257,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
 // ─────────────────────────────────────────────
 async function mostrarResumenFinal(numero, datos) {
     const carrito = await getCarrito(numero)
-    const { total } = calcularTotal(carrito, datos.costo_delivery || 0)
+    const total = carrito.reduce((sum, item) => sum + ((item.precio_tarjeta || item.precio) * item.cantidad), 0) + (datos.costo_delivery || 0)
 
     const modalidadTexto = datos.modalidad === 'delivery'
         ? `🚚 Delivery a *${datos.zona_nombre}*`
@@ -1410,10 +1410,11 @@ async function registrarPedido(numero, sesion) {
 
         // Items
         for (const item of carrito) {
+            const precioUnit = item.precio_tarjeta || item.precio
             await client.query(
                 `INSERT INTO ordenes_pedido_items (orden_id, presentacion_id, cantidad, precio_unitario, precio_total)
                  VALUES ($1, $2, $3, $4, $5)`,
-                [ordenId, item.presentacion_id, item.cantidad, item.precio, item.precio * item.cantidad]
+                [ordenId, item.presentacion_id, item.cantidad, precioUnit, precioUnit * item.cantidad]
             )
         }
 
@@ -1434,7 +1435,7 @@ async function registrarPedido(numero, sesion) {
 
         if (clienteId) recalcularStats(clienteId).catch(() => {})
 
-        const { total } = calcularTotal(carrito, sesion.datos.costo_delivery || 0)
+        const totalConfirmacion = carrito.reduce((sum, item) => sum + ((item.precio_tarjeta || item.precio) * item.cantidad), 0) + (sesion.datos.costo_delivery || 0)
         const modalidadTexto = sesion.datos.modalidad === 'delivery'
             ? `Delivery a ${sesion.datos.zona_nombre}`
             : `Retiro en tienda`
@@ -1452,7 +1453,7 @@ async function registrarPedido(numero, sesion) {
             `✅ *¡Tu orden fue registrada!* 🐾\n\n` +
             `📋 *Número de orden: ${numeroOrden}*\n` +
             `${modalidadTexto}\n` +
-            `💰 Total: Gs. ${total.toLocaleString('es-PY')}` +
+            `💰 Total: Gs. ${totalConfirmacion.toLocaleString('es-PY')}` +
             mensajeComprobante +
             `\n\nUn agente confirmará tu pedido pronto. ¡Gracias por elegirnos! 😊` +
             mensajeCierre

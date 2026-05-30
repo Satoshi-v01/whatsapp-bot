@@ -104,14 +104,17 @@ function calcularTotal(carrito, costo_delivery = 0) {
     return { subtotal, costo_delivery, total: subtotal + costo_delivery }
 }
 
-function formatearCarrito(carrito, zona = null, costo_delivery = 0) {
+function formatearCarrito(carrito, zona = null, costo_delivery = 0, metodo_pago = null) {
     if (!carrito.length) return 'Tu carrito esta vacio.'
 
-    const { subtotal, total } = calcularTotal(carrito, costo_delivery)
+    const pDisplay = (item) => item.precio_tarjeta || item.precio
 
     const items = carrito.map(item =>
-        `- ${item.producto_nombre} - ${item.presentacion_nombre} x${item.cantidad}: Gs. ${(item.precio * item.cantidad).toLocaleString('es-PY')}`
+        `- ${item.producto_nombre} - ${item.presentacion_nombre} x${item.cantidad}: Gs. ${(pDisplay(item) * item.cantidad).toLocaleString('es-PY')}`
     ).join('\n')
+
+    const subtotalDisplay = carrito.reduce((sum, item) => sum + (pDisplay(item) * item.cantidad), 0)
+    const total = subtotalDisplay + costo_delivery
 
     let resumen = `Tu carrito:\n\n${items}\n`
 
@@ -120,6 +123,11 @@ function formatearCarrito(carrito, zona = null, costo_delivery = 0) {
     }
 
     resumen += `\n\n*Total: Gs. ${total.toLocaleString('es-PY')}*`
+
+    const tieneRecargo = carrito.some(item => item.precio_tarjeta && item.precio_tarjeta !== item.precio)
+    if (tieneRecargo && (metodo_pago === 'efectivo' || metodo_pago === 'transferencia')) {
+        resumen += `\n\n🏷️ *Descuento promocional válido solo en efectivo y transferencia*`
+    }
 
     return resumen
 }
