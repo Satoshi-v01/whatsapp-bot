@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
+const { obtenerSesion } = require('../bot/estados')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const logger = require('../middleware/logger')
@@ -37,6 +38,9 @@ router.post('/', async (req, res) => {
         const tipo = mensaje.type
 
         logger.info(`[webhook] mensaje de ${numero} tipo=${tipo}${tipo === 'text' ? ` texto="${mensaje.text?.body}"` : ''}`)
+
+        // Garantiza que la sesión exista antes de guardar el mensaje
+        await obtenerSesion(numero)
 
         if (tipo === 'location') {
             const { latitude, longitude } = mensaje.location
