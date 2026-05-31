@@ -11,7 +11,7 @@ import {
     actualizarStock, actualizarPrecio, actualizarCodigoBarras,
     toggleDisponibleProducto, eliminarPresentacion, eliminarProducto,
     getSecciones, crearSeccion, editarSeccion, eliminarSeccion,
-    importarProductos
+    importarProductos, descargarTemplateStock, importarStock
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -84,10 +84,11 @@ function Inventario() {
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
     const [guardando, setGuardando] = useState(false)
     const [modalConfirmar, setModalConfirmar] = useState(null)
-    const [modalImportar, setModalImportar] = useState(null) // null | { filas, erroresValidacion }
+    const [modalImportar, setModalImportar] = useState(null) // null | { filas, modo: 'precios'|'stock' }
     const [importando, setImportando] = useState(false)
     const [importResultado, setImportResultado] = useState(null)
     const inputImportRef = useRef(null)
+    const inputImportStockRef = useRef(null)
     const [modalStock, setModalStock] = useState(null)
     const [nuevoStockValor, setNuevoStockValor] = useState('')
     const [modalLotes, setModalLotes] = useState(null) // presentacion objeto
@@ -207,14 +208,53 @@ function Inventario() {
         if (!modalImportar?.filas?.length || importando) return
         setImportando(true)
         try {
-            const resultado = await importarProductos(modalImportar.filas)
-            setImportResultado(resultado)
+            const resultado = modalImportar.modo === 'stock'
+                ? await importarStock(modalImportar.filas)
+                : await importarProductos(modalImportar.filas)
+            setImportResultado({ ...resultado, modo: modalImportar.modo })
             await cargarDatos()
         } catch (err) {
             setModalConfirmar({ titulo: 'Error en la importación', mensaje: err.response?.data?.error || 'No se pudo completar la importación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally {
             setImportando(false)
         }
+    }
+
+    function handleSeleccionarExcelStock(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = ev => {
+            try {
+                const wb = XLSX.read(ev.target.result, { type: 'array' })
+                const ws = wb.Sheets[wb.SheetNames[0]]
+                const raw = XLSX.utils.sheet_to_json(ws, { defval: '' })
+                const filas = raw.map(row => {
+                    const norm = {}
+                    Object.entries(row).forEach(([k, v]) => { norm[k.toLowerCase().trim().replace(/\s+/g, '_')] = v })
+                    return {
+                        presentacion_id: parseInt(norm.presentacion_id) || null,
+                        producto: String(norm.producto || ''),
+                        presentacion: String(norm.presentacion || ''),
+                        codigo_barras: String(norm.codigo_barras || '').trim(),
+                        stock_a_agregar: parseInt(String(norm.stock_a_agregar || '').replace(/[^0-9]/g, '')) || 0,
+                        fecha_vencimiento: String(norm.fecha_vencimiento || '').trim(),
+                        numero_lote: String(norm.numero_lote || '').trim(),
+                    }
+                }).filter(f => f.presentacion_id && (f.stock_a_agregar > 0 || f.codigo_barras || f.fecha_vencimiento))
+
+                if (filas.length === 0) {
+                    setModalConfirmar({ titulo: 'Sin filas válidas', mensaje: 'No se encontraron filas con stock_a_agregar mayor a 0. Completá la columna y volvé a importar.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                    return
+                }
+                setImportResultado(null)
+                setModalImportar({ filas, modo: 'stock' })
+            } catch {
+                setModalConfirmar({ titulo: 'Error al leer', mensaje: 'No se pudo leer el archivo. Usá el template descargado desde el sistema.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            }
+        }
+        reader.readAsArrayBuffer(file)
+        e.target.value = ''
     }
     async function handleCrearCategoria() {
         if (!nuevaCategoria.nombre.trim()) return
@@ -561,9 +601,12 @@ function colorVencimiento(diasParaVencer) {
                     <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
                     <button onClick={() => { setNuevaCategoria({ nombre: '', descripcion: '', seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '' }); setModalCategorias(true) }} style={btnSecundario}>Categorías</button>
                     {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
-                    <button onClick={descargarTemplate} style={btnSecundario}>⬇ Template</button>
-                    <button onClick={() => inputImportRef.current?.click()} style={btnSecundario}>⬆ Importar Excel</button>
+                    <button onClick={descargarTemplate} style={btnSecundario}>⬇ Template precios</button>
+                    <button onClick={() => inputImportRef.current?.click()} style={btnSecundario}>⬆ Importar precios</button>
                     <input ref={inputImportRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcel} style={{ display: 'none' }} />
+                    <button onClick={() => descargarTemplateStock().catch(() => {})} style={btnSecundario}>⬇ Template stock</button>
+                    <button onClick={() => inputImportStockRef.current?.click()} style={btnSecundario}>⬆ Importar stock</button>
+                    <input ref={inputImportStockRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcelStock} style={{ display: 'none' }} />
                     <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} style={btnPrimario}>+ Producto</button>
                 </div>
             </div>
@@ -1823,11 +1866,15 @@ function colorVencimiento(diasParaVencer) {
                     {importResultado ? (
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                                {[
+                                {(importResultado.modo === 'stock' ? [
+                                    { label: 'Presentaciones actualizadas', val: importResultado.actualizados, color: '#10b981' },
+                                    { label: 'Lotes creados', val: importResultado.lotesCreados, color: '#3b82f6' },
+                                    { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
+                                ] : [
                                     { label: 'Productos nuevos', val: importResultado.creados, color: '#10b981' },
                                     { label: 'Presentaciones', val: importResultado.actualizados, color: '#3b82f6' },
                                     { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
-                                ].map(k => (
+                                ]).map(k => (
                                     <div key={k.label} style={{ padding: '14px', borderRadius: '10px', background: s.surfaceLow, textAlign: 'center', border: `1px solid ${s.border}` }}>
                                         <p style={{ fontSize: '24px', fontWeight: '800', color: k.color }}>{k.val}</p>
                                         <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '4px' }}>{k.label}</p>
@@ -1851,7 +1898,10 @@ function colorVencimiento(diasParaVencer) {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                                     <thead>
                                         <tr style={{ background: s.surfaceLow }}>
-                                            {['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock'].map(h => (
+                                            {modalImportar.modo === 'stock'
+                                                ? ['Producto', 'Presentación', 'Cód. Barras', '+Stock', 'Vencimiento', 'N° Lote']
+                                                : ['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock']
+                                            }.map(h => (
                                                 <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `1px solid ${s.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
                                         </tr>
@@ -1859,15 +1909,24 @@ function colorVencimiento(diasParaVencer) {
                                     <tbody>
                                         {modalImportar.filas.map((f, i) => (
                                             <tr key={i} style={{ borderBottom: `1px solid ${s.borderLight}` }}>
-                                                <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.nombre_producto}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.marca || '—'}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.subcategoria || '—'}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted, fontFamily: 'monospace' }}>{f.sku || '—'}</td>
-                                                <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.presentacion}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
-                                                <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span style={{ color: '#ef4444' }}>Requerido</span>}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_tarjeta ? `Gs. ${parseInt(f.precio_tarjeta).toLocaleString()}` : '—'}</td>
-                                                <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.stock ?? 0}</td>
+                                                {modalImportar.modo === 'stock' ? <>
+                                                    <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.producto}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.text }}>{f.presentacion}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted, fontFamily: 'monospace' }}>{f.codigo_barras || '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>+{f.stock_a_agregar}</td>
+                                                    <td style={{ padding: '8px 12px', color: f.fecha_vencimiento ? '#f59e0b' : s.textFaint }}>{f.fecha_vencimiento || '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.numero_lote || '—'}</td>
+                                                </> : <>
+                                                    <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.nombre_producto}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.marca || '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.subcategoria || '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted, fontFamily: 'monospace' }}>{f.sku || '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.presentacion}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span style={{ color: '#ef4444' }}>Requerido</span>}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_tarjeta ? `Gs. ${parseInt(f.precio_tarjeta).toLocaleString()}` : '—'}</td>
+                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.stock ?? 0}</td>
+                                                </>}
                                             </tr>
                                         ))}
                                     </tbody>

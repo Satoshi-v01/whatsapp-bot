@@ -4,6 +4,7 @@ const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { registrarLog } = require('../middleware/auditoria')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
+const XLSX = require('xlsx')
 
 // 1. Ver todos los productos con sus presentaciones
 router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
@@ -710,6 +711,148 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         }).catch(() => {})
 
         res.json({ creados, actualizados, errores })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
+// Descargar template de stock pre-llenado con datos actuales
+router.get('/template-stock', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `SELECT
+                pr.id AS presentacion_id,
+                p.nombre AS producto,
+                COALESCE(m.nombre, '') AS marca,
+                pr.nombre AS presentacion,
+                COALESCE(pr.codigo_barras, '') AS codigo_barras,
+                pr.stock AS stock_actual
+             FROM presentaciones pr
+             JOIN productos p ON p.id = pr.producto_id
+             LEFT JOIN marcas m ON m.id = p.marca_id
+             WHERE pr.disponible = true
+             ORDER BY p.nombre ASC, pr.nombre ASC`
+        )
+
+        const filas = resultado.rows.map(r => ({
+            presentacion_id: r.presentacion_id,
+            producto: r.producto,
+            marca: r.marca,
+            presentacion: r.presentacion,
+            codigo_barras: r.codigo_barras,
+            stock_actual: r.stock_actual,
+            stock_a_agregar: '',
+            fecha_vencimiento: '',
+            numero_lote: '',
+        }))
+
+        const ws = XLSX.utils.json_to_sheet(filas)
+        // Anchos de columna
+        ws['!cols'] = [
+            { wch: 8 },  // presentacion_id
+            { wch: 28 }, // producto
+            { wch: 14 }, // marca
+            { wch: 12 }, // presentacion
+            { wch: 16 }, // codigo_barras
+            { wch: 12 }, // stock_actual
+            { wch: 14 }, // stock_a_agregar
+            { wch: 16 }, // fecha_vencimiento
+            { wch: 14 }, // numero_lote
+        ]
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Stock')
+
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+        res.setHeader('Content-Disposition', 'attachment; filename="template_stock.xlsx"')
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        res.send(buffer)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Importar stock: suma unidades, actualiza código de barras, crea lotes
+router.post('/importar-stock', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { filas } = req.body
+        if (!Array.isArray(filas) || filas.length === 0) {
+            return res.status(400).json({ error: 'No hay filas para importar' })
+        }
+
+        await client.query('BEGIN')
+
+        let actualizados = 0
+        let lotesCreados = 0
+        const errores = []
+
+        for (const [idx, fila] of filas.entries()) {
+            try {
+                const presentacionId = parseInt(fila.presentacion_id)
+                if (!presentacionId || isNaN(presentacionId)) {
+                    errores.push({ fila: idx + 2, mensaje: 'presentacion_id inválido — no modificar esa columna' })
+                    continue
+                }
+
+                const stockAgregar = parseInt(fila.stock_a_agregar) || 0
+                if (stockAgregar <= 0 && !fila.codigo_barras?.trim() && !fila.fecha_vencimiento?.trim()) continue
+
+                // Verificar que la presentación existe
+                const prRes = await client.query(`SELECT id, stock FROM presentaciones WHERE id = $1`, [presentacionId])
+                if (!prRes.rows.length) {
+                    errores.push({ fila: idx + 2, mensaje: `Presentación ${presentacionId} no encontrada` })
+                    continue
+                }
+
+                // Actualizar código de barras si se proporcionó
+                const codigoBarras = fila.codigo_barras?.trim() || null
+
+                if (stockAgregar > 0 && fila.fecha_vencimiento?.trim()) {
+                    // Con vencimiento → crear lote + sumar stock
+                    const fechaVenc = new Date(fila.fecha_vencimiento)
+                    if (isNaN(fechaVenc.getTime())) {
+                        errores.push({ fila: idx + 2, mensaje: 'fecha_vencimiento inválida (usar formato YYYY-MM-DD)' })
+                        continue
+                    }
+                    await client.query(
+                        `INSERT INTO lotes (presentacion_id, numero_lote, fecha_vencimiento, stock_inicial, stock_actual, activo)
+                         VALUES ($1, $2, $3, $4, $4, true)`,
+                        [presentacionId, fila.numero_lote?.trim() || null, fechaVenc.toISOString().split('T')[0], stockAgregar]
+                    )
+                    lotesCreados++
+                }
+
+                if (stockAgregar > 0 || codigoBarras) {
+                    await client.query(
+                        `UPDATE presentaciones
+                         SET stock = stock + $1,
+                             codigo_barras = COALESCE(NULLIF($2, ''), codigo_barras)
+                         WHERE id = $3`,
+                        [stockAgregar, codigoBarras, presentacionId]
+                    )
+                    actualizados++
+                }
+            } catch (e) {
+                errores.push({ fila: idx + 2, mensaje: e.message })
+            }
+        }
+
+        await client.query('COMMIT')
+
+        registrarLog({
+            usuario_id: req.usuario?.id,
+            usuario_nombre: req.usuario?.nombre,
+            accion: 'editar',
+            modulo: 'inventario',
+            entidad: 'importacion_stock',
+            descripcion: `Importación stock: ${actualizados} presentaciones actualizadas, ${lotesCreados} lotes creados, ${errores.length} errores`,
+            ip: req.ip
+        }).catch(() => {})
+
+        res.json({ actualizados, lotesCreados, errores })
     } catch (error) {
         await client.query('ROLLBACK').catch(() => {})
         manejarError(res, error)

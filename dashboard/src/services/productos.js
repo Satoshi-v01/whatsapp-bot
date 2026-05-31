@@ -153,3 +153,18 @@ export async function importarProductos(filas) {
     const res = await api.post('/productos/importar', { filas })
     return res.data
 }
+
+export async function descargarTemplateStock() {
+    const res = await api.get('/productos/template-stock', { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'template_stock.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
+}
+
+export async function importarStock(filas) {
+    const res = await api.post('/productos/importar-stock', { filas })
+    return res.data
+}
