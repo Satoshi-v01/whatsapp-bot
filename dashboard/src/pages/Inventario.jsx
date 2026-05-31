@@ -1898,10 +1898,10 @@ function colorVencimiento(diasParaVencer) {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                                     <thead>
                                         <tr style={{ background: s.surfaceLow }}>
-                                            {modalImportar.modo === 'stock'
+                                            {(modalImportar.modo === 'stock'
                                                 ? ['Producto', 'Presentación', 'Cód. Barras', '+Stock', 'Vencimiento', 'N° Lote']
                                                 : ['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock']
-                                            }.map(h => (
+                                            ).map(h => (
                                                 <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `1px solid ${s.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
                                         </tr>
