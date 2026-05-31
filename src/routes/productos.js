@@ -307,6 +307,47 @@ router.get('/codigo-barras/:codigo', autenticar, verificarPermiso('inventario', 
     }
 })
 
+// Descargar template de stock pre-llenado con datos actuales
+router.get('/template-stock', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `SELECT
+                pr.id AS presentacion_id,
+                p.nombre AS producto,
+                COALESCE(m.nombre, '') AS marca,
+                pr.nombre AS presentacion,
+                COALESCE(pr.codigo_barras, '') AS codigo_barras,
+                pr.stock AS stock_actual
+             FROM presentaciones pr
+             JOIN productos p ON p.id = pr.producto_id
+             LEFT JOIN marcas m ON m.id = p.marca_id
+             WHERE pr.disponible = true
+             ORDER BY p.nombre ASC, pr.nombre ASC`
+        )
+        const filas = resultado.rows.map(r => ({
+            presentacion_id: r.presentacion_id,
+            producto: r.producto,
+            marca: r.marca,
+            presentacion: r.presentacion,
+            codigo_barras: r.codigo_barras,
+            stock_actual: r.stock_actual,
+            stock_a_agregar: '',
+            fecha_vencimiento: '',
+            numero_lote: '',
+        }))
+        const ws = XLSX.utils.json_to_sheet(filas)
+        ws['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 14 }]
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Stock')
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+        res.setHeader('Content-Disposition', 'attachment; filename="template_stock.xlsx"')
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        res.send(buffer)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // 4. Ver un producto específico
 router.get('/:id', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
     try {
@@ -719,60 +760,6 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
     }
 })
 
-// Descargar template de stock pre-llenado con datos actuales
-router.get('/template-stock', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
-    try {
-        const resultado = await db.query(
-            `SELECT
-                pr.id AS presentacion_id,
-                p.nombre AS producto,
-                COALESCE(m.nombre, '') AS marca,
-                pr.nombre AS presentacion,
-                COALESCE(pr.codigo_barras, '') AS codigo_barras,
-                pr.stock AS stock_actual
-             FROM presentaciones pr
-             JOIN productos p ON p.id = pr.producto_id
-             LEFT JOIN marcas m ON m.id = p.marca_id
-             WHERE pr.disponible = true
-             ORDER BY p.nombre ASC, pr.nombre ASC`
-        )
-
-        const filas = resultado.rows.map(r => ({
-            presentacion_id: r.presentacion_id,
-            producto: r.producto,
-            marca: r.marca,
-            presentacion: r.presentacion,
-            codigo_barras: r.codigo_barras,
-            stock_actual: r.stock_actual,
-            stock_a_agregar: '',
-            fecha_vencimiento: '',
-            numero_lote: '',
-        }))
-
-        const ws = XLSX.utils.json_to_sheet(filas)
-        // Anchos de columna
-        ws['!cols'] = [
-            { wch: 8 },  // presentacion_id
-            { wch: 28 }, // producto
-            { wch: 14 }, // marca
-            { wch: 12 }, // presentacion
-            { wch: 16 }, // codigo_barras
-            { wch: 12 }, // stock_actual
-            { wch: 14 }, // stock_a_agregar
-            { wch: 16 }, // fecha_vencimiento
-            { wch: 14 }, // numero_lote
-        ]
-        const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Stock')
-
-        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
-        res.setHeader('Content-Disposition', 'attachment; filename="template_stock.xlsx"')
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        res.send(buffer)
-    } catch (error) {
-        manejarError(res, error)
-    }
-})
 
 // Importar stock: suma unidades, actualiza código de barras, crea lotes
 router.post('/importar-stock', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
