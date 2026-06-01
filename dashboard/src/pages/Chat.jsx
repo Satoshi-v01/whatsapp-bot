@@ -302,13 +302,17 @@ function Chat() {
 
                                                     if (imgMatch) {
                                                         const mediaId = imgMatch[1].trim()
+                                                        // URL Supabase o http → directo; /uploads/ → directo; mediaId crudo → proxy
+                                                        const imgSrc = mediaId.startsWith('http') || mediaId.startsWith('/uploads/')
+                                                            ? mediaId
+                                                            : `/api/media/${mediaId}`
                                                         return (
                                                             <div>
                                                                 <img
-                                                                    src={`/api/media/${mediaId}`}
+                                                                    src={imgSrc}
                                                                     alt="imagen del cliente"
                                                                     style={{ maxWidth: '240px', maxHeight: '280px', borderRadius: '10px', display: 'block', cursor: 'pointer' }}
-                                                                    onClick={() => window.open(`/api/media/${mediaId}`, '_blank')}
+                                                                    onClick={() => window.open(imgSrc, '_blank')}
                                                                     onError={e => {
                                                                         e.target.style.display = 'none'
                                                                         e.target.nextSibling.style.display = 'flex'
