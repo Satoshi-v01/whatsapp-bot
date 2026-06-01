@@ -491,6 +491,16 @@ async function mostrarPresentaciones(numero, productoId, productoNombre) {
         return
     }
 
+    // Ordenar por peso/tamaño numérico extraído del nombre
+    function pesoEnKg(nombre) {
+        const s = String(nombre).toLowerCase().replace(',', '.')
+        const num = parseFloat(s)
+        if (isNaN(num)) return 9999
+        if (/\d\s*gr?\b/.test(s) && !/kg/.test(s)) return num / 1000
+        return num
+    }
+    conStock.sort((a, b) => pesoEnKg(a.nombre) - pesoEnKg(b.nombre))
+
     const lista = conStock.map((p, i) => {
         const precioDisplay = p.precio_tarjeta || calcularPrecioEfectivo(p).precio
         return `${i + 1}. ${p.nombre} — Gs. ${precioDisplay.toLocaleString('es-PY')}`
@@ -537,7 +547,15 @@ async function manejarEleccionPresentacion(numero, texto, sesion) {
         [sesion.datos.producto_id, numero]
     )
 
+    function pesoEnKgSel(nombre) {
+        const s = String(nombre).toLowerCase().replace(',', '.')
+        const num = parseFloat(s)
+        if (isNaN(num)) return 9999
+        if (/\d\s*gr?\b/.test(s) && !/kg/.test(s)) return num / 1000
+        return num
+    }
     const conStock = resultado.rows.filter(pr => parseInt(pr.disponible) > 0)
+        .sort((a, b) => pesoEnKgSel(a.nombre) - pesoEnKgSel(b.nombre))
     const sel = parsearSeleccion(texto)
 
     if (!sel || sel.indice < 0 || sel.indice >= conStock.length) {
@@ -971,14 +989,30 @@ async function manejarConfirmandoUbicacion(numero, texto, sesion) {
         const normalizar = str => str?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() || ''
         const zonaMatch = zonas.find(z => normalizar(z.nombre) === normalizar(cliente?.ciudad))
 
+        // Si la ciudad guardada no matchea ninguna zona activa, pedir nueva zona
+        if (!zonaMatch) {
+            const lista = await formatearListaZonas(zonas)
+            await actualizarSesion(numero, {
+                paso: 'eligiendo_zona',
+                modo: 'bot',
+                datos: { ...sesion.datos, modalidad: 'delivery', ubicacion: cliente.direccion, referencia: cliente.referencia_delivery || '', zonas }
+            })
+            await enviarYGuardar(numero,
+                `📍 Dirección guardada: *${cliente.direccion}*\n\n` +
+                `Tu zona anterior ya no está disponible. Elegí una zona:\n\n${lista}\n\n` +
+                `Respondé con el número de tu zona.`
+            )
+            return
+        }
+
         const datos = {
             ...sesion.datos,
             modalidad: 'delivery',
             ubicacion: cliente.direccion,
             referencia: cliente.referencia_delivery || '',
-            zona_id: zonaMatch?.id || null,
-            zona_nombre: zonaMatch?.nombre || cliente?.ciudad || '',
-            costo_delivery: zonaMatch?.costo || 0,
+            zona_id: zonaMatch.id,
+            zona_nombre: zonaMatch.nombre,
+            costo_delivery: zonaMatch.costo,
             zonas,
             paso_delivery: 'horario'
         }
@@ -1178,7 +1212,7 @@ async function manejarDatosDelivery(numero, texto, sesion, tipoMensaje = 'text')
     const paso = sesion.datos.paso_delivery
 
     if (paso === 'ubicacion') {
-        const ubicacion = tipoMensaje === 'location' ? texto : texto
+        const ubicacion = texto
         await actualizarSesion(numero, {
             paso: 'datos_delivery', modo: 'bot',
             datos: { ...sesion.datos, ubicacion, paso_delivery: 'referencia' }
