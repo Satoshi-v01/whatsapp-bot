@@ -334,13 +334,28 @@ function Chat() {
                                                         const audioType = audioSrc.endsWith('.mp3') ? 'audio/mpeg'
                                                             : audioSrc.endsWith('.mp4') || audioSrc.endsWith('.m4a') ? 'audio/mp4'
                                                             : audioSrc.endsWith('.aac') ? 'audio/aac'
-                                                            : 'audio/ogg'
+                                                            : 'audio/ogg; codecs=opus'
                                                         return (
-                                                            <div style={{ minWidth: '200px' }}>
-                                                                <audio controls style={{ width: '100%', height: '36px' }}>
+                                                            <div style={{ minWidth: '220px' }}>
+                                                                <audio
+                                                                    controls
+                                                                    style={{ width: '100%', height: '36px' }}
+                                                                    onError={e => {
+                                                                        e.target.style.display = 'none'
+                                                                        e.target.nextSibling.style.display = 'flex'
+                                                                    }}
+                                                                >
                                                                     <source src={audioSrc} type={audioType} />
                                                                 </audio>
-                                                                <span style={{ fontSize: '11px', color: s.textMuted }}>Nota de voz</span>
+                                                                <div style={{ display: 'none', alignItems: 'center', gap: '8px', padding: '6px 10px', background: s.surfaceLow, borderRadius: '8px' }}>
+                                                                    <span style={{ color: s.textMuted, display: 'flex', flexShrink: 0 }}>
+                                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                                                    </span>
+                                                                    <a href={audioSrc} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#6366f1', textDecoration: 'none', fontWeight: '600' }}>
+                                                                        Abrir nota de voz
+                                                                    </a>
+                                                                </div>
+                                                                <span style={{ fontSize: '11px', color: s.textMuted, display: 'block', marginTop: '2px' }}>Nota de voz</span>
                                                             </div>
                                                         )
                                                     }
