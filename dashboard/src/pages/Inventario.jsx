@@ -552,6 +552,19 @@ function colorVencimiento(diasParaVencer) {
     const colorSeccionActiva = PESTANAS.find(t => t.id === pestanaActiva)?.color || '#1a1a2e'
     const tipoActivo = secciones.find(s => s.slug === pestanaActiva)?.tipo || 'generico'
 
+    // Ordena presentaciones numéricamente por el peso/cantidad del nombre
+    function ordenarPresentaciones(presentaciones) {
+        function pesoEnKg(nombre) {
+            const s = String(nombre).toLowerCase().replace(',', '.')
+            const num = parseFloat(s)
+            if (isNaN(num)) return 9999
+            // Si tiene 'gr' o termina en 'g' sin 'kg', convertir a kg
+            if (/\d\s*gr?\b/.test(s) && !/kg/.test(s)) return num / 1000
+            return num
+        }
+        return [...presentaciones].sort((a, b) => pesoEnKg(a.nombre) - pesoEnKg(b.nombre))
+    }
+
     function getAgrupadorSecundario(p) {
         if (tipoActivo === 'con_calidad_especie') return p.subcategoria_nombre || 'Sin Subcategoria'
         if (pestanaActiva === 'sin_categoria') return 'Sin categoria asignada'
@@ -775,12 +788,11 @@ function colorVencimiento(diasParaVencer) {
                                                             )}
                                                             <td style={{ padding: '14px 16px' }}>
                                                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                                                    {producto.presentaciones.slice(0, 3).map(pr => (
+                                                                    {ordenarPresentaciones(producto.presentaciones).map(pr => (
                                                                         <span key={pr.id} style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '6px', background: s.surfaceLow, color: pr.stock <= 3 ? '#ef4444' : s.textMuted, border: `1px solid ${pr.stock <= 3 ? '#fca5a5' : s.border}` }}>
                                                                             {pr.nombre}
                                                                         </span>
                                                                     ))}
-                                                                    {producto.presentaciones.length > 3 && <span style={{ fontSize: '10px', color: s.textFaint }}>+{producto.presentaciones.length - 3}</span>}
                                                                 </div>
                                                             </td>
                                                             <td style={{ padding: '14px 16px', textAlign: 'right' }}>
@@ -827,7 +839,7 @@ function colorVencimiento(diasParaVencer) {
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
-                                                                                {producto.presentaciones.map(pr => {
+                                                                                {ordenarPresentaciones(producto.presentaciones).map(pr => {
                                                                                     const { precio, conDescuento } = calcularPrecioEfectivo(pr)
                                                                                     const mg = margen(pr)
                                                                                     return (
