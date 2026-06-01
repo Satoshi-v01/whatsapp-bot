@@ -122,7 +122,7 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
 
     // Audios, videos, documentos, stickers
     if (['audio', 'video', 'document', 'sticker'].includes(tipoMensaje)) {
-        await enviarYGuardar(numero, `Perdón 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitás.`)
+        await enviarYGuardar(numero, `Perdón, soy un bot.\nPor ahora solo puedo leer mensajes de texto.\n\nQue queres hacer?\n1. Buscar un producto\n2. Hablar con un agente`)
         return
     }
 
@@ -141,7 +141,7 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
             )
             return
         }
-        await enviarYGuardar(numero, `Perdón 😅 por ahora solo puedo leer mensajes de texto. Escribime lo que necesitás.`)
+        await enviarYGuardar(numero, `Perdón, soy un bot.\nPor ahora solo puedo leer mensajes de texto.\n\nQue queres hacer?\n1. Buscar un producto\n2. Hablar con un agente`)
         return
     }
 
