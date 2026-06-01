@@ -116,6 +116,7 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
                 modo: sesion.modo,
                 datos: { ...sesion.datos, aviso_horario_enviado: true }
             })
+            return
         }
     }
 
