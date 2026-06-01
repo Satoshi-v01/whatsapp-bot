@@ -717,7 +717,7 @@ function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundari
 // TAB — FILTROS CONFIG
 // ════════════════════════════════════════════════════════════════
 const DISPLAY_AS_LABELS = { chip: 'Chip (arriba del grid)', sidebar: 'Sidebar (panel lateral)' }
-const FILTRO_VACIO = { campo: '', label: '', valor: '', label_valor: '', categorias: [], display_as: 'sidebar', orden: 0 }
+const FILTRO_VACIO = { campo: '', label: '', valor: '', label_valor: '', categorias: [], display_as: 'sidebar', orden: 0, invisible: false }
 const CAT_OPTS = [
     { v: 'perros', l: 'Perros' }, { v: 'gatos', l: 'Gatos' },
     { v: 'medicamentos', l: 'Medicamentos' }, { v: 'accesorios', l: 'Accesorios' },
@@ -808,9 +808,10 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                                     {items.sort((a, b) => a.orden - b.orden).map(item => (
                                         <div key={item.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 14px', borderRadius: 99, border: `1.5px solid ${color}30`, background: `${color}0e` }}>
                                             <span style={{ fontSize: 13, fontWeight: 600, color }}>{item.label_valor}</span>
+                                            {item.invisible && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Solo dashboard</span>}
                                             <span style={{ fontSize: 10, color: s.textFaint, marginRight: 2 }}>"{item.valor}"</span>
                                             <span style={{ fontSize: 10, color: s.textFaint }}>#{item.orden}</span>
-                                            <button onClick={() => { setForm({ campo: item.campo, label: item.label, valor: item.valor, label_valor: item.label_valor, categorias: item.categorias || [], display_as: item.display_as, orden: item.orden }); setModal(item) }}
+                                            <button onClick={() => { setForm({ campo: item.campo, label: item.label, valor: item.valor, label_valor: item.label_valor, categorias: item.categorias || [], display_as: item.display_as, orden: item.orden, invisible: !!item.invisible }); setModal(item) }}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'flex', padding: '2px' }}>
                                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                             </button>
@@ -870,7 +871,7 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                             <div>
                                 <label style={labelStyle}>Mostrar como</label>
                                 <select value={form.display_as} onChange={e => setForm(f => ({ ...f, display_as: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
@@ -881,6 +882,13 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                             <div>
                                 <label style={labelStyle}>Orden</label>
                                 <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <label style={labelStyle}>Solo dashboard</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
+                                    <Toggle checked={!!form.invisible} onChange={v => setForm(f => ({ ...f, invisible: v }))} />
+                                    <span style={{ fontSize: 12, color: s.textMuted }}>Oculto en tienda</span>
+                                </div>
                             </div>
                         </div>
 
