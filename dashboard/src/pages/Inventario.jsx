@@ -59,7 +59,7 @@ function Inventario() {
     const [confirmEliminarCategoria, setConfirmEliminarCategoria] = useState(null)
     const [editandoCategoria, setEditandoCategoria] = useState(null)
     const [modalSubcategorias, setModalSubcategorias] = useState(false)
-    const [nuevaSubcategoria, setNuevaSubcategoria] = useState({ nombre: '', descripcion: '' })
+    const [nuevaSubcategoria, setNuevaSubcategoria] = useState({ nombre: '', descripcion: '', ecommerce_categoria: '', ecommerce_campo: '', ecommerce_valor: '' })
     const [confirmEliminarSubcategoria, setConfirmEliminarSubcategoria] = useState(null)
     const [editandoSubcategoria, setEditandoSubcategoria] = useState(null)
     const [productos, setProductos] = useState([])
@@ -294,12 +294,13 @@ function Inventario() {
         if (!nuevaSubcategoria.nombre.trim()) return
         try {
             await crearSubcategoria({ ...nuevaSubcategoria, seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : null })
-            setNuevaSubcategoria({ nombre: '', descripcion: '' })
+            setNuevaSubcategoria({ nombre: '', descripcion: '', ecommerce_categoria: '', ecommerce_campo: '', ecommerce_valor: '' })
             await cargarDatos()
         } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
-    async function handleEditarSubcategoria(id, datos) {
-        try { await editarSubcategoria(id, datos); setEditandoSubcategoria(null); await cargarDatos() }
+    async function handleEditarSubcategoria() {
+        if (!editandoSubcategoria?.nombre?.trim()) return
+        try { await editarSubcategoria(editandoSubcategoria.id, editandoSubcategoria); setEditandoSubcategoria(null); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo editar la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleEliminarSubcategoria(sub) {
@@ -599,7 +600,6 @@ function colorVencimiento(diasParaVencer) {
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setModalSecciones(true)} style={btnSecundario}>Secciones</button>
                     <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
-                    <button onClick={() => { setNuevaCategoria({ nombre: '', descripcion: '', seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '' }); setModalCategorias(true) }} style={btnSecundario}>Categorías</button>
                     {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
                     <button onClick={descargarTemplate} style={btnSecundario}>⬇ Template precios</button>
                     <button onClick={() => inputImportRef.current?.click()} style={btnSecundario}>⬆ Importar precios</button>
@@ -1412,32 +1412,68 @@ function colorVencimiento(diasParaVencer) {
                         </div>
                         <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
                             <label style={labelStyle}>Nueva subcategoria</label>
-                            <input placeholder="Nombre" value={nuevaSubcategoria.nombre} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, nombre: e.target.value })} style={inputStyle} />
-                            <input placeholder="Descripción (opcional)" value={nuevaSubcategoria.descripcion} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, descripcion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+                            <input placeholder="Nombre *" value={nuevaSubcategoria.nombre} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, nombre: e.target.value })} style={inputStyle} />
+                            <input placeholder="Descripción (opcional)" value={nuevaSubcategoria.descripcion} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, descripcion: e.target.value })} style={inputStyle} />
+                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Vinculación Tienda Web</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                                <select value={nuevaSubcategoria.ecommerce_categoria} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_categoria: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px' }}>
+                                    <option value="">Cat. web</option>
+                                    <option value="perros">Perros</option>
+                                    <option value="gatos">Gatos</option>
+                                    <option value="medicamentos">Medicamentos</option>
+                                    <option value="accesorios">Accesorios</option>
+                                    <option value="cuidado">Cuidado</option>
+                                    <option value="ofertas">Ofertas</option>
+                                </select>
+                                <input placeholder="Filtro (ej: etapa_vida)" value={nuevaSubcategoria.ecommerce_campo} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_campo: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
+                                <input placeholder="Valor (ej: adulto)" value={nuevaSubcategoria.ecommerce_valor} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_valor: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
+                            </div>
                             <button onClick={handleCrearSubcategoria} style={{ ...btnPrimario, marginTop: '12px', width: '100%', justifyContent: 'center' }}>+ Agregar subcategoria</button>
                         </div>
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {subcategoriasPestana.map(sub => (
-                                <div key={sub.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {editandoSubcategoria === sub.id ? (
-                                        <>
-                                            <input defaultValue={sub.nombre} id={`sub-edit-${sub.id}`} style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
-                                            <button onClick={() => handleEditarSubcategoria(sub.id, { nombre: document.getElementById(`sub-edit-${sub.id}`).value })} style={{ ...btnPrimario, padding: '6px 12px' }}>Guardar</button>
-                                            <button onClick={() => setEditandoSubcategoria(null)} style={{ ...btnSecundario, padding: '6px 12px' }}>Cancelar</button>
-                                        </>
+                                <div key={sub.id} style={{ borderBottom: `1px solid ${s.borderLight}` }}>
+                                    {editandoSubcategoria?.id === sub.id ? (
+                                        <div style={{ padding: '12px' }}>
+                                            <input value={editandoSubcategoria.nombre} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, nombre: e.target.value })} placeholder="Nombre *" style={inputStyle} />
+                                            <input value={editandoSubcategoria.descripcion || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, descripcion: e.target.value })} placeholder="Descripción" style={inputStyle} />
+                                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Vinculación Tienda Web</p>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                                                <select value={editandoSubcategoria.ecommerce_categoria || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_categoria: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px' }}>
+                                                    <option value="">Cat. web</option>
+                                                    <option value="perros">Perros</option>
+                                                    <option value="gatos">Gatos</option>
+                                                    <option value="medicamentos">Medicamentos</option>
+                                                    <option value="accesorios">Accesorios</option>
+                                                    <option value="cuidado">Cuidado</option>
+                                                    <option value="ofertas">Ofertas</option>
+                                                </select>
+                                                <input value={editandoSubcategoria.ecommerce_campo || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_campo: e.target.value })} placeholder="Filtro" style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
+                                                <input value={editandoSubcategoria.ecommerce_valor || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_valor: e.target.value })} placeholder="Valor" style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button onClick={handleEditarSubcategoria} style={{ ...btnPrimario, padding: '6px 14px', fontSize: '12px' }}>Guardar</button>
+                                                <button onClick={() => setEditandoSubcategoria(null)} style={{ ...btnSecundario, padding: '6px 14px', fontSize: '12px' }}>Cancelar</button>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <>
+                                        <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <div style={{ flex: 1 }}>
                                                 <p style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{sub.nombre}</p>
                                                 {sub.descripcion && <p style={{ fontSize: '11px', color: s.textMuted }}>{sub.descripcion}</p>}
+                                                {(sub.ecommerce_categoria || sub.ecommerce_campo) && (
+                                                    <p style={{ fontSize: '10px', color: '#6366f1', marginTop: '2px', fontFamily: 'monospace' }}>
+                                                        web: {sub.ecommerce_categoria || '—'} · {sub.ecommerce_campo || '—'}={sub.ecommerce_valor || '—'}
+                                                    </p>
+                                                )}
                                             </div>
-                                            <button onClick={() => setEditandoSubcategoria(sub.id)} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>
+                                            <button onClick={() => setEditandoSubcategoria({ id: sub.id, nombre: sub.nombre, descripcion: sub.descripcion || '', ecommerce_categoria: sub.ecommerce_categoria || '', ecommerce_campo: sub.ecommerce_campo || '', ecommerce_valor: sub.ecommerce_valor || '' })} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                             </button>
                                             <button onClick={() => handleEliminarSubcategoria(sub)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>
                                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                             </button>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             ))}
