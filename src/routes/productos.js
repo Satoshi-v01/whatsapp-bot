@@ -18,7 +18,7 @@ router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, r
              ORDER BY p.nombre ASC`
         )
         const presentaciones = await db.query(
-            `SELECT pr.id, pr.producto_id, pr.nombre, pr.precio_venta, pr.precio_compra,
+            `SELECT pr.id, pr.producto_id, pr.nombre, pr.precio_venta, pr.precio_tarjeta, pr.precio_compra,
                     pr.precio_descuento, pr.descuento_activo, pr.descuento_desde,
                     pr.descuento_hasta, pr.descuento_stock, pr.stock, pr.disponible, pr.codigo_barras,
                     (SELECT MIN(l.fecha_vencimiento) FROM lotes l
