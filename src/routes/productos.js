@@ -721,7 +721,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
 
                 if (presExist.rows.length > 0) {
                     await client.query(
-                        `UPDATE presentaciones SET precio_venta = $1, precio_compra = $2, precio_tarjeta = $3
+                        `UPDATE presentaciones SET precio_venta = $1, precio_compra = $2, precio_tarjeta = COALESCE($3, precio_tarjeta)
                          WHERE id = $4`,
                         [precioVenta, precioCompra, precioTarjeta, presExist.rows[0].id]
                     )
