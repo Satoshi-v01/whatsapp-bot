@@ -121,25 +121,28 @@ const SUBCATS_CACHE = {}
 
 function SubcatSelect({ categoriaSlug, value, onChange, inputStyle }) {
     const [opciones, setOpciones] = useState([])
+    const [cargando, setCargando] = useState(false)
 
     useEffect(() => {
         if (!categoriaSlug) { setOpciones([]); return }
         if (SUBCATS_CACHE[categoriaSlug]) { setOpciones(SUBCATS_CACHE[categoriaSlug]); return }
+        setCargando(true)
         api.get(`/ecommerce/subcategorias`, { params: { categoria: categoriaSlug } })
             .then(({ data }) => { SUBCATS_CACHE[categoriaSlug] = data; setOpciones(data) })
             .catch(() => setOpciones([]))
+            .finally(() => setCargando(false))
     }, [categoriaSlug])
 
     return (
         <select
-            value={value}
+            value={value ?? ''}
             onChange={e => onChange(e.target.value)}
-            disabled={!categoriaSlug || opciones.length === 0}
-            style={{ ...inputStyle, marginBottom: 0, opacity: (!categoriaSlug || opciones.length === 0) ? 0.5 : 1 }}
+            disabled={!categoriaSlug || cargando}
+            style={{ ...inputStyle, marginBottom: 0, opacity: (!categoriaSlug || cargando) ? 0.5 : 1 }}
         >
-            <option value="">-- Todas --</option>
-            {opciones.map(s => (
-                <option key={s.id} value={s.id}>{s.nombre}</option>
+            <option value="">{cargando ? 'Cargando...' : '-- Todas --'}</option>
+            {opciones.map(sc => (
+                <option key={sc.id} value={sc.id}>{sc.nombre}</option>
             ))}
         </select>
     )
@@ -177,9 +180,16 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
 
     useEffect(() => { cargar() }, [cargar])
 
+    const CAMPOS_PRODUCTO = ['es_novedad', 'es_destacado', 'imagen_url', 'ecommerce_categoria', 'ecommerce_subcategoria_id']
+
     async function toggleCampo(prod, campo, valor) {
         const prev = [...productos]
-        setProductos(p => p.map(x => x.presentacion_id === prod.presentacion_id ? { ...x, [campo]: valor } : x))
+        const esNivelProducto = CAMPOS_PRODUCTO.includes(campo)
+        setProductos(p => p.map(x => {
+            if (esNivelProducto && x.producto_id === prod.producto_id) return { ...x, [campo]: valor }
+            if (!esNivelProducto && x.presentacion_id === prod.presentacion_id) return { ...x, [campo]: valor }
+            return x
+        }))
         try {
             await api.patch(`/ecommerce/admin/productos/${prod.presentacion_id}`, { [campo]: valor })
         } catch {
@@ -221,10 +231,22 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
         setGuardando(true)
         try {
             await api.patch(`/ecommerce/admin/productos/${editando.presentacion_id}`, editForm)
-            setProductos(p => p.map(x => x.presentacion_id === editando.presentacion_id
-                ? { ...x, ...editForm }
-                : x
-            ))
+            // Campos del producto se propagan a todas las presentaciones del mismo producto
+            const camposProducto = {
+                imagen_url: editForm.imagen_url,
+                es_novedad: editForm.es_novedad,
+                es_destacado: editForm.es_destacado,
+                ecommerce_categoria: editForm.ecommerce_categoria,
+                ecommerce_subcategoria_id: editForm.ecommerce_subcategoria_id || null,
+            }
+            setProductos(p => p.map(x => {
+                if (x.producto_id === editando.producto_id) {
+                    // disponible es por presentacion, solo actualizar la editada
+                    const extra = x.presentacion_id === editando.presentacion_id ? { disponible: editForm.disponible } : {}
+                    return { ...x, ...camposProducto, ...extra }
+                }
+                return x
+            }))
             setEditando(null)
         } catch {
             setError('Error al guardar los cambios.')
