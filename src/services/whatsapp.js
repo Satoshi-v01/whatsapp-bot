@@ -1,4 +1,6 @@
 const axios = require('axios')
+const path = require('path')
+const fs = require('fs')
 const { createClient } = require('@supabase/supabase-js')
 
 async function enviarMensaje(numero, texto) {
@@ -59,4 +61,36 @@ async function descargarYGuardarImagen(imageId) {
     return data.publicUrl
 }
 
-module.exports = { enviarMensaje, descargarYGuardarImagen }
+// Descarga imagen de Meta y la guarda en disco local (public/uploads/media/)
+// Retorna la ruta pública /uploads/media/<nombre>
+async function descargarYCacharMedia(mediaId) {
+    const cacheDir = path.join(__dirname, '../../public/uploads/media')
+
+    // Si ya está en caché, devolver la ruta
+    for (const ext of ['.jpg', '.png', '.webp']) {
+        const cached = path.join(cacheDir, `${mediaId}${ext}`)
+        if (fs.existsSync(cached)) return `/uploads/media/${mediaId}${ext}`
+    }
+
+    const token = process.env.WHATSAPP_TOKEN
+    const metaRes = await axios.get(
+        `https://graph.facebook.com/v19.0/${mediaId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    )
+    const { url, mime_type } = metaRes.data
+    if (!url) throw new Error('Meta no devolvió URL de descarga')
+
+    const imgRes = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: { Authorization: `Bearer ${token}` }
+    })
+
+    const ext = mime_type?.includes('png') ? '.png' : mime_type?.includes('webp') ? '.webp' : '.jpg'
+    fs.mkdirSync(cacheDir, { recursive: true })
+    const filename = `${mediaId}${ext}`
+    fs.writeFileSync(path.join(cacheDir, filename), Buffer.from(imgRes.data))
+
+    return `/uploads/media/${filename}`
+}
+
+module.exports = { enviarMensaje, descargarYGuardarImagen, descargarYCacharMedia }

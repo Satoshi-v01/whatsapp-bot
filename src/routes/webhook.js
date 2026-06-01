@@ -3,7 +3,7 @@ const router = express.Router()
 const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
 const { obtenerSesion } = require('../bot/estados')
-const { enviarMensaje } = require('../services/whatsapp')
+const { enviarMensaje, descargarYGuardarImagen, descargarYCacharMedia } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const logger = require('../middleware/logger')
 
@@ -52,7 +52,21 @@ router.post('/', async (req, res) => {
 
         if (tipo === 'image') {
             const imageId = mensaje.image?.id || ''
-            await guardarMensaje(numero, `[imagen: ${imageId}]`, 'cliente')
+            let textoMensaje = `[imagen: ${imageId}]`
+            try {
+                // Intentar Supabase Storage primero (persistente)
+                const publicUrl = await descargarYGuardarImagen(imageId)
+                textoMensaje = `[imagen: ${publicUrl}]`
+            } catch (errSupabase) {
+                try {
+                    // Fallback: disco local
+                    const localPath = await descargarYCacharMedia(imageId)
+                    textoMensaje = `[imagen: ${localPath}]`
+                } catch (errLocal) {
+                    logger.warn(`No se pudo guardar imagen ${imageId}: ${errLocal.message}`)
+                }
+            }
+            await guardarMensaje(numero, textoMensaje, 'cliente')
             await procesarMensaje(numero, imageId, 'image')
             return res.status(200).send('OK')
         }
