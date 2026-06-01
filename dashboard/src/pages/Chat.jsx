@@ -331,10 +331,14 @@ function Chat() {
                                                         const audioSrc = mediaId.startsWith('http') || mediaId.startsWith('/uploads/')
                                                             ? mediaId
                                                             : `/api/media/${mediaId}`
+                                                        const audioType = audioSrc.endsWith('.mp3') ? 'audio/mpeg'
+                                                            : audioSrc.endsWith('.mp4') || audioSrc.endsWith('.m4a') ? 'audio/mp4'
+                                                            : audioSrc.endsWith('.aac') ? 'audio/aac'
+                                                            : 'audio/ogg'
                                                         return (
                                                             <div style={{ minWidth: '200px' }}>
                                                                 <audio controls style={{ width: '100%', height: '36px' }}>
-                                                                    <source src={audioSrc} />
+                                                                    <source src={audioSrc} type={audioType} />
                                                                 </audio>
                                                                 <span style={{ fontSize: '11px', color: s.textMuted }}>Nota de voz</span>
                                                             </div>

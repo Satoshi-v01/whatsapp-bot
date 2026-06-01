@@ -37,7 +37,14 @@ router.get('/:mediaId', async (req, res) => {
         })
 
         // Guardar en caché para próximas solicitudes
-        const ext = mime_type?.includes('png') ? '.png' : mime_type?.includes('webp') ? '.webp' : '.jpg'
+        const ext = mime_type?.includes('png') ? '.png'
+            : mime_type?.includes('webp') ? '.webp'
+            : mime_type?.includes('ogg') ? '.ogg'
+            : mime_type?.includes('mpeg') || mime_type?.includes('mp3') ? '.mp3'
+            : mime_type?.includes('mp4') ? '.mp4'
+            : mime_type?.includes('aac') ? '.aac'
+            : mime_type?.includes('jpeg') || mime_type?.includes('jpg') ? '.jpg'
+            : '.bin'
         fs.mkdirSync(cacheDir, { recursive: true })
         fs.writeFileSync(path.join(cacheDir, `${mediaId}${ext}`), Buffer.from(mediaRes.data))
 
