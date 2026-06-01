@@ -10,7 +10,7 @@ router.get('/:mediaId', async (req, res) => {
     const cacheDir = path.join(__dirname, '../../public/uploads/media')
 
     // Buscar en caché local primero (sin necesidad del token de Meta)
-    for (const ext of ['.jpg', '.png', '.webp']) {
+    for (const ext of ['.jpg', '.png', '.webp', '.ogg', '.mp3', '.mp4', '.aac', '.m4a', '.bin']) {
         const cached = path.join(cacheDir, `${mediaId}${ext}`)
         if (fs.existsSync(cached)) {
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')

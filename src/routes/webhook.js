@@ -3,7 +3,7 @@ const router = express.Router()
 const crypto = require('crypto')
 const { procesarMensaje } = require('../bot/flow')
 const { obtenerSesion } = require('../bot/estados')
-const { enviarMensaje, descargarYGuardarImagen, descargarYCacharMedia } = require('../services/whatsapp')
+const { enviarMensaje, descargarYGuardarImagen, descargarYGuardarMedia, descargarYCacharMedia } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const logger = require('../middleware/logger')
 
@@ -73,8 +73,21 @@ router.post('/', async (req, res) => {
 
         if (tipo === 'audio') {
             const audioId = mensaje.audio?.id || ''
-            const textoGuardado = audioId ? `[audio: ${audioId}]` : '[audio]'
-            await guardarMensaje(numero, textoGuardado, 'cliente')
+            let textoMensaje = audioId ? `[audio: ${audioId}]` : '[audio]'
+            if (audioId) {
+                try {
+                    const publicUrl = await descargarYGuardarMedia(audioId, 'audios')
+                    textoMensaje = `[audio: ${publicUrl}]`
+                } catch (errSupabase) {
+                    try {
+                        const localPath = await descargarYCacharMedia(audioId)
+                        textoMensaje = `[audio: ${localPath}]`
+                    } catch (errLocal) {
+                        logger.warn(`No se pudo guardar audio ${audioId}: ${errLocal.message}`)
+                    }
+                }
+            }
+            await guardarMensaje(numero, textoMensaje, 'cliente')
             await procesarMensaje(numero, audioId, 'audio')
             return res.status(200).send('OK')
         }

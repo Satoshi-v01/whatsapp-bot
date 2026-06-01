@@ -328,10 +328,13 @@ function Chat() {
 
                                                     if (audioMatch) {
                                                         const mediaId = audioMatch[1].trim()
+                                                        const audioSrc = mediaId.startsWith('http') || mediaId.startsWith('/uploads/')
+                                                            ? mediaId
+                                                            : `/api/media/${mediaId}`
                                                         return (
                                                             <div style={{ minWidth: '200px' }}>
                                                                 <audio controls style={{ width: '100%', height: '36px' }}>
-                                                                    <source src={`/api/media/${mediaId}`} />
+                                                                    <source src={audioSrc} />
                                                                 </audio>
                                                                 <span style={{ fontSize: '11px', color: s.textMuted }}>Nota de voz</span>
                                                             </div>
