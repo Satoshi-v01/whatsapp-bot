@@ -102,10 +102,10 @@ router.get('/subcategorias', async (req, res) => {
   try {
     const { categoria } = req.query
     const resultado = await db.query(
-      `SELECT id, nombre, slug, orden
+      `SELECT id, nombre, slug, orden, categoria_slug
        FROM ecommerce_subcategorias
        ${categoria ? 'WHERE categoria_slug = $1' : ''}
-       ORDER BY orden ASC, nombre ASC`,
+       ORDER BY categoria_slug ASC, orden ASC, nombre ASC`,
       categoria ? [categoria] : []
     )
     res.json(resultado.rows)
@@ -113,6 +113,120 @@ router.get('/subcategorias', async (req, res) => {
     if (error.code === '42P01') return res.json([])
     manejarError(res, error)
   }
+})
+
+// ─── ADMIN CRUD subcategorias ─────────────────────────────────
+router.get('/admin/subcategorias', autenticar, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, nombre, slug, orden, categoria_slug
+       FROM ecommerce_subcategorias
+       ORDER BY categoria_slug ASC, orden ASC, nombre ASC`
+    )
+    res.json(rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+router.post('/admin/subcategorias', autenticar, async (req, res) => {
+  try {
+    const { nombre, categoria_slug, orden = 0 } = req.body
+    if (!nombre?.trim() || !categoria_slug?.trim())
+      return res.status(400).json({ error: 'nombre y categoria_slug son requeridos' })
+    const slug = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const { rows } = await db.query(
+      `INSERT INTO ecommerce_subcategorias (nombre, slug, categoria_slug, orden)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [nombre.trim(), slug, categoria_slug.trim(), parseInt(orden) || 0]
+    )
+    res.json(rows[0])
+  } catch (error) { manejarError(res, error) }
+})
+
+router.patch('/admin/subcategorias/:id', autenticar, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { nombre, categoria_slug, orden } = req.body
+    const sets = []; const vals = []; let i = 1
+    if (nombre !== undefined)        { sets.push(`nombre = $${i++}`);         vals.push(nombre.trim()) }
+    if (categoria_slug !== undefined) { sets.push(`categoria_slug = $${i++}`); vals.push(categoria_slug.trim()) }
+    if (orden !== undefined)          { sets.push(`orden = $${i++}`);          vals.push(parseInt(orden) || 0) }
+    if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' })
+    vals.push(parseInt(id))
+    const { rows } = await db.query(`UPDATE ecommerce_subcategorias SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, vals)
+    if (!rows.length) return res.status(404).json({ error: 'No encontrada' })
+    res.json(rows[0])
+  } catch (error) { manejarError(res, error) }
+})
+
+router.delete('/admin/subcategorias/:id', autenticar, async (req, res) => {
+  try {
+    const { id } = req.params
+    await db.query(`UPDATE productos SET ecommerce_subcategoria_id = NULL WHERE ecommerce_subcategoria_id = $1`, [parseInt(id)])
+    await db.query(`DELETE FROM ecommerce_subcategorias WHERE id = $1`, [parseInt(id)])
+    res.json({ ok: true })
+  } catch (error) { manejarError(res, error) }
+})
+
+// ─── ADMIN CRUD filtros config ────────────────────────────────
+router.get('/admin/filtros-config', autenticar, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, campo, label, valor, label_valor, categorias, display_as, orden
+       FROM ecommerce_filtros_config
+       ORDER BY campo ASC, orden ASC`
+    )
+    res.json(rows)
+  } catch (error) {
+    if (error.code === '42P01') return res.json([])
+    manejarError(res, error)
+  }
+})
+
+router.post('/admin/filtros-config', autenticar, async (req, res) => {
+  try {
+    const { campo, label, valor, label_valor, categorias, display_as = 'sidebar', orden = 0 } = req.body
+    if (!campo?.trim() || !label?.trim() || !valor?.trim() || !label_valor?.trim())
+      return res.status(400).json({ error: 'campo, label, valor y label_valor son requeridos' })
+    const { rows } = await db.query(
+      `INSERT INTO ecommerce_filtros_config (campo, label, valor, label_valor, categorias, display_as, orden)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (campo, valor) DO UPDATE SET label=$2, label_valor=$4, categorias=$5, display_as=$6, orden=$7
+       RETURNING *`,
+      [campo.trim(), label.trim(), valor.trim(), label_valor.trim(),
+       categorias?.length ? categorias : null, display_as, parseInt(orden) || 0]
+    )
+    res.json(rows[0])
+  } catch (error) { manejarError(res, error) }
+})
+
+router.patch('/admin/filtros-config/:id', autenticar, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { campo, label, valor, label_valor, categorias, display_as, orden } = req.body
+    const sets = []; const vals = []; let i = 1
+    if (campo !== undefined)       { sets.push(`campo = $${i++}`);       vals.push(campo.trim()) }
+    if (label !== undefined)       { sets.push(`label = $${i++}`);       vals.push(label.trim()) }
+    if (valor !== undefined)       { sets.push(`valor = $${i++}`);       vals.push(valor.trim()) }
+    if (label_valor !== undefined) { sets.push(`label_valor = $${i++}`); vals.push(label_valor.trim()) }
+    if (categorias !== undefined)  { sets.push(`categorias = $${i++}`);  vals.push(categorias?.length ? categorias : null) }
+    if (display_as !== undefined)  { sets.push(`display_as = $${i++}`);  vals.push(display_as) }
+    if (orden !== undefined)       { sets.push(`orden = $${i++}`);       vals.push(parseInt(orden) || 0) }
+    if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' })
+    vals.push(parseInt(id))
+    const { rows } = await db.query(`UPDATE ecommerce_filtros_config SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, vals)
+    if (!rows.length) return res.status(404).json({ error: 'No encontrado' })
+    res.json(rows[0])
+  } catch (error) { manejarError(res, error) }
+})
+
+router.delete('/admin/filtros-config/:id', autenticar, async (req, res) => {
+  try {
+    await db.query(`DELETE FROM ecommerce_filtros_config WHERE id = $1`, [parseInt(req.params.id)])
+    res.json({ ok: true })
+  } catch (error) { manejarError(res, error) }
 })
 
 // ─── GET /api/ecommerce/productos ────────────────────────────
@@ -129,6 +243,7 @@ router.get('/productos', async (req, res) => {
       marca_id,
       precio_min,
       precio_max,
+      atributos,   // JSON string: {"etapa_vida":"adulto","tamano_raza":"medium"}
       limit = 20,
       offset = 0,
     } = req.query
@@ -152,6 +267,16 @@ router.get('/productos', async (req, res) => {
     if (novedad === 'true') condiciones.push(`p.es_novedad = true`)
     if (subcategoria_id) { condiciones.push(`p.ecommerce_subcategoria_id = $${i++}`); valores.push(parseInt(subcategoria_id)) }
     if (marca_id) { condiciones.push(`p.marca_id = $${i++}`); valores.push(parseInt(marca_id)) }
+    if (atributos) {
+      try {
+        const attrs = JSON.parse(atributos)
+        const activos = Object.fromEntries(Object.entries(attrs).filter(([, v]) => v))
+        if (Object.keys(activos).length) {
+          condiciones.push(`p.atributos @> $${i++}::jsonb`)
+          valores.push(JSON.stringify(activos))
+        }
+      } catch {}
+    }
 
     const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''
 
@@ -789,6 +914,7 @@ router.get('/admin/productos', autenticar, async (req, res) => {
          p.ecommerce_categoria,
          p.ecommerce_subcategoria_id,
          es2.nombre AS ecommerce_subcategoria_nombre,
+         COALESCE(p.atributos, '{}') AS atributos,
          c.nombre AS categoria_nombre,
          m.nombre AS marca_nombre
        FROM presentaciones pr
@@ -811,7 +937,7 @@ router.get('/admin/productos', autenticar, async (req, res) => {
 router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) => {
   try {
     const { presentacionId } = req.params
-    const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id } = req.body
+    const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos } = req.body
 
     // Actualizar disponible en la presentacion
     if (disponible !== undefined) {
@@ -830,11 +956,12 @@ router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) =>
     const sets = []
     const vals = []
     let i = 1
-    if (imagen_url !== undefined)              { sets.push(`imagen_url = $${i++}`);                vals.push(imagen_url) }
-    if (es_novedad !== undefined)              { sets.push(`es_novedad = $${i++}`);                vals.push(es_novedad) }
-    if (es_destacado !== undefined)            { sets.push(`es_destacado = $${i++}`);              vals.push(es_destacado) }
-    if (ecommerce_categoria !== undefined)     { sets.push(`ecommerce_categoria = $${i++}`);       vals.push(ecommerce_categoria || null) }
+    if (imagen_url !== undefined)                { sets.push(`imagen_url = $${i++}`);                vals.push(imagen_url) }
+    if (es_novedad !== undefined)                { sets.push(`es_novedad = $${i++}`);                vals.push(es_novedad) }
+    if (es_destacado !== undefined)              { sets.push(`es_destacado = $${i++}`);              vals.push(es_destacado) }
+    if (ecommerce_categoria !== undefined)       { sets.push(`ecommerce_categoria = $${i++}`);       vals.push(ecommerce_categoria || null) }
     if (ecommerce_subcategoria_id !== undefined) { sets.push(`ecommerce_subcategoria_id = $${i++}`); vals.push(ecommerce_subcategoria_id ? parseInt(ecommerce_subcategoria_id) : null) }
+    if (atributos !== undefined)                 { sets.push(`atributos = $${i++}::jsonb`);          vals.push(JSON.stringify(atributos ?? {})) }
 
     if (sets.length) {
       vals.push(productoId)
@@ -863,7 +990,7 @@ router.get('/filtros', async (req, res) => {
 
     const where = `WHERE ${conds.join(' AND ')}`
 
-    const [marcasRes, precioRes] = await Promise.all([
+    const [marcasRes, precioRes, filtrosConfigRes] = await Promise.all([
       db.query(
         `SELECT DISTINCT m.id, m.nombre
          FROM marcas m
@@ -882,12 +1009,29 @@ router.get('/filtros', async (req, res) => {
          ${where}`,
         vals
       ),
+      db.query(
+        `SELECT campo, label, valor, label_valor, display_as, orden
+         FROM ecommerce_filtros_config
+         WHERE categorias IS NULL OR $1 = ANY(categorias)
+         ORDER BY campo ASC, orden ASC`,
+        [categoria || '']
+      ).catch(() => ({ rows: [] })),
     ])
 
+    // Agrupar filtros por campo
+    const filtrosMap = {}
+    filtrosConfigRes.rows.forEach(row => {
+      if (!filtrosMap[row.campo]) {
+        filtrosMap[row.campo] = { campo: row.campo, label: row.label, display_as: row.display_as, valores: [] }
+      }
+      filtrosMap[row.campo].valores.push({ valor: row.valor, label_valor: row.label_valor })
+    })
+
     res.json({
-      marcas: marcasRes.rows,
+      marcas:     marcasRes.rows,
       precio_min: Number(precioRes.rows[0]?.precio_min || 0),
       precio_max: Number(precioRes.rows[0]?.precio_max || 0),
+      filtros:    Object.values(filtrosMap),
     })
   } catch (error) {
     manejarError(res, error)

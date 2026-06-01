@@ -180,7 +180,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
 
     useEffect(() => { cargar() }, [cargar])
 
-    const CAMPOS_PRODUCTO = ['es_novedad', 'es_destacado', 'imagen_url', 'ecommerce_categoria', 'ecommerce_subcategoria_id']
+    const CAMPOS_PRODUCTO = ['es_novedad', 'es_destacado', 'imagen_url', 'ecommerce_categoria', 'ecommerce_subcategoria_id', 'atributos']
 
     async function toggleCampo(prod, campo, valor) {
         const prev = [...productos]
@@ -198,6 +198,8 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
         }
     }
 
+    const [filtrosConfig, setFiltrosConfig] = useState([])
+
     function abrirEditar(prod) {
         setEditando(prod)
         setEditForm({
@@ -207,7 +209,17 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
             disponible: prod.disponible,
             ecommerce_categoria: prod.ecommerce_categoria || '',
             ecommerce_subcategoria_id: prod.ecommerce_subcategoria_id || '',
+            atributos: prod.atributos || {},
         })
+        // Cargar filtros config para la categoria de este producto
+        const cat = prod.ecommerce_categoria || ''
+        if (cat) {
+            api.get('/ecommerce/admin/filtros-config')
+                .then(({ data }) => setFiltrosConfig(data.filter(f => !f.categorias || f.categorias.includes(cat))))
+                .catch(() => setFiltrosConfig([]))
+        } else {
+            setFiltrosConfig([])
+        }
     }
 
     async function handleEliminarProducto(prod) {
@@ -238,6 +250,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                 es_destacado: editForm.es_destacado,
                 ecommerce_categoria: editForm.ecommerce_categoria,
                 ecommerce_subcategoria_id: editForm.ecommerce_subcategoria_id || null,
+                atributos: editForm.atributos || {},
             }
             setProductos(p => p.map(x => {
                 if (x.producto_id === editando.producto_id) {
@@ -447,7 +460,15 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                 <label style={labelStyle}>Categoria web</label>
                                 <select
                                     value={editForm.ecommerce_categoria}
-                                    onChange={e => setEditForm(f => ({ ...f, ecommerce_categoria: e.target.value, ecommerce_subcategoria_id: '' }))}
+                                    onChange={e => {
+                                        const cat = e.target.value
+                                        setEditForm(f => ({ ...f, ecommerce_categoria: cat, ecommerce_subcategoria_id: '', atributos: {} }))
+                                        if (cat) {
+                                            api.get('/ecommerce/admin/filtros-config')
+                                                .then(({ data }) => setFiltrosConfig(data.filter(f => !f.categorias || f.categorias.includes(cat))))
+                                                .catch(() => setFiltrosConfig([]))
+                                        } else { setFiltrosConfig([]) }
+                                    }}
                                     style={{ ...inputStyle, marginBottom: 0 }}
                                 >
                                     <option value="">-- Sin categoria --</option>
@@ -470,6 +491,39 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                             </div>
                         </div>
 
+                        {/* Atributos dinámicos desde ecommerce_filtros_config */}
+                        {filtrosConfig.length > 0 && (() => {
+                            // Agrupar por campo
+                            const grupos = {}
+                            filtrosConfig.forEach(f => {
+                                if (!grupos[f.campo]) grupos[f.campo] = { label: f.label, valores: [] }
+                                grupos[f.campo].valores.push({ valor: f.valor, label_valor: f.label_valor })
+                            })
+                            const campos = Object.entries(grupos)
+                            return (
+                                <div style={{ display: 'grid', gridTemplateColumns: campos.length === 1 ? '1fr' : '1fr 1fr', gap: 12 }}>
+                                    {campos.map(([campo, { label, valores }]) => (
+                                        <div key={campo}>
+                                            <label style={labelStyle}>{label}</label>
+                                            <select
+                                                value={editForm.atributos?.[campo] ?? ''}
+                                                onChange={e => setEditForm(f => ({
+                                                    ...f,
+                                                    atributos: { ...f.atributos, [campo]: e.target.value || undefined }
+                                                }))}
+                                                style={{ ...inputStyle, marginBottom: 0 }}
+                                            >
+                                                <option value="">-- Sin especificar --</option>
+                                                {valores.map(({ valor, label_valor }) => (
+                                                    <option key={valor} value={valor}>{label_valor}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        })()}
+
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
                             <button onClick={() => setEditando(null)} style={btnSecundario}>Cancelar</button>
                             <button onClick={guardarEditar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
@@ -478,6 +532,372 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                         </div>
                     </div>
                 </Modal>
+            )}
+        </div>
+    )
+}
+
+// ════════════════════════════════════════════════════════════════
+// TAB — SUBCATEGORÍAS
+// ════════════════════════════════════════════════════════════════
+const CAT_SLUGS_LABELS = [
+    { slug: 'perros',       label: 'Perros' },
+    { slug: 'gatos',        label: 'Gatos' },
+    { slug: 'medicamentos', label: 'Medicamentos' },
+    { slug: 'accesorios',   label: 'Accesorios' },
+    { slug: 'cuidado',      label: 'Cuidado' },
+    { slug: 'ofertas',      label: 'Ofertas' },
+]
+const SUBCAT_VACIA = { nombre: '', categoria_slug: 'perros', orden: 0 }
+
+function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
+    const [subcats, setSubcats] = useState([])
+    const [cargando, setCargando] = useState(true)
+    const [error, setError] = useState('')
+    const [modal, setModal] = useState(null) // null | 'crear' | objeto
+    const [form, setForm] = useState(SUBCAT_VACIA)
+    const [guardando, setGuardando] = useState(false)
+    const [confirmar, setConfirmar] = useState(null)
+
+    async function cargar() {
+        setCargando(true)
+        try {
+            const { data } = await api.get('/ecommerce/admin/subcategorias')
+            setSubcats(data)
+        } catch { setError('No se pudieron cargar las subcategorías.') }
+        finally { setCargando(false) }
+    }
+    useEffect(() => { cargar() }, [])
+
+    async function guardar() {
+        if (!form.nombre.trim()) { setError('El nombre es requerido.'); return }
+        setGuardando(true); setError('')
+        try {
+            if (modal === 'crear') {
+                const { data } = await api.post('/ecommerce/admin/subcategorias', form)
+                setSubcats(prev => [...prev, data])
+            } else {
+                const { data } = await api.patch(`/ecommerce/admin/subcategorias/${modal.id}`, form)
+                setSubcats(prev => prev.map(x => x.id === modal.id ? data : x))
+            }
+            setModal(null)
+        } catch (err) { setError(err.response?.data?.error || 'Error al guardar.') }
+        finally { setGuardando(false) }
+    }
+
+    async function eliminar(id) {
+        try {
+            await api.delete(`/ecommerce/admin/subcategorias/${id}`)
+            setSubcats(prev => prev.filter(x => x.id !== id))
+            setConfirmar(null)
+        } catch { setError('Error al eliminar.') }
+    }
+
+    // Agrupar por categoria
+    const porCategoria = CAT_SLUGS_LABELS.map(cat => ({
+        ...cat,
+        items: subcats.filter(s => s.categoria_slug === cat.slug).sort((a, b) => a.orden - b.orden),
+    })).filter(cat => cat.items.length > 0 || modal !== null)
+
+    const CAT_COLORS = { perros: '#ffa601', gatos: '#7c3aed', medicamentos: '#0ea5e9', accesorios: '#f97316', cuidado: '#10b981', ofertas: '#dc2626' }
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div>
+                    <p style={{ margin: 0, fontSize: 13, color: s.textMuted }}>
+                        Las subcategorías aparecen como filtros en la tienda web dentro de cada categoría.
+                    </p>
+                </div>
+                <button onClick={() => { setForm(SUBCAT_VACIA); setModal('crear') }} style={btnPrimario}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nueva subcategoría
+                </button>
+            </div>
+
+            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+            {cargando ? (
+                <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando...</p>
+            ) : subcats.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px 0', color: s.textMuted }}>
+                    <p style={{ fontSize: 14 }}>No hay subcategorías todavía.</p>
+                    <p style={{ fontSize: 13, marginTop: 4 }}>
+                        Creá las primeras, o ejecutá el SQL <code style={{ background: s.surfaceLow, padding: '2px 6px', borderRadius: 4 }}>sql/subcategorias_ecommerce.sql</code> en Supabase para cargar las predeterminadas.
+                    </p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    {CAT_SLUGS_LABELS.map(cat => {
+                        const items = subcats.filter(x => x.categoria_slug === cat.slug).sort((a, b) => a.orden - b.orden)
+                        if (!items.length) return null
+                        const color = CAT_COLORS[cat.slug] || '#64748b'
+                        return (
+                            <div key={cat.slug}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: s.text }}>{cat.label}</span>
+                                    <span style={{ fontSize: 11, color: s.textFaint }}>({items.length})</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {items.map(sub => (
+                                        <div key={sub.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 14px', borderRadius: 99, border: `1.5px solid ${color}30`, background: `${color}0e` }}>
+                                            <span style={{ fontSize: 13, fontWeight: 600, color }}>{sub.nombre}</span>
+                                            <span style={{ fontSize: 10, color: s.textFaint, marginRight: 2 }}>#{sub.orden}</span>
+                                            <button
+                                                onClick={() => { setForm({ nombre: sub.nombre, categoria_slug: sub.categoria_slug, orden: sub.orden }); setModal(sub) }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'flex', padding: '2px' }}
+                                                title="Editar"
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmar(sub)}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', padding: '2px' }}
+                                                title="Eliminar"
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* Modal crear/editar */}
+            {modal !== null && (
+                <Modal s={s} onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nueva subcategoría' : 'Editar subcategoría'} width={420}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {error && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{error}</p>}
+                        <div>
+                            <label style={labelStyle}>Categoría</label>
+                            <select value={form.categoria_slug} onChange={e => setForm(f => ({ ...f, categoria_slug: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
+                                {CAT_SLUGS_LABELS.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Nombre</label>
+                            <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Adulto Mini" style={{ ...inputStyle, marginBottom: 0 }} />
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Orden (menor = primero)</label>
+                            <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, marginBottom: 0 }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <button onClick={() => { setModal(null); setError('') }} style={btnSecundario}>Cancelar</button>
+                            <button onClick={guardar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                                {guardando ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Guardar'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {confirmar && (
+                <ModalConfirmar
+                    titulo="¿Eliminar subcategoría?"
+                    mensaje={`Se eliminará "${confirmar.nombre}" y los productos asignados quedarán sin subcategoría.`}
+                    textoBoton="Eliminar" colorBoton="#ef4444"
+                    onConfirmar={() => eliminar(confirmar.id)}
+                    onCancelar={() => setConfirmar(null)}
+                />
+            )}
+        </div>
+    )
+}
+
+// ════════════════════════════════════════════════════════════════
+// TAB — FILTROS CONFIG
+// ════════════════════════════════════════════════════════════════
+const DISPLAY_AS_LABELS = { chip: 'Chip (arriba del grid)', sidebar: 'Sidebar (panel lateral)' }
+const FILTRO_VACIO = { campo: '', label: '', valor: '', label_valor: '', categorias: [], display_as: 'sidebar', orden: 0 }
+const CAT_OPTS = [
+    { v: 'perros', l: 'Perros' }, { v: 'gatos', l: 'Gatos' },
+    { v: 'medicamentos', l: 'Medicamentos' }, { v: 'accesorios', l: 'Accesorios' },
+    { v: 'cuidado', l: 'Cuidado' }, { v: 'ofertas', l: 'Ofertas' },
+]
+
+function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
+    const [rows, setRows] = useState([])
+    const [cargando, setCargando] = useState(true)
+    const [error, setError] = useState('')
+    const [modal, setModal] = useState(null)
+    const [form, setForm] = useState(FILTRO_VACIO)
+    const [guardando, setGuardando] = useState(false)
+    const [confirmar, setConfirmar] = useState(null)
+
+    async function cargar() {
+        setCargando(true)
+        try { const { data } = await api.get('/ecommerce/admin/filtros-config'); setRows(data) }
+        catch { setError('No se pudo cargar la configuración de filtros.') }
+        finally { setCargando(false) }
+    }
+    useEffect(() => { cargar() }, [])
+
+    async function guardar() {
+        if (!form.campo.trim() || !form.label.trim() || !form.valor.trim() || !form.label_valor.trim())
+            return setError('Todos los campos son requeridos.')
+        setGuardando(true); setError('')
+        try {
+            if (modal === 'crear') {
+                const { data } = await api.post('/ecommerce/admin/filtros-config', form)
+                setRows(prev => [...prev, data])
+            } else {
+                const { data } = await api.patch(`/ecommerce/admin/filtros-config/${modal.id}`, form)
+                setRows(prev => prev.map(x => x.id === modal.id ? data : x))
+            }
+            setModal(null)
+        } catch (err) { setError(err.response?.data?.error || 'Error al guardar.') }
+        finally { setGuardando(false) }
+    }
+
+    async function eliminar(id) {
+        try { await api.delete(`/ecommerce/admin/filtros-config/${id}`); setRows(p => p.filter(x => x.id !== id)); setConfirmar(null) }
+        catch { setError('Error al eliminar.') }
+    }
+
+    // Agrupar por campo
+    const grupos = {}
+    rows.forEach(r => {
+        if (!grupos[r.campo]) grupos[r.campo] = { label: r.label, display_as: r.display_as, items: [] }
+        grupos[r.campo].items.push(r)
+    })
+
+    const CHIP_COLOR = '#6366f1'; const SIDEBAR_COLOR = '#0ea5e9'
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <p style={{ margin: 0, fontSize: 13, color: s.textMuted, maxWidth: 520 }}>
+                    Define los filtros que aparecen en el ecommerce por categoría. Chips se muestran arriba del grid; Sidebar se muestra en el panel lateral.
+                </p>
+                <button onClick={() => { setForm(FILTRO_VACIO); setModal('crear') }} style={btnPrimario}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nuevo valor
+                </button>
+            </div>
+
+            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+            {cargando ? <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando...</p> : rows.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px 0', color: s.textMuted }}>
+                    <p style={{ fontSize: 14 }}>No hay filtros configurados.</p>
+                    <p style={{ fontSize: 13 }}>Ejecutá <code style={{ background: s.surfaceLow, padding: '2px 6px', borderRadius: 4 }}>sql/atributos_productos.sql</code> en Supabase para cargar los valores por defecto.</p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {Object.entries(grupos).map(([campo, { label, display_as, items }]) => {
+                        const color = display_as === 'chip' ? CHIP_COLOR : SIDEBAR_COLOR
+                        return (
+                            <div key={campo}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: s.text }}>{label}</span>
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: `${color}18`, color, border: `1px solid ${color}30` }}>
+                                        {DISPLAY_AS_LABELS[display_as] || display_as}
+                                    </span>
+                                    <span style={{ fontSize: 11, color: s.textFaint, fontFamily: 'monospace' }}>{campo}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {items.sort((a, b) => a.orden - b.orden).map(item => (
+                                        <div key={item.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 14px', borderRadius: 99, border: `1.5px solid ${color}30`, background: `${color}0e` }}>
+                                            <span style={{ fontSize: 13, fontWeight: 600, color }}>{item.label_valor}</span>
+                                            <span style={{ fontSize: 10, color: s.textFaint, marginRight: 2 }}>"{item.valor}"</span>
+                                            <span style={{ fontSize: 10, color: s.textFaint }}>#{item.orden}</span>
+                                            <button onClick={() => { setForm({ campo: item.campo, label: item.label, valor: item.valor, label_valor: item.label_valor, categorias: item.categorias || [], display_as: item.display_as, orden: item.orden }); setModal(item) }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'flex', padding: '2px' }}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            </button>
+                                            <button onClick={() => setConfirmar(item)}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', padding: '2px' }}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+
+            {modal !== null && (
+                <Modal s={s} onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nuevo valor de filtro' : 'Editar valor'} width={480}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {error && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{error}</p>}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div>
+                                <label style={labelStyle}>Campo (clave interna)</label>
+                                <input value={form.campo} onChange={e => setForm(f => ({ ...f, campo: e.target.value }))} placeholder="etapa_vida" style={{ ...inputStyle, marginBottom: 0, fontFamily: 'monospace' }} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Label del grupo</label>
+                                <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Etapa de vida" style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div>
+                                <label style={labelStyle}>Valor (clave guardada)</label>
+                                <input value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="adulto" style={{ ...inputStyle, marginBottom: 0, fontFamily: 'monospace' }} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Label visible</label>
+                                <input value={form.label_valor} onChange={e => setForm(f => ({ ...f, label_valor: e.target.value }))} placeholder="Adulto" style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Categorías (vacío = todas)</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {CAT_OPTS.map(({ v, l }) => {
+                                    const activo = form.categorias?.includes(v)
+                                    return (
+                                        <button key={v} type="button"
+                                            onClick={() => setForm(f => ({ ...f, categorias: activo ? f.categorias.filter(c => c !== v) : [...(f.categorias || []), v] }))}
+                                            style={{ padding: '5px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${activo ? '#6366f1' : s.border}`, background: activo ? '#ede9fe' : s.surfaceLow, color: activo ? '#4338ca' : s.textMuted }}>
+                                            {l}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div>
+                                <label style={labelStyle}>Mostrar como</label>
+                                <select value={form.display_as} onChange={e => setForm(f => ({ ...f, display_as: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
+                                    <option value="chip">Chip (arriba del grid)</option>
+                                    <option value="sidebar">Sidebar (panel lateral)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Orden</label>
+                                <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, marginBottom: 0 }} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <button onClick={() => { setModal(null); setError('') }} style={btnSecundario}>Cancelar</button>
+                            <button onClick={guardar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                                {guardando ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Guardar'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {confirmar && (
+                <ModalConfirmar
+                    titulo="¿Eliminar valor?"
+                    mensaje={`Se eliminará "${confirmar.label_valor}" del filtro "${confirmar.label}". Los productos que lo tengan asignado conservarán el valor en sus atributos pero no aparecerá como opción de filtro.`}
+                    textoBoton="Eliminar" colorBoton="#ef4444"
+                    onConfirmar={() => eliminar(confirmar.id)}
+                    onCancelar={() => setConfirmar(null)}
+                />
             )}
         </div>
     )
@@ -1282,11 +1702,13 @@ function TabPedidos({ s, btnSecundario, sharedProps }) {
 // PÁGINA PRINCIPAL — TIENDA WEB
 // ════════════════════════════════════════════════════════════════
 const TABS = [
-    { key: 'productos',     label: 'Productos' },
-    { key: 'categorias',    label: 'Categorias' },
-    { key: 'banners',       label: 'Banners' },
-    { key: 'configuracion', label: 'Configuración' },
-    { key: 'trafico',       label: 'Trafico' },
+    { key: 'productos',      label: 'Productos' },
+    { key: 'filtros',        label: 'Filtros' },
+    { key: 'subcategorias',  label: 'Subcategorías' },
+    { key: 'categorias',     label: 'Categorias' },
+    { key: 'banners',        label: 'Banners' },
+    { key: 'configuracion',  label: 'Configuración' },
+    { key: 'trafico',        label: 'Trafico' },
 ]
 
 function TiendaWeb() {
@@ -1359,6 +1781,8 @@ function TiendaWeb() {
             {/* Contenido */}
             <div style={{ background: s.surface, borderRadius: 12, padding: 24, border: `1px solid ${s.border}` }}>
                 {tab === 'productos'     && <TabProductos     {...sharedProps} />}
+                {tab === 'filtros'       && <TabFiltros       {...sharedProps} />}
+                {tab === 'subcategorias' && <TabSubcategorias {...sharedProps} />}
                 {tab === 'categorias'    && <TabCategorias    {...sharedProps} />}
                 {tab === 'banners'       && <TabBanners       {...sharedProps} />}
                 {tab === 'configuracion' && <TabConfiguracion {...sharedProps} />}

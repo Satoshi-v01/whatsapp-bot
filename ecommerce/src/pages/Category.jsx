@@ -56,7 +56,19 @@ function Divider({ color }) {
 }
 
 // ─── FilterPanel ─────────────────────────────────────────
-function FilterPanel({ marcas, marcaId, onMarca, precioMin, precioMax, low, high, onPrecio, onClear, color, activeFilters }) {
+function FilterCheckbox({ label, checked, onChange, color }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '7px 10px', borderRadius: 10, background: checked ? `${color}0f` : 'transparent', transition: 'background 0.15s' }}>
+      <span style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked ? color : '#ddd'}`, background: checked ? color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+        {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+      </span>
+      <input type="checkbox" checked={checked} onChange={onChange} style={{ display: 'none' }} />
+      <span style={{ fontSize: 13, fontWeight: checked ? 700 : 400, color: checked ? '#1a1208' : '#8b6f47' }}>{label}</span>
+    </label>
+  )
+}
+
+function FilterPanel({ marcas, marcaId, onMarca, sidebarFilters, atributos, onAtributo, precioMin, precioMax, low, high, onPrecio, onClear, color, activeFilters }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
@@ -74,14 +86,28 @@ function FilterPanel({ marcas, marcaId, onMarca, precioMin, precioMax, low, high
           )}
         </div>
         {activeFilters > 0 && (
-          <button
-            onClick={onClear}
-            style={{ fontSize: 12, color: color, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
+          <button onClick={onClear} style={{ fontSize: 12, color: color, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             Limpiar todo
           </button>
         )}
       </div>
+
+      {/* Filtros dinámicos del sidebar */}
+      {sidebarFilters.map(filtro => (
+        <div key={filtro.campo}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#8b6f47', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
+            {filtro.label}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {filtro.valores.map(({ valor, label_valor }) => (
+              <FilterCheckbox key={valor} label={label_valor} checked={atributos[filtro.campo] === valor}
+                onChange={() => onAtributo(filtro.campo, atributos[filtro.campo] === valor ? null : valor)} color={color} />
+            ))}
+          </div>
+          <Divider color={color} />
+          <div style={{ marginTop: 16 }} />
+        </div>
+      ))}
 
       {/* Precio */}
       {precioMax > precioMin && (
@@ -102,35 +128,9 @@ function FilterPanel({ marcas, marcaId, onMarca, precioMin, precioMax, low, high
             Marca
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {marcas.map(m => {
-              const checked = marcaId === String(m.id)
-              return (
-                <label
-                  key={m.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '7px 10px', borderRadius: 10, background: checked ? `${color}0f` : 'transparent', transition: 'background 0.15s' }}
-                >
-                  <span style={{
-                    width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked ? color : '#ddd'}`,
-                    background: checked ? color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0, transition: 'all 0.15s',
-                  }}>
-                    {checked && (
-                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                        <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </span>
-                  <input
-                    type="checkbox" checked={checked}
-                    onChange={() => onMarca(checked ? '' : String(m.id))}
-                    style={{ display: 'none' }}
-                  />
-                  <span style={{ fontSize: 13, fontWeight: checked ? 700 : 400, color: checked ? '#1a1208' : '#8b6f47' }}>
-                    {m.nombre}
-                  </span>
-                </label>
-              )
-            })}
+            {marcas.map(m => (
+              <FilterCheckbox key={m.id} label={m.nombre} checked={marcaId === String(m.id)} onChange={() => onMarca(marcaId === String(m.id) ? '' : String(m.id))} color={color} />
+            ))}
           </div>
         </>
       )}
@@ -147,17 +147,19 @@ export default function Category() {
 
   const { subcategories: subcats } = useSubcategories(slug)
 
-  const [subcatId,    setSubcatId]    = useState(null)
-  const [marcaId,     setMarcaId]     = useState('')
-  const [sort,        setSort]        = useState('mas_vendido')
-  const [page,        setPage]        = useState(1)
-  const [filterOpen,  setFilterOpen]  = useState(false)
+  const [subcatId,       setSubcatId]       = useState(null)
+  const [atributos,      setAtributos]      = useState({})  // {etapa_vida:'adulto', tamano_raza:'medium'}
+  const [marcaId,        setMarcaId]        = useState('')
+  const [sort,           setSort]           = useState('mas_vendido')
+  const [page,           setPage]           = useState(1)
+  const [filterOpen,     setFilterOpen]     = useState(false)
 
-  const [marcas,    setMarcas]    = useState([])
-  const [precioMin, setPrecioMin] = useState(0)
-  const [precioMax, setPrecioMax] = useState(0)
-  const [low,       setLow]       = useState(0)
-  const [high,      setHigh]      = useState(0)
+  const [marcas,         setMarcas]         = useState([])
+  const [filtros,        setFiltros]        = useState([])  // [{campo, label, display_as, valores}]
+  const [precioMin,      setPrecioMin]      = useState(0)
+  const [precioMax,      setPrecioMax]      = useState(0)
+  const [low,            setLow]            = useState(0)
+  const [high,           setHigh]           = useState(0)
   const [loadingFiltros, setLoadingFiltros] = useState(true)
 
   useEffect(() => {
@@ -165,6 +167,7 @@ export default function Category() {
     api.get('/api/ecommerce/filtros', { params: { categoria: slug } })
       .then(({ data }) => {
         setMarcas(data.marcas ?? [])
+        setFiltros(data.filtros ?? [])
         setPrecioMin(data.precio_min); setPrecioMax(data.precio_max)
         setLow(data.precio_min);       setHigh(data.precio_max)
       })
@@ -172,16 +175,30 @@ export default function Category() {
       .finally(() => setLoadingFiltros(false))
   }, [slug])
 
-  // Reset filtros al cambiar categoria
-  useEffect(() => { setSubcatId(null); setMarcaId(''); setPage(1) }, [slug])
+  // Reset al cambiar categoria
+  useEffect(() => { setSubcatId(null); setAtributos({}); setMarcaId(''); setPage(1) }, [slug])
 
   const handlePrecio = useCallback((l, h) => { setLow(l); setHigh(h); setPage(1) }, [])
 
-  function clearFilters() {
-    setMarcaId(''); setSubcatId(null); setLow(precioMin); setHigh(precioMax); setPage(1)
+  function setAtributo(campo, valor) {
+    setAtributos(prev => {
+      const next = { ...prev }
+      if (valor) next[campo] = valor; else delete next[campo]
+      return next
+    })
+    setPage(1)
   }
 
-  const activeFilters = (marcaId ? 1 : 0) + (low > precioMin || high < precioMax ? 1 : 0)
+  function clearFilters() {
+    setMarcaId(''); setSubcatId(null); setAtributos({})
+    setLow(precioMin); setHigh(precioMax); setPage(1)
+  }
+
+  const atributosActivos  = Object.values(atributos).filter(Boolean).length
+  const activeFilters = (marcaId ? 1 : 0) + atributosActivos + (low > precioMin || high < precioMax ? 1 : 0)
+
+  const chipsFilters   = filtros.filter(f => f.display_as === 'chip')
+  const sidebarFilters = filtros.filter(f => f.display_as === 'sidebar')
 
   const params = useMemo(() => {
     const p = { categoria: slug, solo_disponibles: true, sort, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }
@@ -189,15 +206,17 @@ export default function Category() {
     if (marcaId)          p.marca_id        = marcaId
     if (low  > precioMin) p.precio_min      = low
     if (high < precioMax) p.precio_max      = high
+    const atrsActivos = Object.fromEntries(Object.entries(atributos).filter(([, v]) => v))
+    if (Object.keys(atrsActivos).length) p.atributos = JSON.stringify(atrsActivos)
     return p
-  }, [slug, subcatId, marcaId, sort, page, low, high, precioMin, precioMax])
+  }, [slug, subcatId, atributos, marcaId, sort, page, low, high, precioMin, precioMax])
 
   const { products, loading, error, total } = useProducts(params)
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const pageTitle = category?.label ?? slug
 
-  const hasSidebar = !loadingFiltros && (marcas.length > 0 || precioMax > precioMin)
+  const hasSidebar = !loadingFiltros && (marcas.length > 0 || precioMax > precioMin || sidebarFilters.length > 0)
 
   const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
 
@@ -243,8 +262,15 @@ export default function Category() {
               <li style={{ color: '#1a1208', fontWeight: 600 }}>{pageTitle}</li>
               {subcatId && <>
                 <li style={{ color: '#c4a882' }}>/</li>
-                <li style={{ color: '#1a1208' }}>{subcats.find(s => s.id === subcatId)?.nombre}</li>
+                <li style={{ color: '#1a1208' }}>{subcats.find(sc => sc.id === subcatId)?.nombre}</li>
               </>}
+              {Object.entries(atributos).filter(([, v]) => v).map(([campo, valor]) => {
+                const filtro = filtros.find(f => f.campo === campo)
+                const label = filtro?.valores.find(v => v.valor === valor)?.label_valor ?? valor
+                return (
+                  <><li key={campo} style={{ color: '#c4a882' }}>/</li><li style={{ color: '#1a1208' }}>{label}</li></>
+                )
+              })}
             </ol>
           </nav>
         </div>
@@ -264,14 +290,28 @@ export default function Category() {
             </div>
           </div>
 
-          {/* Subcategorias */}
-          {subcats.length > 0 && (
+          {/* Chips de atributos con display_as='chip' */}
+          {chipsFilters.map(filtro => (
+            <div key={filtro.campo} style={{ marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <SubcatChip sub={{ label: 'Todos' }} active={!atributos[filtro.campo]} color={color} bg={bg}
+                  onClick={() => setAtributo(filtro.campo, null)} />
+                {filtro.valores.map(({ valor, label_valor }) => (
+                  <SubcatChip key={valor} sub={{ label: label_valor }} active={atributos[filtro.campo] === valor} color={color} bg={bg}
+                    onClick={() => setAtributo(filtro.campo, atributos[filtro.campo] === valor ? null : valor)} />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Subcategorias (para categorias sin filtros de atributos tipo chip) */}
+          {chipsFilters.length === 0 && subcats.length > 0 && (
             <div style={{ marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <SubcatChip sub={{ slug: '', label: 'Todos' }} active={subcatId === null} color={color} bg={bg} onClick={() => { setSubcatId(null); setPage(1) }} />
-                {subcats.map(s => (
-                  <SubcatChip key={s.id} sub={s} active={subcatId === s.id} color={color} bg={bg}
-                    onClick={() => { setSubcatId(subcatId === s.id ? null : s.id); setPage(1) }} />
+                <SubcatChip sub={{ label: 'Todos' }} active={subcatId === null} color={color} bg={bg} onClick={() => { setSubcatId(null); setPage(1) }} />
+                {subcats.map(sc => (
+                  <SubcatChip key={sc.id} sub={sc} active={subcatId === sc.id} color={color} bg={bg}
+                    onClick={() => { setSubcatId(subcatId === sc.id ? null : sc.id); setPage(1) }} />
                 ))}
               </div>
             </div>
@@ -293,6 +333,7 @@ export default function Category() {
               >
                 <FilterPanel
                   marcas={marcas} marcaId={marcaId} onMarca={v => { setMarcaId(v); setPage(1) }}
+                  sidebarFilters={sidebarFilters} atributos={atributos} onAtributo={setAtributo}
                   precioMin={precioMin} precioMax={precioMax} low={low} high={high} onPrecio={handlePrecio}
                   activeFilters={activeFilters} onClear={clearFilters} color={color}
                 />
