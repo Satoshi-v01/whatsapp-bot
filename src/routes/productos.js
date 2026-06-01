@@ -159,11 +159,12 @@ router.get('/subcategorias', autenticar, verificarPermiso('inventario', 'ver'), 
 
 router.post('/subcategorias', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
-        const { nombre, descripcion, seccion } = req.body
+        const { nombre, descripcion, seccion, ecommerce_categoria, ecommerce_campo, ecommerce_valor } = req.body
         if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' })
         const resultado = await db.query(
-            `INSERT INTO subcategorias (nombre, descripcion, seccion) VALUES ($1, $2, $3) RETURNING *`,
-            [nombre, descripcion || null, seccion || null]
+            `INSERT INTO subcategorias (nombre, descripcion, seccion, ecommerce_categoria, ecommerce_campo, ecommerce_valor)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [nombre, descripcion || null, seccion || null, ecommerce_categoria || null, ecommerce_campo || null, ecommerce_valor || null]
         )
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'subcategoria', entidad_id: resultado.rows[0].id, descripcion: `Subcategoría creada: ${resultado.rows[0].nombre}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.status(201).json(resultado.rows[0])
@@ -175,15 +176,39 @@ router.post('/subcategorias', autenticar, verificarPermiso('inventario', 'editar
 router.patch('/subcategorias/:id', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
-        const { nombre, descripcion, seccion } = req.body
+        const { nombre, descripcion, seccion, ecommerce_categoria, ecommerce_campo, ecommerce_valor } = req.body
         const anterior = await db.query(`SELECT * FROM subcategorias WHERE id = $1`, [id])
         const resultado = await db.query(
-            `UPDATE subcategorias SET nombre = COALESCE($1, nombre), descripcion = COALESCE($2, descripcion), seccion = COALESCE($3, seccion) WHERE id = $4 RETURNING *`,
-            [nombre, descripcion, seccion, id]
+            `UPDATE subcategorias SET
+               nombre = COALESCE($1, nombre),
+               descripcion = COALESCE($2, descripcion),
+               seccion = COALESCE($3, seccion),
+               ecommerce_categoria = $4,
+               ecommerce_campo     = $5,
+               ecommerce_valor     = $6
+             WHERE id = $7 RETURNING *`,
+            [nombre, descripcion, seccion, ecommerce_categoria || null, ecommerce_campo || null, ecommerce_valor || null, id]
         )
         if (resultado.rows.length === 0) return res.status(404).json({ error: 'Subcategoría no encontrada' })
-        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'subcategoria', entidad_id: parseInt(id), descripcion: `Subcategoría editada: ${resultado.rows[0].nombre}`, dato_anterior: anterior.rows[0], dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
-        res.json(resultado.rows[0])
+
+        // Cascade: actualizar productos que usan esta subcategoria
+        const sub = resultado.rows[0]
+        if (sub.ecommerce_categoria || (sub.ecommerce_campo && sub.ecommerce_valor)) {
+            await db.query(
+                `UPDATE productos SET
+                   ecommerce_categoria = COALESCE($1, ecommerce_categoria),
+                   atributos = CASE
+                     WHEN $2 IS NOT NULL AND $3 IS NOT NULL
+                     THEN jsonb_build_object($2::text, $3::text)
+                     ELSE COALESCE(atributos, '{}')
+                   END
+                 WHERE subcategoria_id = $4`,
+                [sub.ecommerce_categoria || null, sub.ecommerce_campo || null, sub.ecommerce_valor || null, id]
+            )
+        }
+
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'subcategoria', entidad_id: parseInt(id), descripcion: `Subcategoría editada: ${sub.nombre}`, dato_anterior: anterior.rows[0], dato_nuevo: sub, ip: req.ip }).catch(() => {})
+        res.json(sub)
     } catch (error) {
         manejarError(res, error)
     }
@@ -372,15 +397,29 @@ router.get('/:id', autenticar, verificarPermiso('inventario', 'ver'), async (req
     }
 })
 
+// Helper: derivar campos ecommerce desde subcategoria
+async function ecommerceDesdeSubcategoria(subcategoria_id) {
+    if (!subcategoria_id) return {}
+    const sub = await db.query(`SELECT ecommerce_categoria, ecommerce_campo, ecommerce_valor FROM subcategorias WHERE id = $1`, [subcategoria_id])
+    if (!sub.rows.length) return {}
+    const { ecommerce_categoria, ecommerce_campo, ecommerce_valor } = sub.rows[0]
+    const resultado = {}
+    if (ecommerce_categoria) resultado.ecommerce_categoria = ecommerce_categoria
+    if (ecommerce_campo && ecommerce_valor) resultado.atributos = { [ecommerce_campo]: ecommerce_valor }
+    return resultado
+}
+
 // 5. Crear producto
 router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     try {
         const { categoria_id, marca_id, nombre, descripcion, calidad, sku, especie, seccion_inventario, subcategoria_id } = req.body
         if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' })
+        const eco = await ecommerceDesdeSubcategoria(subcategoria_id)
         const resultado = await db.query(
-            `INSERT INTO productos (categoria_id, marca_id, nombre, descripcion, calidad, sku, especie, seccion_inventario, subcategoria_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [categoria_id || null, marca_id || null, nombre, descripcion || null, calidad || 'standard', sku || null, especie || null, seccion_inventario || null, subcategoria_id || null]
+            `INSERT INTO productos (categoria_id, marca_id, nombre, descripcion, calidad, sku, especie, seccion_inventario, subcategoria_id, ecommerce_categoria, atributos)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [categoria_id || null, marca_id || null, nombre, descripcion || null, calidad || 'standard', sku || null, especie || null, seccion_inventario || null, subcategoria_id || null,
+             eco.ecommerce_categoria || null, JSON.stringify(eco.atributos || {})]
         )
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'producto', entidad_id: resultado.rows[0].id, descripcion: `Producto creado: ${resultado.rows[0].nombre}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.status(201).json(resultado.rows[0])
@@ -395,21 +434,31 @@ router.patch('/:id', autenticar, verificarPermiso('inventario', 'editar'), async
         const { id } = req.params
         const { nombre, descripcion, calidad, disponible, categoria_id, marca_id, sku, especie, seccion_inventario, subcategoria_id } = req.body
         const anterior = await db.query(`SELECT * FROM productos WHERE id = $1`, [id])
-        const resultado = await db.query(
-            `UPDATE productos SET
-               nombre = COALESCE($1, nombre),
-               descripcion = COALESCE($2, descripcion),
-               calidad = COALESCE($3, calidad),
-               disponible = COALESCE($4, disponible),
-               categoria_id = COALESCE($5, categoria_id),
-               marca_id = COALESCE($6, marca_id),
-               sku = COALESCE($7, sku),
-               especie = $8,
-               seccion_inventario = $9,
-               subcategoria_id = $10
-             WHERE id = $11 RETURNING *`,
-            [nombre, descripcion, calidad, disponible, categoria_id || null, marca_id || null, sku, especie || null, seccion_inventario || null, subcategoria_id || null, id]
-        )
+
+        // Si cambia la subcategoria, derivar campos ecommerce automáticamente
+        const subcatCambio = subcategoria_id !== undefined && String(subcategoria_id) !== String(anterior.rows[0]?.subcategoria_id)
+        const eco = subcatCambio ? await ecommerceDesdeSubcategoria(subcategoria_id) : {}
+
+        const sets = [
+            'nombre = COALESCE($1, nombre)',
+            'descripcion = COALESCE($2, descripcion)',
+            'calidad = COALESCE($3, calidad)',
+            'disponible = COALESCE($4, disponible)',
+            'categoria_id = COALESCE($5, categoria_id)',
+            'marca_id = COALESCE($6, marca_id)',
+            'sku = COALESCE($7, sku)',
+            'especie = $8',
+            'seccion_inventario = $9',
+            'subcategoria_id = $10',
+        ]
+        const vals = [nombre, descripcion, calidad, disponible, categoria_id || null, marca_id || null, sku, especie || null, seccion_inventario || null, subcategoria_id || null]
+        let n = 11
+
+        if (subcatCambio && eco.ecommerce_categoria) { sets.push(`ecommerce_categoria = $${n++}`); vals.push(eco.ecommerce_categoria) }
+        if (subcatCambio && eco.atributos) { sets.push(`atributos = $${n++}::jsonb`); vals.push(JSON.stringify(eco.atributos)) }
+
+        vals.push(id)
+        const resultado = await db.query(`UPDATE productos SET ${sets.join(', ')} WHERE id = $${n} RETURNING *`, vals)
         if (resultado.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' })
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'producto', entidad_id: parseInt(id), descripcion: `Producto editado: ${resultado.rows[0].nombre}`, dato_anterior: anterior.rows[0], dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.json(resultado.rows[0])

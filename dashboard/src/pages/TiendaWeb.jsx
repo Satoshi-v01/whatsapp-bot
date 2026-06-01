@@ -491,6 +491,10 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                             </div>
                         </div>
 
+                        <p style={{ fontSize: '11px', color: '#6366f1', background: '#ede9fe', padding: '6px 10px', borderRadius: '6px', margin: '0 0 4px' }}>
+                            La categoría web y los atributos de filtro se auto-asignan desde la subcategoría del inventario. Editá la subcategoría en Inventario para cambiarlos. Podés sobreescribir manualmente si necesitás.
+                        </p>
+
                         {/* Atributos dinámicos desde ecommerce_filtros_config */}
                         {filtrosConfig.length > 0 && (() => {
                             // Agrupar por campo
