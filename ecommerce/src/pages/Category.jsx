@@ -207,7 +207,21 @@ export default function Category() {
     if (low  > precioMin) p.precio_min      = low
     if (high < precioMax) p.precio_max      = high
     const atrsActivos = Object.fromEntries(Object.entries(atributos).filter(([, v]) => v))
-    if (Object.keys(atrsActivos).length) p.atributos = JSON.stringify(atrsActivos)
+    if (Object.keys(atrsActivos).length) {
+      // Expandir con aliases: si "medium" tiene incluye_valores=['medianos_grandes'],
+      // el backend filtra por medium OR medianos_grandes
+      const atrsExpandidos = {}
+      Object.entries(atrsActivos).forEach(([campo, valor]) => {
+        const filtro = filtros.find(f => f.campo === campo)
+        const cfg = filtro?.valores.find(v => v.valor === valor)
+        if (cfg?.incluye_valores?.length) {
+          atrsExpandidos[campo] = [valor, ...cfg.incluye_valores]
+        } else {
+          atrsExpandidos[campo] = valor
+        }
+      })
+      p.atributos = JSON.stringify(atrsExpandidos)
+    }
     return p
   }, [slug, subcatId, atributos, marcaId, sort, page, low, high, precioMin, precioMax])
 

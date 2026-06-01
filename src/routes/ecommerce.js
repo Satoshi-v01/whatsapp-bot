@@ -174,7 +174,7 @@ router.delete('/admin/subcategorias/:id', autenticar, async (req, res) => {
 router.get('/admin/filtros-config', autenticar, async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, campo, label, valor, label_valor, categorias, display_as, orden
+      `SELECT id, campo, label, valor, label_valor, categorias, display_as, orden, invisible, incluye_valores
        FROM ecommerce_filtros_config
        ORDER BY campo ASC, orden ASC`
     )
@@ -187,16 +187,18 @@ router.get('/admin/filtros-config', autenticar, async (req, res) => {
 
 router.post('/admin/filtros-config', autenticar, async (req, res) => {
   try {
-    const { campo, label, valor, label_valor, categorias, display_as = 'sidebar', orden = 0 } = req.body
+    const { campo, label, valor, label_valor, categorias, display_as = 'sidebar', orden = 0, invisible = false, incluye_valores } = req.body
     if (!campo?.trim() || !label?.trim() || !valor?.trim() || !label_valor?.trim())
       return res.status(400).json({ error: 'campo, label, valor y label_valor son requeridos' })
     const { rows } = await db.query(
-      `INSERT INTO ecommerce_filtros_config (campo, label, valor, label_valor, categorias, display_as, orden)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (campo, valor) DO UPDATE SET label=$2, label_valor=$4, categorias=$5, display_as=$6, orden=$7
+      `INSERT INTO ecommerce_filtros_config (campo, label, valor, label_valor, categorias, display_as, orden, invisible, incluye_valores)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (campo, valor) DO UPDATE
+         SET label=$2, label_valor=$4, categorias=$5, display_as=$6, orden=$7, invisible=$8, incluye_valores=$9
        RETURNING *`,
       [campo.trim(), label.trim(), valor.trim(), label_valor.trim(),
-       categorias?.length ? categorias : null, display_as, parseInt(orden) || 0]
+       categorias?.length ? categorias : null, display_as, parseInt(orden) || 0,
+       !!invisible, incluye_valores?.length ? incluye_valores : null]
     )
     res.json(rows[0])
   } catch (error) { manejarError(res, error) }
@@ -205,15 +207,17 @@ router.post('/admin/filtros-config', autenticar, async (req, res) => {
 router.patch('/admin/filtros-config/:id', autenticar, async (req, res) => {
   try {
     const { id } = req.params
-    const { campo, label, valor, label_valor, categorias, display_as, orden } = req.body
+    const { campo, label, valor, label_valor, categorias, display_as, orden, invisible, incluye_valores } = req.body
     const sets = []; const vals = []; let i = 1
-    if (campo !== undefined)       { sets.push(`campo = $${i++}`);       vals.push(campo.trim()) }
-    if (label !== undefined)       { sets.push(`label = $${i++}`);       vals.push(label.trim()) }
-    if (valor !== undefined)       { sets.push(`valor = $${i++}`);       vals.push(valor.trim()) }
-    if (label_valor !== undefined) { sets.push(`label_valor = $${i++}`); vals.push(label_valor.trim()) }
-    if (categorias !== undefined)  { sets.push(`categorias = $${i++}`);  vals.push(categorias?.length ? categorias : null) }
-    if (display_as !== undefined)  { sets.push(`display_as = $${i++}`);  vals.push(display_as) }
-    if (orden !== undefined)       { sets.push(`orden = $${i++}`);       vals.push(parseInt(orden) || 0) }
+    if (campo !== undefined)           { sets.push(`campo = $${i++}`);           vals.push(campo.trim()) }
+    if (label !== undefined)           { sets.push(`label = $${i++}`);           vals.push(label.trim()) }
+    if (valor !== undefined)           { sets.push(`valor = $${i++}`);           vals.push(valor.trim()) }
+    if (label_valor !== undefined)     { sets.push(`label_valor = $${i++}`);     vals.push(label_valor.trim()) }
+    if (categorias !== undefined)      { sets.push(`categorias = $${i++}`);      vals.push(categorias?.length ? categorias : null) }
+    if (display_as !== undefined)      { sets.push(`display_as = $${i++}`);      vals.push(display_as) }
+    if (orden !== undefined)           { sets.push(`orden = $${i++}`);           vals.push(parseInt(orden) || 0) }
+    if (invisible !== undefined)       { sets.push(`invisible = $${i++}`);       vals.push(!!invisible) }
+    if (incluye_valores !== undefined) { sets.push(`incluye_valores = $${i++}`); vals.push(incluye_valores?.length ? incluye_valores : null) }
     if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' })
     vals.push(parseInt(id))
     const { rows } = await db.query(`UPDATE ecommerce_filtros_config SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, vals)
@@ -270,11 +274,17 @@ router.get('/productos', async (req, res) => {
     if (atributos) {
       try {
         const attrs = JSON.parse(atributos)
-        const activos = Object.fromEntries(Object.entries(attrs).filter(([, v]) => v))
-        if (Object.keys(activos).length) {
-          condiciones.push(`p.atributos @> $${i++}::jsonb`)
-          valores.push(JSON.stringify(activos))
-        }
+        Object.entries(attrs).forEach(([key, val]) => {
+          if (!val) return
+          if (Array.isArray(val) && val.length > 0) {
+            // OR: atributo coincide con cualquiera de los valores (incluidos aliases)
+            condiciones.push(`p.atributos->>'${key}' = ANY($${i++}::text[])`)
+            valores.push(val)
+          } else if (typeof val === 'string') {
+            condiciones.push(`p.atributos->>'${key}' = $${i++}`)
+            valores.push(val)
+          }
+        })
       } catch {}
     }
 
@@ -1010,9 +1020,10 @@ router.get('/filtros', async (req, res) => {
         vals
       ),
       db.query(
-        `SELECT campo, label, valor, label_valor, display_as, orden
+        `SELECT campo, label, valor, label_valor, display_as, orden, incluye_valores
          FROM ecommerce_filtros_config
-         WHERE categorias IS NULL OR $1 = ANY(categorias)
+         WHERE (categorias IS NULL OR $1 = ANY(categorias))
+           AND invisible IS NOT TRUE
          ORDER BY campo ASC, orden ASC`,
         [categoria || '']
       ).catch(() => ({ rows: [] })),
@@ -1024,7 +1035,11 @@ router.get('/filtros', async (req, res) => {
       if (!filtrosMap[row.campo]) {
         filtrosMap[row.campo] = { campo: row.campo, label: row.label, display_as: row.display_as, valores: [] }
       }
-      filtrosMap[row.campo].valores.push({ valor: row.valor, label_valor: row.label_valor })
+      filtrosMap[row.campo].valores.push({
+        valor: row.valor,
+        label_valor: row.label_valor,
+        incluye_valores: row.incluye_valores ?? null,
+      })
     })
 
     res.json({
