@@ -61,13 +61,26 @@ async function descargarYGuardarImagen(imageId) {
     return data.publicUrl
 }
 
-// Descarga imagen de Meta y la guarda en disco local (public/uploads/media/)
+function extDesdeMime(mimeType) {
+    if (!mimeType) return '.bin'
+    if (mimeType.includes('png'))  return '.png'
+    if (mimeType.includes('webp')) return '.webp'
+    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return '.jpg'
+    if (mimeType.includes('ogg'))  return '.ogg'
+    if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return '.mp3'
+    if (mimeType.includes('mp4'))  return '.mp4'
+    if (mimeType.includes('aac'))  return '.aac'
+    if (mimeType.includes('m4a'))  return '.m4a'
+    return '.bin'
+}
+
+// Descarga cualquier media de Meta y guarda en disco local (public/uploads/media/)
 // Retorna la ruta pública /uploads/media/<nombre>
 async function descargarYCacharMedia(mediaId) {
     const cacheDir = path.join(__dirname, '../../public/uploads/media')
+    const EXTS = ['.jpg', '.png', '.webp', '.ogg', '.mp3', '.mp4', '.aac', '.m4a', '.bin']
 
-    // Si ya está en caché, devolver la ruta
-    for (const ext of ['.jpg', '.png', '.webp']) {
+    for (const ext of EXTS) {
         const cached = path.join(cacheDir, `${mediaId}${ext}`)
         if (fs.existsSync(cached)) return `/uploads/media/${mediaId}${ext}`
     }
@@ -80,17 +93,44 @@ async function descargarYCacharMedia(mediaId) {
     const { url, mime_type } = metaRes.data
     if (!url) throw new Error('Meta no devolvió URL de descarga')
 
-    const imgRes = await axios.get(url, {
+    const mediaRes = await axios.get(url, {
         responseType: 'arraybuffer',
         headers: { Authorization: `Bearer ${token}` }
     })
 
-    const ext = mime_type?.includes('png') ? '.png' : mime_type?.includes('webp') ? '.webp' : '.jpg'
+    const ext = extDesdeMime(mime_type)
     fs.mkdirSync(cacheDir, { recursive: true })
     const filename = `${mediaId}${ext}`
-    fs.writeFileSync(path.join(cacheDir, filename), Buffer.from(imgRes.data))
+    fs.writeFileSync(path.join(cacheDir, filename), Buffer.from(mediaRes.data))
 
     return `/uploads/media/${filename}`
 }
 
-module.exports = { enviarMensaje, descargarYGuardarImagen, descargarYCacharMedia }
+// Descarga cualquier media de Meta y sube a Supabase Storage
+async function descargarYGuardarMedia(mediaId, carpeta = 'media') {
+    const metaRes = await axios.get(
+        `https://graph.facebook.com/v19.0/${mediaId}`,
+        { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
+    )
+    const { url, mime_type } = metaRes.data
+    if (!url) throw new Error('Meta no devolvió URL de descarga')
+
+    const mediaRes = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+    })
+    const buffer = Buffer.from(mediaRes.data)
+    const ext = extDesdeMime(mime_type)
+    const nombre = `${carpeta}/${Date.now()}-${mediaId.slice(-8)}${ext}`
+
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { error } = await supabase.storage
+        .from('imagenes')
+        .upload(nombre, buffer, { contentType: mime_type || 'application/octet-stream', upsert: false })
+    if (error) throw error
+
+    const { data } = supabase.storage.from('imagenes').getPublicUrl(nombre)
+    return data.publicUrl
+}
+
+module.exports = { enviarMensaje, descargarYGuardarImagen, descargarYGuardarMedia, descargarYCacharMedia }
