@@ -821,7 +821,7 @@ function colorVencimiento(diasParaVencer) {
                                                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                                             <thead>
                                                                                 <tr style={{ background: s.surface }}>
-                                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'Descuento', 'Margen', 'Stock', 'Vencimiento', 'Acciones'].map(h => (
+                                                                                    {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Descuento', 'Margen', 'Stock', 'Vencimiento', 'Acciones'].map(h => (
                                                                                         <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                                                                                     ))}
                                                                                 </tr>
@@ -845,6 +845,9 @@ function colorVencimiento(diasParaVencer) {
                                                                                                         <span style={{ marginLeft: '4px', fontSize: '10px', background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '8px', fontWeight: '700' }}>%</span>
                                                                                                     </span>
                                                                                                 ) : `Gs. ${(pr.precio_venta || 0).toLocaleString()}`}
+                                                                                            </td>
+                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>
+                                                                                                {pr.precio_tarjeta ? `Gs. ${pr.precio_tarjeta.toLocaleString()}` : <span style={{ color: s.textFaint }}>—</span>}
                                                                                             </td>
                                                                                             <td style={{ padding: '10px 12px', fontSize: '12px' }}>
                                                                                                 {pr.descuento_activo && pr.precio_descuento ? <span style={{ color: '#10b981', fontWeight: '600' }}>Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span> : <span style={{ color: s.textFaint }}>—</span>}
