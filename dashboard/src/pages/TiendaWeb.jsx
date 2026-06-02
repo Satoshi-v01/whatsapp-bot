@@ -1308,8 +1308,9 @@ const CAMPOS_CONFIG = [
 ]
 
 const TOGGLES_CONFIG = [
-    { key: 'delivery_activo', label: 'Habilitar delivery' },
-    { key: 'retiro_activo',   label: 'Habilitar retiro en local' },
+    { key: 'delivery_activo',    label: 'Habilitar delivery' },
+    { key: 'retiro_activo',      label: 'Habilitar retiro en local' },
+    { key: 'mostrar_sin_stock',  label: 'Mostrar productos sin stock', hint: 'Los clientes verán los productos pero con badge "Fuera de stock". Pueden seleccionar presentaciones sin stock pero no agregarlas al carrito.' },
 ]
 
 function TabConfiguracion({ s, inputStyle, labelStyle, btnPrimario }) {
@@ -1387,11 +1388,14 @@ function TabConfiguracion({ s, inputStyle, labelStyle, btnPrimario }) {
                     </div>
                 ))}
 
-                <div style={{ display: 'flex', gap: 16 }}>
-                    {TOGGLES_CONFIG.map(({ key, label }) => (
-                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 8, background: s.surfaceLow, border: `1px solid ${s.border}`, flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {TOGGLES_CONFIG.map(({ key, label, hint }) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderRadius: 8, background: s.surfaceLow, border: `1px solid ${s.border}` }}>
                             <Toggle checked={config[key] !== false && config[key] !== 'false'} onChange={v => setConfig(c => ({ ...c, [key]: v }))} />
-                            <span style={{ fontSize: 13, fontWeight: 600, color: s.text }}>{label}</span>
+                            <div>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: s.text }}>{label}</span>
+                                {hint && <p style={{ fontSize: 11, color: s.textMuted, marginTop: 2 }}>{hint}</p>}
+                            </div>
                         </div>
                     ))}
                 </div>

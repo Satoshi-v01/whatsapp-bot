@@ -336,7 +336,8 @@ router.get('/productos', async (req, res) => {
              'precio_venta', COALESCE(pr.precio_tarjeta, pr.precio_venta),
              'stock', pr.stock
            ) ORDER BY pr.nombre ASC
-         ) FILTER (WHERE pr.disponible = true AND pr.stock > 0) AS presentaciones
+         ) FILTER (WHERE pr.disponible = true ${solo_disponibles !== 'false' ? 'AND pr.stock > 0' : ''}) AS presentaciones,
+         COUNT(pr.id) FILTER (WHERE pr.disponible = true AND pr.stock > 0) > 0 AS tiene_stock
        FROM productos p
        JOIN presentaciones pr ON pr.producto_id = p.id AND pr.disponible = true
        LEFT JOIN categorias c ON c.id = p.categoria_id
@@ -360,6 +361,7 @@ router.get('/productos', async (req, res) => {
       categoria_slug: row.categoria_slug,
       slug: buildProductSlug(row.nombre_base, row.producto_id),
       precio_desde: Number(row.precio_desde || 0),
+      tiene_stock: row.tiene_stock,
       presentaciones: (row.presentaciones || []).map(pr => ({
         id: pr.id,
         nombre: pr.nombre,

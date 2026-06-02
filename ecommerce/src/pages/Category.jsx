@@ -7,6 +7,7 @@ import PriceRangeSlider from '@/components/ui/PriceRangeSlider'
 import Pagination from '@/components/ui/Pagination'
 import { useProducts } from '@/hooks/useProducts'
 import { useSubcategories } from '@/hooks/useSubcategories'
+import { useShopConfig } from '@/hooks/useShopConfig'
 import { CATEGORIES } from '@/constants/categories'
 import api from '@/services/api'
 
@@ -146,6 +147,7 @@ export default function Category() {
   const bg         = category?.bg    ?? '#fff8e6'
 
   const { subcategories: subcats } = useSubcategories(slug)
+  const { mostrarSinStock } = useShopConfig()
 
   const [subcatId,       setSubcatId]       = useState(null)
   const [atributos,      setAtributos]      = useState({})  // {etapa_vida:'adulto', tamano_raza:'medium'}
@@ -246,7 +248,7 @@ export default function Category() {
   const sidebarFilters = filtros.filter(f => f.display_as === 'sidebar')
 
   const params = useMemo(() => {
-    const p = { categoria: slug, solo_disponibles: true, sort, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }
+    const p = { categoria: slug, solo_disponibles: !mostrarSinStock, sort, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }
     if (subcatId)         p.subcategoria_id = subcatId
     if (marcaId)          p.marca_id        = marcaId
     if (low  > precioMin) p.precio_min      = low

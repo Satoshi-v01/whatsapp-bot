@@ -7,6 +7,7 @@ import ProductCard from '@/components/ui/ProductCard'
 import { useProduct } from '@/hooks/useProduct'
 import { useProducts } from '@/hooks/useProducts'
 import { useCart } from '@/hooks/useCart'
+import { useShopConfig } from '@/hooks/useShopConfig'
 import { formatPrice } from '@/utils/formatPrice'
 import { CATEGORIES } from '@/constants/categories'
 
@@ -199,6 +200,7 @@ export default function Product() {
   const navigate = useNavigate()
   const { product, loading, error } = useProduct(slug)
   const { addItem } = useCart()
+  const { mostrarSinStock } = useShopConfig()
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const [selectedPres, setSelectedPres] = useState(null)
@@ -467,26 +469,34 @@ export default function Product() {
                       Presentación:
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {presentaciones.map(pr => (
-                        <button
-                          key={pr.id}
-                          onClick={() => { setSelectedPres(pr); setQty(1) }}
-                          disabled={!pr.disponible || pr.stock === 0}
-                          style={{
-                            padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 700,
-                            border: `2px solid ${presActual?.id === pr.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                            background: presActual?.id === pr.id ? 'var(--color-primary)' : '#fff',
-                            color: presActual?.id === pr.id ? '#fff' : (!pr.disponible || pr.stock === 0) ? 'var(--color-text-muted)' : 'var(--color-text)',
-                            cursor: (!pr.disponible || pr.stock === 0) ? 'not-allowed' : 'pointer',
-                            opacity: (!pr.disponible || pr.stock === 0) ? 0.45 : 1,
-                            textDecoration: (!pr.disponible || pr.stock === 0) ? 'line-through' : 'none',
-                            transition: 'all 0.15s',
-                            fontFamily: 'Inter, system-ui, sans-serif',
-                          }}
-                        >
-                          {pr.nombre}
-                        </button>
-                      ))}
+                      {presentaciones.map(pr => {
+                        const sinStock = !pr.disponible || pr.stock === 0
+                        const seleccionado = presActual?.id === pr.id
+                        const bloqueado = sinStock && !mostrarSinStock
+                        return (
+                          <button
+                            key={pr.id}
+                            onClick={() => { setSelectedPres(pr); setQty(1) }}
+                            disabled={bloqueado}
+                            style={{
+                              padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 700,
+                              border: `2px solid ${seleccionado ? (sinStock ? '#94a3b8' : 'var(--color-primary)') : 'var(--color-border)'}`,
+                              background: seleccionado ? (sinStock ? '#e2e8f0' : 'var(--color-primary)') : '#fff',
+                              color: seleccionado ? (sinStock ? '#64748b' : '#fff') : sinStock ? 'var(--color-text-muted)' : 'var(--color-text)',
+                              cursor: bloqueado ? 'not-allowed' : 'pointer',
+                              opacity: bloqueado ? 0.45 : 1,
+                              textDecoration: bloqueado ? 'line-through' : 'none',
+                              transition: 'all 0.15s',
+                              fontFamily: 'Inter, system-ui, sans-serif',
+                            }}
+                          >
+                            {pr.nombre}
+                            {sinStock && mostrarSinStock && (
+                              <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>sin stock</span>
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -544,7 +554,7 @@ export default function Product() {
                     className="w-full md:w-auto px-8 py-4 rounded-xl text-base font-bold cursor-not-allowed"
                     style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-text-muted)' }}
                   >
-                    Sin stock
+                    Fuera de stock
                   </button>
                 )}
 
