@@ -984,6 +984,47 @@ router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) =>
   }
 })
 
+// ─── GET /api/ecommerce/filtros/precio ───────────────────────
+// Rango de precios para los filtros activos (se llama al cambiar filtros)
+router.get('/filtros/precio', async (req, res) => {
+  try {
+    const { categoria, atributos, marca_id, subcategoria_id } = req.query
+    const conds = ['pr.disponible = true', 'pr.stock > 0']
+    const vals = []
+    let i = 1
+
+    if (categoria) { conds.push(`p.ecommerce_categoria = $${i++}`); vals.push(categoria.toLowerCase()) }
+    if (marca_id)  { conds.push(`p.marca_id = $${i++}`);            vals.push(parseInt(marca_id)) }
+    if (subcategoria_id) { conds.push(`p.ecommerce_subcategoria_id = $${i++}`); vals.push(parseInt(subcategoria_id)) }
+    if (atributos) {
+      try {
+        const attrs = JSON.parse(atributos)
+        Object.entries(attrs).forEach(([key, val]) => {
+          if (!val) return
+          if (Array.isArray(val) && val.length > 0) {
+            conds.push(`p.atributos->>'${key}' = ANY($${i++}::text[])`)
+            vals.push(val)
+          } else if (typeof val === 'string') {
+            conds.push(`p.atributos->>'${key}' = $${i++}`)
+            vals.push(val)
+          }
+        })
+      } catch {}
+    }
+
+    const where = `WHERE ${conds.join(' AND ')}`
+    const { rows } = await db.query(
+      `SELECT MIN(${PRECIO_EF}) AS precio_min, MAX(${PRECIO_EF}) AS precio_max
+       FROM presentaciones pr JOIN productos p ON p.id = pr.producto_id ${where}`,
+      vals
+    )
+    res.json({
+      precio_min: Number(rows[0]?.precio_min || 0),
+      precio_max: Number(rows[0]?.precio_max || 0),
+    })
+  } catch (error) { manejarError(res, error) }
+})
+
 // ─── GET /api/ecommerce/filtros ───────────────────────────────
 // Devuelve marcas disponibles y rango de precios para una categoria
 router.get('/filtros', async (req, res) => {

@@ -162,6 +162,9 @@ export default function Category() {
   const [high,           setHigh]           = useState(0)
   const [loadingFiltros, setLoadingFiltros] = useState(true)
 
+  const [precioMinBase, setPrecioMinBase] = useState(0)
+  const [precioMaxBase, setPrecioMaxBase] = useState(0)
+
   useEffect(() => {
     setLoadingFiltros(true)
     api.get('/api/ecommerce/filtros', { params: { categoria: slug } })
@@ -169,6 +172,7 @@ export default function Category() {
         setMarcas(data.marcas ?? [])
         setFiltros(data.filtros ?? [])
         setPrecioMin(data.precio_min); setPrecioMax(data.precio_max)
+        setPrecioMinBase(data.precio_min); setPrecioMaxBase(data.precio_max)
         setLow(data.precio_min);       setHigh(data.precio_max)
       })
       .catch(() => {})
@@ -177,6 +181,45 @@ export default function Category() {
 
   // Reset al cambiar categoria
   useEffect(() => { setSubcatId(null); setAtributos({}); setMarcaId(''); setPage(1) }, [slug])
+
+  // Re-fetchear rango de precios cuando cambian los filtros activos (debounce 300ms)
+  useEffect(() => {
+    const atrsActivos = Object.fromEntries(Object.entries(atributos).filter(([, v]) => v))
+    const tienesFiltros = marcaId || subcatId || Object.keys(atrsActivos).length > 0
+    if (!tienesFiltros) return // sin filtros activos el rango inicial ya es correcto
+
+    const timer = setTimeout(() => {
+      const params = { categoria: slug }
+      if (marcaId) params.marca_id = marcaId
+      if (subcatId) params.subcategoria_id = subcatId
+      if (Object.keys(atrsActivos).length) {
+        // Expandir aliases igual que en params
+        const atrsExpandidos = {}
+        Object.entries(atrsActivos).forEach(([campo, valor]) => {
+          const filtro = filtros.find(f => f.campo === campo)
+          const cfg = filtro?.valores.find(v => v.valor === valor)
+          atrsExpandidos[campo] = cfg?.incluye_valores?.length ? [valor, ...cfg.incluye_valores] : valor
+        })
+        params.atributos = JSON.stringify(atrsExpandidos)
+      }
+
+      api.get('/api/ecommerce/filtros/precio', { params })
+        .then(({ data }) => {
+          const newMin = data.precio_min
+          const newMax = data.precio_max
+          if (newMax > newMin) {
+            setPrecioMin(newMin)
+            setPrecioMax(newMax)
+            // Clampear la selección actual al nuevo rango
+            setLow(prev => Math.max(newMin, Math.min(prev, newMax)))
+            setHigh(prev => Math.min(newMax, Math.max(prev, newMin)))
+          }
+        })
+        .catch(() => {})
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [atributos, marcaId, subcatId, slug])
 
   const handlePrecio = useCallback((l, h) => { setLow(l); setHigh(h); setPage(1) }, [])
 
@@ -191,7 +234,9 @@ export default function Category() {
 
   function clearFilters() {
     setMarcaId(''); setSubcatId(null); setAtributos({})
-    setLow(precioMin); setHigh(precioMax); setPage(1)
+    // Restaurar rango de precios al base de la categoría
+    setPrecioMin(precioMinBase); setPrecioMax(precioMaxBase)
+    setLow(precioMinBase); setHigh(precioMaxBase); setPage(1)
   }
 
   const atributosActivos  = Object.values(atributos).filter(Boolean).length
