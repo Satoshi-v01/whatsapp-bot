@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatPrice } from '@/utils/formatPrice'
+import { useShopConfig } from '@/hooks/useShopConfig'
 
 function IconPlus({ size = 16 }) {
   return (
@@ -76,14 +77,17 @@ function AddToCartBtn({ stock, onClick }) {
 }
 
 export default function ProductCard({ product, onAddToCart, eager = false }) {
-  const { nombre, imagen_url, es_novedad, slug, marca, presentaciones = [], rating, reviews } = product
+  const { nombre, imagen_url, es_novedad, slug, marca, presentaciones = [], tiene_stock } = product
+  const { mostrarSinStock } = useShopConfig()
 
   const [hovered, setHovered] = useState(false)
   const [selectedPres, setSelectedPres] = useState(() => presentaciones.find(p => p.stock > 0) || presentaciones[0] || null)
 
   const precio = selectedPres?.precio_venta || product.precio_desde || 0
   const stock = selectedPres?.stock || 0
-  const outOfStock = !selectedPres || stock === 0
+  // tiene_stock viene del backend; fallback al cálculo local
+  const hayStock = tiene_stock ?? presentaciones.some(p => p.stock > 0)
+  const outOfStock = !hayStock
 
   const cartItem = selectedPres ? {
     id: selectedPres.id,
@@ -124,7 +128,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
         ) : (
           <PlaceholderImage nombre={nombre} />
         )}
-        {es_novedad && (
+        {es_novedad && !outOfStock && (
           <div style={{
             position: 'absolute', top: 12, left: 12,
             background: 'var(--color-primary)', color: '#fff',
@@ -132,6 +136,16 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
             fontSize: 11, fontWeight: 800, letterSpacing: 0.5,
           }}>
             Nuevo
+          </div>
+        )}
+        {outOfStock && (
+          <div style={{
+            position: 'absolute', top: 12, left: 12,
+            background: 'rgba(100,116,139,0.9)', color: '#fff',
+            padding: '4px 10px', borderRadius: 999,
+            fontSize: 11, fontWeight: 800, letterSpacing: 0.5,
+          }}>
+            Fuera de stock
           </div>
         )}
       </Link>
@@ -160,26 +174,30 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
         {/* Pills de presentaciones */}
         {presentaciones.length > 1 && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
-            {presentaciones.map(pr => (
-              <button
-                key={pr.id}
-                onClick={e => { e.preventDefault(); setSelectedPres(pr) }}
-                disabled={pr.stock === 0}
-                style={{
-                  padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
-                  border: `2px solid ${selectedPres?.id === pr.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  background: selectedPres?.id === pr.id ? 'var(--color-primary)' : 'transparent',
-                  color: selectedPres?.id === pr.id ? '#fff' : pr.stock === 0 ? 'var(--color-text-muted)' : 'var(--color-text)',
-                  cursor: pr.stock === 0 ? 'not-allowed' : 'pointer',
-                  opacity: pr.stock === 0 ? 0.4 : 1,
-                  transition: 'all 0.15s',
-                  textDecoration: pr.stock === 0 ? 'line-through' : 'none',
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                }}
-              >
-                {pr.nombre}
-              </button>
-            ))}
+            {presentaciones.map(pr => {
+              const sinStock = pr.stock === 0
+              const seleccionado = selectedPres?.id === pr.id
+              return (
+                <button
+                  key={pr.id}
+                  onClick={e => { e.preventDefault(); setSelectedPres(pr) }}
+                  disabled={sinStock && !mostrarSinStock}
+                  style={{
+                    padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                    border: `2px solid ${seleccionado ? (sinStock ? '#94a3b8' : 'var(--color-primary)') : 'var(--color-border)'}`,
+                    background: seleccionado ? (sinStock ? '#e2e8f0' : 'var(--color-primary)') : 'transparent',
+                    color: seleccionado ? (sinStock ? '#64748b' : '#fff') : sinStock ? 'var(--color-text-muted)' : 'var(--color-text)',
+                    cursor: (sinStock && !mostrarSinStock) ? 'not-allowed' : 'pointer',
+                    opacity: (sinStock && !mostrarSinStock) ? 0.4 : 1,
+                    transition: 'all 0.15s',
+                    textDecoration: (sinStock && !mostrarSinStock) ? 'line-through' : 'none',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                  }}
+                >
+                  {pr.nombre}
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -192,8 +210,8 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
         </div>
 
         {outOfStock && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 4 }}>
-            Sin stock
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textAlign: 'center', marginTop: 4 }}>
+            Fuera de stock
           </div>
         )}
       </div>
