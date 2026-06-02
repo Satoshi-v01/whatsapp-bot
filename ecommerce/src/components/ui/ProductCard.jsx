@@ -117,7 +117,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
       }}
     >
       {/* ── Imagen ── */}
-      <Link to={`/producto/${slug}`} tabIndex={-1} aria-hidden="true" style={{ display: 'block', position: 'relative', aspectRatio: '1 / 1', background: 'var(--color-bg-elevated)', overflow: 'hidden', flexShrink: 0 }}>
+      <Link to={`/producto/${slug}`} tabIndex={-1} aria-hidden="true" style={{ display: 'block', position: 'relative', aspectRatio: '1 / 1', background: '#fff', overflow: 'hidden', flexShrink: 0 }}>
         {imagen_url ? (
           <img
             src={imagen_url}
