@@ -391,33 +391,18 @@ export default function Product() {
                   }}
                 />
 
-                {/* Marco con gradiente sutil */}
+                {/* Imagen — fondo blanco simple */}
                 <div
                   className="relative rounded-2xl overflow-hidden"
                   style={{
                     aspectRatio: '1/1',
                     border: '1.5px solid var(--color-border)',
-                    boxShadow: 'var(--shadow-lg)',
-                    background: 'linear-gradient(145deg, var(--color-primary-light) 0%, #fff 60%, var(--color-bg-elevated) 100%)',
+                    background: '#fff',
                     zIndex: 1,
                   }}
                 >
                   <ProductImage src={imagen_url} alt={nombre} />
-
                 </div>
-
-                {/* Punto decorativo — esquina superior izquierda */}
-                <div
-                  aria-hidden="true"
-                  className="absolute -top-2 -left-2 w-5 h-5 rounded-full z-10"
-                  style={{ backgroundColor: 'var(--color-primary)', boxShadow: '0 0 0 3px var(--color-primary-light)' }}
-                />
-                {/* Punto decorativo — esquina inferior derecha */}
-                <div
-                  aria-hidden="true"
-                  className="absolute -bottom-2 -right-2 w-3 h-3 rounded-full z-10"
-                  style={{ backgroundColor: 'var(--color-primary-dark)', opacity: 0.5 }}
-                />
               </motion.div>
 
               {/* Detalle */}
