@@ -404,20 +404,6 @@ export default function Product() {
                 >
                   <ProductImage src={imagen_url} alt={nombre} />
 
-                  {/* Overlay hover zoom hint */}
-                  {imagen_url && (
-                    <div
-                      className="absolute inset-0 flex items-end justify-end p-3 opacity-0 hover:opacity-100 transition-opacity duration-250"
-                      style={{ background: 'linear-gradient(to top, rgba(26,18,8,0.22) 0%, transparent 50%)' }}
-                    >
-                      <span
-                        className="text-xs font-semibold text-white px-2.5 py-1 rounded-full"
-                        style={{ backgroundColor: 'rgba(26,18,8,0.55)', backdropFilter: 'blur(4px)' }}
-                      >
-                        Ver detalle
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Punto decorativo — esquina superior izquierda */}
