@@ -407,10 +407,11 @@ function Caja() {
             mensaje: `Registrar ${lineasValidas.length} producto(s) por Gs. ${total.toLocaleString()}?`,
             textoBoton: 'Confirmar', colorBoton: '#10b981',
             onConfirmar: async () => {
+                let numeroFactura = null
+                let datosImpresion = null
                 try {
-                    // Obtener número de factura
                     const resNumero = await api.post('/configuracion/factura/siguiente-numero')
-                    const numeroFactura = resNumero.data.numero_formateado
+                    numeroFactura = resNumero.data.numero_formateado
 
                     const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
@@ -423,7 +424,7 @@ function Caja() {
                             precio: precio * linea.cantidad,
                             metodo_pago: metodoPago,
                             subtipo_pago: subtipoPago || null,
-                            tipo_iva: '10', 
+                            tipo_iva: '10',
                             quiere_factura: !!(razonSocial || rucFactura),
                             ruc_factura: rucFactura || null,
                             razon_social: razonSocial || null,
@@ -452,20 +453,11 @@ function Caja() {
                         try { await confirmarOrden(opOrigen.id, { modalidad: canal, metodo_pago: metodoPago }) } catch (e) {}
                     }
 
-                    resetCaja()
-                    setModalConfirmar({
-                        titulo: 'Venta registrada',
-                        mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
-                        textoBoton: 'Nueva venta', colorBoton: '#10b981',
-                        onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
-                    })
-
-                    // Imprimir factura (fuera del try principal para que un popup bloqueado no muestre error de registro)
                     const metodoImpresion = metodoPago === 'tarjeta'
                         ? (subtipoPago === 'debito' ? 'tarjeta_debito' : 'tarjeta_credito')
                         : metodoPago
 
-                    imprimirFactura({
+                    datosImpresion = {
                         numero_factura: numeroFactura,
                         cliente_nombre: razonSocial || clienteSeleccionado?.nombre || null,
                         cliente_ruc: rucFactura || clienteSeleccionado?.ruc || null,
@@ -495,11 +487,24 @@ function Caja() {
                         total,
                         cajero,
                         config: configFactura
+                    }
+
+                    resetCaja()
+                    setModalConfirmar({
+                        titulo: 'Venta registrada',
+                        mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
+                        textoBoton: 'Nueva venta', colorBoton: '#10b981',
+                        onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
                     })
                 } catch (err) {
                     const detalle = err.response?.data?.error
                         || (err.response ? `Error HTTP ${err.response.status}` : `Sin respuesta del servidor (${err.message})`)
                     setModalConfirmar({ titulo: 'Error al registrar', mensaje: detalle, textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                }
+
+                // Imprimir fuera del try para que un error de impresion no pise el modal de exito
+                if (datosImpresion) {
+                    try { imprimirFactura(datosImpresion) } catch (e) { console.error('Error al imprimir:', e) }
                 }
             }
         })
