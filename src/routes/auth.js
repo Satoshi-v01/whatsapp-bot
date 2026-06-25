@@ -33,10 +33,11 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales incorrectas' })
         }
 
+        const horas = parseInt(process.env.SESSION_EXPIRY_HOURS) || 24
         const token = jwt.sign(
             { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol },
             process.env.JWT_SECRET,
-            { expiresIn: '8h' }
+            { expiresIn: `${horas}h` }
         )
      
         res.json({
