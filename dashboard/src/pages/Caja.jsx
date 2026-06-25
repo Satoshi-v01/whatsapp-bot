@@ -452,7 +452,15 @@ function Caja() {
                         try { await confirmarOrden(opOrigen.id, { modalidad: canal, metodo_pago: metodoPago }) } catch (e) {}
                     }
 
-                    // Imprimir factura
+                    resetCaja()
+                    setModalConfirmar({
+                        titulo: 'Venta registrada',
+                        mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
+                        textoBoton: 'Nueva venta', colorBoton: '#10b981',
+                        onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
+                    })
+
+                    // Imprimir factura (fuera del try principal para que un popup bloqueado no muestre error de registro)
                     const metodoImpresion = metodoPago === 'tarjeta'
                         ? (subtipoPago === 'debito' ? 'tarjeta_debito' : 'tarjeta_credito')
                         : metodoPago
@@ -487,14 +495,6 @@ function Caja() {
                         total,
                         cajero,
                         config: configFactura
-                    })
-
-                    resetCaja()
-                    setModalConfirmar({
-                        titulo: 'Venta registrada',
-                        mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
-                        textoBoton: 'Nueva venta', colorBoton: '#10b981',
-                        onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
                     })
                 } catch (err) {
                     setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar la venta.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
