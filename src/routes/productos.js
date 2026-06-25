@@ -332,6 +332,48 @@ router.get('/codigo-barras/:codigo', autenticar, verificarPermiso('inventario', 
     }
 })
 
+// Descargar template de precios pre-llenado con datos actuales
+router.get('/template-precios', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `SELECT
+                p.nombre        AS nombre_producto,
+                COALESCE(m.nombre, '')  AS marca,
+                COALESCE(p.especie, '') AS especie,
+                COALESCE(p.calidad, '') AS calidad,
+                COALESCE(c.nombre, '')  AS categoria,
+                COALESCE(sc.nombre, '') AS subcategoria,
+                COALESCE(p.sku, '')     AS sku,
+                pr.nombre               AS presentacion,
+                COALESCE(pr.precio_compra, 0)   AS precio_compra,
+                pr.precio_venta                  AS precio_venta,
+                COALESCE(pr.precio_tarjeta, '')  AS precio_tarjeta,
+                pr.stock                         AS stock
+             FROM presentaciones pr
+             JOIN productos p ON p.id = pr.producto_id
+             LEFT JOIN marcas m ON m.id = p.marca_id
+             LEFT JOIN categorias c ON c.id = p.categoria_id
+             LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
+             WHERE pr.disponible = true
+             ORDER BY m.nombre ASC, p.nombre ASC, pr.nombre ASC`
+        )
+        const ws = XLSX.utils.json_to_sheet(resultado.rows)
+        ws['!cols'] = [
+            { wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
+            { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+            { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 8 }
+        ]
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Lista de Precios')
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+        res.setHeader('Content-Disposition', 'attachment; filename="template_precios.xlsx"')
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        res.send(buffer)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // Descargar template de stock pre-llenado con datos actuales
 router.get('/template-stock', autenticar, verificarPermiso('inventario', 'ver'), async (req, res) => {
     try {

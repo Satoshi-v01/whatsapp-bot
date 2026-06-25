@@ -11,7 +11,7 @@ import {
     actualizarStock, actualizarPrecio, actualizarCodigoBarras,
     toggleDisponibleProducto, eliminarPresentacion, eliminarProducto,
     getSecciones, crearSeccion, editarSeccion, eliminarSeccion,
-    importarProductos, descargarTemplateStock, importarStock
+    importarProductos, descargarTemplatePrecios, descargarTemplateStock, importarStock
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -614,7 +614,7 @@ function colorVencimiento(diasParaVencer) {
                     <button onClick={() => setModalSecciones(true)} style={btnSecundario}>Secciones</button>
                     <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
                     {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
-                    <button onClick={descargarTemplate} style={btnSecundario}>⬇ Template precios</button>
+                    <button onClick={() => descargarTemplatePrecios().catch(() => {})} style={btnSecundario}>⬇ Template precios</button>
                     <button onClick={() => inputImportRef.current?.click()} style={btnSecundario}>⬆ Importar precios</button>
                     <input ref={inputImportRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcel} style={{ display: 'none' }} />
                     <button onClick={() => descargarTemplateStock().catch(() => {})} style={btnSecundario}>⬇ Template stock</button>
