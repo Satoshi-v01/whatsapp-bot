@@ -1907,7 +1907,7 @@ function colorVencimiento(diasParaVencer) {
                             </h3>
                             <p style={{ fontSize: '12px', color: s.textMuted }}>
                                 {importResultado
-                                    ? `${importResultado.creados} productos nuevos · ${importResultado.actualizados} presentaciones cargadas · ${importResultado.errores.length} errores`
+                                    ? `${importResultado.productosCreados ?? importResultado.creados ?? 0} productos nuevos · ${importResultado.presentacionesActualizadas ?? importResultado.actualizados ?? 0} precios actualizados · ${importResultado.presentacionesCreadas ?? 0} presentaciones nuevas · ${importResultado.errores.length} errores`
                                     : `${modalImportar.filas.length} filas detectadas`}
                             </p>
                         </div>
@@ -1916,14 +1916,15 @@ function colorVencimiento(diasParaVencer) {
 
                     {importResultado ? (
                         <div style={{ flex: 1 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: importResultado.modo === 'stock' ? '1fr 1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                                 {(importResultado.modo === 'stock' ? [
                                     { label: 'Presentaciones actualizadas', val: importResultado.actualizados, color: '#10b981' },
                                     { label: 'Lotes creados', val: importResultado.lotesCreados, color: '#3b82f6' },
                                     { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
                                 ] : [
-                                    { label: 'Productos nuevos', val: importResultado.creados, color: '#10b981' },
-                                    { label: 'Presentaciones', val: importResultado.actualizados, color: '#3b82f6' },
+                                    { label: 'Productos nuevos', val: importResultado.productosCreados ?? importResultado.creados ?? 0, color: '#10b981' },
+                                    { label: 'Precios actualizados', val: importResultado.presentacionesActualizadas ?? importResultado.actualizados ?? 0, color: '#3b82f6' },
+                                    { label: 'Presentaciones nuevas', val: importResultado.presentacionesCreadas ?? 0, color: '#8b5cf6' },
                                     { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
                                 ]).map(k => (
                                     <div key={k.label} style={{ padding: '14px', borderRadius: '10px', background: s.surfaceLow, textAlign: 'center', border: `1px solid ${s.border}` }}>
