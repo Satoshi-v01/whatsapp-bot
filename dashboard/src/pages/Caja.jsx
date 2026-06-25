@@ -467,7 +467,7 @@ function Caja() {
                         vuelto: vueltoCalculado,
                         items: [
                             ...lineasValidas.map(linea => {
-                                const { precio } = calcularPrecioEfectivo(linea.presentacionSeleccionada)
+                                const { precio } = calcularPrecioCaja(linea.presentacionSeleccionada)
                                 return {
                                     descripcion: `${linea.productoSeleccionado.marca_nombre ? linea.productoSeleccionado.marca_nombre + ' ' : ''}${linea.productoSeleccionado.nombre} ${linea.presentacionSeleccionada.nombre}`,
                                     cantidad: linea.cantidad,
