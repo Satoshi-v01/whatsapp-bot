@@ -181,7 +181,7 @@ function Inventario() {
                         calidad: String(norm.calidad || norm.quality || '').trim().toLowerCase(),
                         categoria: String(norm.categoria || norm.category || '').trim().toLowerCase(),
                         subcategoria: String(norm.subcategoria || norm.subcategory || norm.sub_categoria || '').trim(),
-                        sku: String(norm.sku || norm.codigo || norm.codigo_producto || '').trim(),
+                        sku: String(norm.sku_producto || norm.sku || norm.codigo || norm.codigo_producto || '').trim(),
                         presentacion: String(norm.presentacion || norm.presentacion_nombre || norm.tamaño || norm.size || norm.kg || '').trim(),
                         precio_compra: parseInt(String(norm.precio_compra || norm.p_compra || norm.costo || '').replace(/[^0-9]/g, '')) || 0,
                         precio_venta: parseInt(String(norm.precio_venta || norm.p_venta || norm.precio || norm.precio_de_venta || '').replace(/[^0-9]/g, '')) || 0,

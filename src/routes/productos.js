@@ -337,18 +337,19 @@ router.get('/template-precios', autenticar, verificarPermiso('inventario', 'ver'
     try {
         const resultado = await db.query(
             `SELECT
-                p.nombre        AS nombre_producto,
-                COALESCE(m.nombre, '')  AS marca,
-                COALESCE(p.especie, '') AS especie,
-                COALESCE(p.calidad, '') AS calidad,
-                COALESCE(c.nombre, '')  AS categoria,
-                COALESCE(sc.nombre, '') AS subcategoria,
-                COALESCE(p.sku, '')     AS sku,
-                pr.nombre               AS presentacion,
+                p.nombre                        AS nombre_producto,
+                COALESCE(m.nombre, '')          AS marca,
+                COALESCE(p.especie, '')         AS especie,
+                COALESCE(p.calidad, '')         AS calidad,
+                COALESCE(c.nombre, '')          AS categoria,
+                COALESCE(sc.nombre, '')         AS subcategoria,
+                COALESCE(p.sku, '')             AS sku_producto,
+                pr.nombre                       AS presentacion,
+                COALESCE(pr.sku, '')            AS sku_presentacion,
                 COALESCE(pr.precio_compra, 0)   AS precio_compra,
-                pr.precio_venta                  AS precio_venta,
-                pr.precio_tarjeta                AS precio_tarjeta,
-                pr.stock                         AS stock
+                pr.precio_venta                 AS precio_venta,
+                pr.precio_tarjeta               AS precio_tarjeta,
+                pr.stock                        AS stock
              FROM presentaciones pr
              JOIN productos p ON p.id = pr.producto_id
              LEFT JOIN marcas m ON m.id = p.marca_id
@@ -361,7 +362,7 @@ router.get('/template-precios', autenticar, verificarPermiso('inventario', 'ver'
         ws['!cols'] = [
             { wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
             { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
-            { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 8 }
+            { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 8 }
         ]
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Lista de Precios')
@@ -529,20 +530,19 @@ router.post('/:id/presentaciones', autenticar, verificarPermiso('inventario', 'c
         const { nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras } = req.body
         if (!nombre || !precio_venta) return res.status(400).json({ error: 'Nombre y precio de venta son requeridos' })
 
-        let codigoFinal = codigo_barras || null
-        if (!codigoFinal) {
-            const prod = await db.query(`SELECT sku FROM productos WHERE id = $1`, [id])
-            const sku = prod.rows[0]?.sku
-            if (sku) {
-                const cnt = await db.query(`SELECT COUNT(*) as n FROM presentaciones WHERE producto_id = $1`, [id])
-                codigoFinal = `${sku}-${parseInt(cnt.rows[0].n) + 1}`
-            }
+        // Auto-generar SKU de presentacion: {sku_producto}-{n}
+        let skuPresentacion = null
+        const prod = await db.query(`SELECT sku FROM productos WHERE id = $1`, [id])
+        const skuProducto = prod.rows[0]?.sku
+        if (skuProducto) {
+            const cnt = await db.query(`SELECT COUNT(*) as n FROM presentaciones WHERE producto_id = $1`, [id])
+            skuPresentacion = `${skuProducto}-${parseInt(cnt.rows[0].n) + 1}`
         }
 
         const resultado = await db.query(
-            `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [id, nombre, precio_venta, precio_tarjeta || null, precio_compra || 0, stock || 0, codigoFinal]
+            `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras, sku)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [id, nombre, precio_venta, precio_tarjeta || null, precio_compra || 0, stock || 0, codigo_barras || null, skuPresentacion]
         )
         const producto = await db.query(`SELECT nombre FROM productos WHERE id = $1`, [id])
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'presentacion', entidad_id: resultado.rows[0].id, descripcion: `Presentación creada: ${nombre} — ${producto.rows[0]?.nombre} — Gs. ${precio_venta.toLocaleString()}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
@@ -839,24 +839,27 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
 
                 if (presExist.rows.length > 0) {
                     await client.query(
-                        `UPDATE presentaciones SET precio_venta = $1, precio_compra = $2, precio_tarjeta = COALESCE($3, precio_tarjeta)
+                        `UPDATE presentaciones SET
+                            precio_venta  = $1,
+                            precio_compra = COALESCE(NULLIF($2, 0), precio_compra),
+                            precio_tarjeta = COALESCE($3, precio_tarjeta)
                          WHERE id = $4`,
-                        [precioVenta, precioCompra, precioTarjeta, presExist.rows[0].id]
+                        [precioVenta, precioCompra || null, precioTarjeta, presExist.rows[0].id]
                     )
                     actualizados++
                 } else {
-                    // Auto-generar codigo_barras: {sku_producto}-{n}
-                    const prodSku = await client.query(`SELECT sku FROM productos WHERE id = $1`, [productoId])
-                    const skuBase = prodSku.rows[0]?.sku
-                    let codigoAuto = null
+                    // Auto-generar SKU de presentacion: {sku_producto}-{n}
+                    const prodSkuRes = await client.query(`SELECT sku FROM productos WHERE id = $1`, [productoId])
+                    const skuBase = prodSkuRes.rows[0]?.sku
+                    let skuPres = null
                     if (skuBase) {
                         const cntPres = await client.query(`SELECT COUNT(*) as n FROM presentaciones WHERE producto_id = $1`, [productoId])
-                        codigoAuto = `${skuBase}-${parseInt(cntPres.rows[0].n) + 1}`
+                        skuPres = `${skuBase}-${parseInt(cntPres.rows[0].n) + 1}`
                     }
                     await client.query(
-                        `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, precio_tarjeta, stock, codigo_barras)
+                        `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, precio_tarjeta, stock, sku)
                          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                        [productoId, nombrePres, precioVenta, precioCompra, precioTarjeta, stock, codigoAuto]
+                        [productoId, nombrePres, precioVenta, precioCompra, precioTarjeta, stock, skuPres]
                     )
                     actualizados++
                 }
