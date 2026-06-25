@@ -862,6 +862,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         // Reemplazar IDs temporales en inserts
         for (const ins of inserts) {
             if (ins.productoId < 0) ins.productoId = tempIdAReal.get(ins.productoId)
+        }
 
         // Batch UPDATE de precios
         if (updates.length > 0) {
