@@ -756,20 +756,22 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         const marcasPorNombre = new Map(marcasRes.rows.map(r => [r.nombre, r.id]))
         const productosPorNombreMarca = new Map(productosRes.rows.map(r => [`${r.nombre}__${r.marca_id ?? 0}`, r.id]))
         const productosPorSku = new Map(productosRes.rows.filter(r => r.sku).map(r => [r.sku, r.id]))
+        const skuPorProductoId = new Map(productosRes.rows.filter(r => r.sku).map(r => [r.id, r.sku]))
         const pressPorProdNombre = new Map(presentacionesRes.rows.map(r => [`${r.producto_id}__${r.nombre}`, r]))
         const seccionesValidas = new Set(seccionesRes.rows.map(r => r.seccion_inventario.toLowerCase()))
         const subcatPorNombre = new Map(subcatRes.rows.map(r => [r.nombre, r.id]))
+
+        // Contador O(n) en vez de O(n²)
+        const contadorPres = new Map()
+        for (const p of presentacionesRes.rows) {
+            contadorPres.set(p.producto_id, (contadorPres.get(p.producto_id) ?? 0) + 1)
+        }
         // ──────────────────────────────────────────────────────────────────────
 
         const errores = []
-        const updates = []   // { id, precioVenta, precioCompra, precioTarjeta }
-        const inserts = []   // nuevas presentaciones
-        const nuevosProductos = [] // productos a crear (raros)
-
-        // Contador de presentaciones nuevas por producto (para SKU auto)
-        const contadorPres = new Map(
-            productosRes.rows.map(r => [r.id, presentacionesRes.rows.filter(p => p.producto_id === r.id).length])
-        )
+        const updates = []        // { id, precioVenta, precioCompra, precioTarjeta }
+        const inserts = []        // nuevas presentaciones
+        const nuevosProductosDatos = [] // { nombre, calidad, especie, seccion, marcaId, sku, subcategoriaId }
 
         for (const [idx, fila] of filas.entries()) {
             const nombre = String(fila.nombre_producto || '').trim()
@@ -799,7 +801,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                 ?? (fila.sku?.trim() ? productosPorSku.get(fila.sku.trim()) : null)
                 ?? null
 
-            // 3. Si no existe → crear (infrecuente, solo para nuevos productos)
+            // 3. Si no existe → encolar para crear dentro de la transacción
             if (!productoId) {
                 const calidades = ['standard', 'premium', 'premium_special', 'super_premium']
                 const calidad = calidades.includes(fila.calidad) ? fila.calidad : 'standard'
@@ -812,17 +814,13 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                     : null
                 const skuVal = fila.sku?.trim() || null
 
-                const res = await client.query(
-                    `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id, sku, subcategoria_id)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                    [nombre, calidad, especie, seccion, marcaId, skuVal, subcategoriaId]
-                )
-                productoId = res.rows[0].id
-                // Actualizar mapas en memoria para filas siguientes del mismo producto
+                // Placeholder negativo para identificar productos pendientes de crear
+                productoId = -(nuevosProductosDatos.length + 1)
+                nuevosProductosDatos.push({ _tempId: productoId, nombre, calidad, especie, seccion, marcaId, skuVal, subcategoriaId })
                 productosPorNombreMarca.set(`${nombre.toLowerCase()}__${marcaId ?? 0}`, productoId)
                 if (skuVal) productosPorSku.set(skuVal, productoId)
+                skuPorProductoId.set(productoId, skuVal)
                 contadorPres.set(productoId, 0)
-                nuevosProductos.push(productoId)
             }
 
             // 4. Buscar presentación en memoria
@@ -831,24 +829,39 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
             const precioCompra = parseInt(fila.precio_compra) || 0
             const precioTarjeta = parseInt(fila.precio_tarjeta) || null
 
-            if (presExist) {
+            if (presExist && presExist.id !== null) {
+                // Presentación existente en DB → actualizar precios
                 updates.push({ id: presExist.id, precioVenta, precioCompra, precioTarjeta })
-            } else {
-                // Auto-generar SKU presentacion
-                const skuBase = productosPorSku.has(fila.sku?.trim()) ? fila.sku?.trim()
-                    : [...productosPorSku.entries()].find(([, v]) => v === productoId)?.[0] ?? null
+            } else if (!presExist) {
+                // Presentación nueva → encolar insert
+                const skuBase = skuPorProductoId.get(productoId) ?? null
                 const n = (contadorPres.get(productoId) ?? 0) + 1
                 contadorPres.set(productoId, n)
                 const skuPres = skuBase ? `${skuBase}-${n}` : null
 
                 inserts.push({ productoId, nombre: nombrePres, precioVenta, precioCompra, precioTarjeta, skuPres })
-                // Añadir al mapa para evitar doble insert si la misma presentacion aparece dos veces
+                // Marcar como encolada para no insertar dos veces si aparece duplicada en el Excel
                 pressPorProdNombre.set(presKey, { id: null, producto_id: productoId, nombre: nombrePres.toLowerCase() })
             }
+            // Si presExist.id === null → ya está encolada en inserts, ignorar duplicado
         }
 
-        // ── ESCRITURA EN BATCH ─────────────────────────────────────────────────
+        // ── ESCRITURA EN BATCH (todo dentro de una sola transacción) ──────────
         await client.query('BEGIN')
+
+        // Crear productos nuevos y reemplazar IDs temporales por reales
+        const tempIdAReal = new Map()
+        for (const p of nuevosProductosDatos) {
+            const res = await client.query(
+                `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id, sku, subcategoria_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                [p.nombre, p.calidad, p.especie, p.seccion, p.marcaId, p.skuVal, p.subcategoriaId]
+            )
+            tempIdAReal.set(p._tempId, res.rows[0].id)
+        }
+        // Reemplazar IDs temporales en inserts
+        for (const ins of inserts) {
+            if (ins.productoId < 0) ins.productoId = tempIdAReal.get(ins.productoId)
 
         // Batch UPDATE de precios
         if (updates.length > 0) {
