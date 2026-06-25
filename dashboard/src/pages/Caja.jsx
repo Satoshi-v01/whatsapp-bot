@@ -497,7 +497,9 @@ function Caja() {
                         config: configFactura
                     })
                 } catch (err) {
-                    setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar la venta.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                    const detalle = err.response?.data?.error
+                        || (err.response ? `Error HTTP ${err.response.status}` : `Sin respuesta del servidor (${err.message})`)
+                    setModalConfirmar({ titulo: 'Error al registrar', mensaje: detalle, textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
                 }
             }
         })
