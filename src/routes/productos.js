@@ -778,7 +778,8 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                     const especies = ['perro', 'gato', 'ambos']
                     const especie = especies.includes(fila.especie) ? fila.especie : null
                     const categorias = ['balanceados', 'accesorios', 'medicamentos', 'higiene', 'snacks']
-                    const seccion = categorias.includes(fila.categoria) ? fila.categoria : null
+                    const catNorm = (fila.categoria || '').trim().toLowerCase()
+                    const seccion = categorias.includes(catNorm) ? catNorm : null
 
                     // Buscar subcategoría por nombre si se proporcionó
                     let subcategoriaId = null

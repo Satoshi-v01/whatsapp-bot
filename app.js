@@ -55,7 +55,7 @@ const limiterAuth = rateLimit({
     legacyHeaders: false
 })
 
-app.use(express.json())
+app.use(express.json({ limit: '5mb' }))
 
 // Seguridad HTTP headers
 app.use(helmet({
@@ -341,7 +341,11 @@ app.use((err, req, res, next) => {
         url: req.url,
         method: req.method
     })
-    res.status(500).json({ error: 'Error interno del servidor' })
+    const status = err.status || err.statusCode || 500
+    const mensaje = status === 413 ? 'Archivo demasiado grande'
+        : process.env.NODE_ENV === 'production' ? 'Error interno del servidor'
+        : err.message
+    res.status(status).json({ error: mensaje })
 })
 
 // Manejo de promesas no capturadas
