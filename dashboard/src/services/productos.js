@@ -154,6 +154,16 @@ export async function importarProductos(filas) {
     return res.data
 }
 
+export async function descargarTemplatePrecios() {
+    const res = await api.get('/productos/template-precios', { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'template_precios.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
+}
+
 export async function descargarTemplateStock() {
     const res = await api.get('/productos/template-stock', { responseType: 'blob' })
     const url = URL.createObjectURL(res.data)
