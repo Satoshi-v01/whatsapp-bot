@@ -1,3 +1,16 @@
+function imprimirHtml(html) {
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument || iframe.contentWindow.document
+    doc.open()
+    doc.write(html)
+    doc.close()
+    iframe.contentWindow.focus()
+    iframe.contentWindow.print()
+    setTimeout(() => document.body.removeChild(iframe), 1000)
+}
+
 export function numeroALetras(numero) {
     const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE']
     const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
@@ -200,15 +213,7 @@ export function imprimirFactura(datos) {
 <body><pre>${ticket}</pre></body>
 </html>`
 
-    const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
-    const url  = URL.createObjectURL(blob)
-    const ventana = window.open(url, '_blank', 'width=420,height=700')
-    if (!ventana) {
-        URL.revokeObjectURL(url)
-        alert('El navegador bloqueó el popup de impresión. Permitir popups para este sitio y volver a intentar.')
-        return
-    }
-    ventana.onload = () => { ventana.print(); URL.revokeObjectURL(url) }
+    imprimirHtml(html)
 }
 
 export function imprimirCierre({ cierreDatos, gastos, fechaCierre, cajero, config }) {
@@ -271,13 +276,5 @@ ${gastos.length > 0 ? `<div class="fila"><span>Total gastos</span><span>- Gs. ${
 <div class="center" style="font-size:10px; margin-top:4px;">— Fin del cierre —</div>
 </body></html>`
 
-    const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
-    const url  = URL.createObjectURL(blob)
-    const ventana = window.open(url, '_blank', 'width=420,height=700')
-    if (!ventana) {
-        URL.revokeObjectURL(url)
-        alert('El navegador bloqueó el popup de impresión. Permitir popups para este sitio y volver a intentar.')
-        return
-    }
-    ventana.onload = () => { ventana.print(); URL.revokeObjectURL(url) }
+    imprimirHtml(html)
 }
