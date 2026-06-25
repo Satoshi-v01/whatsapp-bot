@@ -347,7 +347,7 @@ router.get('/template-precios', autenticar, verificarPermiso('inventario', 'ver'
                 pr.nombre               AS presentacion,
                 COALESCE(pr.precio_compra, 0)   AS precio_compra,
                 pr.precio_venta                  AS precio_venta,
-                COALESCE(pr.precio_tarjeta, '')  AS precio_tarjeta,
+                pr.precio_tarjeta                AS precio_tarjeta,
                 pr.stock                         AS stock
              FROM presentaciones pr
              JOIN productos p ON p.id = pr.producto_id
