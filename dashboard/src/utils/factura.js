@@ -274,5 +274,10 @@ ${gastos.length > 0 ? `<div class="fila"><span>Total gastos</span><span>- Gs. ${
     const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
     const url  = URL.createObjectURL(blob)
     const ventana = window.open(url, '_blank', 'width=420,height=700')
+    if (!ventana) {
+        URL.revokeObjectURL(url)
+        alert('El navegador bloqueó el popup de impresión. Permitir popups para este sitio y volver a intentar.')
+        return
+    }
     ventana.onload = () => { ventana.print(); URL.revokeObjectURL(url) }
 }
