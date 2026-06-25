@@ -799,21 +799,22 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                         if (subRes.rows.length > 0) subcategoriaId = subRes.rows[0].id
                     }
 
-                    // Insertar sin SKU si ya existe uno igual, para evitar duplicate key
+                    // Si el SKU ya existe en otro producto, ese ES el producto — usarlo
                     const skuVal = fila.sku?.trim() || null
-                    let skuUsado = skuVal
                     if (skuVal) {
                         const skuExist = await client.query(`SELECT id FROM productos WHERE sku = $1`, [skuVal])
-                        if (skuExist.rows.length > 0) skuUsado = null
+                        if (skuExist.rows.length > 0) { productoId = skuExist.rows[0].id }
                     }
 
-                    const nuevoProd = await client.query(
-                        `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id, sku, subcategoria_id)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                        [nombre, calidad, especie, seccion, marcaId, skuUsado, subcategoriaId]
-                    )
-                    productoId = nuevoProd.rows[0].id
-                    creados++
+                    if (!productoId) {
+                        const nuevoProd = await client.query(
+                            `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id, sku, subcategoria_id)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                            [nombre, calidad, especie, seccion, marcaId, skuVal, subcategoriaId]
+                        )
+                        productoId = nuevoProd.rows[0].id
+                        creados++
+                    }
                 }
 
                 // 3. Buscar o crear presentación
