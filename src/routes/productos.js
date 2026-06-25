@@ -739,15 +739,19 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         const errores = []
 
         for (const [idx, fila] of filas.entries()) {
+            const sp = `sp_${idx}`
+            await client.query(`SAVEPOINT ${sp}`)
             try {
                 const nombre = String(fila.nombre_producto || '').trim()
                 const nombrePres = String(fila.presentacion || '').trim()
                 if (!nombre || !nombrePres) {
+                    await client.query(`RELEASE SAVEPOINT ${sp}`)
                     errores.push({ fila: idx + 2, mensaje: 'Falta nombre_producto o presentacion' })
                     continue
                 }
                 const precioVenta = parseInt(fila.precio_venta) || 0
                 if (!precioVenta) {
+                    await client.query(`RELEASE SAVEPOINT ${sp}`)
                     errores.push({ fila: idx + 2, mensaje: `${nombre} — ${nombrePres}: precio_venta requerido` })
                     continue
                 }
@@ -764,7 +768,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                     }
                 }
 
-                // 2. Buscar o crear producto
+                // 2. Buscar producto: por nombre+marca, luego por SKU
                 let productoId
                 const prodExist = await client.query(
                     `SELECT id FROM productos WHERE LOWER(nombre) = LOWER($1) AND COALESCE(marca_id, 0) = COALESCE($2, 0)`,
@@ -772,7 +776,12 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                 )
                 if (prodExist.rows.length > 0) {
                     productoId = prodExist.rows[0].id
-                } else {
+                } else if (fila.sku?.trim()) {
+                    const porSku = await client.query(`SELECT id FROM productos WHERE sku = $1`, [fila.sku.trim()])
+                    if (porSku.rows.length > 0) productoId = porSku.rows[0].id
+                }
+
+                if (!productoId) {
                     const calidades = ['standard', 'premium', 'premium_special', 'super_premium']
                     const calidad = calidades.includes(fila.calidad) ? fila.calidad : 'standard'
                     const especies = ['perro', 'gato', 'ambos']
@@ -781,7 +790,6 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                     const catNorm = (fila.categoria || '').trim().toLowerCase()
                     const seccion = categorias.includes(catNorm) ? catNorm : null
 
-                    // Buscar subcategoría por nombre si se proporcionó
                     let subcategoriaId = null
                     if (fila.subcategoria?.trim()) {
                         const subRes = await client.query(
@@ -791,12 +799,18 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                         if (subRes.rows.length > 0) subcategoriaId = subRes.rows[0].id
                     }
 
-                    const sku = fila.sku?.trim() || null
+                    // Insertar sin SKU si ya existe uno igual, para evitar duplicate key
+                    const skuVal = fila.sku?.trim() || null
+                    let skuUsado = skuVal
+                    if (skuVal) {
+                        const skuExist = await client.query(`SELECT id FROM productos WHERE sku = $1`, [skuVal])
+                        if (skuExist.rows.length > 0) skuUsado = null
+                    }
 
                     const nuevoProd = await client.query(
                         `INSERT INTO productos (nombre, calidad, especie, seccion_inventario, marca_id, sku, subcategoria_id)
                          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                        [nombre, calidad, especie, seccion, marcaId, sku, subcategoriaId]
+                        [nombre, calidad, especie, seccion, marcaId, skuUsado, subcategoriaId]
                     )
                     productoId = nuevoProd.rows[0].id
                     creados++
@@ -826,7 +840,10 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                     )
                     actualizados++
                 }
+
+                await client.query(`RELEASE SAVEPOINT ${sp}`)
             } catch (e) {
+                await client.query(`ROLLBACK TO SAVEPOINT ${sp}`)
                 errores.push({ fila: idx + 2, mensaje: e.message })
             }
         }
