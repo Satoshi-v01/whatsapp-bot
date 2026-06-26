@@ -1,6 +1,8 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
+
+const idempotenciaCache = new Map()
 const { validarVentaPresencial, validarEstado, validarId } = require('../middleware/validar')
 const { recalcularStats } = require('./clientes')
 const { manejarError } = require('../middleware/validar')
@@ -483,6 +485,20 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             ? items
             : [{ presentacion_id: parseInt(presentacion_id), cantidad: parseInt(cantidad) || 1, precio_unitario: Math.round(parseInt(precio) / (parseInt(cantidad) || 1)), tipo_iva: tipo_iva || '10' }]
 
+        const canalFinal = canal || 'agente_presencial'
+
+        // Fingerprint de contenido: mismo cliente + mismos artículos + misma cantidad + mismo método + misma modalidad
+        const itemsOrdenados = [...itemsNorm]
+            .sort((a, b) => parseInt(a.presentacion_id) - parseInt(b.presentacion_id))
+            .map(it => `${parseInt(it.presentacion_id)}x${parseInt(it.cantidad)}`)
+            .join(',')
+        const fingerprint = `${cliente_id ?? 'anon'}-${itemsOrdenados}-${metodo_pago || ''}-${canalFinal}`
+
+        const ventaCached = idempotenciaCache.get(fingerprint)
+        if (ventaCached && Date.now() - ventaCached.ts < 60000) {
+            return res.status(200).json({ ok: true, venta: ventaCached.venta, duplicado: true })
+        }
+
         const subtotal = itemsNorm.reduce((s, it) => s + (parseInt(it.precio_unitario) * parseInt(it.cantidad)), 0)
         const totalPrecio = subtotal + (parseInt(costo_delivery) || 0)
 
@@ -504,11 +520,37 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             }
         }
 
+        // Verificar duplicado en DB dentro de la transacción.
+        // El FOR UPDATE del stock ya serializó los requests sobre el mismo producto,
+        // así que esta query ve filas confirmadas + las bloqueadas por esta tx.
+        if (itemsNorm.length === 1) {
+            const dup = await client.query(
+                `SELECT id FROM ventas
+                 WHERE (cliente_id IS NOT DISTINCT FROM $1)
+                   AND presentacion_id = $2
+                   AND cantidad = $3
+                   AND metodo_pago = $4
+                   AND canal = $5
+                   AND created_at > NOW() - INTERVAL '60 seconds'
+                   AND estado != 'cancelado'
+                 LIMIT 1`,
+                [cliente_id || null,
+                 parseInt(itemsNorm[0].presentacion_id),
+                 parseInt(itemsNorm[0].cantidad),
+                 metodo_pago,
+                 canalFinal]
+            )
+            if (dup.rows.length > 0) {
+                await client.query('ROLLBACK')
+                const ventaExist = await db.query(`SELECT * FROM ventas WHERE id = $1`, [dup.rows[0].id])
+                return res.status(200).json({ ok: true, venta: ventaExist.rows[0], duplicado: true })
+            }
+        }
+
         const fecha_vencimiento_credito = tipo_venta === 'credito' && plazo_dias
             ? new Date(Date.now() + parseInt(plazo_dias) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
             : null
 
-        const canalFinal = canal || 'agente_presencial'
         const estadoVenta = (tipo_venta === 'credito' || canalFinal === 'agente_delivery' || canalFinal === 'whatsapp_delivery')
             ? 'pendiente_pago'
             : 'pagado'
@@ -570,6 +612,9 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         }
 
         await client.query('COMMIT')
+
+        idempotenciaCache.set(fingerprint, { venta: venta.rows[0], ts: Date.now() })
+        setTimeout(() => idempotenciaCache.delete(fingerprint), 70000)
 
         if (cliente_id) {
             recalcularStats(cliente_id).catch(() => {})
