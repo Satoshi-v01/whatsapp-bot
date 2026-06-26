@@ -18,6 +18,7 @@ function Caja() {
     const busquedaProductoRef = useRef(null)
     const codigoBarrasRef = useRef('')
     const codigoBarrasTimer = useRef(null)
+    const procesandoVenta = useRef(false)
     const { darkMode } = useApp()
     const [pestana, setPestana] = useState('venta')
     const [tipoVenta, setTipoVenta] = useState('contado')
@@ -407,6 +408,9 @@ function Caja() {
             mensaje: `Registrar ${lineasValidas.length} producto(s) por Gs. ${total.toLocaleString()}?`,
             textoBoton: 'Confirmar', colorBoton: '#10b981',
             onConfirmar: async () => {
+                if (procesandoVenta.current) return
+                procesandoVenta.current = true
+
                 let numeroFactura = null
                 let datosImpresion = null
                 try {
@@ -500,6 +504,8 @@ function Caja() {
                     const detalle = err.response?.data?.error
                         || (err.response ? `Error HTTP ${err.response.status}` : `Sin respuesta del servidor (${err.message})`)
                     setModalConfirmar({ titulo: 'Error al registrar', mensaje: detalle, textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                } finally {
+                    procesandoVenta.current = false
                 }
 
                 // Imprimir fuera del try para que un error de impresion no pise el modal de exito
