@@ -436,7 +436,8 @@ function Caja() {
                             tipo_venta: tipoVenta,
                             plazo_dias: tipoVenta === 'credito' ? plazoDias : null,
                             costo_delivery: i === 0 ? costoDelivery : 0,
-                            zona_delivery: i === 0 ? (formDelivery.zona_nombre || null) : null
+                            zona_delivery: i === 0 ? (formDelivery.zona_nombre || null) : null,
+                            numero_factura: numeroFactura
                         })
                         ventasIds.push(respuesta?.venta?.id)
                     }

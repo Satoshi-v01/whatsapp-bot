@@ -475,6 +475,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             tipo_iva,
             costo_delivery,
             zona_delivery,
+            numero_factura,
             // backward compat single-product
             presentacion_id,
             cantidad,
@@ -561,14 +562,14 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         const ventaTipoIva = itemsNorm.length === 1 ? (itemsNorm[0].tipo_iva || '10') : '10'
 
         const venta = await client.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery, numero_factura)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             RETURNING *`,
             [cliente_id || null, ventaPresentacionId, ventaCantidad, totalPrecio, canalFinal, estadoVenta,
             metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
             razon_social || null, agente_id || null,
             tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, ventaTipoIva,
-            costo_delivery || 0, zona_delivery || null]
+            costo_delivery || 0, zona_delivery || null, numero_factura || null]
         )
 
         const ventaId = venta.rows[0].id
