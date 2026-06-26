@@ -361,8 +361,11 @@ function Ventas() {
                                                 onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
                                                 onMouseLeave={e => e.currentTarget.style.background = s.surface}
                                             >
-                                                <td style={{ padding: '16px 24px', fontFamily: 'monospace', fontSize: '13px', fontWeight: '600', color: s.text }}>
-                                                    #{String(venta.id).padStart(4, '0')}
+                                                <td style={{ padding: '16px 24px' }}>
+                                                    <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: '600', color: s.text }}>#{String(venta.id).padStart(4, '0')}</span>
+                                                    {venta.numero_factura && (
+                                                        <p style={{ fontSize: '10px', color: s.textMuted, marginTop: '3px', fontFamily: 'monospace' }}>{venta.numero_factura}</p>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '13px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -506,6 +509,12 @@ function Ventas() {
                         <div>
                             <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Detalles</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {ventaDetalle.numero_factura && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: s.surfaceLow, borderRadius: '8px', border: `1px solid ${s.border}` }}>
+                                        <span style={{ fontSize: '13px', color: s.textMuted }}>N° Factura</span>
+                                        <span style={{ fontSize: '13px', fontWeight: '700', color: s.text, fontFamily: 'monospace' }}>{ventaDetalle.numero_factura}</span>
+                                    </div>
+                                )}
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ fontSize: '13px', color: s.textMuted }}>Canal</span>
                                     <span style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{labelCanal(ventaDetalle.canal)}</span>
