@@ -324,6 +324,8 @@ app.get('/ecommerce/*splat', (req, res) => {
 
 
 
+app.get('/health', (req, res) => res.sendStatus(200))
+
 app.get('/test-db', autenticar, require('./src/middleware/auth').soloAdmin, async (req, res) => {
   try {
     const result = await query('SELECT NOW()');
