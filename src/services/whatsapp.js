@@ -2,6 +2,7 @@ const axios = require('axios')
 const path = require('path')
 const fs = require('fs')
 const { createClient } = require('@supabase/supabase-js')
+const logger = require('../middleware/logger')
 
 async function enviarMensaje(numero, texto) {
     try {
@@ -22,9 +23,9 @@ async function enviarMensaje(numero, texto) {
                 }
             }
         )
-        console.log(`Mensaje enviado a ${numero}: ${texto}`)
+        logger.info(`Mensaje enviado a ${numero}: ${texto}`)
     } catch (error) {
-        console.error('Error enviando mensaje:', error.response?.data || error.message)
+        logger.error('Error enviando mensaje:', { data: error.response?.data, message: error.message })
     }
 }
 

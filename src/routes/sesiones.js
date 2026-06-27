@@ -5,6 +5,7 @@ const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const { manejarError } = require('../middleware/validar')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
+const logger = require('../middleware/logger')
 
 // 1. Ver todas las conversaciones activas
 router.get('/', autenticar, verificarPermiso('chat', 'ver'), async (req, res) => {
@@ -67,7 +68,7 @@ router.patch('/:numero/tomar', autenticar, verificarPermiso('chat', 'gestionar')
                 `Hola, te comunico con un asesor que te ayudará en breve.`
             )
         } catch (msgError) {
-            console.error('Error enviando mensaje de handoff:', msgError.message)
+            logger.error('Error enviando mensaje de handoff:', { message: msgError.message })
         }
 
         res.json({ ok: true, mensaje: 'Control tomado por el agente' })

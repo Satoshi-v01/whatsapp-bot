@@ -38,8 +38,10 @@ function validarId(req, res, next) {
     next()
 }
 
+const logger = require('./logger')
+
 function manejarError(res, error) {
-    console.error('[error]', error.message, error.code || '')
+    logger.error('[error]', { message: error.message, code: error.code || '' })
     if (process.env.NODE_ENV === 'production') {
         res.status(500).json({ error: 'Error interno del servidor' })
     } else {

@@ -1,4 +1,5 @@
 const { Pool } = require('pg')
+const logger = require('../middleware/logger')
 
 let pool = null
 
@@ -11,8 +12,8 @@ function getPool() {
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 5000,
         })
-        pool.on('connect', () => console.log('Conectado a PostgreSQL'))
-        pool.on('error', (err) => console.error('Error PostgreSQL:', err))
+        pool.on('connect', () => logger.info('Conectado a PostgreSQL'))
+        pool.on('error', (err) => logger.error('Error PostgreSQL:', { message: err.message }))
     }
     return pool
 }

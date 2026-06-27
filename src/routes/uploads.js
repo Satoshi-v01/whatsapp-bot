@@ -3,6 +3,7 @@ const multer = require('multer')
 const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
 const { autenticar } = require('../middleware/auth')
+const logger = require('../middleware/logger')
 
 const router = express.Router()
 
@@ -49,7 +50,7 @@ router.post('/imagen', autenticar, upload.single('imagen'), async (req, res) => 
 
         res.json({ url: data.publicUrl })
     } catch (err) {
-        console.error('Error subiendo imagen a Supabase Storage:', err.message)
+        logger.error('Error subiendo imagen a Supabase Storage:', { message: err.message })
         res.status(500).json({ error: 'No se pudo subir la imagen.' })
     }
 })

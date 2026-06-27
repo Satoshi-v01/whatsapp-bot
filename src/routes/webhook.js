@@ -16,10 +16,10 @@ router.get('/', (req, res) => {
     const tokenSeguro = secret.length === token?.length &&
         crypto.timingSafeEqual(Buffer.from(token), Buffer.from(secret))
     if (mode === 'subscribe' && tokenSeguro) {
-        console.log('Webhook verificado por Meta')
+        logger.info('Webhook verificado por Meta')
         res.status(200).send(challenge)
     } else {
-        console.log('Token incorrecto — verificación rechazada')
+        logger.warn('Token incorrecto — verificación rechazada')
         res.status(403).send('Forbidden')
     }
 })
@@ -115,7 +115,7 @@ router.post('/', async (req, res) => {
         res.status(200).send('OK')
 
     } catch (error) {
-        console.error('Error procesando mensaje:', error)
+        logger.error('Error procesando mensaje:', { message: error.message, stack: error.stack })
         res.status(200).send('OK')
     }
 })
