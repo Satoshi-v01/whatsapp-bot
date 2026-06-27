@@ -491,130 +491,126 @@ function Ventas() {
             {/* Panel detalle */}
             {ventaDetalle && (
                 <div onClick={() => setVentaDetalle(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-                <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', maxHeight: '85vh', background: s.surface, borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.35)', overflowY: 'auto' }}>
-                    <div style={{ padding: '24px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Venta #{String(ventaDetalle.id).padStart(4, '0')}</h3>
-                            <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>{formatearFecha(ventaDetalle.created_at)}</p>
-                        </div>
-                        <button onClick={() => setVentaDetalle(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: s.textMuted }}>✕</button>
-                    </div>
-                    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div>
-                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Cliente</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#e0e7ff', color: '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700' }}>
-                                    {iniciales(ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'CF')}
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Cliente'}</p>
-                                    {ventaDetalle.cliente_ruc && <p style={{ fontSize: '12px', color: s.textMuted }}>RUC: {ventaDetalle.cliente_ruc}</p>}
-                                    {ventaDetalle.cliente_numero && <p style={{ fontSize: '12px', color: s.textMuted }}>{ventaDetalle.cliente_numero}</p>}
-                                </div>
+                <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', background: '#fff', borderRadius: '16px', boxShadow: '0 24px 60px -12px rgba(15,23,42,.28), 0 0 0 1px rgba(15,23,42,.04)', overflowY: 'auto' }}>
+
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid rgb(241,245,249)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgb(224,231,255)', color: 'rgb(55,48,163)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', flexShrink: 0 }}>
+                                {iniciales(ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'CF')}
+                            </div>
+                            <div>
+                                <p style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: 'rgb(15,23,42)' }}>{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Cliente'}</p>
+                                {ventaDetalle.cliente_ruc && <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgb(100,116,139)' }}>RUC {ventaDetalle.cliente_ruc}</p>}
                             </div>
                         </div>
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px' }}>
-                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-                                {Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 1 ? `Productos (${ventaDetalle.items.length})` : 'Producto'}
-                            </p>
-                            {Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 0
-                                ? ventaDetalle.items.map((item, idx) => (
-                                    <div key={idx} style={idx > 0 ? { marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` } : {}}>
-                                        <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{item.marca_nombre && `${item.marca_nombre} — `}{item.producto_nombre}</p>
-                                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>{item.presentacion_nombre}</p>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Cantidad</span>
-                                            <span style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{item.cantidad}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Subtotal</span>
-                                            <span style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{formatearGs(item.precio_total || item.precio_unitario)}</span>
-                                        </div>
-                                    </div>
-                                  ))
-                                : <>
-                                    <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.marca_nombre && `${ventaDetalle.marca_nombre} — `}{ventaDetalle.producto_nombre}</p>
-                                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '2px' }}>{ventaDetalle.presentacion_nombre}</p>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` }}>
-                                        <span style={{ fontSize: '13px', color: s.textMuted }}>Cantidad</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{ventaDetalle.cantidad}</span>
-                                    </div>
-                                  </>
-                            }
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` }}>
-                                <span style={{ fontSize: '13px', color: s.textMuted }}>Total</span>
-                                <span style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>{formatearGs(ventaDetalle.precio)}</span>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', flexDirection: 'column', gap: '5px' }}>
+                            {ventaDetalle.numero_factura && <p style={{ margin: 0, fontSize: '11px', color: 'rgb(148,163,184)', fontFamily: 'ui-monospace,monospace' }}>{ventaDetalle.numero_factura}</p>}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '600', color: ventaDetalle.tipo_venta === 'credito' ? 'rgb(161,98,7)' : 'rgb(5,150,105)', background: ventaDetalle.tipo_venta === 'credito' ? 'rgb(254,243,199)' : 'rgb(209,250,229)', padding: '2px 9px', borderRadius: '999px' }}>
+                                    {ventaDetalle.tipo_venta === 'credito' ? `Crédito ${ventaDetalle.plazo_dias}d` : 'Contado'}
+                                </span>
+                                <button onClick={() => setVentaDetalle(null)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: 'rgb(148,163,184)', padding: '2px 4px', lineHeight: 1 }}>✕</button>
                             </div>
-                            {ventaDetalle.ganancia > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                                    <span style={{ fontSize: '13px', color: s.textMuted }}>Ganancia</span>
-                                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#10b981' }}>{formatearGs(ventaDetalle.ganancia)}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Detalles</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {ventaDetalle.numero_factura && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: s.surfaceLow, borderRadius: '8px', border: `1px solid ${s.border}` }}>
-                                        <span style={{ fontSize: '13px', color: s.textMuted }}>N° Factura</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '700', color: s.text, fontFamily: 'monospace' }}>{ventaDetalle.numero_factura}</span>
-                                    </div>
-                                )}
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: '13px', color: s.textMuted }}>Canal</span>
-                                    <span style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{labelCanal(ventaDetalle.canal)}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: '13px', color: s.textMuted }}>Método de pago</span>
-                                    <span style={{ fontSize: '13px', fontWeight: '500', color: s.text, textTransform: 'capitalize' }}>{ventaDetalle.metodo_pago || '—'}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: '13px', color: s.textMuted }}>Condición</span>
-                                    <span style={{ fontSize: '13px', fontWeight: '600', color: ventaDetalle.tipo_venta === 'credito' ? '#f59e0b' : '#10b981' }}>
-                                        {ventaDetalle.tipo_venta === 'credito' ? `Crédito (${ventaDetalle.plazo_dias}d)` : 'Contado'}
-                                    </span>
-                                </div>
-                                {ventaDetalle.tipo_venta === 'credito' && ventaDetalle.fecha_vencimiento_credito && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ fontSize: '13px', color: s.textMuted }}>Vence</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '600', color: new Date(ventaDetalle.fecha_vencimiento_credito) < new Date() ? '#ef4444' : '#f59e0b' }}>
-                                            {new Date(ventaDetalle.fecha_vencimiento_credito).toLocaleDateString('es-PY')}
-                                        </span>
-                                    </div>
-                                )}
-                                {ventaDetalle.quiere_factura && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ fontSize: '13px', color: s.textMuted }}>RUC factura</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{ventaDetalle.ruc_factura || '—'}</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Estado</p>
-                            {ventaDetalle.estado === 'cancelado' ? (
-                                <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
-                                    VENTA ANULADA
-                                </div>
-                            ) : (
-                                <>
-                                    <select value={ventaDetalle.estado} onChange={e => cambiarEstado(ventaDetalle.id, e.target.value)}
-                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, fontSize: '13px', cursor: 'pointer', background: s.inputBg, color: s.text, marginBottom: '10px' }}>
-                                        <option value="pendiente_pago">Pendiente de pago</option>
-                                        <option value="pagado">Pagado</option>
-                                        <option value="entregado">Entregado</option>
-                                    </select>
-                                    <button onClick={() => confirmarAnular(ventaDetalle)}
-                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = 'white' }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ef4444' }}>
-                                        Anular venta
-                                    </button>
-                                </>
-                            )}
                         </div>
                     </div>
+
+                    {/* Productos */}
+                    <div style={{ padding: '16px 22px 6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '700', color: 'rgb(100,116,139)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Productos</p>
+                            {Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 0 && (
+                                <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgb(148,163,184)' }}>{ventaDetalle.items.length} {ventaDetalle.items.length === 1 ? 'ítem' : 'ítems'}</span>
+                            )}
+                        </div>
+                        {/* Cabecera de tabla */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '34px 1fr 92px 92px', gap: '8px', padding: '0 4px 6px', borderBottom: '1px solid rgb(241,245,249)' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'center' }}>Cant</span>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Producto</span>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'right' }}>P. unit.</span>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'right' }}>Total</span>
+                        </div>
+                        {/* Filas */}
+                        {(Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 0
+                            ? ventaDetalle.items
+                            : [{ producto_nombre: ventaDetalle.producto_nombre, presentacion_nombre: ventaDetalle.presentacion_nombre, cantidad: ventaDetalle.cantidad, precio_unitario: ventaDetalle.precio, precio_total: ventaDetalle.precio }]
+                        ).map((item, idx) => (
+                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '34px 1fr 92px 92px', gap: '8px', alignItems: 'center', padding: '9px 4px', borderBottom: '1px solid rgb(248,250,252)' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'rgb(55,48,163)', background: 'rgb(238,242,255)', borderRadius: '7px', textAlign: 'center', padding: '3px 0' }}>{item.cantidad}</span>
+                                <div style={{ minWidth: 0 }}>
+                                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', lineHeight: 1.25 }}>{item.producto_nombre}</p>
+                                    <p style={{ margin: '1px 0 0', fontSize: '11px', color: 'rgb(148,163,184)' }}>{item.presentacion_nombre}</p>
+                                </div>
+                                <span style={{ fontSize: '12px', color: 'rgb(100,116,139)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                    {item.precio_unitario ? formatearGs(item.precio_unitario) : '—'}
+                                </span>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                    {formatearGs(item.precio_total || item.precio_unitario)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Totales */}
+                    <div style={{ margin: '8px 22px 0', padding: '14px 16px', background: 'rgb(248,250,252)', borderRadius: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: 'rgb(100,116,139)' }}>Total</span>
+                            <span style={{ fontSize: '20px', fontWeight: '700', color: 'rgb(15,23,42)', fontVariantNumeric: 'tabular-nums' }}>{formatearGs(ventaDetalle.precio)}</span>
+                        </div>
+                        {ventaDetalle.ganancia > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                                <span style={{ fontSize: '12px', color: 'rgb(100,116,139)' }}>Ganancia</span>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'rgb(16,185,129)', fontVariantNumeric: 'tabular-nums' }}>{formatearGs(ventaDetalle.ganancia)}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Meta row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 22px', padding: '16px 22px 4px' }}>
+                        <div>
+                            <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Método de pago</p>
+                            <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', textTransform: 'capitalize' }}>{ventaDetalle.metodo_pago || '—'}</p>
+                        </div>
+                        <div>
+                            <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Canal</p>
+                            <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)' }}>{labelCanal(ventaDetalle.canal)}</p>
+                        </div>
+                        {ventaDetalle.tipo_venta === 'credito' && ventaDetalle.fecha_vencimiento_credito && (
+                            <div>
+                                <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Vencimiento</p>
+                                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: new Date(ventaDetalle.fecha_vencimiento_credito) < new Date() ? 'rgb(220,38,38)' : 'rgb(161,98,7)' }}>
+                                    {new Date(ventaDetalle.fecha_vencimiento_credito).toLocaleDateString('es-PY')}
+                                </p>
+                            </div>
+                        )}
+                        {ventaDetalle.quiere_factura && ventaDetalle.ruc_factura && (
+                            <div>
+                                <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>RUC factura</p>
+                                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)' }}>{ventaDetalle.ruc_factura}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer actions */}
+                    {ventaDetalle.estado === 'cancelado' ? (
+                        <div style={{ margin: '12px 22px 20px', padding: '11px 16px', borderRadius: '9px', background: 'rgb(254,242,242)', color: 'rgb(153,27,27)', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
+                            VENTA ANULADA
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '16px 22px 20px' }}>
+                            <select value={ventaDetalle.estado} onChange={e => cambiarEstado(ventaDetalle.id, e.target.value)}
+                                style={{ flex: 1, padding: '11px 12px', borderRadius: '9px', border: '1px solid rgb(226,232,240)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', background: '#fff', color: 'rgb(15,23,42)', fontFamily: 'inherit' }}>
+                                <option value="pendiente_pago">Pendiente de pago</option>
+                                <option value="pagado">Pagado</option>
+                                <option value="entregado">Entregado</option>
+                            </select>
+                            <button onClick={() => confirmarAnular(ventaDetalle)}
+                                style={{ padding: '11px 16px', borderRadius: '9px', border: '1px solid rgb(254,202,202)', background: 'rgb(254,242,242)', color: 'rgb(220,38,38)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                                Anular
+                            </button>
+                        </div>
+                    )}
+
                 </div>
                 </div>
             )}
