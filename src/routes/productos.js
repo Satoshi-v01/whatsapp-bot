@@ -905,7 +905,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
             accion: 'crear',
             modulo: 'inventario',
             entidad: 'importacion',
-            descripcion: `Importación: ${nuevosProductos.length} productos nuevos, ${updates.length} precios actualizados, ${inserts.length} presentaciones nuevas, ${errores.length} errores`,
+            descripcion: `Importación: ${nuevosProductosDatos.length} productos nuevos, ${updates.length} precios actualizados, ${inserts.length} presentaciones nuevas, ${errores.length} errores`,
             ip: req.ip
         }).catch(() => {})
 
