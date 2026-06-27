@@ -298,10 +298,10 @@ router.get('/productos', async (req, res) => {
 
     let orderBy
     switch (sort) {
-      case 'precio_asc':  orderBy = `MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) ASC`;  break
-      case 'precio_desc': orderBy = `MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) DESC`; break
+      case 'precio_asc':  orderBy = `tiene_stock DESC, MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) ASC, p.nombre ASC`;  break
+      case 'precio_desc': orderBy = `tiene_stock DESC, MIN(COALESCE(pr.precio_tarjeta, pr.precio_venta)) DESC, p.nombre ASC`; break
       case 'destacados':  orderBy = `p.es_destacado DESC, tiene_stock DESC, p.nombre ASC`; break
-      case 'mas_vendido': orderBy = `total_vendido DESC, p.nombre ASC`; break
+      case 'mas_vendido': orderBy = `total_vendido DESC, tiene_stock DESC, p.nombre ASC`; break
       default:            orderBy = `tiene_stock DESC, p.nombre ASC`
     }
 
