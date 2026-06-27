@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
-const { soloAdmin } = require('../middleware/auth')
+const { soloAdmin, verificarPermiso } = require('../middleware/auth')
 
 // Obtener toda la configuración
 router.get('/', async (req, res) => {
@@ -64,7 +64,7 @@ router.post('/bulk', soloAdmin, async (req, res) => {
 })
 
 // Obtener y incrementar número de factura (atómico)
-router.post('/factura/siguiente-numero', async (req, res) => {
+router.post('/factura/siguiente-numero', verificarPermiso('ventas', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         await client.query('BEGIN')

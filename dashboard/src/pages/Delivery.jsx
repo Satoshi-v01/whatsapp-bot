@@ -5,7 +5,7 @@ import { getProductos, getCategorias } from '../services/productos'
 import { buscarClientes } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { getUsuarios } from '../services/usuarios'
+import { getUsuarios, getRepartidores } from '../services/usuarios'
 import { asignarRepartidor } from '../services/deliveries'
 import { formatearCalidad } from '../utils/formato'
 import { fechaHoyPY } from '../utils/fecha'
@@ -55,10 +55,9 @@ function Delivery() {
     async function cargarDeliveries() {
         try {
             setCargando(true)
-            const [datos, usuarios] = await Promise.all([getDeliveries(fechaFiltro), getUsuarios()])
+            const [datos, repartidoresData] = await Promise.all([getDeliveries(fechaFiltro), getRepartidores()])
             setDeliveries(datos)
-            // Filtrar solo repartidores
-            setRepartidores(usuarios.filter(u => u.rol_nombre?.toLowerCase() === 'repartidor' && u.disponible))
+            setRepartidores(repartidoresData)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los deliveries.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }

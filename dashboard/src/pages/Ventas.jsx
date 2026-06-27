@@ -54,29 +54,33 @@ function Ventas() {
             const datos = await getLibroVentas(libroFechaDesde, libroFechaHasta)
             
             const filas = datos.map((v, idx) => {
-                const total = parseInt(v.total || 0)
+                const anulada = v.estado === 'cancelado'
+                const total = anulada ? 0 : parseInt(v.total || 0)
                 const tipoIva = v.tipo_iva || '10'
-                
+
                 let grav10 = 0, iva10 = 0, grav5 = 0, iva5 = 0, exenta = 0
-                
-                if (tipoIva === '10') {
-                    iva10 = Math.floor(total / 11)
-                    grav10 = total - iva10
-                } else if (tipoIva === '5') {
-                    iva5 = Math.floor(total / 21)
-                    grav5 = total - iva5
-                } else {
-                    exenta = total
+
+                if (!anulada) {
+                    if (tipoIva === '10') {
+                        iva10 = Math.floor(total / 11)
+                        grav10 = total - iva10
+                    } else if (tipoIva === '5') {
+                        iva5 = Math.floor(total / 21)
+                        grav5 = total - iva5
+                    } else {
+                        exenta = total
+                    }
                 }
 
-                const cliente = v.razon_social || v.cliente_nombre || 'CONSUMIDOR FINAL'
-                const ruc = v.ruc_factura || v.cliente_ruc || '—'
+                const cliente = anulada ? '—' : (v.razon_social || v.cliente_nombre || 'CONSUMIDOR FINAL')
+                const ruc = anulada ? '—' : (v.ruc_factura || v.cliente_ruc || '—')
+                const nroFactura = v.numero_factura || `#${String(v.id).padStart(7, '0')}`
 
                 return {
                     'N°': idx + 1,
                     'Fecha': new Date(v.fecha).toLocaleDateString('es-PY'),
                     'Tipo Documento': 'Factura',
-                    'N° Factura': `#${String(v.id).padStart(7, '0')}`,
+                    'N° Factura': nroFactura,
                     'Cliente': cliente,
                     'RUC / CI': ruc,
                     'Gravada 10%': grav10,
@@ -84,11 +88,13 @@ function Ventas() {
                     'Gravada 5%': grav5,
                     'IVA 5%': iva5,
                     'Exentas': exenta,
-                    'Total': total
+                    'Total': total,
+                    'Observación': anulada ? 'ANULADA' : ''
                 }
             })
 
-            // Fila de totales
+            // Totales solo sobre facturas vigentes
+            const filasVigentes = filas.filter(f => f['Observación'] !== 'ANULADA')
             const totales = {
                 'N°': '',
                 'Fecha': '',
@@ -96,12 +102,13 @@ function Ventas() {
                 'N° Factura': '',
                 'Cliente': 'TOTALES',
                 'RUC / CI': '',
-                'Gravada 10%': filas.reduce((s, f) => s + f['Gravada 10%'], 0),
-                'IVA 10%': filas.reduce((s, f) => s + f['IVA 10%'], 0),
-                'Gravada 5%': filas.reduce((s, f) => s + f['Gravada 5%'], 0),
-                'IVA 5%': filas.reduce((s, f) => s + f['IVA 5%'], 0),
-                'Exentas': filas.reduce((s, f) => s + f['Exentas'], 0),
-                'Total': filas.reduce((s, f) => s + f['Total'], 0),
+                'Gravada 10%': filasVigentes.reduce((s, f) => s + f['Gravada 10%'], 0),
+                'IVA 10%': filasVigentes.reduce((s, f) => s + f['IVA 10%'], 0),
+                'Gravada 5%': filasVigentes.reduce((s, f) => s + f['Gravada 5%'], 0),
+                'IVA 5%': filasVigentes.reduce((s, f) => s + f['IVA 5%'], 0),
+                'Exentas': filasVigentes.reduce((s, f) => s + f['Exentas'], 0),
+                'Total': filasVigentes.reduce((s, f) => s + f['Total'], 0),
+                'Observación': ''
             }
 
             const wb = XLSX.utils.book_new()
@@ -111,11 +118,26 @@ function Ventas() {
             ws['!cols'] = [
                 { wch: 5 }, { wch: 12 }, { wch: 14 }, { wch: 18 },
                 { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
-                { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }
+                { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
             ]
 
+            // Colorear en rojo las filas anuladas (fila 0 = header, datos desde fila 1)
+            const numCols = Object.keys(filas[0] || {}).length
+            const estiloAnulada = {
+                font: { color: { rgb: 'C0392B' } },
+                fill: { patternType: 'solid', fgColor: { rgb: 'FDECEA' } }
+            }
+            filas.forEach((fila, rowIdx) => {
+                if (fila['Observación'] === 'ANULADA') {
+                    for (let c = 0; c < numCols; c++) {
+                        const addr = XLSX.utils.encode_cell({ r: rowIdx + 1, c })
+                        if (ws[addr]) ws[addr].s = estiloAnulada
+                    }
+                }
+            })
+
             XLSX.utils.book_append_sheet(wb, ws, 'Libro de Ventas')
-            XLSX.writeFile(wb, `libro_ventas_${libroFechaDesde}_${libroFechaHasta}.xlsx`)
+            XLSX.writeFile(wb, `libro_ventas_${libroFechaDesde}_${libroFechaHasta}.xlsx`, { cellStyles: true })
             setModalLibro(false)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo exportar el libro de ventas.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
@@ -376,7 +398,12 @@ function Ventas() {
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '12px', color: s.textMuted }}>
-                                                    {venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}
+                                                    {Array.isArray(venta.items) && venta.items.length > 1
+                                                        ? venta.items.map((it, idx) => (
+                                                            <div key={idx}>{it.marca_nombre && `${it.marca_nombre} — `}{it.producto_nombre} {it.presentacion_nombre}</div>
+                                                          ))
+                                                        : <>{venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}</>
+                                                    }
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '13px', color: s.textMuted }}>{formatearFecha(venta.created_at)}</td>
                                                 <td style={{ padding: '16px', textAlign: 'center' }}>
