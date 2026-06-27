@@ -415,8 +415,9 @@ function Inventario() {
                 nota: fraccionForm.nota || null
             }
             if (fraccionForm.modo_destino === 'nueva') {
+                const nombreBase = fraccionForm.nombre_nuevo.trim()
                 payload.nueva_presentacion = {
-                    nombre: fraccionForm.nombre_nuevo.trim(),
+                    nombre: nombreBase.toUpperCase().includes('FRACCIONADO') ? nombreBase : `${nombreBase} FRACCIONADO`,
                     precio_venta: fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null,
                     precio_tarjeta: fraccionForm.precio_tarjeta ? parseInt(fraccionForm.precio_tarjeta) : null,
                     precio_compra: fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null,
