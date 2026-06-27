@@ -490,7 +490,8 @@ function Ventas() {
 
             {/* Panel detalle */}
             {ventaDetalle && (
-                <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '400px', background: s.surface, boxShadow: '-4px 0 20px rgba(0,0,0,0.2)', zIndex: 1000, overflowY: 'auto' }}>
+                <div onClick={() => setVentaDetalle(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+                <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', maxHeight: '85vh', background: s.surface, borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.35)', overflowY: 'auto' }}>
                     <div style={{ padding: '24px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Venta #{String(ventaDetalle.id).padStart(4, '0')}</h3>
@@ -614,6 +615,7 @@ function Ventas() {
                             )}
                         </div>
                     </div>
+                </div>
                 </div>
             )}
 
