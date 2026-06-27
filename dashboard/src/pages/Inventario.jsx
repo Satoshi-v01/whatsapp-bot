@@ -148,7 +148,7 @@ function Inventario() {
     }
 
     function descargarTemplate() {
-        const encabezados = [['nombre_producto', 'marca', 'especie', 'calidad', 'categoria', 'subcategoria', 'sku', 'presentacion', 'precio_compra', 'precio_venta', 'precio_tarjeta', 'stock']]
+        const encabezados = [['nombre_producto', 'marca', 'especie', 'calidad', 'categoria', 'subcategoria', 'sku', 'presentacion', 'precio_compra', 'precio_venta', 'precio_tarjeta']]
         const slug = pestanaActiva !== 'sin_categoria' ? pestanaActiva : 'inventario'
         const subcat1 = subcategoriasPestana[0]?.nombre || ''
         const subcat2 = subcategoriasPestana[1]?.nombre || ''
@@ -157,23 +157,23 @@ function Inventario() {
         if (tipoActivo === 'con_calidad_especie') {
             // Balanceados: necesita especie, calidad y subcategoria
             ejemplos = [
-                ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', slug, subcat1 || 'Adultos', 'PP-AD-3KG', '3kg', 155000, 190000, 202000, 10],
-                ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', slug, subcat1 || 'Adultos', 'PP-AD-15KG', '15kg', 580000, 720000, 765000, 5],
-                ['Whiskas Adulto', 'Mars', 'gato', 'standard', slug, subcat2 || '', 'WK-AD-500', '500g', 18000, 25000, '', 20],
+                ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', slug, subcat1 || 'Adultos', 'PP-AD-3KG', '3kg', 155000, 190000, 202000],
+                ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', slug, subcat1 || 'Adultos', 'PP-AD-15KG', '15kg', 580000, 720000, 765000],
+                ['Whiskas Adulto', 'Mars', 'gato', 'standard', slug, subcat2 || '', 'WK-AD-500', '500g', 18000, 25000, ''],
             ]
         } else if (tipoActivo === 'con_especie') {
-            // Accesorios: necesita especie, sin calidad, subcategoria opcional
+            // Accesorios/Medicamentos: necesita especie, sin calidad, subcategoria opcional
             ejemplos = [
-                ['Collar Ajustable Rojo', 'Marca', 'perro', '', slug, subcat1 || '', 'COL-001-S', 'Talle S', 25000, 45000, 48000, 15],
-                ['Collar Ajustable Rojo', 'Marca', 'perro', '', slug, subcat1 || '', 'COL-001-M', 'Talle M', 28000, 50000, 53000, 10],
-                ['Juguete Raton', 'Marca', 'gato', '', slug, subcat2 || '', 'JUG-002', 'Unitario', 12000, 22000, '', 8],
+                ['Collar Ajustable Rojo', 'Marca', 'perro', '', slug, subcat1 || '', 'COL-001-S', 'Talle S', 25000, 45000, 48000],
+                ['Collar Ajustable Rojo', 'Marca', 'perro', '', slug, subcat1 || '', 'COL-001-M', 'Talle M', 28000, 50000, 53000],
+                ['Juguete Raton', 'Marca', 'gato', '', slug, subcat2 || '', 'JUG-002', 'Unitario', 12000, 22000, ''],
             ]
         } else {
-            // Generico (Medicamentos, Arenas, etc.): sin especie ni calidad
+            // Generico (Arenas, etc.): sin especie ni calidad
             ejemplos = [
-                ['Producto Ejemplo', 'Marca', '', '', slug, '', 'SKU-001', '100ml', 15000, 25000, 27000, 10],
-                ['Producto Ejemplo', 'Marca', '', '', slug, '', 'SKU-002', '250ml', 30000, 50000, 53000, 5],
-                ['Otro Producto', 'Marca', '', '', slug, '', 'SKU-003', '1kg', 45000, 70000, 75000, 8],
+                ['Producto Ejemplo', 'Marca', '', '', slug, '', 'SKU-001', '100ml', 15000, 25000, 27000],
+                ['Producto Ejemplo', 'Marca', '', '', slug, '', 'SKU-002', '250ml', 30000, 50000, 53000],
+                ['Otro Producto', 'Marca', '', '', slug, '', 'SKU-003', '1kg', 45000, 70000, 75000],
             ]
         }
 
@@ -193,7 +193,6 @@ function Inventario() {
             ['precio_compra', 'Numero entero en Gs. Ej: 150000', 'NO'],
             ['precio_venta', 'Numero entero en Gs. Ej: 190000', 'SI'],
             ['precio_tarjeta', 'Numero entero en Gs. Dejar vacio si igual a efectivo', 'NO'],
-            ['stock', 'Numero entero. Poner 0 si no hay stock', 'NO'],
         ]
         const wsInfo = XLSX.utils.aoa_to_sheet(instrucciones)
         wsInfo['!cols'] = [{ wch: 20 }, { wch: 55 }, { wch: 12 }]
@@ -229,7 +228,6 @@ function Inventario() {
                         precio_compra: parseInt(String(norm.precio_compra || norm.p_compra || norm.costo || '').replace(/[^0-9]/g, '')) || 0,
                         precio_venta: parseInt(String(norm.precio_venta || norm.p_venta || norm.precio || norm.precio_de_venta || '').replace(/[^0-9]/g, '')) || 0,
                         precio_tarjeta: parseInt(String(norm.precio_tarjeta || norm.p_tarjeta || '').replace(/[^0-9]/g, '')) || null,
-                        stock: parseInt(String(norm.stock || norm.cantidad || '').replace(/[^0-9]/g, '')) || 0,
                     }
                 }).filter(f => f.nombre_producto && f.presentacion)
 
@@ -834,7 +832,7 @@ function colorVencimiento(diasParaVencer) {
                                                                 <td style={{ padding: '14px 16px' }}>
                                                                     {producto.especie ? (
                                                                         <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px', background: producto.especie === 'perro' ? (darkMode ? '#1e3a5f' : '#dbeafe') : producto.especie === 'gato' ? (darkMode ? '#2d1b4e' : '#ede9fe') : (darkMode ? '#1a2e1a' : '#dcfce7'), color: producto.especie === 'perro' ? '#2563eb' : producto.especie === 'gato' ? '#7c3aed' : '#16a34a' }}>
-                                                                            {producto.especie === 'ambos' ? 'Perro/Gato' : producto.especie === 'otro' ? 'Otro' : producto.especie.charAt(0).toUpperCase() + producto.especie.slice(1)}
+                                                                            {producto.especie === 'ambos' ? 'Perro/Gato' : producto.especie.charAt(0).toUpperCase() + producto.especie.slice(1)}
                                                                         </span>
                                                                     ) : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
                                                                 </td>
@@ -2020,7 +2018,7 @@ function colorVencimiento(diasParaVencer) {
                                         <tr style={{ background: s.surfaceLow }}>
                                             {(modalImportar.modo === 'stock'
                                                 ? ['Producto', 'Presentación', 'Cód. Barras', '+Stock', 'Vencimiento', 'N° Lote']
-                                                : ['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Stock']
+                                                : ['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta']
                                             ).map(h => (
                                                 <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `1px solid ${s.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
@@ -2045,7 +2043,6 @@ function colorVencimiento(diasParaVencer) {
                                                     <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
                                                     <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span style={{ color: '#ef4444' }}>Requerido</span>}</td>
                                                     <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_tarjeta ? `Gs. ${parseInt(f.precio_tarjeta).toLocaleString()}` : '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.stock ?? 0}</td>
                                                 </>}
                                             </tr>
                                         ))}
