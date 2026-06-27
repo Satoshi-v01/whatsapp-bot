@@ -910,7 +910,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         }).catch(() => {})
 
         res.json({
-            productosCreados: nuevosProductos.length,
+            productosCreados: nuevosProductosDatos.length,
             presentacionesActualizadas: updates.length,
             presentacionesCreadas: inserts.length,
             errores
