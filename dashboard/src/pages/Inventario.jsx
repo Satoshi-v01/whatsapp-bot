@@ -614,7 +614,7 @@ function colorVencimiento(diasParaVencer) {
     }
 
     function getAgrupadorSecundario(p) {
-        if (tipoActivo === 'con_calidad_especie') return p.subcategoria_nombre || 'Sin Subcategoria'
+        if (tipoActivo === 'con_calidad_especie' || tipoActivo === 'con_especie') return p.subcategoria_nombre || 'Sin Subcategoria'
         if (pestanaActiva === 'sin_categoria') return 'Sin categoria asignada'
         return p.categoria_nombre || 'Sin Categoria'
     }
@@ -788,7 +788,7 @@ function colorVencimiento(diasParaVencer) {
                                                 {(tipoActivo === 'con_calidad_especie'
                                                     ? ['Producto', 'SKU', 'Calidad', 'Especie', 'Presentaciones', 'Acciones']
                                                     : tipoActivo === 'con_especie'
-                                                    ? ['Producto', 'SKU', 'Especie', 'Presentaciones', 'Acciones']
+                                                    ? ['Producto', 'SKU', 'Subcategoria', 'Especie', 'Presentaciones', 'Acciones']
                                                     : ['Producto', 'SKU', 'Presentaciones', 'Acciones']
                                                 ).map(h => (
                                                     <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
@@ -823,6 +823,11 @@ function colorVencimiento(diasParaVencer) {
                                                             {tipoActivo === 'con_calidad_especie' && (
                                                                 <td style={{ padding: '14px 16px' }}>
                                                                     <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>{formatearCalidad(producto.calidad)}</span>
+                                                                </td>
+                                                            )}
+                                                            {tipoActivo === 'con_especie' && (
+                                                                <td style={{ padding: '14px 16px' }}>
+                                                                    <span style={{ fontSize: '12px', color: producto.subcategoria_nombre ? s.text : s.textFaint }}>{producto.subcategoria_nombre || '—'}</span>
                                                                 </td>
                                                             )}
                                                             {(tipoActivo === 'con_calidad_especie' || tipoActivo === 'con_especie') && (
