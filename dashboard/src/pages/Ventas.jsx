@@ -399,9 +399,7 @@ function Ventas() {
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '12px', color: s.textMuted }}>
                                                     {Array.isArray(venta.items) && venta.items.length > 1
-                                                        ? venta.items.map((it, idx) => (
-                                                            <div key={idx}>{it.marca_nombre && `${it.marca_nombre} — `}{it.producto_nombre} {it.presentacion_nombre}</div>
-                                                          ))
+                                                        ? <span style={{ fontWeight: '600', color: s.text }}>{venta.items.length} productos</span>
                                                         : <>{venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}</>
                                                     }
                                                 </td>
@@ -515,14 +513,34 @@ function Ventas() {
                             </div>
                         </div>
                         <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px' }}>
-                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Producto</p>
-                            <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.marca_nombre && `${ventaDetalle.marca_nombre} — `}{ventaDetalle.producto_nombre}</p>
-                            <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '2px' }}>{ventaDetalle.presentacion_nombre}</p>
+                            <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+                                {Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 1 ? `Productos (${ventaDetalle.items.length})` : 'Producto'}
+                            </p>
+                            {Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 0
+                                ? ventaDetalle.items.map((item, idx) => (
+                                    <div key={idx} style={idx > 0 ? { marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` } : {}}>
+                                        <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{item.marca_nombre && `${item.marca_nombre} — `}{item.producto_nombre}</p>
+                                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>{item.presentacion_nombre}</p>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Cantidad</span>
+                                            <span style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{item.cantidad}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                                            <span style={{ fontSize: '12px', color: s.textMuted }}>Subtotal</span>
+                                            <span style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{formatearGs(item.precio_total || item.precio_unitario)}</span>
+                                        </div>
+                                    </div>
+                                  ))
+                                : <>
+                                    <p style={{ fontSize: '14px', fontWeight: '600', color: s.text }}>{ventaDetalle.marca_nombre && `${ventaDetalle.marca_nombre} — `}{ventaDetalle.producto_nombre}</p>
+                                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '2px' }}>{ventaDetalle.presentacion_nombre}</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` }}>
+                                        <span style={{ fontSize: '13px', color: s.textMuted }}>Cantidad</span>
+                                        <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{ventaDetalle.cantidad}</span>
+                                    </div>
+                                  </>
+                            }
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${s.border}` }}>
-                                <span style={{ fontSize: '13px', color: s.textMuted }}>Cantidad</span>
-                                <span style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{ventaDetalle.cantidad}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
                                 <span style={{ fontSize: '13px', color: s.textMuted }}>Total</span>
                                 <span style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>{formatearGs(ventaDetalle.precio)}</span>
                             </div>
