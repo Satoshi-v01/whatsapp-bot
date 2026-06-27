@@ -748,7 +748,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
             client.query(`SELECT id, LOWER(nombre) AS nombre FROM marcas`),
             client.query(`SELECT id, LOWER(nombre) AS nombre, marca_id, sku FROM productos`),
             client.query(`SELECT id, producto_id, LOWER(nombre) AS nombre, precio_compra, precio_tarjeta, sku FROM presentaciones WHERE disponible = true`),
-            client.query(`SELECT DISTINCT seccion_inventario FROM productos WHERE seccion_inventario IS NOT NULL`),
+            client.query(`SELECT slug FROM secciones_inventario`),
             client.query(`SELECT id, LOWER(nombre) AS nombre FROM subcategorias`),
         ])
 
@@ -758,7 +758,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         const productosPorSku = new Map(productosRes.rows.filter(r => r.sku).map(r => [r.sku, r.id]))
         const skuPorProductoId = new Map(productosRes.rows.filter(r => r.sku).map(r => [r.id, r.sku]))
         const pressPorProdNombre = new Map(presentacionesRes.rows.map(r => [`${r.producto_id}__${r.nombre}`, r]))
-        const seccionesValidas = new Set(seccionesRes.rows.map(r => r.seccion_inventario.toLowerCase()))
+        const seccionesValidas = new Set(seccionesRes.rows.map(r => r.slug.toLowerCase()))
         const subcatPorNombre = new Map(subcatRes.rows.map(r => [r.nombre, r.id]))
 
         // Contador O(n) en vez de O(n²)
