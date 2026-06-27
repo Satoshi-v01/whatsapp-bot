@@ -38,8 +38,10 @@ router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, r
 router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
-        const { presentacion_origen_id, cantidad_origen, cantidad_destino, precio_venta, precio_compra, nota,
+        const { presentacion_origen_id, precio_venta, precio_compra, precio_tarjeta, nota,
                 presentacion_destino_id: destino_id_param, nueva_presentacion } = req.body
+        const cantidad_origen = parseInt(req.body.cantidad_origen)
+        const cantidad_destino = parseInt(req.body.cantidad_destino)
         const usuario_id = req.usuario?.id
         const usuario_nombre = req.usuario?.nombre
 
@@ -75,11 +77,12 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
                 return res.status(400).json({ error: 'El nombre de la presentación fraccionada es requerido' })
             }
             const nuevaRes = await client.query(
-                `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, stock, disponible)
-                 VALUES ($1, $2, $3, $4, 0, true) RETURNING *`,
+                `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_compra, precio_tarjeta, stock, disponible)
+                 VALUES ($1, $2, $3, $4, $5, 0, true) RETURNING *`,
                 [origen.producto_id, nueva_presentacion.nombre.trim(),
                  nueva_presentacion.precio_venta || null,
-                 nueva_presentacion.precio_compra || null]
+                 nueva_presentacion.precio_compra || null,
+                 nueva_presentacion.precio_tarjeta || null]
             )
             presentacion_destino_id = nuevaRes.rows[0].id
             destino = nuevaRes.rows[0]
@@ -100,24 +103,25 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
             presentacion_destino_id = destino.id
 
             // Actualizar precios si se enviaron
-            if (precio_venta || precio_compra) {
-                const campos = ['updated_at = NOW()']
+            if (precio_venta || precio_compra || precio_tarjeta) {
+                const campos = []
                 const vals = [presentacion_destino_id]
                 if (precio_venta) { campos.push(`precio_venta = $${vals.length + 1}`); vals.push(precio_venta) }
                 if (precio_compra) { campos.push(`precio_compra = $${vals.length + 1}`); vals.push(precio_compra) }
-                await client.query(`UPDATE presentaciones SET ${campos.join(', ')} WHERE id = $1`, vals)
+                if (precio_tarjeta) { campos.push(`precio_tarjeta = $${vals.length + 1}`); vals.push(precio_tarjeta) }
+                if (campos.length > 0) await client.query(`UPDATE presentaciones SET ${campos.join(', ')} WHERE id = $1`, vals)
             }
         }
 
         // Descontar stock origen
         await client.query(
-            `UPDATE presentaciones SET stock = stock - $1, updated_at = NOW() WHERE id = $2`,
+            `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
             [cantidad_origen, presentacion_origen_id]
         )
 
         // Sumar stock destino
         await client.query(
-            `UPDATE presentaciones SET stock = stock + $1, updated_at = NOW() WHERE id = $2`,
+            `UPDATE presentaciones SET stock = stock + $1 WHERE id = $2`,
             [cantidad_destino, presentacion_destino_id]
         )
 
