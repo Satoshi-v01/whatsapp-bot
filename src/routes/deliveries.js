@@ -7,6 +7,7 @@ const { guardarMensaje } = require('../services/mensajes')
 const { descontarStockFEFO } = require('../services/stock')
 const { registrarLog } = require('../middleware/auditoria')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
+const logger = require('../middleware/logger')
 
 
 // Ver todos los deliveries
@@ -37,7 +38,7 @@ router.get('/', autenticar, verificarPermiso('delivery', 'ver'), async (req, res
 })
 
 // Asignar repartidor
-router.patch('/:id/asignar', async (req, res) => {
+router.patch('/:id/asignar', autenticar, verificarPermiso('delivery', 'editar'), async (req, res) => {
     try {
         const { repartidor_id } = req.body
         const anterior = await db.query(`SELECT repartidor_id FROM deliveries WHERE id = $1`, [req.params.id])
@@ -57,7 +58,7 @@ router.patch('/:id/asignar', async (req, res) => {
 })
 
 // Deliveries del repartidor
-router.get('/mis-deliveries', async (req, res) => {
+router.get('/mis-deliveries', autenticar, verificarPermiso('delivery', 'ver'), async (req, res) => {
     try {
         const { repartidor_id } = req.query
         if (!repartidor_id) return res.status(400).json({ error: 'repartidor_id requerido' })
@@ -85,7 +86,7 @@ router.get('/mis-deliveries', async (req, res) => {
 })
 
 // Cambiar estado repartidor
-router.patch('/:id/estado-repartidor', async (req, res) => {
+router.patch('/:id/estado-repartidor', autenticar, verificarPermiso('delivery', 'cambiar_estado'), async (req, res) => {
     try {
         const { estado } = req.body
         if (!['en_camino', 'entregado'].includes(estado)) return res.status(400).json({ error: 'Estado inválido' })
@@ -110,7 +111,7 @@ router.patch('/:id/estado-repartidor', async (req, res) => {
 })
 
 // Ver deliveries por estado
-router.get('/estado/:estado', async (req, res) => {
+router.get('/estado/:estado', autenticar, verificarPermiso('delivery', 'ver'), async (req, res) => {
     try {
         const { estado } = req.params
         const resultado = await db.query(
@@ -254,7 +255,7 @@ router.patch('/:id/estado', autenticar, verificarPermiso('delivery', 'cambiar_es
                         await enviarMensaje(delivery.cliente_numero, mensajes[estado])
                         await guardarMensaje(delivery.cliente_numero, mensajes[estado], 'bot')
                     } catch (err) {
-                        console.error('Error enviando mensaje de estado:', err.message)
+                        logger.error('Error enviando mensaje de estado:', { message: err.message })
                     }
                 }
             }
@@ -267,7 +268,7 @@ router.patch('/:id/estado', autenticar, verificarPermiso('delivery', 'cambiar_es
 })
 
 // Agregar nota o demora
-router.post('/:id/nota', async (req, res) => {
+router.post('/:id/nota', autenticar, verificarPermiso('delivery', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
         const { texto, tipo = 'nota' } = req.body
@@ -289,7 +290,7 @@ router.post('/:id/nota', async (req, res) => {
 })
 
 // Crear delivery simple desde caja
-router.post('/simple', async (req, res) => {
+router.post('/simple', autenticar, verificarPermiso('delivery', 'crear'), async (req, res) => {
     try {
         const { venta_id, cliente_numero, ubicacion, referencia, horario, contacto_entrega, metodo_pago } = req.body
         if (!venta_id) return res.status(400).json({ error: 'venta_id es requerido' })

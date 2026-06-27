@@ -324,7 +324,7 @@ app.get('/ecommerce/*splat', (req, res) => {
 
 
 
-app.get('/test-db', async (req, res) => {
+app.get('/test-db', autenticar, require('./src/middleware/auth').soloAdmin, async (req, res) => {
   try {
     const result = await query('SELECT NOW()');
     res.json({ dbTime: result.rows[0].now });
@@ -369,7 +369,7 @@ setInterval(async () => {
     try {
         await procesarTimeouts()
     } catch (err) {
-        console.error('Error en timeout job:', err.message)
+        logger.error('Error en timeout job:', { message: err.message })
     } finally {
         corriendo = false
     }

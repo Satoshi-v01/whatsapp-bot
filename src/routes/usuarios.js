@@ -1,12 +1,12 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcrypt')
 const { manejarError } = require('../middleware/validar')
-const { soloAdmin } = require('../middleware/auth')
+const { soloAdmin, verificarPermiso } = require('../middleware/auth')
 
 // Listar usuarios
-router.get('/', async (req, res) => {
+router.get('/', soloAdmin, async (req, res) => {
     try {
         const resultado = await db.query(
            `SELECT u.id, u.nombre, u.email, u.rol, u.disponible,
@@ -21,8 +21,24 @@ router.get('/', async (req, res) => {
     }
 })
 
+// Listar repartidores disponibles (para asignacion en Delivery)
+router.get('/repartidores', verificarPermiso('delivery', 'ver'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+           `SELECT u.id, u.nombre, u.disponible
+            FROM usuarios u
+            LEFT JOIN roles r ON u.rol_id = r.id
+            WHERE r.nombre ILIKE 'repartidor' AND u.disponible = true
+            ORDER BY u.nombre ASC`
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // Listar roles
-router.get('/roles', async (req, res) => {
+router.get('/roles', soloAdmin, async (req, res) => {
     try {
         const resultado = await db.query(`SELECT * FROM roles ORDER BY id ASC`)
         res.json(resultado.rows)

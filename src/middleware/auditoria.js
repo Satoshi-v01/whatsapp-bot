@@ -1,4 +1,5 @@
 const db = require('../db/index')
+const logger = require('./logger')
 
 async function registrarLog({ usuario_id, usuario_nombre, accion, modulo, entidad, entidad_id, descripcion, dato_anterior, dato_nuevo, ip }) {
     try {
@@ -20,7 +21,7 @@ async function registrarLog({ usuario_id, usuario_nombre, accion, modulo, entida
         )
     } catch (err) {
         // El log nunca debe romper el flujo principal
-        console.error('Error registrando log:', err.message)
+        logger.error('Error registrando log:', { message: err.message })
     }
 }
 

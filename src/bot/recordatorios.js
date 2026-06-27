@@ -2,6 +2,7 @@ const db = require('../db/index')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
 const { limpiarCarrito } = require('../services/carrito')
+const logger = require('../middleware/logger')
 
 const MINUTOS_RECORDATORIO = 60
 const HORAS_CIERRE = 3
@@ -14,7 +15,7 @@ async function procesarTimeouts() {
         await db.query(`SELECT expirar_ordenes_pedido()`)
         await recordatorioComprobante()
     } catch (err) {
-        console.error('Error en procesarTimeouts:', err.message)
+        logger.error('Error en procesarTimeouts:', { message: err.message })
     }
 }
 
@@ -53,7 +54,7 @@ async function enviarRecordatorios() {
                 [sesion.cliente_numero]
             )
         } catch (err) {
-            console.error(`Error enviando recordatorio a ${sesion.cliente_numero}:`, err.message)
+            logger.error(`Error enviando recordatorio a ${sesion.cliente_numero}:`, { message: err.message })
         }
     }
 }
@@ -94,7 +95,7 @@ async function cerrarSesionesInactivas() {
                 [sesion.cliente_numero]
             )
         } catch (err) {
-            console.error(`Error cerrando sesion ${sesion.cliente_numero}:`, err.message)
+            logger.error(`Error cerrando sesion ${sesion.cliente_numero}:`, { message: err.message })
         }
     }
 }
@@ -123,7 +124,7 @@ async function recordatorioComprobante() {
             await enviarMensaje(sesion.cliente_numero, msg)
             await guardarMensaje(sesion.cliente_numero, msg, 'bot')
         } catch (err) {
-            console.error(`Error recordatorio comprobante ${sesion.cliente_numero}:`, err.message)
+            logger.error(`Error recordatorio comprobante ${sesion.cliente_numero}:`, { message: err.message })
         }
     }
 }
