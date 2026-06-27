@@ -5,6 +5,11 @@ export async function getUsuarios() {
     return res.data
 }
 
+export async function getRepartidores() {
+    const res = await api.get('/usuarios/repartidores')
+    return res.data
+}
+
 export async function getRoles() {
     const res = await api.get('/usuarios/roles')
     return res.data

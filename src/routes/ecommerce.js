@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
-const { autenticar } = require('../middleware/auth')
+const { autenticar, verificarPermiso } = require('../middleware/auth')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 
@@ -116,7 +116,7 @@ router.get('/subcategorias', async (req, res) => {
 })
 
 // ─── ADMIN CRUD subcategorias ─────────────────────────────────
-router.get('/admin/subcategorias', autenticar, async (req, res) => {
+router.get('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT id, nombre, slug, orden, categoria_slug
@@ -130,7 +130,7 @@ router.get('/admin/subcategorias', autenticar, async (req, res) => {
   }
 })
 
-router.post('/admin/subcategorias', autenticar, async (req, res) => {
+router.post('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 'crear'), async (req, res) => {
   try {
     const { nombre, categoria_slug, orden = 0 } = req.body
     if (!nombre?.trim() || !categoria_slug?.trim())
@@ -145,7 +145,7 @@ router.post('/admin/subcategorias', autenticar, async (req, res) => {
   } catch (error) { manejarError(res, error) }
 })
 
-router.patch('/admin/subcategorias/:id', autenticar, async (req, res) => {
+router.patch('/admin/subcategorias/:id', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { id } = req.params
     const { nombre, categoria_slug, orden } = req.body
@@ -161,7 +161,7 @@ router.patch('/admin/subcategorias/:id', autenticar, async (req, res) => {
   } catch (error) { manejarError(res, error) }
 })
 
-router.delete('/admin/subcategorias/:id', autenticar, async (req, res) => {
+router.delete('/admin/subcategorias/:id', autenticar, verificarPermiso('ecommerce', 'eliminar'), async (req, res) => {
   try {
     const { id } = req.params
     await db.query(`UPDATE productos SET ecommerce_subcategoria_id = NULL WHERE ecommerce_subcategoria_id = $1`, [parseInt(id)])
@@ -171,7 +171,7 @@ router.delete('/admin/subcategorias/:id', autenticar, async (req, res) => {
 })
 
 // ─── ADMIN CRUD filtros config ────────────────────────────────
-router.get('/admin/filtros-config', autenticar, async (req, res) => {
+router.get('/admin/filtros-config', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT id, campo, label, valor, label_valor, categorias, display_as, orden, invisible, incluye_valores
@@ -185,7 +185,7 @@ router.get('/admin/filtros-config', autenticar, async (req, res) => {
   }
 })
 
-router.post('/admin/filtros-config', autenticar, async (req, res) => {
+router.post('/admin/filtros-config', autenticar, verificarPermiso('ecommerce', 'crear'), async (req, res) => {
   try {
     const { campo, label, valor, label_valor, categorias, display_as = 'sidebar', orden = 0, invisible = false, incluye_valores } = req.body
     if (!campo?.trim() || !label?.trim() || !valor?.trim() || !label_valor?.trim())
@@ -204,7 +204,7 @@ router.post('/admin/filtros-config', autenticar, async (req, res) => {
   } catch (error) { manejarError(res, error) }
 })
 
-router.patch('/admin/filtros-config/:id', autenticar, async (req, res) => {
+router.patch('/admin/filtros-config/:id', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { id } = req.params
     const { campo, label, valor, label_valor, categorias, display_as, orden, invisible, incluye_valores } = req.body
@@ -226,7 +226,7 @@ router.patch('/admin/filtros-config/:id', autenticar, async (req, res) => {
   } catch (error) { manejarError(res, error) }
 })
 
-router.delete('/admin/filtros-config/:id', autenticar, async (req, res) => {
+router.delete('/admin/filtros-config/:id', autenticar, verificarPermiso('ecommerce', 'eliminar'), async (req, res) => {
   try {
     await db.query(`DELETE FROM ecommerce_filtros_config WHERE id = $1`, [parseInt(req.params.id)])
     res.json({ ok: true })
@@ -706,7 +706,7 @@ router.get('/zonas', async (req, res) => {
 // ════════════════════════════════════════════════════════════════
 
 // ─── GET /api/ecommerce/admin/config ──────────────────────────
-router.get('/admin/config', autenticar, async (req, res) => {
+router.get('/admin/config', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const resultado = await db.query(`SELECT clave, valor, updated_at FROM tienda_config ORDER BY clave`)
     const config = {}
@@ -719,7 +719,7 @@ router.get('/admin/config', autenticar, async (req, res) => {
 })
 
 // ─── PUT /api/ecommerce/admin/config ──────────────────────────
-router.put('/admin/config', autenticar, async (req, res) => {
+router.put('/admin/config', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const updates = req.body // { clave: valor, ... }
     if (!updates || typeof updates !== 'object') {
@@ -740,7 +740,7 @@ router.put('/admin/config', autenticar, async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/admin/categorias ──────────────────────
-router.get('/admin/categorias', autenticar, async (req, res) => {
+router.get('/admin/categorias', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const resultado = await db.query(
       `SELECT clave, valor FROM tienda_config WHERE clave LIKE 'cat_imagen_%'`
@@ -755,7 +755,7 @@ router.get('/admin/categorias', autenticar, async (req, res) => {
 })
 
 // ─── PATCH /api/ecommerce/admin/categorias/:slug ──────────────
-router.patch('/admin/categorias/:slug', autenticar, async (req, res) => {
+router.patch('/admin/categorias/:slug', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { slug } = req.params
     if (!SLUGS_VALIDOS.includes(slug)) return res.status(400).json({ error: 'Slug invalido' })
@@ -773,7 +773,7 @@ router.patch('/admin/categorias/:slug', autenticar, async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/admin/banners ─────────────────────────
-router.get('/admin/banners', autenticar, async (req, res) => {
+router.get('/admin/banners', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const resultado = await db.query(
       `SELECT * FROM ecommerce_banners ORDER BY orden ASC`
@@ -786,7 +786,7 @@ router.get('/admin/banners', autenticar, async (req, res) => {
 })
 
 // ─── POST /api/ecommerce/admin/banners ────────────────────────
-router.post('/admin/banners', autenticar, async (req, res) => {
+router.post('/admin/banners', autenticar, verificarPermiso('ecommerce', 'crear'), async (req, res) => {
   try {
     const { titulo, subtitulo, badge, cta_texto, cta_url, imagen_url, orden = 0, activo = true } = req.body
     if (!titulo?.trim()) return res.status(400).json({ error: 'El título es requerido' })
@@ -802,7 +802,7 @@ router.post('/admin/banners', autenticar, async (req, res) => {
 })
 
 // ─── PATCH /api/ecommerce/admin/banners/:id ───────────────────
-router.patch('/admin/banners/:id', autenticar, async (req, res) => {
+router.patch('/admin/banners/:id', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { id } = req.params
     const { titulo, subtitulo, badge, cta_texto, cta_url, imagen_url, orden, activo } = req.body
@@ -827,7 +827,7 @@ router.patch('/admin/banners/:id', autenticar, async (req, res) => {
 })
 
 // ─── DELETE /api/ecommerce/admin/banners/:id ──────────────────
-router.delete('/admin/banners/:id', autenticar, async (req, res) => {
+router.delete('/admin/banners/:id', autenticar, verificarPermiso('ecommerce', 'eliminar'), async (req, res) => {
   try {
     await db.query(`DELETE FROM ecommerce_banners WHERE id = $1`, [req.params.id])
     res.json({ ok: true })
@@ -837,7 +837,7 @@ router.delete('/admin/banners/:id', autenticar, async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/admin/pedidos ─────────────────────────
-router.get('/admin/pedidos', autenticar, async (req, res) => {
+router.get('/admin/pedidos', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const { estado, limit = 50, offset = 0 } = req.query
     const conds = [`op.canal = 'pagina_web'`]
@@ -871,7 +871,7 @@ router.get('/admin/pedidos', autenticar, async (req, res) => {
 })
 
 // ─── DELETE /api/ecommerce/admin/pedidos/:id ──────────────────
-router.delete('/admin/pedidos/:id', autenticar, async (req, res) => {
+router.delete('/admin/pedidos/:id', autenticar, verificarPermiso('ecommerce', 'eliminar'), async (req, res) => {
   const client = await db.pool.connect()
   try {
     const orden = await client.query(`SELECT id, numero_pedido FROM ordenes_pedido WHERE id = $1 AND canal = 'pagina_web'`, [req.params.id])
@@ -893,7 +893,7 @@ router.delete('/admin/pedidos/:id', autenticar, async (req, res) => {
 
 // ─── GET /api/ecommerce/admin/productos ───────────────────────
 // Lista presentaciones con campos editables para el ecommerce
-router.get('/admin/productos', autenticar, async (req, res) => {
+router.get('/admin/productos', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const { buscar = '', categoria } = req.query
     const conds = []
@@ -946,7 +946,7 @@ router.get('/admin/productos', autenticar, async (req, res) => {
 
 // ─── PATCH /api/ecommerce/admin/productos/:presentacionId ─────
 // Edita campos ecommerce del producto (imagen, novedad, destacado, disponible)
-router.patch('/admin/productos/:presentacionId', autenticar, async (req, res) => {
+router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { presentacionId } = req.params
     const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos } = req.body
@@ -1097,7 +1097,7 @@ router.get('/filtros', async (req, res) => {
 })
 
 // ─── GET /api/ecommerce/admin/estadisticas ────────────────────
-router.get('/admin/estadisticas', autenticar, async (req, res) => {
+router.get('/admin/estadisticas', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const { periodo = 'mes' } = req.query
 

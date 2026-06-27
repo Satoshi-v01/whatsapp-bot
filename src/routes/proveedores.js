@@ -59,7 +59,7 @@ router.post('/', autenticar, verificarPermiso('proveedores', 'crear'), async (re
 // FACTURAS — rutas fijas
 // ─────────────────────────────────────────────
 
-router.get('/facturas', async (req, res) => {
+router.get('/facturas', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const { estado, tipo, proveedor_id, fecha_desde, fecha_hasta, proximas } = req.query
         let condiciones = ['f.activo = true']
@@ -89,7 +89,7 @@ router.get('/facturas', async (req, res) => {
     }
 })
 
-router.patch('/facturas/:id', async (req, res) => {
+router.patch('/facturas/:id', autenticar, verificarPermiso('proveedores', 'editar'), async (req, res) => {
     try {
         const { numero_factura, fecha_emision, plazo_dias, monto_total, iva_10, iva_5, exentas, notas } = req.body
         const anterior = await db.query(`SELECT * FROM facturas_compra WHERE id = $1`, [req.params.id])
@@ -113,7 +113,7 @@ router.patch('/facturas/:id', async (req, res) => {
 })
 
 // Libro de compras (SET)
-router.get('/libro-compras', async (req, res) => {
+router.get('/libro-compras', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const { fecha_desde, fecha_hasta } = req.query
 
@@ -148,7 +148,7 @@ router.get('/libro-compras', async (req, res) => {
     }
 })
 
-router.post('/facturas/:id/pagos', async (req, res) => {
+router.post('/facturas/:id/pagos', autenticar, verificarPermiso('proveedores', 'editar'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { numero_recibo, monto, metodo_pago, fecha_pago, tipo_pago, notas } = req.body
@@ -199,7 +199,7 @@ router.post('/facturas/:id/pagos', async (req, res) => {
     }
 })
 
-router.get('/facturas/:id/pagos', async (req, res) => {
+router.get('/facturas/:id/pagos', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const resultado = await db.query(`SELECT * FROM pagos_facturas WHERE factura_id = $1 ORDER BY created_at DESC`, [req.params.id])
         res.json(resultado.rows)
@@ -212,7 +212,7 @@ router.get('/facturas/:id/pagos', async (req, res) => {
 // REPORTES
 // ─────────────────────────────────────────────
 
-router.get('/reportes/resumen', async (req, res) => {
+router.get('/reportes/resumen', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const { periodo = 'mes', proveedor_id, tipo, fecha_desde, fecha_hasta } = req.query
 
@@ -293,7 +293,7 @@ router.get('/reportes/resumen', async (req, res) => {
 // RUTAS CON PARÁMETRO DINÁMICO /:id
 // ─────────────────────────────────────────────
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const proveedor = await db.query(`SELECT * FROM proveedores WHERE id = $1 AND activo = true`, [req.params.id])
         if (!proveedor.rows.length) return res.status(404).json({ error: 'Proveedor no encontrado' })
@@ -325,7 +325,7 @@ router.patch('/:id', autenticar, verificarPermiso('proveedores', 'editar'), asyn
     }
 })
 
-router.get('/:id/facturas', async (req, res) => {
+router.get('/:id/facturas', autenticar, verificarPermiso('proveedores', 'ver'), async (req, res) => {
     try {
         const { estado, tipo } = req.query
         let condiciones = ['f.proveedor_id = $1', 'f.activo = true']
@@ -350,7 +350,7 @@ router.get('/:id/facturas', async (req, res) => {
     }
 })
 
-router.post('/:id/facturas', async (req, res) => {
+router.post('/:id/facturas', autenticar, verificarPermiso('proveedores', 'crear'), async (req, res) => {
     try {
         const { numero_factura, fecha_emision, tipo, plazo_dias, monto_total, iva_10, iva_5, exentas, metodo_pago, notas } = req.body
 
