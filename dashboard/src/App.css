@@ -118,14 +118,13 @@
   box-sizing: border-box;
 }
 
-html {
+html, body {
+  height: 100%;
+  overflow: hidden;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-body {
   font-family: var(--font-ui);
   background: var(--bg);
   color: var(--text);
@@ -142,6 +141,9 @@ h1, h2, h3, h4, h5, h6 {
 .font-data, [class*="stat-"], [class*="kpi-"], [class*="metric-"] {
   font-family: var(--font-data);
 }
+
+/* ── Page padding reduction ── */
+.page-scroll { padding: 20px !important; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
@@ -177,8 +179,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── LAYOUT ── */
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
 }
@@ -187,6 +190,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow: auto;
   background: var(--bg);
   animation: fadeIn 0.18s ease;
+  min-height: 0;
 }
 
 /* ─────────────────────────────────────────────
@@ -194,7 +198,7 @@ h1, h2, h3, h4, h5, h6 {
 ───────────────────────────────────────────── */
 .sb {
   width: 240px;
-  min-height: 100vh;
+  height: 100%;
   background: linear-gradient(180deg, var(--sb-bg) 0%, var(--sb-bg-end) 100%);
   display: flex;
   flex-direction: column;
