@@ -172,6 +172,7 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                     MIN(c.nombre) as cliente_nombre,
                     MIN(c.ruc) as cliente_ruc,
                     SUM(v.precio - COALESCE(pr.precio_compra, 0)) as ganancia,
+                    ARRAY_AGG(v.id ORDER BY v.id) as venta_ids,
                     JSON_AGG(JSON_BUILD_OBJECT(
                         'id', v.id,
                         'presentacion_id', v.presentacion_id,
@@ -218,7 +219,7 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                        JOIN presentaciones pr2 ON vi.presentacion_id = pr2.id
                        JOIN productos p2 ON pr2.producto_id = p2.id
                        LEFT JOIN marcas m2 ON p2.marca_id = m2.id
-                       WHERE vi.venta_id = g.id),
+                       WHERE vi.venta_id = ANY(g.venta_ids)),
                        g.items_heredados
                    ) as items
             FROM grupos g`
