@@ -56,6 +56,8 @@ function Caja() {
     const [formCliente, setFormCliente] = useState({ tipo: 'persona', nombre: '', ruc: '', telefono: '' })
     const [razonSocial, setRazonSocial] = useState('')
     const [rucFactura, setRucFactura] = useState('')
+    const [facturaManual, setFacturaManual] = useState(false)
+    const [numeroFacturaManual, setNumeroFacturaManual] = useState('')
     const [canal, setCanal] = useState('presencial')
     const [metodoPago, setMetodoPago] = useState('efectivo')
     const [subtipoPago, setSubtipoPago] = useState('')
@@ -366,7 +368,7 @@ function Caja() {
 
     function resetCaja() {
         setLineas([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1 }])
-        setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial('')
+        setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial(''); setFacturaManual(false); setNumeroFacturaManual('')
         setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setOpOrigen(null)
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
         setTipoVenta('contado')
@@ -414,8 +416,12 @@ function Caja() {
                 let numeroFactura = null
                 let datosImpresion = null
                 try {
-                    const resNumero = await api.post('/configuracion/factura/siguiente-numero')
-                    numeroFactura = resNumero.data.numero_formateado
+                    if (facturaManual) {
+                        numeroFactura = numeroFacturaManual.trim() || null
+                    } else {
+                        const resNumero = await api.post('/configuracion/factura/siguiente-numero')
+                        numeroFactura = resNumero.data.numero_formateado
+                    }
 
                     const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
@@ -720,16 +726,44 @@ function Caja() {
                                     </div>
                                 )}
                                 <div style={{ borderTop: `1px solid ${s.borderLight}`, paddingTop: '20px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        <div>
-                                            <label style={labelStyle}>Razon social</label>
-                                            <input placeholder="Consumidor final" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>RUC</label>
-                                            <input placeholder="Ej: 5.578.584-9" value={rucFactura} onChange={e => setRucFactura(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
-                                        </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={facturaManual}
+                                                onChange={e => { setFacturaManual(e.target.checked); setNumeroFacturaManual('') }}
+                                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                            />
+                                            <span style={{ fontSize: '13px', fontWeight: '600', color: facturaManual ? '#dc2626' : s.textMuted }}>
+                                                Factura manual (talonario fisico)
+                                            </span>
+                                        </label>
                                     </div>
+                                    {facturaManual ? (
+                                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 14px' }}>
+                                            <p style={{ fontSize: '11px', color: '#dc2626', fontWeight: '600', marginBottom: '8px' }}>
+                                                NO se generara numero del sistema. Ingresa el numero del talonario fisico.
+                                            </p>
+                                            <label style={labelStyle}>Numero de factura del talonario</label>
+                                            <input
+                                                placeholder="Ej: 001-002-0000123"
+                                                value={numeroFacturaManual}
+                                                onChange={e => setNumeroFacturaManual(e.target.value)}
+                                                style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div>
+                                                <label style={labelStyle}>Razon social</label>
+                                                <input placeholder="Consumidor final" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
+                                            </div>
+                                            <div>
+                                                <label style={labelStyle}>RUC</label>
+                                                <input placeholder="Ej: 5.578.584-9" value={rucFactura} onChange={e => setRucFactura(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </section>
