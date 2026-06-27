@@ -341,7 +341,7 @@ router.get('/template-precios', autenticar, verificarPermiso('inventario', 'ver'
                 COALESCE(m.nombre, '')          AS marca,
                 COALESCE(p.especie, '')         AS especie,
                 COALESCE(p.calidad, '')         AS calidad,
-                COALESCE(c.nombre, '')          AS categoria,
+                COALESCE(p.seccion_inventario, '') AS categoria,
                 COALESCE(sc.nombre, '')         AS subcategoria,
                 COALESCE(p.sku, '')             AS sku_producto,
                 pr.nombre                       AS presentacion,
@@ -353,7 +353,6 @@ router.get('/template-precios', autenticar, verificarPermiso('inventario', 'ver'
              FROM presentaciones pr
              JOIN productos p ON p.id = pr.producto_id
              LEFT JOIN marcas m ON m.id = p.marca_id
-             LEFT JOIN categorias c ON c.id = p.categoria_id
              LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
              WHERE pr.disponible = true
              ORDER BY m.nombre ASC, p.nombre ASC, pr.nombre ASC`
