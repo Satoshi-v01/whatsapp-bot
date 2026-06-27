@@ -103,7 +103,7 @@ function Inventario() {
         return texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
     }
     const [modalFraccionar, setModalFraccionar] = useState(null) // { producto, presentacion }
-    const [fraccionForm, setFraccionForm] = useState({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', nota: '' })
+    const [fraccionForm, setFraccionForm] = useState({ presentacion_destino_id: '', cantidad_origen: '', cantidad_destino: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', nota: '' })
     const [fraccionando, setFraccionando] = useState(false)
     const [lotes, setLotes] = useState([])
     const [cargandoLotes, setCargandoLotes] = useState(false)
@@ -393,7 +393,9 @@ function Inventario() {
     }
 
     function abrirModalFraccionar(producto, pr) {
-        setFraccionForm({ modo_destino: 'existente', presentacion_destino_id: '', nombre_nuevo: '', cantidad_origen: '', cantidad_destino: '', precio_venta: '', precio_compra: '', nota: '' })
+        const otrasPresent = producto.presentaciones.filter(p => p.id !== pr.id)
+        const modoInicial = otrasPresent.length === 0 ? 'nueva' : 'existente'
+        setFraccionForm({ modo_destino: modoInicial, presentacion_destino_id: '', nombre_nuevo: '', cantidad_origen: '', cantidad_destino: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', nota: '' })
         setModalFraccionar({ producto, presentacion: pr })
     }
 
@@ -416,11 +418,13 @@ function Inventario() {
                 payload.nueva_presentacion = {
                     nombre: fraccionForm.nombre_nuevo.trim(),
                     precio_venta: fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null,
+                    precio_tarjeta: fraccionForm.precio_tarjeta ? parseInt(fraccionForm.precio_tarjeta) : null,
                     precio_compra: fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null,
                 }
             } else {
                 payload.presentacion_destino_id = parseInt(fraccionForm.presentacion_destino_id)
                 payload.precio_venta = fraccionForm.precio_venta ? parseInt(fraccionForm.precio_venta) : null
+                payload.precio_tarjeta = fraccionForm.precio_tarjeta ? parseInt(fraccionForm.precio_tarjeta) : null
                 payload.precio_compra = fraccionForm.precio_compra ? parseInt(fraccionForm.precio_compra) : null
             }
             await registrarTransformacion(payload)
@@ -1810,7 +1814,7 @@ function colorVencimiento(diasParaVencer) {
                                     placeholder="Unidades que se generan"
                                     style={{ ...inputStyle, marginBottom: '10px' }}
                                 />
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                                     <div>
                                         <label style={labelStyle}>Precio compra {modoNueva ? '' : '(opcional)'}</label>
                                         <input
@@ -1822,7 +1826,7 @@ function colorVencimiento(diasParaVencer) {
                                         />
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Precio venta {modoNueva ? '' : '(opcional)'}</label>
+                                        <label style={labelStyle}>Precio efectivo {modoNueva ? '' : '(opcional)'}</label>
                                         <input
                                             type="number" min="0"
                                             value={fraccionForm.precio_venta}
@@ -1831,9 +1835,24 @@ function colorVencimiento(diasParaVencer) {
                                             style={{ ...inputStyle, marginBottom: 0 }}
                                         />
                                     </div>
+                                    <div>
+                                        <label style={labelStyle}>Precio tarjeta {modoNueva ? '' : '(opcional)'}</label>
+                                        <input
+                                            type="number" min="0"
+                                            value={fraccionForm.precio_tarjeta}
+                                            onChange={e => setFraccionForm({ ...fraccionForm, precio_tarjeta: e.target.value })}
+                                            placeholder="Gs. 0"
+                                            style={{ ...inputStyle, marginBottom: 0 }}
+                                        />
+                                    </div>
                                 </div>
+                                {fraccionForm.precio_venta && fraccionForm.precio_tarjeta && parseInt(fraccionForm.precio_tarjeta) > parseInt(fraccionForm.precio_venta) && (
+                                    <p style={{ fontSize: '11px', color: '#6d28d9', marginTop: '6px', fontWeight: '600' }}>
+                                        Recargo tarjeta: {((parseInt(fraccionForm.precio_tarjeta) - parseInt(fraccionForm.precio_venta)) / parseInt(fraccionForm.precio_venta) * 100).toFixed(2)}%
+                                    </p>
+                                )}
                                 {cantOrigen > 0 && cantDestino > 0 && fraccionForm.precio_venta && (
-                                    <p style={{ fontSize: '11px', color: '#10b981', marginTop: '8px', fontWeight: '600' }}>
+                                    <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: '600' }}>
                                         Total fraccionado: Gs. {(cantDestino * parseInt(fraccionForm.precio_venta || 0)).toLocaleString('es-PY')}
                                         {pr.precio_venta && ` (original: Gs. ${(cantOrigen * pr.precio_venta).toLocaleString('es-PY')})`}
                                     </p>
