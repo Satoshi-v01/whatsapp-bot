@@ -149,16 +149,59 @@ function Inventario() {
 
     function descargarTemplate() {
         const encabezados = [['nombre_producto', 'marca', 'especie', 'calidad', 'categoria', 'subcategoria', 'sku', 'presentacion', 'precio_compra', 'precio_venta', 'precio_tarjeta', 'stock']]
-        const ejemplos = [
-            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', 'Adultos', 'PP-AD-3KG', '3kg', 155000, 190000, 202000, 10],
-            ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', 'balanceados', 'Adultos', 'PP-AD-15KG', '15kg', 580000, 720000, 765000, 5],
-            ['Whiskas Adulto', 'Mars', 'gato', 'standard', 'balanceados', '', 'WK-AD-500', '500g', 18000, 25000, '', 20],
+        const slug = pestanaActiva !== 'sin_categoria' ? pestanaActiva : 'inventario'
+        const subcat1 = subcategoriasPestana[0]?.nombre || ''
+        const subcat2 = subcategoriasPestana[1]?.nombre || ''
+
+        let ejemplos = []
+        if (tipoActivo === 'con_calidad_especie') {
+            // Balanceados: necesita especie, calidad y subcategoria
+            ejemplos = [
+                ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', slug, subcat1 || 'Adultos', 'PP-AD-3KG', '3kg', 155000, 190000, 202000, 10],
+                ['Pro Plan Adulto', 'Purina', 'perro', 'super_premium', slug, subcat1 || 'Adultos', 'PP-AD-15KG', '15kg', 580000, 720000, 765000, 5],
+                ['Whiskas Adulto', 'Mars', 'gato', 'standard', slug, subcat2 || '', 'WK-AD-500', '500g', 18000, 25000, '', 20],
+            ]
+        } else if (tipoActivo === 'con_especie') {
+            // Accesorios: necesita especie, sin calidad, subcategoria opcional
+            ejemplos = [
+                ['Collar Ajustable Rojo', 'Marca', 'perro', '', slug, subcat1 || '', 'COL-001-S', 'Talle S', 25000, 45000, 48000, 15],
+                ['Collar Ajustable Rojo', 'Marca', 'perro', '', slug, subcat1 || '', 'COL-001-M', 'Talle M', 28000, 50000, 53000, 10],
+                ['Juguete Raton', 'Marca', 'gato', '', slug, subcat2 || '', 'JUG-002', 'Unitario', 12000, 22000, '', 8],
+            ]
+        } else {
+            // Generico (Medicamentos, Arenas, etc.): sin especie ni calidad
+            ejemplos = [
+                ['Producto Ejemplo', 'Marca', '', '', slug, '', 'SKU-001', '100ml', 15000, 25000, 27000, 10],
+                ['Producto Ejemplo', 'Marca', '', '', slug, '', 'SKU-002', '250ml', 30000, 50000, 53000, 5],
+                ['Otro Producto', 'Marca', '', '', slug, '', 'SKU-003', '1kg', 45000, 70000, 75000, 8],
+            ]
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet([encabezados[0], ...ejemplos])
+        ws['!cols'] = encabezados[0].map((_, i) => ({ wch: i === 0 ? 32 : i <= 4 ? 18 : 14 }))
+
+        const instrucciones = [
+            ['CAMPO', 'VALOR VALIDO', 'OBLIGATORIO'],
+            ['nombre_producto', 'Texto libre', 'SI'],
+            ['marca', 'Debe existir en el sistema (Inventario → Marcas)', 'NO'],
+            ['especie', tipoActivo === 'con_calidad_especie' || tipoActivo === 'con_especie' ? 'perro | gato | ambos' : 'Dejar VACIO', tipoActivo !== 'generico' ? 'SI' : 'NO'],
+            ['calidad', tipoActivo === 'con_calidad_especie' ? 'standard | premium | premium_special | super_premium' : 'Dejar VACIO', tipoActivo === 'con_calidad_especie' ? 'SI' : 'NO'],
+            ['categoria', `Siempre poner: ${slug}`, 'SI'],
+            ['subcategoria', 'Debe existir en el sistema. Dejar vacio si no aplica.', 'NO'],
+            ['sku', 'Codigo unico del producto', 'NO'],
+            ['presentacion', 'Ej: 3kg, 500ml, Unitario', 'SI'],
+            ['precio_compra', 'Numero entero en Gs. Ej: 150000', 'NO'],
+            ['precio_venta', 'Numero entero en Gs. Ej: 190000', 'SI'],
+            ['precio_tarjeta', 'Numero entero en Gs. Dejar vacio si igual a efectivo', 'NO'],
+            ['stock', 'Numero entero. Poner 0 si no hay stock', 'NO'],
         ]
-        const ws = XLSX.utils.aoa_to_sheet([...encabezados, ...ejemplos])
-        ws['!cols'] = encabezados[0].map((_, i) => ({ wch: i === 0 ? 28 : i <= 4 ? 16 : 14 }))
+        const wsInfo = XLSX.utils.aoa_to_sheet(instrucciones)
+        wsInfo['!cols'] = [{ wch: 20 }, { wch: 55 }, { wch: 12 }]
+
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Lista de Precios')
-        XLSX.writeFile(wb, 'template_importacion.xlsx')
+        XLSX.utils.book_append_sheet(wb, ws, 'Importar')
+        XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrucciones')
+        XLSX.writeFile(wb, `template_${slug}.xlsx`)
     }
 
     function handleSeleccionarExcel(e) {
