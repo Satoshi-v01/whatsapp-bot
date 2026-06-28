@@ -82,6 +82,11 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
         let valores = []
         let i = 1
 
+        // Excluir cancelados por default; si el filtro estado='cancelado' se aplica explicitamente se sobreescribe
+        if (!estado || estado !== 'cancelado') {
+            condiciones.push(`v.estado != 'cancelado'`)
+        }
+
         if (periodo === 'recientes') {
             condiciones.push(`v.created_at >= NOW() - INTERVAL '24 hours'`)
         } else if (periodo === 'semanal') {
