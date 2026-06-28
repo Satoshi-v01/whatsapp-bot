@@ -237,7 +237,16 @@ function Caja() {
     }
 
     function handleBuscarProducto(lineaId, valor) {
-        const filtrados = valor.trim() ? productos.filter(p => p.nombre.toLowerCase().includes(valor.toLowerCase()) || (p.marca_nombre && p.marca_nombre.toLowerCase().includes(valor.toLowerCase()))) : []
+        const filtrados = valor.trim()
+            ? productos
+                .filter(p => p.nombre.toLowerCase().includes(valor.toLowerCase()) || (p.marca_nombre && p.marca_nombre.toLowerCase().includes(valor.toLowerCase())))
+                .sort((a, b) => {
+                    const stockA = a.presentaciones?.reduce((s, pr) => s + (pr.stock || 0), 0) || 0
+                    const stockB = b.presentaciones?.reduce((s, pr) => s + (pr.stock || 0), 0) || 0
+                    if ((stockA > 0) !== (stockB > 0)) return stockA > 0 ? -1 : 1
+                    return a.nombre.localeCompare(b.nombre)
+                })
+            : []
         setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, busqueda: valor, productosFiltrados: filtrados, productoSeleccionado: valor ? l.productoSeleccionado : null } : l))
     }
 
@@ -746,8 +755,21 @@ function Caja() {
                                                             style={{ padding: '9px 14px', borderBottom: '1px solid #f0eee8', cursor: 'pointer', background: '#fff' }}
                                                             onMouseEnter={e => e.currentTarget.style.background = '#faf9f7'}
                                                             onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                                                            <p style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a22' }}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
-                                                            <p style={{ fontSize: '11px', color: '#9d9b96', marginTop: '2px' }}>{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
+                                                            {(() => {
+                                                                const stockTotal = p.presentaciones?.reduce((s, pr) => s + (pr.stock || 0), 0) || 0
+                                                                const sinStock = stockTotal === 0
+                                                                return (
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                                                                        <div>
+                                                                            <p style={{ fontSize: '13px', fontWeight: '600', color: sinStock ? '#9d9b96' : '#1a1a22' }}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
+                                                                            <p style={{ fontSize: '11px', color: '#9d9b96', marginTop: '2px' }}>{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
+                                                                        </div>
+                                                                        <span style={{ fontSize: '11px', fontWeight: '700', flexShrink: 0, color: sinStock ? '#d04545' : stockTotal <= 5 ? '#f59e0b' : '#0f9d6b', background: sinStock ? '#fff0f0' : stockTotal <= 5 ? '#fffbeb' : '#f0fdf9', padding: '2px 8px', borderRadius: '6px', border: `1px solid ${sinStock ? '#fca5a5' : stockTotal <= 5 ? '#fde68a' : '#86efac'}` }}>
+                                                                            {sinStock ? 'Sin stock' : `Stock: ${stockTotal}`}
+                                                                        </span>
+                                                                    </div>
+                                                                )
+                                                            })()}
                                                         </div>
                                                     ))}
                                                 </div>
