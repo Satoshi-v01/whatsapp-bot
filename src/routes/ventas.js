@@ -10,7 +10,23 @@ const { descontarStockFEFO } = require('../services/stock')
 const { registrarLog } = require('../middleware/auditoria')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
 
+let consumidorFinalId = null
 
+async function getOCrearConsumidorFinal() {
+    if (consumidorFinalId) return consumidorFinalId
+    const res = await db.query(
+        `SELECT id FROM clientes WHERE tipo = 'consumidor_final' LIMIT 1`
+    )
+    if (res.rows.length > 0) {
+        consumidorFinalId = res.rows[0].id
+        return consumidorFinalId
+    }
+    const insert = await db.query(
+        `INSERT INTO clientes (tipo, nombre, origen) VALUES ('consumidor_final', 'Consumidor Final', 'sistema') RETURNING id`
+    )
+    consumidorFinalId = insert.rows[0].id
+    return consumidorFinalId
+}
 
 // 1. Ver todas las ventas
 router.get('/', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
@@ -583,6 +599,8 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         const subtotal = itemsNorm.reduce((s, it) => s + (parseInt(it.precio_unitario) * parseInt(it.cantidad)), 0)
         const totalPrecio = subtotal + (parseInt(costo_delivery) || 0)
 
+        const clienteIdFinal = cliente_id || await getOCrearConsumidorFinal()
+
         await client.query('BEGIN')
 
         // Validar stock de todos los items antes de insertar
@@ -645,7 +663,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery, numero_factura)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             RETURNING *`,
-            [cliente_id || null, ventaPresentacionId, ventaCantidad, totalPrecio, canalFinal, estadoVenta,
+            [clienteIdFinal, ventaPresentacionId, ventaCantidad, totalPrecio, canalFinal, estadoVenta,
             metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
             razon_social || null, agente_id || null,
             tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, ventaTipoIva,
@@ -697,8 +715,8 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         idempotenciaCache.set(fingerprint, { venta: venta.rows[0], ts: Date.now() })
         setTimeout(() => idempotenciaCache.delete(fingerprint), 70000)
 
-        if (cliente_id) {
-            recalcularStats(cliente_id).catch(() => {})
+        if (clienteIdFinal) {
+            recalcularStats(clienteIdFinal).catch(() => {})
         }
 
         const descripcion = itemsNorm.length === 1
