@@ -1,7 +1,9 @@
 const db = require('../db/index')
 
+const DIAS_EN = { Sunday: 'Domingo', Monday: 'Lunes', Tuesday: 'Martes', Wednesday: 'Miércoles', Thursday: 'Jueves', Friday: 'Viernes', Saturday: 'Sábado' }
+
 function getAhoraEnPY() {
-    const partes = new Intl.DateTimeFormat('es-PY', {
+    const partes = new Intl.DateTimeFormat('en-US', {
         timeZone: 'America/Asuncion',
         weekday: 'long',
         hour: '2-digit',
@@ -9,11 +11,10 @@ function getAhoraEnPY() {
         hour12: false
     }).formatToParts(new Date())
     const get = tipo => partes.find(p => p.type === tipo)?.value ?? ''
-    const dia = get('weekday')
-    const diaCap = dia.charAt(0).toUpperCase() + dia.slice(1)
+    const dia = DIAS_EN[get('weekday')] || get('weekday')
     const horas = parseInt(get('hour'))
     const minutos = parseInt(get('minute'))
-    return { dia: diaCap, minutos: horas * 60 + minutos }
+    return { dia, minutos: horas * 60 + minutos }
 }
 
 async function estaAbierto() {
