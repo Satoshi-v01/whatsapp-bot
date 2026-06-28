@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import * as XLSX from 'xlsx'
 import {
     getProductos, getCategorias, getMarcas, crearMarca,
@@ -799,8 +799,8 @@ function colorVencimiento(diasParaVencer) {
                                                 const stockTotal = producto.presentaciones.reduce((sum, pr) => sum + pr.stock, 0)
                                                 const alertas = producto.presentaciones.filter(pr => pr.stock <= 3).length
                                                 return (
-                                                    <>
-                                                        <tr key={producto.id}
+                                                    <Fragment key={producto.id}>
+                                                        <tr
                                                             style={{ borderBottom: `1px solid ${expandido ? 'transparent' : s.borderLight}`, transition: 'background 0.1s', cursor: 'pointer' }}
                                                             onClick={() => setProductoExpandido(expandido ? null : producto.id)}
                                                             onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
@@ -974,7 +974,7 @@ function colorVencimiento(diasParaVencer) {
                                                                 </td>
                                                             </tr>
                                                         )}
-                                                    </>
+                                                    </Fragment>
                                                 )
                                             })}
                                         </tbody>
