@@ -540,7 +540,7 @@ function Caja() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '12px', color: '#9d9b96' }}>
-                        {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                        {new Date().toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                     </span>
                     <button onClick={() => navigate('/dashboard/ventas')}
                         style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid #e3e1db', background: 'transparent', color: '#6d6b65', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>

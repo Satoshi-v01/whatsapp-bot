@@ -1,6 +1,9 @@
+const TZ = 'America/Asuncion'
+
 export function formatearFecha(fecha, opciones = {}) {
     if (!fecha) return '—'
     return new Date(fecha).toLocaleString('es-PY', {
+        timeZone: TZ,
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -13,6 +16,7 @@ export function formatearFecha(fecha, opciones = {}) {
 export function formatearSoloFecha(fecha) {
     if (!fecha) return '—'
     return new Date(fecha).toLocaleDateString('es-PY', {
+        timeZone: TZ,
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -22,6 +26,7 @@ export function formatearSoloFecha(fecha) {
 export function formatearSoloHora(fecha) {
     if (!fecha) return '—'
     return new Date(fecha).toLocaleTimeString('es-PY', {
+        timeZone: TZ,
         hour: '2-digit',
         minute: '2-digit'
     })
@@ -30,6 +35,7 @@ export function formatearSoloHora(fecha) {
 export function formatearHora(fecha) {
     if (!fecha) return '—'
     return new Date(fecha).toLocaleTimeString('es-PY', {
+        timeZone: TZ,
         hour: '2-digit',
         minute: '2-digit'
     })

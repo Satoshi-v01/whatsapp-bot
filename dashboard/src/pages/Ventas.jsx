@@ -78,7 +78,7 @@ function Ventas() {
 
                 return {
                     'N°': idx + 1,
-                    'Fecha': new Date(v.fecha).toLocaleDateString('es-PY'),
+                    'Fecha': new Date(v.fecha).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' }),
                     'Tipo Documento': 'Factura',
                     'N° Factura': nroFactura,
                     'Cliente': cliente,
@@ -574,7 +574,7 @@ function Ventas() {
                             <div>
                                 <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Vencimiento</p>
                                 <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: new Date(ventaDetalle.fecha_vencimiento_credito) < new Date() ? 'rgb(220,38,38)' : 'rgb(161,98,7)' }}>
-                                    {new Date(ventaDetalle.fecha_vencimiento_credito).toLocaleDateString('es-PY')}
+                                    {new Date(ventaDetalle.fecha_vencimiento_credito).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })}
                                 </p>
                             </div>
                         )}

@@ -93,7 +93,7 @@ function Home() {
             <div className="home-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
                     <p style={{ fontSize: '12px', color: s.textFaint, marginBottom: '6px', textTransform: 'capitalize' }}>
-                        {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                        {new Date().toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                     </p>
                     <h2 style={{ fontSize: '26px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>
                         Bienvenido{usuario.nombre ? `, ${usuario.nombre.split(' ')[0]}` : ''}

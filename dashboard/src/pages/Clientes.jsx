@@ -610,7 +610,7 @@ function Clientes() {
                                                                                     <span style={{ fontSize: '12px', fontWeight: '800', color: '#f59e0b' }}>{formatearGs(v.saldo)}</span>
                                                                                 </td>
                                                                                 <td style={{ padding: '10px 14px', fontSize: '11px', color: vencido ? '#ef4444' : s.textMuted }}>
-                                                                                    {v.fecha_vencimiento_credito ? new Date(v.fecha_vencimiento_credito).toLocaleDateString('es-PY') : '—'}
+                                                                                    {v.fecha_vencimiento_credito ? new Date(v.fecha_vencimiento_credito).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' }) : '—'}
                                                                                     {vencido && <span style={{ marginLeft: '4px' }}>⚠️</span>}
                                                                                 </td>
                                                                                 <td style={{ padding: '10px 14px' }}>
