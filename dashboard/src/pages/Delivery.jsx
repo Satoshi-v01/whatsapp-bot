@@ -395,112 +395,222 @@ function Delivery() {
                     </div>
                 </div>
 
-                {/* Detalle central */}
-                <div className={`split-detail${detalle ? ' has-detail' : ''}`} style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
-                    {!detalle ? (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
+                {/* Area vacia cuando no hay detalle */}
+                <div style={{ flex: 1, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {!detalle && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: s.textMuted }}>
                             <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
-                            <p style={{ fontSize: '14px', fontWeight: '500' }}>Seleccioná un delivery para ver los detalles</p>
-                        </div>
-                    ) : (
-                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-
-                            {/* Header */}
-                            <div style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <div>
-                                        <h3 style={{ fontSize: '17px', fontWeight: '800', color: s.text }}>{detalle.cliente_nombre || detalle.cliente_numero || 'Sin nombre'}</h3>
-                                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '3px' }}>{detalle.marca_nombre && `${detalle.marca_nombre} — `}{detalle.producto_nombre} — {detalle.presentacion_nombre}</p>
-                                        <p style={{ fontSize: '16px', fontWeight: '800', color: s.text, marginTop: '6px' }}>Gs. {parseInt(detalle.precio).toLocaleString()}</p>
-                                    </div>
-                                    {(() => {
-                                        const cfg = estadoConfig[detalle.estado] || {}
-                                        return (
-                                            <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                                {iconoEstado(cfg.icono)} {cfg.label}
-                                            </span>
-                                        )
-                                    })()}
-                                </div>
-                            </div>
-
-                            {/* Datos de entrega */}
-                            <div style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>Datos de entrega</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                    {[
-                                        { label: 'Cliente', val: detalle.cliente_nombre },
-                                        { label: 'Teléfono', val: detalle.cliente_telefono || detalle.cliente_numero },
-                                        { label: 'Ubicación', val: detalle.ubicacion },
-                                        { label: 'Referencia', val: detalle.referencia },
-                                        { label: 'Horario preferido', val: detalle.horario },
-                                        { label: 'Contacto', val: detalle.contacto_entrega },
-                                        { label: 'Fecha del pedido', val: formatearFecha(detalle.created_at) },
-                                    ].filter(item => item.val).map((item, i) => (
-                                        <div key={i} style={{ padding: '9px 12px', background: s.surfaceLow, borderRadius: '8px' }}>
-                                            <p style={{ fontSize: '9px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{item.label}</p>
-                                            <p style={{ fontSize: '12px', color: s.text, fontWeight: '500' }}>{item.val}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                {(detalle.maps_url || detalle.ubicacion?.includes('maps.google.com') || detalle.ubicacion?.startsWith('http')) && (
-                                    <a
-                                        href={detalle.maps_url || detalle.ubicacion}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginTop: '14px', padding: '10px 16px', borderRadius: '8px', background: '#16a34a', color: 'white', fontSize: '13px', fontWeight: '700', textDecoration: 'none', width: '100%', justifyContent: 'center' }}
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                        Abrir en Google Maps
-                                    </a>
-                                )}
-                            </div>
-
-                            {/* Asignar repartidor */}
-                            {repartidores.length > 0 && (
-                                <div style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                    <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Repartidor asignado</p>
-                                    <select
-                                        value={detalle.repartidor_id || ''}
-                                        onChange={e => handleAsignarRepartidor(detalle.id, e.target.value ? parseInt(e.target.value) : null)}
-                                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
-                                        <option value="">Sin asignar</option>
-                                        {repartidores.map(r => (
-                                            <option key={r.id} value={r.id}>{r.nombre}</option>
-                                        ))}
-                                    </select>
-                                    {detalle.repartidor_id && detalle.asignado_at && (
-                                        <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '6px' }}>
-                                            Asignado: {new Date(detalle.asignado_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Cambiar estado */}
-                            <div style={{ background: s.surface, borderRadius: '12px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Cambiar estado</p>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                    {Object.entries(estadoConfig).map(([estado, cfg]) => {
-                                        const activo = detalle.estado === estado
-                                        return (
-                                            <button key={estado} onClick={() => cambiarEstado(detalle.id, estado)} disabled={activo || !puedo('delivery', 'editar')}
-                                                style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${activo ? cfg.color : s.border}`, fontSize: '12px', fontWeight: activo ? '700' : '500', cursor: activo ? 'not-allowed' : 'pointer', background: activo ? cfg.color : s.surfaceLow, color: activo ? 'white' : s.text, transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                                                onMouseEnter={e => { if (!activo) e.currentTarget.style.borderColor = cfg.color }}
-                                                onMouseLeave={e => { if (!activo) e.currentTarget.style.borderColor = s.border }}>
-                                                {iconoEstado(cfg.icono)} {cfg.label}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
+                            <p style={{ fontSize: '14px', fontWeight: '500' }}>Selecciona un delivery para ver los detalles</p>
                         </div>
                     )}
                 </div>
-
-                {/* Panel lateral derecho */}
-                {detalle && <PanelLateral d={detalle} />}
             </div>
+
+            {/* Modal detalle centrado */}
+            {detalle && (() => {
+                const cfg = estadoConfig[detalle.estado] || {}
+                const pagado = detalle.estado_venta === 'pagado'
+                const historial = Array.isArray(detalle.historial_notas) ? detalle.historial_notas : []
+                const timeline = [
+                    { label: 'Pedido creado', ts: detalle.created_at, siempre: true },
+                    { label: 'Confirmado', ts: detalle.confirmado_at },
+                    { label: 'En camino', ts: detalle.en_camino_at },
+                    { label: 'Entregado', ts: detalle.entregado_at },
+                    { label: 'Cancelado', ts: detalle.cancelado_at },
+                ].filter(t => t.siempre || t.ts)
+
+                return (
+                    <div onClick={() => setDetalle(null)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
+                        <div onClick={e => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '780px', maxHeight: '90vh', background: s.bg, borderRadius: '16px', boxShadow: '0 24px 60px -12px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+                            {/* Header modal */}
+                            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${s.border}`, background: s.surface, borderRadius: '16px 16px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+                                <div>
+                                    <h3 style={{ fontSize: '17px', fontWeight: '800', color: s.text }}>{detalle.cliente_nombre || detalle.cliente_numero || 'Sin nombre'}</h3>
+                                    <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '3px' }}>{detalle.marca_nombre && `${detalle.marca_nombre} — `}{detalle.producto_nombre} — {detalle.presentacion_nombre}</p>
+                                    <p style={{ fontSize: '16px', fontWeight: '800', color: s.text, marginTop: '5px' }}>Gs. {parseInt(detalle.precio).toLocaleString()}</p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                                    <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: cfg.textColor, background: darkMode ? `${cfg.color}30` : cfg.bg, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                        {iconoEstado(cfg.icono)} {cfg.label}
+                                    </span>
+                                    <button onClick={() => setDetalle(null)}
+                                        style={{ width: '30px', height: '30px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Cuerpo 2 columnas */}
+                            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+                                {/* Columna izquierda */}
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+                                    {/* Datos de entrega */}
+                                    <div style={{ background: s.surface, borderRadius: '10px', padding: '16px', border: `1px solid ${s.border}` }}>
+                                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Datos de entrega</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                            {[
+                                                { label: 'Cliente', val: detalle.cliente_nombre },
+                                                { label: 'Telefono', val: detalle.cliente_telefono || detalle.cliente_numero },
+                                                { label: 'Ubicacion', val: detalle.ubicacion },
+                                                { label: 'Referencia', val: detalle.referencia },
+                                                { label: 'Horario preferido', val: detalle.horario },
+                                                { label: 'Contacto', val: detalle.contacto_entrega },
+                                                { label: 'Fecha del pedido', val: formatearFecha(detalle.created_at) },
+                                            ].filter(item => item.val).map((item, i) => (
+                                                <div key={i} style={{ padding: '8px 10px', background: s.surfaceLow, borderRadius: '7px' }}>
+                                                    <p style={{ fontSize: '9px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{item.label}</p>
+                                                    <p style={{ fontSize: '12px', color: s.text, fontWeight: '500' }}>{item.val}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {(detalle.maps_url || detalle.ubicacion?.includes('maps.google.com') || detalle.ubicacion?.startsWith('http')) && (
+                                            <a href={detalle.maps_url || detalle.ubicacion} target="_blank" rel="noreferrer"
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginTop: '12px', padding: '9px 16px', borderRadius: '8px', background: '#16a34a', color: 'white', fontSize: '12px', fontWeight: '700', textDecoration: 'none', width: '100%', justifyContent: 'center', boxSizing: 'border-box' }}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                                Abrir en Google Maps
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    {/* Repartidor */}
+                                    {repartidores.length > 0 && (
+                                        <div style={{ background: s.surface, borderRadius: '10px', padding: '16px', border: `1px solid ${s.border}` }}>
+                                            <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Repartidor asignado</p>
+                                            <select value={detalle.repartidor_id || ''} onChange={e => handleAsignarRepartidor(detalle.id, e.target.value ? parseInt(e.target.value) : null)}
+                                                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
+                                                <option value="">Sin asignar</option>
+                                                {repartidores.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                                            </select>
+                                            {detalle.repartidor_id && detalle.asignado_at && (
+                                                <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '6px' }}>
+                                                    Asignado: {new Date(detalle.asignado_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Cambiar estado */}
+                                    <div style={{ background: s.surface, borderRadius: '10px', padding: '16px', border: `1px solid ${s.border}` }}>
+                                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Cambiar estado</p>
+                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                            {Object.entries(estadoConfig).map(([estado, ec]) => {
+                                                const activo = detalle.estado === estado
+                                                return (
+                                                    <button key={estado} onClick={() => cambiarEstado(detalle.id, estado)} disabled={activo || !puedo('delivery', 'editar')}
+                                                        style={{ padding: '7px 12px', borderRadius: '8px', border: `1px solid ${activo ? ec.color : s.border}`, fontSize: '12px', fontWeight: activo ? '700' : '500', cursor: activo ? 'not-allowed' : 'pointer', background: activo ? ec.color : s.surfaceLow, color: activo ? 'white' : s.text, transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                                                        onMouseEnter={e => { if (!activo) e.currentTarget.style.borderColor = ec.color }}
+                                                        onMouseLeave={e => { if (!activo) e.currentTarget.style.borderColor = s.border }}>
+                                                        {iconoEstado(ec.icono)} {ec.label}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Columna derecha */}
+                                <div style={{ width: '260px', flexShrink: 0, borderLeft: `1px solid ${s.border}`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+
+                                    {/* Estado de pago */}
+                                    <div style={{ padding: '16px', borderBottom: `1px solid ${s.borderLight}` }}>
+                                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Estado de pago</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '10px', background: pagado ? (darkMode ? 'rgba(16,185,129,0.1)' : '#f0fdf4') : (darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb'), border: `1px solid ${pagado ? '#86efac' : '#fde68a'}` }}>
+                                            <span style={{ color: pagado ? '#10b981' : '#f59e0b', display: 'flex' }}>
+                                                {pagado
+                                                    ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                    : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                }
+                                            </span>
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: '800', color: pagado ? '#10b981' : '#f59e0b' }}>{pagado ? 'Pagado' : 'Pendiente de pago'}</p>
+                                                <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '1px' }}>{detalle.metodo_pago || '—'}</p>
+                                            </div>
+                                        </div>
+                                        {!pagado && detalle.metodo_pago === 'transferencia' && (
+                                            <button onClick={() => confirmarPago(detalle.venta_id)}
+                                                style={{ marginTop: '8px', width: '100%', padding: '9px 14px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#059669'}
+                                                onMouseLeave={e => e.currentTarget.style.background = '#10b981'}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                Pago confirmado
+                                            </button>
+                                        )}
+                                        {detalle.quiere_factura && (
+                                            <div style={{ marginTop: '8px', padding: '7px 10px', borderRadius: '7px', background: s.surfaceLow, fontSize: '11px', color: s.textMuted }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Factura a:</span> <strong style={{ color: s.text }}>{detalle.razon_social || 'Sin razon social'}</strong>
+                                                {detalle.ruc_factura && <span> · RUC: {detalle.ruc_factura}</span>}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Timeline */}
+                                    <div style={{ padding: '16px', borderBottom: `1px solid ${s.borderLight}` }}>
+                                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Timeline</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            {timeline.map((t, i) => (
+                                                <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                                                        <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: t.ts ? cfg.color : s.border, marginTop: '3px' }} />
+                                                        {i < timeline.length - 1 && <div style={{ width: '2px', height: '18px', background: s.borderLight }} />}
+                                                    </div>
+                                                    <div style={{ paddingBottom: i < timeline.length - 1 ? '6px' : 0 }}>
+                                                        <p style={{ fontSize: '12px', fontWeight: '600', color: t.ts ? s.text : s.textFaint }}>{t.label}</p>
+                                                        {t.ts && <p style={{ fontSize: '10px', color: s.textFaint }}>{formatearFecha(t.ts)}</p>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Historial de notas */}
+                                    {historial.length > 0 && (
+                                        <div style={{ padding: '16px', borderBottom: `1px solid ${s.borderLight}` }}>
+                                            <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Notas y demoras</p>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                {historial.map((n, i) => (
+                                                    <div key={i} style={{ padding: '7px 9px', background: s.surfaceLow, borderRadius: '7px', fontSize: '11px' }}>
+                                                        <p style={{ color: s.text, fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ flexShrink: 0, color: s.textFaint }}>{iconoNota(n.tipo)}</span>{n.texto}</p>
+                                                        <p style={{ color: s.textFaint, marginTop: '2px' }}>{formatearFecha(n.timestamp)}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Agregar nota */}
+                                    <div style={{ padding: '16px' }}>
+                                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Agregar nota</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+                                            {demoras.map(dem => (
+                                                <button key={dem.tipo} onClick={() => handleAgregarNota(dem.tipo)}
+                                                    style={{ padding: '6px 10px', borderRadius: '7px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '11px', fontWeight: '600', textAlign: 'left', transition: 'all 0.15s' }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = s.surfaceLow; e.currentTarget.style.color = s.text }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = s.textMuted }}>
+                                                    {dem.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <input value={notaTexto} onChange={e => setNotaTexto(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAgregarNota('nota') }}
+                                                placeholder="Nota personalizada..."
+                                                style={{ flex: 1, padding: '7px 10px', borderRadius: '7px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, fontSize: '12px', outline: 'none' }} />
+                                            <button onClick={() => handleAgregarNota('nota')} disabled={enviandoNota || !notaTexto.trim()}
+                                                style={{ padding: '7px 12px', borderRadius: '7px', border: 'none', background: notaTexto.trim() ? '#1a1a2e' : s.surfaceLow, color: notaTexto.trim() ? 'white' : s.textFaint, cursor: notaTexto.trim() ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '700' }}>
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* Modal nuevo delivery */}
             {modalNuevo && (
