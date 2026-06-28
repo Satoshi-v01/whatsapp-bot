@@ -408,11 +408,6 @@ function Ventas() {
                                                     <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colMetodo.bg, color: colMetodo.color, textTransform: 'uppercase' }}>
                                                         {venta.metodo_pago || '—'}
                                                     </span>
-                                                </td>
-                                                <td style={{ padding: '16px', textAlign: 'center' }}>
-                                                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colMetodo.bg, color: colMetodo.color, textTransform: 'uppercase' }}>
-                                                        {venta.metodo_pago || '—'}
-                                                    </span>
                                                     {venta.tipo_venta === 'credito' && (
                                                         <span style={{ display: 'block', marginTop: '4px', padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: '#fef3c7', color: '#92400e' }}>
                                                             Crédito
