@@ -356,12 +356,12 @@ router.get('/rentabilidad', async (req, res) => {
                 COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia,
                 CASE
                     WHEN SUM(v.precio) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(v.precio) * 100)::numeric, 1)
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(v.precio))::numeric, 1)
                     ELSE 0
                 END as margen_pct,
                 CASE
                     WHEN SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) * 100)::numeric, 1)
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad))::numeric, 1)
                     ELSE 0
                 END as markup_pct
              FROM ventas v
@@ -384,12 +384,12 @@ router.get('/rentabilidad', async (req, res) => {
                 COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_total,
                 CASE
                     WHEN SUM(v.precio) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(v.precio) * 100)::numeric, 1)
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(v.precio))::numeric, 1)
                     ELSE 0
                 END as margen_promedio_pct,
                 CASE
                     WHEN SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) * 100)::numeric, 1)
+                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad))::numeric, 1)
                     ELSE 0
                 END as markup_promedio_pct
              FROM ventas v
