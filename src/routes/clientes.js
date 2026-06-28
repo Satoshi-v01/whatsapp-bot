@@ -95,7 +95,7 @@ router.get('/:id', autenticar, verificarPermiso('clientes', 'ver'), async (req, 
             `SELECT COUNT(*) as total_compras, COALESCE(SUM(v.precio), 0) as monto_total,
                 COALESCE(AVG(v.precio), 0) as ticket_promedio,
                 MAX(v.created_at) as ultima_compra, MIN(v.created_at) as primera_compra
-             FROM ventas v WHERE v.cliente_id = $1`, [id]
+             FROM ventas v WHERE v.cliente_id = $1 AND v.estado != 'cancelado'`, [id]
         )
 
         const productoFavorito = await db.query(
@@ -104,7 +104,7 @@ router.get('/:id', autenticar, verificarPermiso('clientes', 'ver'), async (req, 
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              LEFT JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
-             WHERE v.cliente_id = $1
+             WHERE v.cliente_id = $1 AND v.estado != 'cancelado'
              GROUP BY p.nombre, m.nombre ORDER BY cantidad DESC LIMIT 1`, [id]
         )
 
