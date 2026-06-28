@@ -181,6 +181,7 @@ router.get('/buscar/autocomplete', autenticar, verificarPermiso('clientes', 'ver
                  ORDER BY d.created_at DESC LIMIT 1
              ) d ON true
              WHERE c.activo = true
+             AND c.tipo != 'consumidor_final'
              AND (LOWER(c.nombre) ILIKE $1 OR c.ruc ILIKE $1 OR c.telefono ILIKE $1)
              ORDER BY c.nombre ASC LIMIT 10`,
             [`%${q.toLowerCase()}%`]
