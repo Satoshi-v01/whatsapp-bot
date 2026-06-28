@@ -10,7 +10,9 @@ async function guardarMensaje(numero, texto, origen) {
 
 async function obtenerMensajes(numero) {
     const resultado = await db.query(
-        `SELECT * FROM mensajes 
+        `SELECT id, cliente_numero, texto, origen,
+                created_at AT TIME ZONE 'UTC' AS created_at
+         FROM mensajes
          WHERE cliente_numero = $1
          ORDER BY created_at ASC`,
         [numero]
