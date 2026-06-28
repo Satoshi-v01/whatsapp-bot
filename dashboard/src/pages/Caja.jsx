@@ -759,15 +759,13 @@ function Caja() {
                                                                 const stockTotal = p.presentaciones?.reduce((s, pr) => s + (pr.stock || 0), 0) || 0
                                                                 const sinStock = stockTotal === 0
                                                                 return (
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                                                        <div>
-                                                                            <p style={{ fontSize: '13px', fontWeight: '600', color: sinStock ? '#9d9b96' : '#1a1a22' }}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
-                                                                            <p style={{ fontSize: '11px', color: '#9d9b96', marginTop: '2px' }}>{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
-                                                                        </div>
-                                                                        <span style={{ fontSize: '11px', fontWeight: '700', flexShrink: 0, color: sinStock ? '#d04545' : stockTotal <= 5 ? '#f59e0b' : '#0f9d6b', background: sinStock ? '#fff0f0' : stockTotal <= 5 ? '#fffbeb' : '#f0fdf9', padding: '2px 8px', borderRadius: '6px', border: `1px solid ${sinStock ? '#fca5a5' : stockTotal <= 5 ? '#fde68a' : '#86efac'}` }}>
+                                                                    <>
+                                                                        <p style={{ fontSize: '13px', fontWeight: '600', color: sinStock ? '#9d9b96' : '#1a1a22' }}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
+                                                                        <p style={{ fontSize: '11px', color: '#9d9b96', marginTop: '2px' }}>{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
+                                                                        <span style={{ display: 'inline-block', marginTop: '4px', fontSize: '11px', fontWeight: '700', color: sinStock ? '#d04545' : stockTotal <= 5 ? '#f59e0b' : '#0f9d6b', background: sinStock ? '#fff0f0' : stockTotal <= 5 ? '#fffbeb' : '#f0fdf9', padding: '1px 7px', borderRadius: '5px', border: `1px solid ${sinStock ? '#fca5a5' : stockTotal <= 5 ? '#fde68a' : '#86efac'}` }}>
                                                                             {sinStock ? 'Sin stock' : `Stock: ${stockTotal}`}
                                                                         </span>
-                                                                    </div>
+                                                                    </>
                                                                 )
                                                             })()}
                                                         </div>
