@@ -214,7 +214,7 @@ function Reportes() {
                 return
             }
             const filas = datos.map(v => ({
-                'Fecha': new Date(v.fecha).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                'Fecha': new Date(v.fecha).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', day: '2-digit', month: '2-digit', year: 'numeric' }),
                 'Cliente': v.cliente || 'Cliente', 'RUC': v.ruc || '', 'Teléfono': v.telefono || '',
                 'Marca': v.marca || '', 'Producto': v.producto || '', 'Presentación': v.presentacion || '',
                 'Cantidad': v.cantidad, 'Monto (Gs.)': parseInt(v.monto), 'IVA 10% (Gs.)': parseInt(v.iva),

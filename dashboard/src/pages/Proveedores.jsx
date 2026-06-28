@@ -111,7 +111,7 @@ function Proveedores() {
 
                 return {
                     'N°': idx + 1,
-                    'Fecha': new Date(f.fecha).toLocaleDateString('es-PY'),
+                    'Fecha': new Date(f.fecha).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' }),
                     'Tipo Documento': 'Factura',
                     'N° Factura': f.numero_factura || '—',
                     'Timbrado': f.timbrado_proveedor || '—',
