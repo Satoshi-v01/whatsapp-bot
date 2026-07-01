@@ -30,6 +30,7 @@ function Proveedores() {
     const [modalProveedor, setModalProveedor] = useState(null) // null | 'nuevo' | proveedor
     const [modalFactura, setModalFactura] = useState(null) // null | proveedorId
     const [modalPago, setModalPago] = useState(null) // null | factura
+    const [sumaIva, setSumaIva] = useState(true)
     const [filtroEstado, setFiltroEstado] = useState('')
     const [filtroTipo, setFiltroTipo] = useState('')
     const [filtroPeriodo, setFiltroPeriodo] = useState('mes')
@@ -170,6 +171,7 @@ function Proveedores() {
         try {
             await crearFactura(modalFactura, formFactura)
             setModalFactura(null)
+            setSumaIva(true)
             setFormFactura({ numero_factura: '', timbrado_proveedor: '', fecha_emision: fechaHoyPY(), tipo: 'contado', plazo_dias: '', monto_total: '', iva_10: '', iva_5: '', exentas: '', metodo_pago: 'efectivo', notas: '' })
             await cargarDatos()
             if (pestana === 'facturas') await cargarFacturas()
@@ -330,7 +332,7 @@ function Proveedores() {
                                                 style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #fca5a5', background: darkMode ? '#450a0a' : '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                                                 Eliminar
                                             </button>
-                                            <button onClick={() => { setModalFactura(p.id) }}
+                                            <button onClick={() => { setModalFactura(p.id); setSumaIva(true) }}
                                                 style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                                                 + Factura
                                             </button>
@@ -696,78 +698,116 @@ function Proveedores() {
                             )}
 
                             {/* Montos */}
-                            <div style={{ gridColumn: '1 / -1', borderTop: `1px solid ${s.border}`, paddingTop: '12px', marginTop: '4px' }}>
-                                <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Montos</p>
+                            <div style={{ gridColumn: '1 / -1', borderTop: `1px solid ${s.border}`, paddingTop: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Montos</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Suma IVA</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const nuevo = !sumaIva
+                                            setSumaIva(nuevo)
+                                            if (!nuevo) {
+                                                setFormFactura(prev => {
+                                                    const total = prev.monto_total || ''
+                                                    return { ...prev, gravada_10: '', iva_10: '', gravada_5: '', iva_5: '', exentas: total }
+                                                })
+                                            } else {
+                                                setFormFactura(prev => ({ ...prev, exentas: '', monto_total: '' }))
+                                            }
+                                        }}
+                                        style={{ width: '40px', height: '22px', borderRadius: '11px', border: 'none', cursor: 'pointer', background: sumaIva ? '#10b981' : s.border, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                                    >
+                                        <span style={{ position: 'absolute', top: '3px', left: sumaIva ? '21px' : '3px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Gravada 10% */}
-                            <div>
-                                <label style={labelStyle}>Gravada 10%</label>
-                                <input
-                                    value={formFactura.gravada_10 ? parseInt(formFactura.gravada_10).toLocaleString('es-PY') : ''}
-                                    onChange={e => {
-                                        const grav10 = parsearMiles(e.target.value)
-                                        const iva10 = grav10 ? String(Math.floor(parseInt(grav10) / 11)) : ''
-                                        setFormFactura(prev => {
-                                            const next = { ...prev, gravada_10: grav10, iva_10: iva10 }
-                                            return { ...next, monto_total: calcularTotal(next) }
-                                        })
-                                    }}
-                                    placeholder="Gs. 0"
-                                    style={inputStyle}
-                                />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>IVA 10% (auto)</label>
-                                <input
-                                    value={formFactura.iva_10 ? parseInt(formFactura.iva_10).toLocaleString('es-PY') : ''}
-                                    readOnly
-                                    style={{ ...inputStyle, background: s.surfaceLow, color: s.textMuted, cursor: 'not-allowed' }}
-                                />
-                            </div>
+                            {sumaIva ? (
+                                <>
+                                {/* Gravada 10% */}
+                                <div>
+                                    <label style={labelStyle}>Gravada 10%</label>
+                                    <input
+                                        value={formFactura.gravada_10 ? parseInt(formFactura.gravada_10).toLocaleString('es-PY') : ''}
+                                        onChange={e => {
+                                            const grav10 = parsearMiles(e.target.value)
+                                            const iva10 = grav10 ? String(Math.floor(parseInt(grav10) / 11)) : ''
+                                            setFormFactura(prev => {
+                                                const next = { ...prev, gravada_10: grav10, iva_10: iva10 }
+                                                return { ...next, monto_total: calcularTotal(next) }
+                                            })
+                                        }}
+                                        placeholder="Gs. 0"
+                                        style={inputStyle}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>IVA 10% (auto)</label>
+                                    <input
+                                        value={formFactura.iva_10 ? parseInt(formFactura.iva_10).toLocaleString('es-PY') : ''}
+                                        readOnly
+                                        style={{ ...inputStyle, background: s.surfaceLow, color: s.textMuted, cursor: 'not-allowed' }}
+                                    />
+                                </div>
 
-                            {/* Gravada 5% */}
-                            <div>
-                                <label style={labelStyle}>Gravada 5%</label>
-                                <input
-                                    value={formFactura.gravada_5 ? parseInt(formFactura.gravada_5).toLocaleString('es-PY') : ''}
-                                    onChange={e => {
-                                        const grav5 = parsearMiles(e.target.value)
-                                        const iva5 = grav5 ? String(Math.floor(parseInt(grav5) / 21)) : ''
-                                        setFormFactura(prev => {
-                                            const next = { ...prev, gravada_5: grav5, iva_5: iva5 }
-                                            return { ...next, monto_total: calcularTotal(next) }
-                                        })
-                                    }}
-                                    placeholder="Gs. 0"
-                                    style={inputStyle}
-                                />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>IVA 5% (auto)</label>
-                                <input
-                                    value={formFactura.iva_5 ? parseInt(formFactura.iva_5).toLocaleString('es-PY') : ''}
-                                    readOnly
-                                    style={{ ...inputStyle, background: s.surfaceLow, color: s.textMuted, cursor: 'not-allowed' }}
-                                />
-                            </div>
+                                {/* Gravada 5% */}
+                                <div>
+                                    <label style={labelStyle}>Gravada 5%</label>
+                                    <input
+                                        value={formFactura.gravada_5 ? parseInt(formFactura.gravada_5).toLocaleString('es-PY') : ''}
+                                        onChange={e => {
+                                            const grav5 = parsearMiles(e.target.value)
+                                            const iva5 = grav5 ? String(Math.floor(parseInt(grav5) / 21)) : ''
+                                            setFormFactura(prev => {
+                                                const next = { ...prev, gravada_5: grav5, iva_5: iva5 }
+                                                return { ...next, monto_total: calcularTotal(next) }
+                                            })
+                                        }}
+                                        placeholder="Gs. 0"
+                                        style={inputStyle}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>IVA 5% (auto)</label>
+                                    <input
+                                        value={formFactura.iva_5 ? parseInt(formFactura.iva_5).toLocaleString('es-PY') : ''}
+                                        readOnly
+                                        style={{ ...inputStyle, background: s.surfaceLow, color: s.textMuted, cursor: 'not-allowed' }}
+                                    />
+                                </div>
 
-                            {/* Exentas */}
-                            <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={labelStyle}>Exentas</label>
-                                <input
-                                    value={formFactura.exentas ? parseInt(formFactura.exentas).toLocaleString('es-PY') : ''}
-                                    onChange={e => {
-                                        const exentas = parsearMiles(e.target.value)
-                                        setFormFactura(prev => {
-                                            const next = { ...prev, exentas }
-                                            return { ...next, monto_total: calcularTotal(next) }
-                                        })
-                                    }}
-                                    placeholder="Gs. 0"
-                                    style={inputStyle}
-                                />
-                            </div>
+                                {/* Exentas */}
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label style={labelStyle}>Exentas</label>
+                                    <input
+                                        value={formFactura.exentas ? parseInt(formFactura.exentas).toLocaleString('es-PY') : ''}
+                                        onChange={e => {
+                                            const exentas = parsearMiles(e.target.value)
+                                            setFormFactura(prev => {
+                                                const next = { ...prev, exentas }
+                                                return { ...next, monto_total: calcularTotal(next) }
+                                            })
+                                        }}
+                                        placeholder="Gs. 0"
+                                        style={inputStyle}
+                                    />
+                                </div>
+                                </>
+                            ) : (
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label style={labelStyle}>Monto total</label>
+                                    <input
+                                        value={formFactura.exentas ? parseInt(formFactura.exentas).toLocaleString('es-PY') : ''}
+                                        onChange={e => {
+                                            const monto = parsearMiles(e.target.value)
+                                            setFormFactura(prev => ({ ...prev, exentas: monto, gravada_10: '', iva_10: '', gravada_5: '', iva_5: '', monto_total: monto }))
+                                        }}
+                                        placeholder="Gs. 0"
+                                        style={inputStyle}
+                                    />
+                                </div>
+                            )}
 
                             {/* Total calculado */}
                             <div style={{ gridColumn: '1 / -1', padding: '12px 16px', background: s.surfaceLow, borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
