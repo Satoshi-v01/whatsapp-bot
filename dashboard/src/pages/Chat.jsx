@@ -6,6 +6,12 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha, formatearHora } from '../utils/fecha'
 
+function notificar(titulo, cuerpo, onClick) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    const n = new Notification(titulo, { body: cuerpo, icon: '/favicon.ico', tag: `${titulo}-${cuerpo}`, requireInteraction: true })
+    if (onClick) n.onclick = () => { window.focus(); onClick(); n.close() }
+}
+
 function Chat() {
     const [sesiones, setSesiones] = useState([])
     const [sesionActiva, setSesionActiva] = useState(null)
@@ -15,11 +21,19 @@ function Chat() {
     const [mensajes, setMensajes] = useState([])
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [buscar, setBuscar] = useState('')
+    const [sinLeer, setSinLeer] = useState(new Set())
     const inputRef = useRef(null)
     const mensajesRef = useRef(null)
+    const prevSesionesRef = useRef(null)
     const { darkMode } = useApp()
     const [searchParams] = useSearchParams()
     const numeroParam = searchParams.get('numero')
+
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission()
+        }
+    }, [])
 
     const s = {
         bg: darkMode ? '#0b141a' : '#f8fafc',
@@ -67,11 +81,50 @@ function Chat() {
     async function cargarSesiones() {
         try {
             const datos = await getSesiones()
-            setSesiones(datos)
-            setCargando(false)
+            setSesionesConNotificaciones(datos)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar las conversaciones.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally {
+            setCargando(false)
         }
+    }
+
+    function setSesionesConNotificaciones(datos) {
+        const prev = prevSesionesRef.current
+        if (prev !== null) {
+            const nuevosNumeros = []
+            for (const sesion of datos) {
+                const anterior = prev.get(sesion.cliente_numero)
+                if (!anterior) {
+                    nuevosNumeros.push(sesion.cliente_numero)
+                    notificar(
+                        'Nuevo chat WhatsApp',
+                        `${sesion.cliente_numero} inició una conversación`,
+                        () => {
+                            const live = prevSesionesRef.current?.get(sesion.cliente_numero) ?? sesion
+                            marcarLeido(sesion.cliente_numero, live)
+                        }
+                    )
+                } else if (anterior.modo !== 'esperando_agente' && sesion.modo === 'esperando_agente') {
+                    nuevosNumeros.push(sesion.cliente_numero)
+                }
+            }
+            if (nuevosNumeros.length > 0) {
+                setSinLeer(prev => new Set([...prev, ...nuevosNumeros]))
+            }
+        }
+        prevSesionesRef.current = new Map(datos.map(s => [s.cliente_numero, s]))
+        setSesiones(datos)
+        const numerosActivos = new Set(datos.map(s => s.cliente_numero))
+        setSinLeer(prev => {
+            const pruned = new Set([...prev].filter(n => numerosActivos.has(n)))
+            return pruned.size === prev.size ? prev : pruned
+        })
+    }
+
+    function marcarLeido(numero, sesion) {
+        setSinLeer(prev => { const n = new Set(prev); n.delete(numero); return n })
+        setSesionActiva(sesion)
     }
 
     async function cargarMensajes(numero, inicial = false) {
@@ -187,9 +240,16 @@ function Chat() {
 
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     <div style={{ padding: '12px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', paddingLeft: '8px' }}>
-                            Conversaciones activas ({sesionesFiltradas.length})
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingLeft: '8px', paddingRight: '4px' }}>
+                            <p style={{ fontSize: '10px', fontWeight: '800', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
+                                Conversaciones activas ({sesionesFiltradas.length})
+                            </p>
+                            {sinLeer.size > 0 && (
+                                <span style={{ fontSize: '11px', fontWeight: '800', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '999px', lineHeight: 1.4 }}>
+                                    {sinLeer.size} sin leer
+                                </span>
+                            )}
+                        </div>
 
                         {sesionesFiltradas.length === 0 ? (
                             <div style={{ padding: '32px 16px', textAlign: 'center', color: s.textMuted }}>
@@ -199,20 +259,26 @@ function Chat() {
                         ) : (
                             sesionesFiltradas.map(sesion => {
                                 const activa = sesionActiva?.cliente_numero === sesion.cliente_numero
+                                const esSinLeer = sinLeer.has(sesion.cliente_numero)
                                 const cfg = modoConfig[sesion.modo] || modoConfig.bot
                                 return (
-                                    <div key={sesion.cliente_numero} onClick={() => setSesionActiva(sesion)}
-                                        style={{ padding: '14px', borderRadius: '16px', marginBottom: '4px', cursor: 'pointer', background: activa ? s.rowActive : 'transparent', border: `1px solid ${activa ? s.rowBorder : 'transparent'}`, transition: 'all 0.15s' }}
+                                    <div key={sesion.cliente_numero} onClick={() => marcarLeido(sesion.cliente_numero, sesion)}
+                                        style={{ padding: '14px', borderRadius: '16px', marginBottom: '4px', cursor: 'pointer', background: activa ? s.rowActive : esSinLeer ? (darkMode ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)') : 'transparent', border: `1px solid ${activa ? s.rowBorder : esSinLeer ? 'rgba(239,68,68,0.25)' : 'transparent'}`, transition: 'all 0.15s' }}
                                         onMouseEnter={e => { if (!activa) e.currentTarget.style.background = s.surfaceLow }}
-                                        onMouseLeave={e => { if (!activa) e.currentTarget.style.background = 'transparent' }}
+                                        onMouseLeave={e => { if (!activa) e.currentTarget.style.background = esSinLeer ? (darkMode ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)') : 'transparent' }}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0, fontWeight: '700', color: s.textMuted }}>
-                                                    {sesion.cliente_numero.slice(-2)}
+                                                <div style={{ position: 'relative', flexShrink: 0 }}>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: s.textMuted }}>
+                                                        {sesion.cliente_numero.slice(-2)}
+                                                    </div>
+                                                    {esSinLeer && (
+                                                        <span style={{ position: 'absolute', top: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', border: `2px solid ${s.surface}` }} />
+                                                    )}
                                                 </div>
                                                 <div>
-                                                    <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{sesion.cliente_numero}</p>
+                                                    <p style={{ fontSize: '13px', fontWeight: esSinLeer ? '800' : '700', color: esSinLeer ? (darkMode ? '#fca5a5' : '#dc2626') : s.text }}>{sesion.cliente_numero}</p>
                                                     <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '1px' }}>Paso: {sesion.paso}</p>
                                                 </div>
                                             </div>

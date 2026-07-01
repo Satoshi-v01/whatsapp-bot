@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { getHistorial, actualizarEstadoVenta, anularVenta } from '../services/ventas'
+import { getHistorial, actualizarEstadoVenta, anularVenta, actualizarMetodoPago } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import * as XLSX from 'xlsx'
@@ -178,6 +178,22 @@ function Ventas() {
             setModalConfirmar({
                 titulo: 'Error',
                 mensaje: 'No se pudo actualizar el estado.',
+                textoBoton: 'Cerrar',
+                colorBoton: '#888',
+                onConfirmar: () => setModalConfirmar(null)
+            })
+        }
+    }
+
+    async function cambiarMetodoPago(id, nuevoMetodo) {
+        try {
+            await actualizarMetodoPago(id, nuevoMetodo)
+            await cargarHistorial()
+            setVentaDetalle(prev => prev?.id === id ? { ...prev, metodo_pago: nuevoMetodo } : prev)
+        } catch (err) {
+            setModalConfirmar({
+                titulo: 'Error',
+                mensaje: err.response?.data?.error || 'No se pudo cambiar el método de pago.',
                 textoBoton: 'Cerrar',
                 colorBoton: '#888',
                 onConfirmar: () => setModalConfirmar(null)
@@ -563,8 +579,21 @@ function Ventas() {
                     {/* Meta row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 22px', padding: '16px 22px 4px' }}>
                         <div>
-                            <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Método de pago</p>
-                            <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', textTransform: 'capitalize' }}>{ventaDetalle.metodo_pago || '—'}</p>
+                            <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Método de pago</p>
+                            {ventaDetalle.estado === 'cancelado' ? (
+                                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', textTransform: 'capitalize' }}>{ventaDetalle.metodo_pago || '—'}</p>
+                            ) : (
+                                <select
+                                    value={ventaDetalle.metodo_pago || ''}
+                                    onChange={e => cambiarMetodoPago(ventaDetalle.id, e.target.value)}
+                                    style={{ padding: '4px 8px', borderRadius: '7px', border: '1px solid rgb(226,232,240)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', background: '#fff', color: 'rgb(15,23,42)', fontFamily: 'inherit' }}
+                                >
+                                    <option value="">— Sin definir —</option>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="tarjeta">Tarjeta</option>
+                                    <option value="transferencia">Transferencia</option>
+                                </select>
+                            )}
                         </div>
                         <div>
                             <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Canal</p>
