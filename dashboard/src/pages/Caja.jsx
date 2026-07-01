@@ -64,6 +64,7 @@ function Caja() {
     const [subtipoPago, setSubtipoPago] = useState('')
     const [opOrigen, setOpOrigen] = useState(null)
     const [formDelivery, setFormDelivery] = useState({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
+    const [facturarDelivery, setFacturarDelivery] = useState(true)
 
     // Estados cierre de caja
     const [cierreDatos, setCierreDatos] = useState(null)
@@ -349,7 +350,7 @@ function Caja() {
 
     const lineasValidas = lineas.filter(l => l.presentacionSeleccionada)
     const subtotal = lineasValidas.reduce((sum, l) => sum + calcularPrecioCaja(l.presentacionSeleccionada).precio * l.cantidad, 0)
-    const costoDelivery = canal === 'delivery' ? (formDelivery.costo_delivery || 0) : 0
+    const costoDelivery = canal === 'delivery' && facturarDelivery ? (formDelivery.costo_delivery || 0) : 0
     const total = subtotal + costoDelivery
     const iva = Math.floor(total / 11)
 
@@ -368,6 +369,7 @@ function Caja() {
         setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial(''); setFacturaManual(false); setNumeroFacturaManual('')
         setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setOpOrigen(null)
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
+        setFacturarDelivery(true)
         setTipoVenta('contado')
         setPlazoDias(30)
         setMontoEfectivo('')
@@ -840,7 +842,19 @@ function Caja() {
                         {/* Datos de delivery */}
                         {canal === 'delivery' && (
                             <div style={{ background: '#fff', border: '1px solid #e3e1db', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>
-                                <p style={{ fontSize: '12px', fontWeight: '700', color: '#1a1a22', marginBottom: '10px' }}>Datos de entrega</p>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#1a1a22' }}>Datos de entrega</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                                        <span style={{ fontSize: '11px', color: '#6d6b65', fontWeight: '600' }}>Facturar delivery</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFacturarDelivery(prev => !prev)}
+                                            style={{ width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: facturarDelivery ? '#0f9d6b' : '#e3e1db', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}
+                                        >
+                                            <span style={{ position: 'absolute', top: '2px', left: facturarDelivery ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                        </button>
+                                    </div>
+                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                     <div style={{ gridColumn: '1 / -1' }}>
                                         <label style={fieldLabel}>Ubicacion / Direccion *</label>
