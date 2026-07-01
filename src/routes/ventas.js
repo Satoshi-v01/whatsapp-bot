@@ -468,6 +468,70 @@ router.patch('/:id/estado', autenticar, verificarPermiso('ventas', 'editar'), va
     }
 })
 
+// 6b. Actualizar método de pago (actualiza todas las líneas del mismo numero_factura)
+router.patch('/:id/metodo-pago', autenticar, verificarPermiso('ventas', 'editar'), validarId, async (req, res) => {
+    const client = await db.pool.connect()
+    try {
+        const { id } = req.params
+        const { metodo_pago } = req.body
+
+        const metodos = ['efectivo', 'tarjeta', 'transferencia']
+        if (!metodo_pago || !metodos.includes(metodo_pago)) {
+            return res.status(400).json({ error: 'Método de pago inválido' })
+        }
+
+        await client.query('BEGIN')
+
+        const ventaRef = await client.query(`SELECT numero_factura, estado FROM ventas WHERE id = $1 FOR UPDATE`, [parseInt(id)])
+        if (!ventaRef.rows.length) {
+            await client.query('ROLLBACK')
+            return res.status(404).json({ error: 'Venta no encontrada' })
+        }
+
+        const { numero_factura, estado } = ventaRef.rows[0]
+        if (estado === 'cancelado') {
+            await client.query('ROLLBACK')
+            return res.status(400).json({ error: 'No se puede modificar una venta anulada' })
+        }
+
+        const resultado = numero_factura
+            ? await client.query(
+                `UPDATE ventas SET metodo_pago = $1 WHERE numero_factura = $2 RETURNING *`,
+                [metodo_pago, numero_factura]
+              )
+            : await client.query(
+                `UPDATE ventas SET metodo_pago = $1 WHERE id = $2 RETURNING *`,
+                [metodo_pago, parseInt(id)]
+              )
+
+        if (!resultado.rows.length) {
+            await client.query('ROLLBACK')
+            return res.status(404).json({ error: 'Venta no encontrada' })
+        }
+
+        await client.query('COMMIT')
+
+        registrarLog({
+            usuario_id: req.usuario?.id || null,
+            usuario_nombre: req.usuario?.nombre || 'Sistema',
+            accion: 'editar',
+            modulo: 'ventas',
+            entidad: 'venta',
+            entidad_id: parseInt(id),
+            descripcion: `Método de pago${numero_factura ? ` de factura ${numero_factura}` : ''} cambiado a ${metodo_pago} (${resultado.rows.length} linea/s)`,
+            dato_nuevo: { metodo_pago },
+            ip: req.ip
+        }).catch(() => {})
+
+        res.json({ ok: true, venta: resultado.rows[0] })
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        manejarError(res, error)
+    } finally {
+        client.release()
+    }
+})
+
 // 7. Anular venta — anula todas las lineas del mismo numero_factura y devuelve stock
 router.post('/:id/anular', autenticar, verificarPermiso('ventas', 'cancelar'), async (req, res) => {
     const client = await db.pool.connect()
