@@ -1,4 +1,11 @@
-function calcularPrecioEfectivo(presentacion) {
+function calcularPrecioEfectivo(presentacion, metodoPago = 'efectivo') {
+    if (metodoPago === 'tarjeta') {
+        return {
+            precio: presentacion.precio_tarjeta || presentacion.precio_venta,
+            con_descuento: false
+        }
+    }
+
     const ahora = new Date()
 
     if (

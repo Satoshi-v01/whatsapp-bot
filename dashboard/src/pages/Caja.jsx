@@ -19,7 +19,7 @@ function Caja() {
     const codigoBarrasRef = useRef('')
     const codigoBarrasTimer = useRef(null)
     const procesandoVenta = useRef(false)
-    const { darkMode } = useApp()
+    const { darkMode, puedo } = useApp()
     const [pestana, setPestana] = useState('venta')
     const [tipoVenta, setTipoVenta] = useState('contado')
     const [plazoDias, setPlazoDias] = useState(30)
@@ -49,7 +49,8 @@ function Caja() {
     const [zonas, setZonas] = useState([])
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
-    const [lineas, setLineas] = useState([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1 }])
+    const [lineas, setLineas] = useState([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1, precioEspecial: '' }])
+    const [precioEspecialActivo, setPrecioEspecialActivo] = useState(false)
     const [busquedaCliente, setBusquedaCliente] = useState('')
     const [resultadosCliente, setResultadosCliente] = useState([])
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
@@ -252,11 +253,11 @@ function Caja() {
     }
 
     function seleccionarProducto(lineaId, producto) {
-        setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, busqueda: `${producto.marca_nombre ? producto.marca_nombre + ' — ' : ''}${producto.nombre}`, productosFiltrados: [], productoSeleccionado: producto, presentacionSeleccionada: null } : l))
+        setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, busqueda: `${producto.marca_nombre ? producto.marca_nombre + ' — ' : ''}${producto.nombre}`, productosFiltrados: [], productoSeleccionado: producto, presentacionSeleccionada: null, precioEspecial: '' } : l))
     }
 
     function seleccionarPresentacion(lineaId, presentacion) {
-        setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, presentacionSeleccionada: presentacion } : l))
+        setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, presentacionSeleccionada: presentacion, precioEspecial: '' } : l))
     }
 
     function cambiarCantidad(lineaId, delta) {
@@ -285,6 +286,15 @@ function Caja() {
         if (pr.descuento_activo && pr.precio_descuento && new Date(pr.descuento_desde) <= ahora && new Date(pr.descuento_hasta) >= ahora)
             return { precio: pr.precio_descuento, conDescuento: true }
         return { precio: pr.precio_venta, conDescuento: false }
+    }
+
+    function calcularPrecioLinea(linea, baseYaCalculada) {
+        const base = baseYaCalculada || calcularPrecioCaja(linea.presentacionSeleccionada)
+        if (precioEspecialActivo && linea.precioEspecial !== '' && linea.precioEspecial !== undefined && linea.precioEspecial !== null) {
+            const especial = Number(linea.precioEspecial)
+            if (!isNaN(especial) && especial >= 0) return { precio: especial, conDescuento: false, esEspecial: true, diferencial: base.precio - especial }
+        }
+        return base
     }
 
     function handleZonaChange(zona_id) {
@@ -349,7 +359,7 @@ function Caja() {
     }
 
     const lineasValidas = lineas.filter(l => l.presentacionSeleccionada)
-    const subtotal = lineasValidas.reduce((sum, l) => sum + calcularPrecioCaja(l.presentacionSeleccionada).precio * l.cantidad, 0)
+    const subtotal = lineasValidas.reduce((sum, l) => sum + calcularPrecioLinea(l).precio * l.cantidad, 0)
     const costoDelivery = canal === 'delivery' && facturarDelivery ? (formDelivery.costo_delivery || 0) : 0
     const total = subtotal + costoDelivery
     const iva = Math.floor(total / 11)
@@ -365,7 +375,8 @@ function Caja() {
     }
 
     function resetCaja() {
-        setLineas([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1 }])
+        setLineas([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1, precioEspecial: '' }])
+        setPrecioEspecialActivo(false)
         setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial(''); setFacturaManual(false); setNumeroFacturaManual('')
         setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setOpOrigen(null)
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
@@ -425,7 +436,7 @@ function Caja() {
                     const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
                         const linea = lineasValidas[i]
-                        const { precio } = calcularPrecioCaja(linea.presentacionSeleccionada)
+                        const { precio } = calcularPrecioLinea(linea)
                         const respuesta = await registrarVentaPresencial({
                             cliente_id: clienteSeleccionado?.id || null,
                             presentacion_id: linea.presentacionSeleccionada.id,
@@ -477,7 +488,7 @@ function Caja() {
                         vuelto: vueltoCalculado,
                         items: [
                             ...lineasValidas.map(linea => {
-                                const { precio } = calcularPrecioCaja(linea.presentacionSeleccionada)
+                                const { precio } = calcularPrecioLinea(linea)
                                 return {
                                     descripcion: `${linea.productoSeleccionado.marca_nombre ? linea.productoSeleccionado.marca_nombre + ' ' : ''}${linea.productoSeleccionado.nombre} ${linea.presentacionSeleccionada.nombre}`,
                                     cantidad: linea.cantidad,
@@ -651,10 +662,20 @@ function Caja() {
                         <div style={{ background: '#fff', border: '1px solid #e3e1db', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
                             <div style={{ padding: '10px 16px', borderBottom: '1px solid #f0eee8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#faf9f7' }}>
                                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1a1a22' }}>Productos</span>
-                                <button onClick={agregarLinea}
-                                    style={{ fontSize: '11px', padding: '5px 12px', border: '1px solid #e3e1db', borderRadius: '7px', background: '#fff', color: '#6d6b65', cursor: 'pointer', fontWeight: '600' }}>
-                                    + Agregar
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    {puedo('caja', 'precio_especial') && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <input type="checkbox" id="precioEspecial" checked={precioEspecialActivo} onChange={e => setPrecioEspecialActivo(e.target.checked)} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
+                                            <label htmlFor="precioEspecial" style={{ fontSize: '11px', color: precioEspecialActivo ? '#d04545' : '#6d6b65', fontWeight: '600', cursor: 'pointer' }}>
+                                                Precio especial
+                                            </label>
+                                        </div>
+                                    )}
+                                    <button onClick={agregarLinea}
+                                        style={{ fontSize: '11px', padding: '5px 12px', border: '1px solid #e3e1db', borderRadius: '7px', background: '#fff', color: '#6d6b65', cursor: 'pointer', fontWeight: '600' }}>
+                                        + Agregar
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Header de tabla */}
@@ -671,7 +692,8 @@ function Caja() {
                             {/* Filas de productos seleccionados */}
                             {lineasValidas.map(linea => {
                                 const pr = linea.presentacionSeleccionada
-                                const { precio, conDescuento } = calcularPrecioCaja(pr)
+                                const precioBase = calcularPrecioCaja(pr)
+                                const { precio, conDescuento, diferencial } = calcularPrecioLinea(linea, precioBase)
                                 return (
                                     <div key={linea.id} style={{ display: 'grid', gridTemplateColumns: '96px 1fr 100px 108px 28px', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #f0eee8' }}>
                                         {/* Stepper */}
@@ -694,15 +716,29 @@ function Caja() {
                                             <p style={{ fontSize: '11px', color: '#9d9b96', marginTop: '1px' }}>
                                                 {pr.nombre}{pr.stock <= 3 ? ` · Stock: ${pr.stock}` : ''}
                                             </p>
-                                            <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null } : l))}
+                                            <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null, precioEspecial: '' } : l))}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#9d9b96', padding: 0, marginTop: '2px' }}>
                                                 cambiar
                                             </button>
                                         </div>
                                         {/* P.Unit */}
-                                        <p style={{ fontSize: '12px', color: conDescuento ? '#0f9d6b' : '#6d6b65', textAlign: 'right', paddingRight: '8px' }}>
-                                            {precio.toLocaleString('es-PY')}
-                                        </p>
+                                        {precioEspecialActivo ? (
+                                            <div>
+                                                <input type="number" min="0" value={linea.precioEspecial ?? ''}
+                                                    placeholder={precioBase.precio.toString()}
+                                                    onChange={e => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, precioEspecial: e.target.value } : l))}
+                                                    style={{ fontSize: '12px', color: '#d04545', textAlign: 'right', border: '1px solid #fca5a5', borderRadius: '6px', padding: '4px 6px', width: '100%', outline: 'none' }} />
+                                                {!!diferencial && (
+                                                    <p style={{ fontSize: '10px', fontWeight: '700', color: diferencial > 0 ? '#0f9d6b' : '#d04545', textAlign: 'right', marginTop: '2px' }}>
+                                                        {diferencial > 0 ? '-' : '+'}{Math.abs(diferencial).toLocaleString('es-PY')} vs. Gs. {precioBase.precio.toLocaleString('es-PY')}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p style={{ fontSize: '12px', color: conDescuento ? '#0f9d6b' : '#6d6b65', textAlign: 'right', paddingRight: '8px' }}>
+                                                {precio.toLocaleString('es-PY')}
+                                            </p>
+                                        )}
                                         {/* Total */}
                                         <p style={{ fontSize: '13px', fontWeight: '700', color: '#1a1a22', textAlign: 'right', paddingRight: '8px' }}>
                                             {(precio * linea.cantidad).toLocaleString('es-PY')}
@@ -781,7 +817,7 @@ function Caja() {
                                                 <p style={{ fontSize: '12px', fontWeight: '700', color: '#1a1a22' }}>
                                                     {linea.productoSeleccionado.marca_nombre && `${linea.productoSeleccionado.marca_nombre} — `}{linea.productoSeleccionado.nombre}
                                                 </p>
-                                                <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null } : l))}
+                                                <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null, precioEspecial: '' } : l))}
                                                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#9d9b96' }}>
                                                     cambiar
                                                 </button>

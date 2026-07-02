@@ -8,7 +8,8 @@ const { recalcularStats } = require('./clientes')
 const { manejarError } = require('../middleware/validar')
 const { descontarStockFEFO } = require('../services/stock')
 const { registrarLog } = require('../middleware/auditoria')
-const { autenticar, verificarPermiso } = require('../middleware/auth')
+const { autenticar, verificarPermiso, usuarioTienePermiso } = require('../middleware/auth')
+const { calcularPrecioEfectivo } = require('../services/precios')
 
 let consumidorFinalId = null
 
@@ -231,6 +232,8 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                            'precio_unitario', vi.precio_unitario,
                            'precio_total', vi.precio_total,
                            'tipo_iva', vi.tipo_iva,
+                           'es_precio_especial', vi.es_precio_especial,
+                           'diferencial_precio', vi.diferencial_precio,
                            'producto_nombre', p2.nombre,
                            'presentacion_nombre', pr2.nombre,
                            'marca_nombre', m2.nombre,
@@ -667,10 +670,13 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
 
         await client.query('BEGIN')
 
-        // Validar stock de todos los items antes de insertar
+        // Validar stock y precio de todos los items antes de insertar
+        let haySpecialPrice = false
         for (const item of itemsNorm) {
             const stock = await client.query(
-                `SELECT stock, nombre FROM presentaciones WHERE id = $1 FOR UPDATE`,
+                `SELECT stock, nombre, precio_venta, precio_tarjeta, precio_descuento,
+                        descuento_activo, descuento_desde, descuento_hasta, descuento_stock
+                 FROM presentaciones WHERE id = $1 FOR UPDATE`,
                 [parseInt(item.presentacion_id)]
             )
             if (stock.rows.length === 0) {
@@ -680,6 +686,20 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             if (stock.rows[0].stock < parseInt(item.cantidad)) {
                 await client.query('ROLLBACK')
                 return res.status(400).json({ error: `Stock insuficiente para "${stock.rows[0].nombre}". Disponible: ${stock.rows[0].stock}` })
+            }
+
+            const precioCatalogo = calcularPrecioEfectivo(stock.rows[0], metodo_pago).precio
+            const precioEnviado = parseInt(item.precio_unitario)
+            item.diferencial_precio = precioCatalogo - precioEnviado
+            item.es_precio_especial = item.diferencial_precio !== 0
+            if (item.es_precio_especial) haySpecialPrice = true
+        }
+
+        if (haySpecialPrice) {
+            const puedePrecioEspecial = await usuarioTienePermiso(req.usuario, 'caja', 'precio_especial')
+            if (!puedePrecioEspecial) {
+                await client.query('ROLLBACK')
+                return res.status(403).json({ error: 'Sin permiso para aplicar precio especial' })
             }
         }
 
@@ -739,11 +759,11 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         // Insertar items en ventas_items
         for (const item of itemsNorm) {
             await client.query(
-                `INSERT INTO ventas_items (venta_id, presentacion_id, cantidad, precio_unitario, precio_total, tipo_iva)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                `INSERT INTO ventas_items (venta_id, presentacion_id, cantidad, precio_unitario, precio_total, tipo_iva, es_precio_especial, diferencial_precio)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                 [ventaId, parseInt(item.presentacion_id), parseInt(item.cantidad),
                  parseInt(item.precio_unitario), parseInt(item.precio_unitario) * parseInt(item.cantidad),
-                 item.tipo_iva || '10']
+                 item.tipo_iva || '10', item.es_precio_especial || false, item.diferencial_precio || 0]
             )
         }
 

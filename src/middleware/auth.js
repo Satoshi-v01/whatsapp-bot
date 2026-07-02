@@ -61,6 +61,23 @@ function verificarPermiso(modulo, accion) {
     }
 }
 
+// Chequeo de permiso reutilizable fuera de una cadena de middleware — uso: await usuarioTienePermiso(req.usuario, 'caja', 'precio_especial')
+async function usuarioTienePermiso(usuario, modulo, accion) {
+    if (!usuario) return false
+    if (usuario.rol === 'admin' || usuario.rol_nombre === 'admin') return true
+
+    const resultado = await db.query(
+        `SELECT r.permisos FROM roles r
+         JOIN usuarios u ON u.rol_id = r.id
+         WHERE u.id = $1`,
+        [usuario.id]
+    )
+    if (!resultado.rows.length) return false
+
+    const permisos = resultado.rows[0].permisos || {}
+    return (permisos[modulo] || []).includes(accion)
+}
+
 function soloAdmin(req, res, next) {
     if (req.usuario?.rol !== 'admin') {
         return res.status(403).json({ error: 'Requiere rol admin' })
@@ -68,4 +85,4 @@ function soloAdmin(req, res, next) {
     next()
 }
 
-module.exports = { autenticar, verificarPermiso, soloAdmin }
+module.exports = { autenticar, verificarPermiso, soloAdmin, usuarioTienePermiso }

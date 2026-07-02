@@ -551,6 +551,11 @@ function Ventas() {
                                 <div style={{ minWidth: 0 }}>
                                     <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', lineHeight: 1.25 }}>{item.producto_nombre}</p>
                                     <p style={{ margin: '1px 0 0', fontSize: '11px', color: 'rgb(148,163,184)' }}>{item.presentacion_nombre}</p>
+                                    {item.es_precio_especial && (
+                                        <span style={{ display: 'inline-block', marginTop: '3px', fontSize: '10px', fontWeight: '700', color: 'rgb(220,38,38)', background: 'rgb(254,242,242)', border: '1px solid rgb(252,165,165)', borderRadius: '5px', padding: '1px 6px' }}>
+                                            Precio especial {item.diferencial_precio > 0 ? '(-' : '(+'}{formatearGs(Math.abs(item.diferencial_precio))})
+                                        </span>
+                                    )}
                                 </div>
                                 <span style={{ fontSize: '12px', color: 'rgb(100,116,139)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                                     {item.precio_unitario ? formatearGs(item.precio_unitario) : '—'}
