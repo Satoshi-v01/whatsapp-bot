@@ -261,8 +261,8 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
         try {
             ventas = await db.query(selectConItems, [...valores, parseInt(por_pagina), offset])
         } catch (err) {
-            // 42P01 = tabla ventas_items no existe aún
-            if (err.code === '42P01') {
+            // 42P01 = tabla ventas_items no existe aún, 42703 = columna nueva (es_precio_especial/diferencial_precio) no existe aún
+            if (err.code === '42P01' || err.code === '42703') {
                 ventas = await db.query(selectSinItems, [...valores, parseInt(por_pagina), offset])
             } else {
                 throw err
@@ -688,8 +688,14 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
                 return res.status(400).json({ error: `Stock insuficiente para "${stock.rows[0].nombre}". Disponible: ${stock.rows[0].stock}` })
             }
 
-            const precioCatalogo = calcularPrecioEfectivo(stock.rows[0], metodo_pago).precio
             const precioEnviado = parseInt(item.precio_unitario)
+            if (Number.isNaN(precioEnviado) || precioEnviado < 0) {
+                await client.query('ROLLBACK').catch(() => {})
+                return res.status(400).json({ error: `Precio invalido para "${stock.rows[0].nombre}"` })
+            }
+
+            const precioCatalogo = calcularPrecioEfectivo(stock.rows[0], metodo_pago).precio
+            item.precio_unitario = precioEnviado
             item.diferencial_precio = precioCatalogo - precioEnviado
             item.es_precio_especial = item.diferencial_precio !== 0
             if (item.es_precio_especial) haySpecialPrice = true
@@ -822,7 +828,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         res.status(201).json({ ok: true, venta: venta.rows[0] })
 
     } catch (error) {
-        await client.query('ROLLBACK')
+        await client.query('ROLLBACK').catch(() => {})
         manejarError(res, error)
     } finally {
         client.release()
