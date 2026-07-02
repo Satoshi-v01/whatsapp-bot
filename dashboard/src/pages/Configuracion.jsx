@@ -27,7 +27,7 @@ const MODULOS = [
 const ACCIONES_POR_MODULO = {
     inicio: ['ver'],
     ventas: ['ver', 'crear', 'editar', 'cancelar', 'exportar'],
-    caja: ['ver', 'operar', 'imprimir', 'cierre'],
+    caja: ['ver', 'operar', 'imprimir', 'cierre', 'precio_especial'],
     inventario: ['ver', 'crear', 'editar', 'eliminar', 'gestionar_lotes'],
     clientes: ['ver', 'crear', 'editar', 'ver_cuenta_corriente', 'registrar_pago'],
     delivery: ['ver', 'crear', 'editar', 'asignar_repartidor', 'cambiar_estado'],
@@ -50,6 +50,7 @@ const LABEL_ACCIONES = {
     operar: 'Operar',
     imprimir: 'Imprimir',
     cierre: 'Cierre',
+    precio_especial: 'Precio especial',
     gestionar_lotes: 'Lotes',
     ver_cuenta_corriente: 'Cta. Cte.',
     registrar_pago: 'Pagos',
