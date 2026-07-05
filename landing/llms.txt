@@ -25,12 +25,12 @@
 - TikTok: https://www.tiktok.com/@sosabulls
 
 ## Sitio web
-- Home: https://sosabulls.com.py/
-- Perros: https://sosabulls.com.py/categoria/perros
-- Gatos: https://sosabulls.com.py/categoria/gatos
-- Medicamentos: https://sosabulls.com.py/categoria/medicamentos
-- Accesorios: https://sosabulls.com.py/categoria/accesorios
-- Cuidado: https://sosabulls.com.py/categoria/cuidado
-- Ofertas: https://sosabulls.com.py/categoria/ofertas
-- Nosotros: https://sosabulls.com.py/nosotros
-- Contacto: https://sosabulls.com.py/contacto
+- Home: https://www.sosabulls.com.py/
+- Perros: https://www.sosabulls.com.py/categoria/perros
+- Gatos: https://www.sosabulls.com.py/categoria/gatos
+- Medicamentos: https://www.sosabulls.com.py/categoria/medicamentos
+- Accesorios: https://www.sosabulls.com.py/categoria/accesorios
+- Cuidado: https://www.sosabulls.com.py/categoria/cuidado
+- Ofertas: https://www.sosabulls.com.py/categoria/ofertas
+- Nosotros: https://www.sosabulls.com.py/nosotros
+- Contacto: https://www.sosabulls.com.py/contacto

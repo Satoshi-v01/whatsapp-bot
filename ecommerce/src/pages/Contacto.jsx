@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import SEOHead from '@/components/seo/SEOHead'
 
-const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
+const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://www.sosabulls.com.py'
 
 const contactoSchema = {
   '@context': 'https://schema.org',

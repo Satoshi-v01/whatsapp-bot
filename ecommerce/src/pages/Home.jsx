@@ -199,7 +199,7 @@ function AboutStrip() {
   )
 }
 
-const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
+const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://www.sosabulls.com.py'
 
 const homeSchema = {
   '@context': 'https://schema.org',

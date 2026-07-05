@@ -285,7 +285,7 @@ export default function Product() {
   const category = CATEGORIES.find(c => c.slug === categoria_slug)
   const outOfStock = !presActual || stock === 0
 
-  const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://sosabulls.com.py'
+  const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://www.sosabulls.com.py'
 
   const nextYear = new Date()
   nextYear.setFullYear(nextYear.getFullYear() + 1)

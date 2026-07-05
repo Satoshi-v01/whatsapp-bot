@@ -3,7 +3,7 @@ const db = require('../db/index')
 
 const router = express.Router()
 
-const BASE_URL = 'https://sosabulls.com.py'
+const BASE_URL = 'https://www.sosabulls.com.py'
 const ECO = `${BASE_URL}/ecommerce`
 
 const CATEGORIAS = ['perros', 'gatos', 'accesorios', 'medicamentos', 'cuidado', 'ofertas']

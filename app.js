@@ -199,7 +199,7 @@ app.use('/ecommerce', express.static(path.join(__dirname, 'ecommerce/dist'), { s
 // SSR meta-injection: Googlebot ve title/description/schema reales desde la DB
 // React hidrata normalmente en el cliente y Helmet toma el control
 const fs = require('fs')
-const SITE = 'https://sosabulls.com.py'
+const SITE = 'https://www.sosabulls.com.py'
 const ECO_INDEX = path.join(__dirname, 'ecommerce/dist/index.html')
 
 function toSlugSsr(text) {

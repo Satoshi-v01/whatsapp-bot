@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = import.meta.env.VITE_SITE_NAME ?? 'Sosa BULLS'
-const SITE_URL  = import.meta.env.VITE_SITE_URL  ?? 'https://sosabulls.com.py'
+const SITE_URL  = import.meta.env.VITE_SITE_URL  ?? 'https://www.sosabulls.com.py'
 const DEFAULT_IMAGE = `${SITE_URL}/logo.png`
 
 export default function SEOHead({
