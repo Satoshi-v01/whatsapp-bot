@@ -146,7 +146,10 @@ export default function Category() {
   const color      = category?.color ?? '#ffa601'
   const bg         = category?.bg    ?? '#fff8e6'
 
-  const { subcategories: subcats } = useSubcategories(slug)
+  const esCategoriaEspecie = slug === 'perros' || slug === 'gatos'
+  const [especie, setEspecie] = useState(null) // null | 'perro' | 'gato'
+
+  const { subcategories: subcats } = useSubcategories(slug, especie)
   const { mostrarSinStock } = useShopConfig()
 
   const [subcatId,       setSubcatId]       = useState(null)
@@ -182,18 +185,19 @@ export default function Category() {
   }, [slug])
 
   // Reset al cambiar categoria
-  useEffect(() => { setSubcatId(null); setAtributos({}); setMarcaId(''); setPage(1) }, [slug])
+  useEffect(() => { setSubcatId(null); setAtributos({}); setMarcaId(''); setPage(1); setEspecie(null) }, [slug])
 
   // Re-fetchear rango de precios cuando cambian los filtros activos (debounce 300ms)
   useEffect(() => {
     const atrsActivos = Object.fromEntries(Object.entries(atributos).filter(([, v]) => v))
-    const tienesFiltros = marcaId || subcatId || Object.keys(atrsActivos).length > 0
+    const tienesFiltros = marcaId || subcatId || (especie && !esCategoriaEspecie) || Object.keys(atrsActivos).length > 0
     if (!tienesFiltros) return // sin filtros activos el rango inicial ya es correcto
 
     const timer = setTimeout(() => {
       const params = { categoria: slug }
       if (marcaId) params.marca_id = marcaId
       if (subcatId) params.subcategoria_id = subcatId
+      if (especie && !esCategoriaEspecie) params.especie = especie
       if (Object.keys(atrsActivos).length) {
         // Expandir aliases igual que en params
         const atrsExpandidos = {}
@@ -221,7 +225,7 @@ export default function Category() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [atributos, marcaId, subcatId, slug])
+  }, [atributos, marcaId, subcatId, slug, especie, esCategoriaEspecie])
 
   const handlePrecio = useCallback((l, h) => { setLow(l); setHigh(h); setPage(1) }, [])
 
@@ -235,14 +239,14 @@ export default function Category() {
   }
 
   function clearFilters() {
-    setMarcaId(''); setSubcatId(null); setAtributos({})
+    setMarcaId(''); setSubcatId(null); setAtributos({}); setEspecie(null)
     // Restaurar rango de precios al base de la categoría
     setPrecioMin(precioMinBase); setPrecioMax(precioMaxBase)
     setLow(precioMinBase); setHigh(precioMaxBase); setPage(1)
   }
 
   const atributosActivos  = Object.values(atributos).filter(Boolean).length
-  const activeFilters = (marcaId ? 1 : 0) + atributosActivos + (low > precioMin || high < precioMax ? 1 : 0)
+  const activeFilters = (marcaId ? 1 : 0) + atributosActivos + (low > precioMin || high < precioMax ? 1 : 0) + (especie && !esCategoriaEspecie ? 1 : 0)
 
   const chipsFilters   = filtros.filter(f => f.display_as === 'chip')
   const sidebarFilters = filtros.filter(f => f.display_as === 'sidebar')
@@ -251,6 +255,7 @@ export default function Category() {
     const p = { categoria: slug, solo_disponibles: !mostrarSinStock, sort, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }
     if (subcatId)         p.subcategoria_id = subcatId
     if (marcaId)          p.marca_id        = marcaId
+    if (especie && !esCategoriaEspecie) p.especie = especie
     if (low  > precioMin) p.precio_min      = low
     if (high < precioMax) p.precio_max      = high
     const atrsActivos = Object.fromEntries(Object.entries(atributos).filter(([, v]) => v))
@@ -270,7 +275,7 @@ export default function Category() {
       p.atributos = JSON.stringify(atrsExpandidos)
     }
     return p
-  }, [slug, subcatId, atributos, marcaId, sort, page, low, high, precioMin, precioMax])
+  }, [slug, subcatId, atributos, marcaId, sort, page, low, high, precioMin, precioMax, especie, esCategoriaEspecie])
 
   const { products, loading, error, total } = useProducts(params)
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -350,6 +355,20 @@ export default function Category() {
               <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8b6f47' }}>{category?.description}</p>
             </div>
           </div>
+
+          {/* Selector de especie — solo en categorías que no son ya "perros"/"gatos" */}
+          {!esCategoriaEspecie && (
+            <div style={{ marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <SubcatChip sub={{ label: 'Todos' }} active={!especie} color={color} bg={bg}
+                  onClick={() => { setEspecie(null); setSubcatId(null); setPage(1) }} />
+                <SubcatChip sub={{ label: 'Perro' }} active={especie === 'perro'} color={color} bg={bg}
+                  onClick={() => { setEspecie(especie === 'perro' ? null : 'perro'); setSubcatId(null); setPage(1) }} />
+                <SubcatChip sub={{ label: 'Gato' }} active={especie === 'gato'} color={color} bg={bg}
+                  onClick={() => { setEspecie(especie === 'gato' ? null : 'gato'); setSubcatId(null); setPage(1) }} />
+              </div>
+            </div>
+          )}
 
           {/* Chips de atributos con display_as='chip' */}
           {chipsFilters.map(filtro => (

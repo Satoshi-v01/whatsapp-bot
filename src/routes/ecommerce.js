@@ -100,13 +100,18 @@ router.get('/categorias', async (req, res) => {
 // ─── GET /api/ecommerce/subcategorias ────────────────────────
 router.get('/subcategorias', async (req, res) => {
   try {
-    const { categoria } = req.query
+    const { categoria, especie } = req.query
+    const condiciones = []
+    const valores = []
+    let i = 1
+    if (categoria) { condiciones.push(`categoria_slug = $${i++}`); valores.push(categoria) }
+    if (especie)   { condiciones.push(`(especie = $${i++} OR especie = 'ambos')`); valores.push(especie) }
     const resultado = await db.query(
-      `SELECT id, nombre, slug, orden, categoria_slug
+      `SELECT id, nombre, slug, orden, categoria_slug, especie
        FROM ecommerce_subcategorias
-       ${categoria ? 'WHERE categoria_slug = $1' : ''}
+       ${condiciones.length ? 'WHERE ' + condiciones.join(' AND ') : ''}
        ORDER BY categoria_slug ASC, orden ASC, nombre ASC`,
-      categoria ? [categoria] : []
+      valores
     )
     res.json(resultado.rows)
   } catch (error) {
@@ -119,7 +124,7 @@ router.get('/subcategorias', async (req, res) => {
 router.get('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 'ver'), async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, nombre, slug, orden, categoria_slug
+      `SELECT id, nombre, slug, orden, categoria_slug, especie
        FROM ecommerce_subcategorias
        ORDER BY categoria_slug ASC, orden ASC, nombre ASC`
     )
@@ -132,14 +137,16 @@ router.get('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 've
 
 router.post('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 'crear'), async (req, res) => {
   try {
-    const { nombre, categoria_slug, orden = 0 } = req.body
+    const { nombre, categoria_slug, orden = 0, especie = 'ambos' } = req.body
     if (!nombre?.trim() || !categoria_slug?.trim())
       return res.status(400).json({ error: 'nombre y categoria_slug son requeridos' })
+    if (!['perro', 'gato', 'ambos'].includes(especie))
+      return res.status(400).json({ error: 'especie inválida' })
     const slug = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     const { rows } = await db.query(
-      `INSERT INTO ecommerce_subcategorias (nombre, slug, categoria_slug, orden)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [nombre.trim(), slug, categoria_slug.trim(), parseInt(orden) || 0]
+      `INSERT INTO ecommerce_subcategorias (nombre, slug, categoria_slug, orden, especie)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [nombre.trim(), slug, categoria_slug.trim(), parseInt(orden) || 0, especie]
     )
     res.json(rows[0])
   } catch (error) { manejarError(res, error) }
@@ -148,11 +155,14 @@ router.post('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 'c
 router.patch('/admin/subcategorias/:id', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { id } = req.params
-    const { nombre, categoria_slug, orden } = req.body
+    const { nombre, categoria_slug, orden, especie } = req.body
+    if (especie !== undefined && !['perro', 'gato', 'ambos'].includes(especie))
+      return res.status(400).json({ error: 'especie inválida' })
     const sets = []; const vals = []; let i = 1
     if (nombre !== undefined)        { sets.push(`nombre = $${i++}`);         vals.push(nombre.trim()) }
     if (categoria_slug !== undefined) { sets.push(`categoria_slug = $${i++}`); vals.push(categoria_slug.trim()) }
     if (orden !== undefined)          { sets.push(`orden = $${i++}`);          vals.push(parseInt(orden) || 0) }
+    if (especie !== undefined)        { sets.push(`especie = $${i++}`);        vals.push(especie) }
     if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' })
     vals.push(parseInt(id))
     const { rows } = await db.query(`UPDATE ecommerce_subcategorias SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, vals)
@@ -248,6 +258,7 @@ router.get('/productos', async (req, res) => {
       precio_min,
       precio_max,
       atributos,   // JSON string: {"etapa_vida":"adulto","tamano_raza":"medium"}
+      especie,     // 'perro' | 'gato' | 'ambos'
       limit = 20,
       offset = 0,
     } = req.query
@@ -271,6 +282,11 @@ router.get('/productos', async (req, res) => {
     if (novedad === 'true') condiciones.push(`p.es_novedad = true`)
     if (subcategoria_id) { condiciones.push(`p.ecommerce_subcategoria_id = $${i++}`); valores.push(parseInt(subcategoria_id)) }
     if (marca_id) { condiciones.push(`p.marca_id = $${i++}`); valores.push(parseInt(marca_id)) }
+    if (especie && ['perro', 'gato'].includes(especie)) {
+      // productos sin especie cargada se tratan como 'ambos' (no deben desaparecer del filtro)
+      condiciones.push(`(p.especie = $${i++} OR p.especie = 'ambos' OR p.especie IS NULL)`)
+      valores.push(especie)
+    }
     if (atributos) {
       try {
         const attrs = JSON.parse(atributos)
@@ -949,7 +965,9 @@ router.get('/admin/productos', autenticar, verificarPermiso('ecommerce', 'ver'),
 router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
   try {
     const { presentacionId } = req.params
-    const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos } = req.body
+    const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos, especie } = req.body
+    if (especie !== undefined && especie !== null && !['perro', 'gato', 'ambos'].includes(especie))
+      return res.status(400).json({ error: 'especie inválida' })
 
     // Actualizar disponible en la presentacion
     if (disponible !== undefined) {
@@ -974,6 +992,7 @@ router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('e
     if (ecommerce_categoria !== undefined)       { sets.push(`ecommerce_categoria = $${i++}`);       vals.push(ecommerce_categoria || null) }
     if (ecommerce_subcategoria_id !== undefined) { sets.push(`ecommerce_subcategoria_id = $${i++}`); vals.push(ecommerce_subcategoria_id ? parseInt(ecommerce_subcategoria_id) : null) }
     if (atributos !== undefined)                 { sets.push(`atributos = $${i++}::jsonb`);          vals.push(JSON.stringify(atributos ?? {})) }
+    if (especie !== undefined)                   { sets.push(`especie = $${i++}`);                   vals.push(especie || null) }
 
     if (sets.length) {
       vals.push(productoId)
@@ -990,7 +1009,7 @@ router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('e
 // Rango de precios para los filtros activos (se llama al cambiar filtros)
 router.get('/filtros/precio', async (req, res) => {
   try {
-    const { categoria, atributos, marca_id, subcategoria_id } = req.query
+    const { categoria, atributos, marca_id, subcategoria_id, especie } = req.query
     const conds = ['pr.disponible = true', 'pr.stock > 0']
     const vals = []
     let i = 1
@@ -998,6 +1017,10 @@ router.get('/filtros/precio', async (req, res) => {
     if (categoria) { conds.push(`p.ecommerce_categoria = $${i++}`); vals.push(categoria.toLowerCase()) }
     if (marca_id)  { conds.push(`p.marca_id = $${i++}`);            vals.push(parseInt(marca_id)) }
     if (subcategoria_id) { conds.push(`p.ecommerce_subcategoria_id = $${i++}`); vals.push(parseInt(subcategoria_id)) }
+    if (especie && ['perro', 'gato'].includes(especie)) {
+      conds.push(`(p.especie = $${i++} OR p.especie = 'ambos' OR p.especie IS NULL)`)
+      vals.push(especie)
+    }
     if (atributos) {
       try {
         const attrs = JSON.parse(atributos)

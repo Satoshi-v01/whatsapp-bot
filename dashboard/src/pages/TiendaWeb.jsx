@@ -455,6 +455,18 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                             ))}
                         </div>
 
+                        <div>
+                            <label style={labelStyle}>Especie</label>
+                            <input
+                                value={{ perro: 'Perro', gato: 'Gato', ambos: 'Ambos' }[editando?.especie] || 'Sin especificar'}
+                                disabled
+                                style={{ ...inputStyle, marginBottom: 0, opacity: 0.7, cursor: 'not-allowed' }}
+                            />
+                            <p style={{ fontSize: 11, color: s.textFaint, margin: '4px 0 0' }}>
+                                Se define en Inventario, no editable desde acá.
+                            </p>
+                        </div>
+
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             <div>
                                 <label style={labelStyle}>Categoria web</label>
@@ -552,7 +564,12 @@ const CAT_SLUGS_LABELS = [
     { slug: 'cuidado',      label: 'Cuidado' },
     { slug: 'ofertas',      label: 'Ofertas' },
 ]
-const SUBCAT_VACIA = { nombre: '', categoria_slug: 'perros', orden: 0 }
+const SUBCAT_VACIA = { nombre: '', categoria_slug: 'perros', orden: 0, especie: 'ambos' }
+const ESPECIE_LABELS = [
+    { valor: 'perro', label: 'Perro' },
+    { valor: 'gato',  label: 'Gato' },
+    { valor: 'ambos', label: 'Ambos' },
+]
 
 function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
     const [subcats, setSubcats] = useState([])
@@ -647,9 +664,12 @@ function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundari
                                     {items.map(sub => (
                                         <div key={sub.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 14px', borderRadius: 99, border: `1.5px solid ${color}30`, background: `${color}0e` }}>
                                             <span style={{ fontSize: 13, fontWeight: 600, color }}>{sub.nombre}</span>
+                                            <span style={{ fontSize: 10, color: s.textFaint }}>
+                                                {ESPECIE_LABELS.find(e => e.valor === sub.especie)?.label || 'Ambos'}
+                                            </span>
                                             <span style={{ fontSize: 10, color: s.textFaint, marginRight: 2 }}>#{sub.orden}</span>
                                             <button
-                                                onClick={() => { setForm({ nombre: sub.nombre, categoria_slug: sub.categoria_slug, orden: sub.orden }); setModal(sub) }}
+                                                onClick={() => { setForm({ nombre: sub.nombre, categoria_slug: sub.categoria_slug, orden: sub.orden, especie: sub.especie || 'ambos' }); setModal(sub) }}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'flex', padding: '2px' }}
                                                 title="Editar"
                                             >
@@ -680,6 +700,12 @@ function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundari
                             <label style={labelStyle}>Categoría</label>
                             <select value={form.categoria_slug} onChange={e => setForm(f => ({ ...f, categoria_slug: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
                                 {CAT_SLUGS_LABELS.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Especie</label>
+                            <select value={form.especie} onChange={e => setForm(f => ({ ...f, especie: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
+                                {ESPECIE_LABELS.map(e => <option key={e.valor} value={e.valor}>{e.label}</option>)}
                             </select>
                         </div>
                         <div>
