@@ -11,7 +11,7 @@ export const CATEGORIES = [
     slug: 'gatos',
     label: 'Gatos',
     seoTitle: 'Alimento para Gatos en Paraguay — Royal Canin, Pro Plan y mas',
-    description: 'Alimento para gatos, arena sanitaria y accesorios. Royal Canin, Pro Plan, Whiskas y mas. Delivery a Asuncion, Gran Asuncion y todo Paraguay.',
+    description: 'Alimento para gatos, arena sanitaria y accesorios. Delivery a Asuncion, Gran Asuncion y todo Paraguay.',
     color: '#7c3aed',
     bg: '#f3eeff',
   },

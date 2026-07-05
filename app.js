@@ -208,10 +208,10 @@ function toSlugSsr(text) {
 }
 
 const CAT_META = {
-    perros:       { title: 'Alimento para Perros en Paraguay — Envio a Domicilio',           desc: 'Compra alimento balanceado para perros en Paraguay. Cachorro, adulto, senior, raza grande y pequeña. Marcas premium con delivery a Asuncion y todo el pais.' },
-    gatos:        { title: 'Alimento para Gatos en Paraguay — Royal Canin, Pro Plan y mas',  desc: 'Alimento para gatos, arena sanitaria y accesorios. Royal Canin, Pro Plan, Whiskas y mas. Delivery a Asuncion y todo Paraguay.' },
-    medicamentos: { title: 'Antiparasitarios y Vitaminas para Mascotas — Paraguay',           desc: 'Antiparasitarios, vitaminas y suplementos para perros y gatos en Paraguay. Productos veterinarios originales con envio a domicilio.' },
-    accesorios:   { title: 'Accesorios para Mascotas — Correas, Camas, Comederos',            desc: 'Correas, camas, comederos, bebederos y juguetes para perros y gatos en Paraguay. Envio a domicilio en Asuncion y todo el pais.' },
+    perros:       { title: 'Alimento para Perros en Paraguay — Envio a Domicilio',           desc: 'Alimento balanceado para perros en Paraguay. Marcas premium' },
+    gatos:        { title: 'Alimento para Gatos en Paraguay — Balanceados y mas',  desc: 'Alimento para gatos, arena sanitaria y accesorios. Balanceados y mas.' },
+    medicamentos: { title: 'Antiparasitarios y Vitaminas para Mascotas — Paraguay',           desc: 'Antiparasitarios, vitaminas y suplementos para perros y gatos en Paraguay. Productos veterinarios originales.' },
+    accesorios:   { title: 'Accesorios para Mascotas — Correas, Camas, Comederos',            desc: 'Correas, camas, comederos, bebederos y juguetes para perros y gatos en Paraguay.' },
     cuidado:      { title: 'Cuidado e Higiene para Mascotas — Shampoos y Grooming',           desc: 'Shampoos, cepillos, toallitas y productos de grooming e higiene para mascotas en Paraguay.' },
     ofertas:      { title: 'Ofertas en Alimentos y Accesorios para Mascotas',                 desc: 'Promociones y descuentos en alimentos balanceados y accesorios para mascotas en Paraguay.' },
 }
