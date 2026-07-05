@@ -173,33 +173,49 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
           {nombre}
         </Link>
 
-        {/* Pills de presentaciones */}
+        {/* Pills de presentaciones — scroll horizontal en vez de wrap: evita que
+            productos con muchas variantes (ej. NexGard) estiren la tarjeta y
+            desnivelen toda la fila del grid */}
         {presentaciones.length > 1 && (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
-            {presentaciones.map(pr => {
-              const sinStock = pr.stock === 0
-              const seleccionado = selectedPres?.id === pr.id
-              return (
-                <button
-                  key={pr.id}
-                  onClick={e => { e.preventDefault(); setSelectedPres(pr) }}
-                  disabled={sinStock && !mostrarSinStock}
-                  style={{
-                    padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
-                    border: `2px solid ${seleccionado ? (sinStock ? '#94a3b8' : 'var(--color-primary)') : 'var(--color-border)'}`,
-                    background: seleccionado ? (sinStock ? '#e2e8f0' : 'var(--color-primary)') : 'transparent',
-                    color: seleccionado ? (sinStock ? '#64748b' : '#fff') : sinStock ? 'var(--color-text-muted)' : 'var(--color-text)',
-                    cursor: (sinStock && !mostrarSinStock) ? 'not-allowed' : 'pointer',
-                    opacity: (sinStock && !mostrarSinStock) ? 0.4 : 1,
-                    transition: 'all 0.15s',
-                    textDecoration: (sinStock && !mostrarSinStock) ? 'line-through' : 'none',
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                  }}
-                >
-                  {pr.nombre}
-                </button>
-              )
-            })}
+          <div className="pres-pills-scroll" style={{ position: 'relative', margin: '2px -2px 0' }}>
+            <div
+              className="pres-pills-scroll-track"
+              style={{ display: 'flex', gap: 5, flexWrap: 'nowrap', overflowX: 'auto', padding: '0 2px 2px' }}
+            >
+              {presentaciones.map(pr => {
+                const sinStock = pr.stock === 0
+                const seleccionado = selectedPres?.id === pr.id
+                return (
+                  <button
+                    key={pr.id}
+                    onClick={e => { e.preventDefault(); setSelectedPres(pr) }}
+                    disabled={sinStock && !mostrarSinStock}
+                    style={{
+                      padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                      border: `2px solid ${seleccionado ? (sinStock ? '#94a3b8' : 'var(--color-primary)') : 'var(--color-border)'}`,
+                      background: seleccionado ? (sinStock ? '#e2e8f0' : 'var(--color-primary)') : 'transparent',
+                      color: seleccionado ? (sinStock ? '#64748b' : '#fff') : sinStock ? 'var(--color-text-muted)' : 'var(--color-text)',
+                      cursor: (sinStock && !mostrarSinStock) ? 'not-allowed' : 'pointer',
+                      opacity: (sinStock && !mostrarSinStock) ? 0.4 : 1,
+                      transition: 'all 0.15s',
+                      textDecoration: (sinStock && !mostrarSinStock) ? 'line-through' : 'none',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                    }}
+                  >
+                    {pr.nombre}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Degradado a la derecha — pista visual de que se puede deslizar */}
+            {presentaciones.length > 3 && (
+              <div style={{
+                position: 'absolute', top: 0, right: 0, bottom: 2, width: 22,
+                background: 'linear-gradient(to right, transparent, #fff)',
+                pointerEvents: 'none',
+              }} />
+            )}
           </div>
         )}
 
