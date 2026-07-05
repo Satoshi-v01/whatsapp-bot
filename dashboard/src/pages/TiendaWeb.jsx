@@ -210,6 +210,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
             ecommerce_categoria: prod.ecommerce_categoria || '',
             ecommerce_subcategoria_id: prod.ecommerce_subcategoria_id || '',
             atributos: prod.atributos || {},
+            especie: prod.especie || '',
         })
         // Cargar filtros config para la categoria de este producto
         const cat = prod.ecommerce_categoria || ''
@@ -242,7 +243,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
     async function guardarEditar() {
         setGuardando(true)
         try {
-            await api.patch(`/ecommerce/admin/productos/${editando.presentacion_id}`, editForm)
+            await api.patch(`/ecommerce/admin/productos/${editando.presentacion_id}`, { ...editForm, especie: editForm.especie || null })
             // Campos del producto se propagan a todas las presentaciones del mismo producto
             const camposProducto = {
                 imagen_url: editForm.imagen_url,
@@ -251,6 +252,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                 ecommerce_categoria: editForm.ecommerce_categoria,
                 ecommerce_subcategoria_id: editForm.ecommerce_subcategoria_id || null,
                 atributos: editForm.atributos || {},
+                especie: editForm.especie || null,
             }
             setProductos(p => p.map(x => {
                 if (x.producto_id === editando.producto_id) {
@@ -457,14 +459,16 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
 
                         <div>
                             <label style={labelStyle}>Especie</label>
-                            <input
-                                value={{ perro: 'Perro', gato: 'Gato', ambos: 'Ambos' }[editando?.especie] || 'Sin especificar'}
-                                disabled
-                                style={{ ...inputStyle, marginBottom: 0, opacity: 0.7, cursor: 'not-allowed' }}
-                            />
-                            <p style={{ fontSize: 11, color: s.textFaint, margin: '4px 0 0' }}>
-                                Se define en Inventario, no editable desde acá.
-                            </p>
+                            <select
+                                value={editForm.especie}
+                                onChange={e => setEditForm(f => ({ ...f, especie: e.target.value }))}
+                                style={{ ...inputStyle, marginBottom: 0 }}
+                            >
+                                <option value="">Sin especificar</option>
+                                <option value="perro">Perro</option>
+                                <option value="gato">Gato</option>
+                                <option value="ambos">Ambos</option>
+                            </select>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
