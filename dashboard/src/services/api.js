@@ -1,9 +1,12 @@
 import axios from 'axios'
 
-// El dashboard corre en el mismo servidor Express que la API,
-// por lo que /api funciona tanto en dev (via Vite proxy) como en prod.
+// En dev, /api relativo funciona via el proxy de Vite. En produccion
+// apuntamos directo a la URL de Render (no al dominio custom): un
+// redirect de dominio (www <-> sin www, a nivel Cloudflare/Render o
+// incluso un 301 viejo cacheado por el navegador) rompe las llamadas a
+// /api porque dejan de ser same-origin y no llevan headers CORS.
 const api = axios.create({
-    baseURL: '/api'
+    baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
 })
 
 api.interceptors.request.use(config => {
