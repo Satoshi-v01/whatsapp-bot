@@ -1,7 +1,34 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { formatPrice } from '@/utils/formatPrice'
 import { useShopConfig } from '@/hooks/useShopConfig'
+
+// ─── Arrastrar con mouse para scrollear las pills (overflow-x no soporta
+// click-and-drag nativo con mouse, solo touch/trackpad) ───────
+function usePillsDrag() {
+  const trackRef = useRef(null)
+  const drag = useRef({ active: false, startX: 0, startScroll: 0, moved: false })
+
+  function onMouseDown(e) {
+    const el = trackRef.current
+    if (!el) return
+    drag.current = { active: true, startX: e.pageX, startScroll: el.scrollLeft, moved: false }
+  }
+  function onMouseMove(e) {
+    const el = trackRef.current
+    if (!el || !drag.current.active) return
+    const delta = e.pageX - drag.current.startX
+    if (Math.abs(delta) > 4) drag.current.moved = true
+    el.scrollLeft = drag.current.startScroll - delta
+  }
+  function endDrag() { drag.current.active = false }
+
+  return {
+    trackRef,
+    dragHandlers: { onMouseDown, onMouseMove, onMouseUp: endDrag, onMouseLeave: endDrag },
+    wasDragged: () => drag.current.moved,
+  }
+}
 
 function IconPlus({ size = 16 }) {
   return (
@@ -82,6 +109,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
 
   const [hovered, setHovered] = useState(false)
   const [selectedPres, setSelectedPres] = useState(() => presentaciones.find(p => p.stock > 0) || presentaciones[0] || null)
+  const { trackRef, dragHandlers, wasDragged } = usePillsDrag()
 
   const precio = selectedPres?.precio_venta || product.precio_desde || 0
   const stock = selectedPres?.stock || 0
@@ -179,8 +207,10 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
         {presentaciones.length > 1 && (
           <div className="pres-pills-scroll" style={{ position: 'relative', margin: '2px -2px 0' }}>
             <div
+              ref={trackRef}
               className="pres-pills-scroll-track"
-              style={{ display: 'flex', gap: 5, flexWrap: 'nowrap', overflowX: 'auto', padding: '0 2px 2px' }}
+              style={{ display: 'flex', gap: 5, flexWrap: 'nowrap', overflowX: 'auto', padding: '0 2px 2px', cursor: 'grab', userSelect: 'none' }}
+              {...dragHandlers}
             >
               {presentaciones.map(pr => {
                 const sinStock = pr.stock === 0
@@ -188,7 +218,11 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
                 return (
                   <button
                     key={pr.id}
-                    onClick={e => { e.preventDefault(); setSelectedPres(pr) }}
+                    onClick={e => {
+                      e.preventDefault()
+                      if (wasDragged()) return
+                      setSelectedPres(pr)
+                    }}
                     disabled={sinStock && !mostrarSinStock}
                     style={{
                       padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
