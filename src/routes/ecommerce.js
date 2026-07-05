@@ -1178,9 +1178,23 @@ router.get('/admin/estadisticas', autenticar, verificarPermiso('ecommerce', 'ver
       default:          intervalo = '30 days'
     }
 
+    // ordenes_pedido no tiene columna "total" — se calcula sumando los items
+    // de cada pedido mas el costo de delivery, igual que en GET /mis-pedidos.
+    const ordenesTotalesCTE = `
+      WITH ordenes_totales AS (
+        SELECT op.id, op.estado, op.tipo_entrega, op.created_at,
+               COALESCE(SUM(opi.precio_total), 0) + COALESCE(op.costo_delivery, 0) AS total
+        FROM ordenes_pedido op
+        LEFT JOIN ordenes_pedido_items opi ON opi.orden_id = op.id
+        WHERE op.canal = 'pagina_web'
+          AND op.created_at >= NOW() - INTERVAL '${intervalo}'
+        GROUP BY op.id, op.estado, op.tipo_entrega, op.created_at, op.costo_delivery
+      )`
+
     // KPIs generales
     const kpis = await db.query(
-      `SELECT
+      `${ordenesTotalesCTE}
+       SELECT
          COUNT(*)                           AS total_pedidos,
          COALESCE(SUM(total), 0)            AS total_ingresos,
          COALESCE(AVG(total), 0)            AS ticket_promedio,
@@ -1188,33 +1202,29 @@ router.get('/admin/estadisticas', autenticar, verificarPermiso('ecommerce', 'ver
          COUNT(*) FILTER (WHERE estado = 'confirmado')  AS confirmados,
          COUNT(*) FILTER (WHERE estado = 'entregado')   AS entregados,
          COUNT(*) FILTER (WHERE estado = 'cancelado')   AS cancelados
-       FROM ordenes_pedido
-       WHERE canal = 'pagina_web'
-         AND created_at >= NOW() - INTERVAL '${intervalo}'`
+       FROM ordenes_totales`
     )
 
     // Pedidos por dia
     const porDia = await db.query(
-      `SELECT
+      `${ordenesTotalesCTE}
+       SELECT
          DATE(created_at AT TIME ZONE 'America/Asuncion') AS fecha,
          COUNT(*)                                         AS cantidad,
          COALESCE(SUM(total), 0)                          AS total
-       FROM ordenes_pedido
-       WHERE canal = 'pagina_web'
-         AND created_at >= NOW() - INTERVAL '${intervalo}'
+       FROM ordenes_totales
        GROUP BY 1
        ORDER BY 1 ASC`
     )
 
     // Delivery vs retiro
     const porEntrega = await db.query(
-      `SELECT
+      `${ordenesTotalesCTE}
+       SELECT
          tipo_entrega,
          COUNT(*) AS cantidad,
          COALESCE(SUM(total), 0) AS total
-       FROM ordenes_pedido
-       WHERE canal = 'pagina_web'
-         AND created_at >= NOW() - INTERVAL '${intervalo}'
+       FROM ordenes_totales
        GROUP BY tipo_entrega`
     )
 
