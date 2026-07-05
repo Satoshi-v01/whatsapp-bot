@@ -141,3 +141,6 @@ logs/*.log
 
 # SQL migration scripts (locales, no versionados)
 /sql/
+
+# Notas internas de diagnostico (locales, no versionadas)
+/RENDER_REDIRECT_DOMINIO.md
