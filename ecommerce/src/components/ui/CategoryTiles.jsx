@@ -146,8 +146,13 @@ export default function CategoryTiles() {
     <section style={{ padding: 'clamp(32px, 4vw, 48px) clamp(20px, 4vw, 48px)', background: 'var(--color-bg)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 13, color: 'var(--color-primary)', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Inter, system-ui, sans-serif' }}>
-            Bienvenidos a Sosa BULLS
+          <div style={{
+            fontFamily: 'Montserrat, system-ui, sans-serif',
+            fontSize: 'clamp(20px, 2.6vw, 30px)',
+            color: 'var(--color-primary)', fontWeight: 800,
+            letterSpacing: -0.3, marginBottom: 10,
+          }}>
+            ¡Bienvenidos a Sosa BULLS!
           </div>
           <h2 style={{
             fontFamily: 'Montserrat, system-ui, sans-serif',
