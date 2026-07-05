@@ -127,13 +127,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Montserrat + Inter — carga asincrona para no bloquear render -->
+    <!-- Montserrat + Inter — carga asincrona para no bloquear render.
+         El swap preload->stylesheet se hace con un <script> (no un atributo
+         onload=""), porque el CSP del backend bloquea script-src-attr. -->
     <link
+      id="font-preload"
       rel="preload"
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
       as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <script>
+      document.getElementById('font-preload').addEventListener('load', function () {
+        this.rel = 'stylesheet'
+      })
+    </script>
     <noscript>
       <link
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
