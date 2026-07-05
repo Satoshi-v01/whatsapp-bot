@@ -93,6 +93,33 @@ function ProductSkeleton() {
   )
 }
 
+// ─── Skeleton de "Completar pedido" — evita el layout shift al
+// pasar de "sin renderizar nada" a la seccion completa cuando llegan
+// los productos complementarios ──────────────────────────────
+function ComplementarySkeleton() {
+  return (
+    <section className="section-padding !pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+      <div className="container-base">
+        <div style={{ marginBottom: 28 }}>
+          <div className="animate-pulse" style={{ width: 180, height: 12, borderRadius: 4, background: 'var(--color-border)', marginBottom: 10 }} />
+          <div className="animate-pulse" style={{ width: 280, height: 28, borderRadius: 6, background: 'var(--color-border)' }} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl overflow-hidden border animate-pulse" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="w-full bg-gray-200" style={{ aspectRatio: '1/1' }} />
+              <div className="p-4 flex flex-col gap-3">
+                <div className="h-4 bg-gray-200 rounded w-2/3" />
+                <div className="h-6 bg-gray-200 rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ─── Grupo de productos dentro de la seccion ─────────────────
 function ProductGroup({ title, products, excludeSlug, limit = 4 }) {
   const filtered = products.filter(p => p.slug !== excludeSlug).slice(0, limit)
@@ -140,7 +167,7 @@ function ComplementarySection({ categoriaSlug, excludeSlug }) {
   const { products: sameCat, loading: loadingSame } = useProducts(paramsSame)
   const { products: accesorios, loading: loadingAcc }  = useProducts(paramsAcc)
 
-  if (loadingSame || (isEspecie && loadingAcc)) return null
+  if (loadingSame || (isEspecie && loadingAcc)) return <ComplementarySkeleton />
 
   const hasSame = sameCat.filter(p => p.slug !== excludeSlug).length > 0
   const hasAcc  = isEspecie && accesorios.length > 0

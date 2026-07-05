@@ -37,7 +37,7 @@ function FeaturedProductsSection() {
           loading={loading}
           error={error}
           heroFirst={false}
-          skeletonCount={8}
+          skeletonCount={12}
         />
       </div>
     </section>
