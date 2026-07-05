@@ -140,7 +140,18 @@ function FilterPanel({ marcas, marcaId, onMarca, sidebarFilters, atributos, onAt
 }
 
 // ─── Pagina ───────────────────────────────────────────────
+// Wrapper con key={slug}: React Router reutiliza la misma instancia de
+// CategoryPage al navegar entre /categoria/:slug (mismo elemento de ruta),
+// por lo que sin esto el estado interno (especie, subcategoria, filtros)
+// queda "pegado" de la categoría anterior durante un instante hasta que los
+// efectos de reseteo corren — se veía como un parpadeo con datos de la
+// categoría previa. La key fuerza un remount limpio en cada cambio de slug.
 export default function Category() {
+  const { slug } = useParams()
+  return <CategoryPage key={slug} />
+}
+
+function CategoryPage() {
   const { slug }   = useParams()
   const category   = CATEGORIES.find(c => c.slug === slug)
   const color      = category?.color ?? '#ffa601'

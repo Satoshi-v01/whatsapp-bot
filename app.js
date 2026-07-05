@@ -186,6 +186,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'landing/index.html'))
 })
 
+// GET /ecommerce sin trailing slash sirve el index directamente — evita el doble redirect
+// (debe ir ANTES del express.static de abajo: si no, serve-static redirige a "/ecommerce/"
+// antes de que esta ruta llegue a ejecutarse, igual que pasaba con /dashboard)
+app.get('/ecommerce', (req, res) => serveEco(req, res))
+
 // Ecommerce SPA en /ecommerce — assets estáticos con prefijo
 // Montar /ecommerce/assets de forma explícita para evitar ambiguedad de path-stripping en Express 5
 app.use('/ecommerce/assets', express.static(path.join(__dirname, 'ecommerce/dist/assets'), { setHeaders: staticAssetHeaders }))
@@ -305,7 +310,6 @@ async function serveEco(req, res) {
     res.send(html)
 }
 
-app.get('/ecommerce',                    serveEco)
 app.get('/ecommerce/categoria/*splat',   serveEco)
 app.get('/ecommerce/producto/*splat',    serveEco)
 app.get('/ecommerce/nosotros',           serveEco)
