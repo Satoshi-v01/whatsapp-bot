@@ -161,6 +161,31 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
     const [guardando, setGuardando] = useState(false)
     const [error, setError] = useState('')
     const [confirmarEliminar, setConfirmarEliminar] = useState(null)
+    const [editandoImagenPres, setEditandoImagenPres] = useState(null)
+    const [imagenPresValue, setImagenPresValue] = useState('')
+    const [guardandoImagenId, setGuardandoImagenId] = useState(null)
+    const [errorImagenPres, setErrorImagenPres] = useState('')
+    const [imagenesRotas, setImagenesRotas] = useState(() => new Set())
+
+    // Guarda la imagen de UNA presentación puntual; aislado del resto (id capturado al iniciar
+    // el guardado) para que abrir/cerrar el modal de otra presentación mientras esto sigue en
+    // vuelo no cierre ni pise el modal equivocado.
+    async function guardarImagenPres() {
+        const id = editandoImagenPres.presentacion_id
+        const valor = imagenPresValue || null
+        setGuardandoImagenId(id)
+        setErrorImagenPres('')
+        try {
+            await api.patch(`/ecommerce/admin/productos/${id}`, { imagen_presentacion_url: valor })
+            setProductos(p => p.map(x => x.presentacion_id === id ? { ...x, imagen_presentacion_url: valor } : x))
+            setImagenesRotas(prev => { const next = new Set(prev); next.delete(id); return next })
+            setEditandoImagenPres(prev => (prev && prev.presentacion_id === id) ? null : prev)
+        } catch {
+            setErrorImagenPres('Error al guardar la imagen de la presentación.')
+        } finally {
+            setGuardandoImagenId(prev => prev === id ? null : prev)
+        }
+    }
 
     function nombreWeb(prod) {
         return prod.producto_nombre
@@ -353,21 +378,29 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                         return (
                                             <tr key={prod.presentacion_id} style={{ background: s.surface, borderTop: esFirst ? `2px solid ${s.border}` : undefined }}>
                                                 <td style={tdStyle}>
-                                                    {esFirst ? (
-                                                        <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${s.border}` }}>
-                                                            {prod.imagen_url ? (
-                                                                <img src={prod.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                            ) : (
-                                                                <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
-                                                                    <ellipse cx="50" cy="65" rx="24" ry="20" />
-                                                                    <circle cx="22" cy="38" r="11" />
-                                                                    <circle cx="42" cy="26" r="11" />
-                                                                    <circle cx="62" cy="26" r="11" />
-                                                                    <circle cx="78" cy="38" r="11" />
-                                                                </svg>
-                                                            )}
-                                                        </div>
-                                                    ) : null}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setErrorImagenPres(''); setEditandoImagenPres(prod); setImagenPresValue(prod.imagen_presentacion_url || '') }}
+                                                        title="Imagen de esta presentación"
+                                                        style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${prod.imagen_presentacion_url ? '#6366f1' : s.border}`, padding: 0, cursor: 'pointer' }}
+                                                    >
+                                                        {(prod.imagen_presentacion_url || prod.imagen_url) && !imagenesRotas.has(prod.presentacion_id) ? (
+                                                            <img
+                                                                src={prod.imagen_presentacion_url || prod.imagen_url}
+                                                                alt=""
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                                onError={() => setImagenesRotas(prev => new Set(prev).add(prod.presentacion_id))}
+                                                            />
+                                                        ) : (
+                                                            <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
+                                                                <ellipse cx="50" cy="65" rx="24" ry="20" />
+                                                                <circle cx="22" cy="38" r="11" />
+                                                                <circle cx="42" cy="26" r="11" />
+                                                                <circle cx="62" cy="26" r="11" />
+                                                                <circle cx="78" cy="38" r="11" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
                                                 </td>
                                                 <td style={tdStyle}>
                                                     {esFirst && <span style={{ fontWeight: 600, color: s.text }}>{nombreWeb(prod)}</span>}
@@ -430,6 +463,31 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                     onCancelar={() => setConfirmarEliminar(null)}
                 />
             )}
+
+            {/* Modal imagen de la presentación (independiente de la imagen general del producto) */}
+            {editandoImagenPres && (() => {
+                const guardandoEsta = guardandoImagenId === editandoImagenPres.presentacion_id
+                return (
+                    <Modal s={s} onClose={() => setEditandoImagenPres(null)} title={`Imagen — ${editandoImagenPres.presentacion_nombre}`} width={420}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            {errorImagenPres && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{errorImagenPres}</p>}
+                            <div>
+                                <label style={labelStyle}>Imagen de esta presentación (opcional)</label>
+                                <InputImagen value={imagenPresValue} onChange={setImagenPresValue} s={s} inputStyle={inputStyle} />
+                                <p style={{ fontSize: 11, color: s.textFaint, margin: '4px 0 0' }}>
+                                    Si no se define, se usa la imagen general del producto.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                                <button onClick={() => setEditandoImagenPres(null)} style={btnSecundario}>Cancelar</button>
+                                <button onClick={guardarImagenPres} disabled={guardandoEsta} style={{ ...btnPrimario, opacity: guardandoEsta ? 0.7 : 1 }}>
+                                    {guardandoEsta ? 'Guardando...' : 'Guardar'}
+                                </button>
+                            </div>
+                        </div>
+                    </Modal>
+                )
+            })()}
 
             {/* Modal editar producto */}
             {editando && (

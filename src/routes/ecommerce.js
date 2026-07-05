@@ -3,6 +3,7 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
+const { registrarLog } = require('../middleware/auditoria')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 
@@ -361,7 +362,8 @@ router.get('/productos', async (req, res) => {
              'id', pr.id,
              'nombre', pr.nombre,
              'precio_venta', COALESCE(pr.precio_tarjeta, pr.precio_venta),
-             'stock', pr.stock
+             'stock', pr.stock,
+             'imagen_url', COALESCE(pr.imagen_url, p.imagen_url)
            ) ORDER BY pr.nombre ASC
          ) FILTER (WHERE pr.disponible = true ${solo_disponibles !== 'false' ? 'AND pr.stock > 0' : ''}) AS presentaciones,
          COUNT(pr.id) FILTER (WHERE pr.disponible = true AND pr.stock > 0) > 0 AS tiene_stock
@@ -394,6 +396,7 @@ router.get('/productos', async (req, res) => {
         nombre: pr.nombre,
         precio_venta: Number(pr.precio_venta),
         stock: Number(pr.stock),
+        imagen_url: pr.imagen_url || null,
       })),
     }))
 
@@ -432,7 +435,8 @@ router.get('/productos/:slug', async (req, res) => {
              'nombre', pr.nombre,
              'precio_venta', COALESCE(pr.precio_tarjeta, pr.precio_venta),
              'stock', pr.stock,
-             'disponible', pr.disponible
+             'disponible', pr.disponible,
+             'imagen_url', COALESCE(pr.imagen_url, p.imagen_url)
            ) ORDER BY pr.nombre ASC
          ) FILTER (WHERE pr.disponible = true) AS presentaciones
        FROM productos p
@@ -455,6 +459,7 @@ router.get('/productos/:slug', async (req, res) => {
       precio_venta: Number(pr.precio_venta),
       stock: Number(pr.stock),
       disponible: pr.disponible,
+      imagen_url: pr.imagen_url || null,
     }))
 
     res.json({
@@ -942,6 +947,7 @@ router.get('/admin/productos', autenticar, verificarPermiso('ecommerce', 'ver'),
          pr.stock,
          pr.disponible,
          pr.codigo_barras,
+         pr.imagen_url AS imagen_presentacion_url,
          (${OFERTA_COND}) AS en_oferta,
          p.id AS producto_id,
          p.nombre AS producto_nombre,
@@ -975,27 +981,35 @@ router.get('/admin/productos', autenticar, verificarPermiso('ecommerce', 'ver'),
 // ─── PATCH /api/ecommerce/admin/productos/:presentacionId ─────
 // Edita campos ecommerce del producto (imagen, novedad, destacado, disponible)
 router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('ecommerce', 'editar'), async (req, res) => {
+  const client = await db.pool.connect()
   try {
     const { presentacionId } = req.params
-    const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos, especie } = req.body
+    const { imagen_url, imagen_presentacion_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos, especie } = req.body
     if (especie !== undefined && especie !== null && !['perro', 'gato', 'ambos'].includes(especie))
       return res.status(400).json({ error: 'especie inválida' })
     // "ofertas" no es una categoria asignable: se arma automaticamente segun el descuento activo
     if (ecommerce_categoria === 'ofertas')
       return res.status(400).json({ error: "'ofertas' no es una categoría asignable. Activá el descuento en Inventario." })
 
+    await client.query('BEGIN')
+
+    // Obtener producto_id y valores previos de esta presentacion
+    const pr = await client.query(`SELECT producto_id, disponible, imagen_url AS imagen_presentacion_url_anterior FROM presentaciones WHERE id = $1`, [presentacionId])
+    if (!pr.rows.length) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Presentación no encontrada' })
+    }
+    const productoId = pr.rows[0].producto_id
+
     // Actualizar disponible en la presentacion
     if (disponible !== undefined) {
-      await db.query(
-        `UPDATE presentaciones SET disponible = $1 WHERE id = $2`,
-        [disponible, presentacionId]
-      )
+      await client.query(`UPDATE presentaciones SET disponible = $1 WHERE id = $2`, [disponible, presentacionId])
     }
 
-    // Obtener producto_id de esta presentacion
-    const pr = await db.query(`SELECT producto_id FROM presentaciones WHERE id = $1`, [presentacionId])
-    if (!pr.rows.length) return res.status(404).json({ error: 'Presentación no encontrada' })
-    const productoId = pr.rows[0].producto_id
+    // Imagen propia de esta presentación (independiente de la imagen general del producto)
+    if (imagen_presentacion_url !== undefined) {
+      await client.query(`UPDATE presentaciones SET imagen_url = $1 WHERE id = $2`, [imagen_presentacion_url || null, presentacionId])
+    }
 
     // Actualizar campos en producto
     const sets = []
@@ -1011,12 +1025,24 @@ router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('e
 
     if (sets.length) {
       vals.push(productoId)
-      await db.query(`UPDATE productos SET ${sets.join(', ')} WHERE id = $${i}`, vals)
+      await client.query(`UPDATE productos SET ${sets.join(', ')} WHERE id = $${i}`, vals)
+    }
+
+    await client.query('COMMIT')
+
+    if (disponible !== undefined) {
+      registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'ecommerce', entidad: 'presentacion', entidad_id: parseInt(presentacionId), descripcion: `Presentación ${disponible ? 'activada' : 'desactivada'} en tienda web`, dato_anterior: { disponible: pr.rows[0].disponible }, dato_nuevo: { disponible }, ip: req.ip }).catch(() => {})
+    }
+    if (imagen_presentacion_url !== undefined) {
+      registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'ecommerce', entidad: 'presentacion', entidad_id: parseInt(presentacionId), descripcion: 'Imagen de presentación actualizada en tienda web', dato_anterior: { imagen_url: pr.rows[0].imagen_presentacion_url_anterior }, dato_nuevo: { imagen_url: imagen_presentacion_url || null }, ip: req.ip }).catch(() => {})
     }
 
     res.json({ ok: true })
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
     manejarError(res, error)
+  } finally {
+    client.release()
   }
 })
 

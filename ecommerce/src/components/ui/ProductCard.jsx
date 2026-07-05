@@ -85,6 +85,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
 
   const precio = selectedPres?.precio_venta || product.precio_desde || 0
   const stock = selectedPres?.stock || 0
+  const imagenActual = selectedPres?.imagen_url || imagen_url
   // tiene_stock viene del backend; fallback al cálculo local
   const hayStock = tiene_stock ?? presentaciones.some(p => p.stock > 0)
   const outOfStock = !hayStock
@@ -94,7 +95,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
     nombre: presentaciones.length > 1 ? `${nombre} — ${selectedPres.nombre}` : nombre,
     precio_venta: selectedPres.precio_venta,
     stock: selectedPres.stock,
-    imagen_url,
+    imagen_url: imagenActual,
     slug,
     marca,
   } : null
@@ -118,9 +119,10 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
     >
       {/* ── Imagen ── */}
       <Link to={`/producto/${slug}`} tabIndex={-1} aria-hidden="true" style={{ display: 'block', position: 'relative', aspectRatio: '1 / 1', background: '#fff', overflow: 'hidden', flexShrink: 0 }}>
-        {imagen_url ? (
+        {imagenActual ? (
           <img
-            src={imagen_url}
+            key={imagenActual}
+            src={imagenActual}
             alt={nombre}
             loading={eager ? 'eager' : 'lazy'}
             style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '8px' }}

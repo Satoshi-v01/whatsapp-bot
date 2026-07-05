@@ -252,6 +252,7 @@ export default function Product() {
   }
 
   const { id, nombre, descripcion, imagen_url, categoria_slug, es_novedad, marca } = product
+  const imagenActual = presActual?.imagen_url || imagen_url
   const precio_venta = presActual?.precio_venta || product.precio_desde || 0
   const stock = presActual?.stock || 0
   const category = CATEGORIES.find(c => c.slug === categoria_slug)
@@ -283,7 +284,7 @@ export default function Product() {
         description: descripcion ?? `${nombre} disponible en Sosa BULLS. Envio a domicilio en Paraguay.`,
         sku: String(id),
         ...(marca && { brand: { '@type': 'Brand', name: marca } }),
-        ...(imagen_url && { image: { '@type': 'ImageObject', url: imagen_url, contentUrl: imagen_url } }),
+        ...(imagenActual && { image: { '@type': 'ImageObject', url: imagenActual, contentUrl: imagenActual } }),
         offers: {
           '@type': 'Offer',
           priceCurrency: 'PYG',
@@ -323,7 +324,7 @@ export default function Product() {
       nombre: presentaciones.length > 1 ? `${nombre} — ${presActual.nombre}` : nombre,
       precio_venta: presActual.precio_venta,
       stock: presActual.stock,
-      imagen_url,
+      imagen_url: imagenActual,
       slug,
       marca,
       cantidad: qty,
@@ -337,7 +338,7 @@ export default function Product() {
       <SEOHead
         title={nombre}
         description={descripcion ?? `Compra ${nombre} en Sosa BULLS. Envío a domicilio en Paraguay.`}
-        image={imagen_url}
+        image={imagenActual}
         type="product"
         schema={schema}
       />
@@ -401,7 +402,7 @@ export default function Product() {
                     zIndex: 1,
                   }}
                 >
-                  <ProductImage src={imagen_url} alt={nombre} />
+                  <ProductImage key={imagenActual} src={imagenActual} alt={nombre} />
                 </div>
               </motion.div>
 
