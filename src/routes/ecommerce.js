@@ -371,7 +371,7 @@ router.get('/productos', async (req, res) => {
              'stock', pr.stock,
              'imagen_url', COALESCE(pr.imagen_url, p.imagen_url)
            ) ORDER BY pr.nombre ASC
-         ) FILTER (WHERE pr.disponible = true ${solo_disponibles !== 'false' ? 'AND pr.stock > 0' : ''}) AS presentaciones,
+         ) FILTER (WHERE pr.disponible = true) AS presentaciones,
          COUNT(pr.id) FILTER (WHERE pr.disponible = true AND pr.stock > 0) > 0 AS tiene_stock
        FROM productos p
        JOIN presentaciones pr ON pr.producto_id = p.id AND pr.disponible = true
