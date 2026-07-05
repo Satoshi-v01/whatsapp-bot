@@ -335,12 +335,18 @@ router.get('/productos', async (req, res) => {
 
     const needsVentas = sort === 'mas_vendido' || sort === 'destacados'
 
+    // Subquery agrupada por producto: HAVING necesita GROUP BY para que el conteo
+    // sea "cuantos productos cumplen" en vez de un unico grupo global (que devuelve
+    // 0 FILAS, no total=0, cuando el filtro de precio no matchea — rompía con 500).
     const countResult = await db.query(
-      `SELECT COUNT(DISTINCT p.id) AS total
-       FROM productos p
-       JOIN presentaciones pr ON pr.producto_id = p.id AND pr.disponible = true
-       ${where}
-       ${having ? having.replace(/COUNT\(pr\.id\)[^,)]*/g, 'true') : ''}`,
+      `SELECT COUNT(*) AS total FROM (
+         SELECT p.id
+         FROM productos p
+         JOIN presentaciones pr ON pr.producto_id = p.id AND pr.disponible = true
+         ${where}
+         GROUP BY p.id
+         ${having}
+       ) sub`,
       valores
     ).catch(() => db.query(`SELECT COUNT(DISTINCT p.id) AS total FROM productos p JOIN presentaciones pr ON pr.producto_id = p.id ${where}`, valores))
 
