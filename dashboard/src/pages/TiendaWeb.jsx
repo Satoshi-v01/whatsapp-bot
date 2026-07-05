@@ -295,7 +295,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                     <option value="medicamentos">Medicamentos</option>
                     <option value="accesorios">Accesorios</option>
                     <option value="cuidado">Cuidado</option>
-                    <option value="ofertas">Ofertas</option>
+                    <option value="ofertas">Ofertas (descuento activo)</option>
                 </select>
             </div>
 
@@ -311,6 +311,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                 const filtered = productos.filter(prod => {
                     if (!filtrocat) return true
                     if (filtrocat === 'sin') return !prod.ecommerce_categoria
+                    if (filtrocat === 'ofertas') return !!prod.en_oferta
                     return prod.ecommerce_categoria === filtrocat
                 })
                 if (filtered.length === 0) return <p style={{ color: s.textMuted, fontSize: 13 }}>No hay productos con este filtro.</p>
@@ -493,8 +494,10 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                     <option value="medicamentos">Medicamentos</option>
                                     <option value="accesorios">Accesorios</option>
                                     <option value="cuidado">Cuidado</option>
-                                    <option value="ofertas">Ofertas</option>
                                 </select>
+                                <p style={{ fontSize: 11, color: s.textFaint, margin: '4px 0 0' }}>
+                                    "Ofertas" no se asigna acá: aparece solo cuando activás el descuento en Inventario.
+                                </p>
                             </div>
                             <div>
                                 <label style={labelStyle}>Subcategoria web</label>
@@ -566,7 +569,6 @@ const CAT_SLUGS_LABELS = [
     { slug: 'medicamentos', label: 'Medicamentos' },
     { slug: 'accesorios',   label: 'Accesorios' },
     { slug: 'cuidado',      label: 'Cuidado' },
-    { slug: 'ofertas',      label: 'Ofertas' },
 ]
 const SUBCAT_VACIA = { nombre: '', categoria_slug: 'perros', orden: 0, especie: 'ambos' }
 const ESPECIE_LABELS = [

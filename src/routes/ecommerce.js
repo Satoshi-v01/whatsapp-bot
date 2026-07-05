@@ -67,7 +67,7 @@ const PRECIO_WEB  = `COALESCE(pr.precio_tarjeta, ${PRECIO_EF})`
 
 router.get('/categorias', async (req, res) => {
   try {
-    const [cats, imgs] = await Promise.all([
+    const [cats, ofertas, imgs] = await Promise.all([
       db.query(
         `SELECT
            p.ecommerce_categoria AS slug,
@@ -76,8 +76,15 @@ router.get('/categorias', async (req, res) => {
            ) AS count
          FROM productos p
          LEFT JOIN presentaciones pr ON pr.producto_id = p.id
-         WHERE p.ecommerce_categoria IS NOT NULL
+         WHERE p.ecommerce_categoria IS NOT NULL AND p.ecommerce_categoria != 'ofertas'
          GROUP BY p.ecommerce_categoria`
+      ),
+      // "ofertas" no es una categoria asignable: cuenta productos con descuento activo y vigente
+      db.query(
+        `SELECT COUNT(DISTINCT p.id) AS count
+         FROM productos p
+         JOIN presentaciones pr ON pr.producto_id = p.id
+         WHERE pr.stock > 0 AND pr.disponible = true AND ${OFERTA_COND}`
       ),
       db.query(
         `SELECT clave, valor FROM tienda_config WHERE clave LIKE 'cat_imagen_%'`
@@ -89,7 +96,7 @@ router.get('/categorias', async (req, res) => {
     cats.rows.forEach(r => { catMap[r.slug] = r })
     res.json(SLUGS_VALIDOS.map(slug => ({
       slug,
-      count: catMap[slug]?.count ?? 0,
+      count: slug === 'ofertas' ? (ofertas.rows[0]?.count ?? 0) : (catMap[slug]?.count ?? 0),
       imagen_url: imagenes[slug] || null,
     })))
   } catch (error) {
@@ -140,6 +147,8 @@ router.post('/admin/subcategorias', autenticar, verificarPermiso('ecommerce', 'c
     const { nombre, categoria_slug, orden = 0, especie = 'ambos' } = req.body
     if (!nombre?.trim() || !categoria_slug?.trim())
       return res.status(400).json({ error: 'nombre y categoria_slug son requeridos' })
+    if (categoria_slug.trim() === 'ofertas')
+      return res.status(400).json({ error: "'ofertas' es una sección automática, no admite subcategorías" })
     if (!['perro', 'gato', 'ambos'].includes(especie))
       return res.status(400).json({ error: 'especie inválida' })
     const slug = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -156,6 +165,8 @@ router.patch('/admin/subcategorias/:id', autenticar, verificarPermiso('ecommerce
   try {
     const { id } = req.params
     const { nombre, categoria_slug, orden, especie } = req.body
+    if (categoria_slug === 'ofertas')
+      return res.status(400).json({ error: "'ofertas' es una sección automática, no admite subcategorías" })
     if (especie !== undefined && !['perro', 'gato', 'ambos'].includes(especie))
       return res.status(400).json({ error: 'especie inválida' })
     const sets = []; const vals = []; let i = 1
@@ -931,6 +942,7 @@ router.get('/admin/productos', autenticar, verificarPermiso('ecommerce', 'ver'),
          pr.stock,
          pr.disponible,
          pr.codigo_barras,
+         (${OFERTA_COND}) AS en_oferta,
          p.id AS producto_id,
          p.nombre AS producto_nombre,
          p.descripcion,
@@ -968,6 +980,9 @@ router.patch('/admin/productos/:presentacionId', autenticar, verificarPermiso('e
     const { imagen_url, es_novedad, es_destacado, disponible, ecommerce_categoria, ecommerce_subcategoria_id, atributos, especie } = req.body
     if (especie !== undefined && especie !== null && !['perro', 'gato', 'ambos'].includes(especie))
       return res.status(400).json({ error: 'especie inválida' })
+    // "ofertas" no es una categoria asignable: se arma automaticamente segun el descuento activo
+    if (ecommerce_categoria === 'ofertas')
+      return res.status(400).json({ error: "'ofertas' no es una categoría asignable. Activá el descuento en Inventario." })
 
     // Actualizar disponible en la presentacion
     if (disponible !== undefined) {
