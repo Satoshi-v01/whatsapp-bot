@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import SEOHead from '@/components/seo/SEOHead'
@@ -180,6 +180,11 @@ function CategoryPage() {
 
   const [precioMinBase, setPrecioMinBase] = useState(0)
   const [precioMaxBase, setPrecioMaxBase] = useState(0)
+  // Si el usuario arrastro el slider de precio a mano — mientras sea false,
+  // un cambio de subcategoria/marca/especie/atributo debe resetear el precio
+  // al rango completo de la nueva combinacion, no "encajar" la seleccion vieja
+  // dentro del nuevo rango (eso generaba un filtro de precio fantasma).
+  const precioManualRef = useRef(false)
 
   useEffect(() => {
     setLoadingFiltros(true)
@@ -196,7 +201,7 @@ function CategoryPage() {
   }, [slug])
 
   // Reset al cambiar categoria
-  useEffect(() => { setSubcatId(null); setAtributos({}); setMarcaId(''); setPage(1); setEspecie(null) }, [slug])
+  useEffect(() => { setSubcatId(null); setAtributos({}); setMarcaId(''); setPage(1); setEspecie(null); precioManualRef.current = false }, [slug])
 
   // Re-fetchear rango de precios cuando cambian los filtros activos (debounce 300ms)
   useEffect(() => {
@@ -227,9 +232,17 @@ function CategoryPage() {
           if (newMax > newMin) {
             setPrecioMin(newMin)
             setPrecioMax(newMax)
-            // Clampear la selección actual al nuevo rango
-            setLow(prev => Math.max(newMin, Math.min(prev, newMax)))
-            setHigh(prev => Math.min(newMax, Math.max(prev, newMin)))
+            if (precioManualRef.current) {
+              // El usuario ya habia elegido un rango a mano: lo encajamos
+              // dentro del nuevo rango en vez de perder su seleccion.
+              setLow(prev => Math.max(newMin, Math.min(prev, newMax)))
+              setHigh(prev => Math.min(newMax, Math.max(prev, newMin)))
+            } else {
+              // Nunca toco el slider: el precio no es un filtro activo, solo
+              // refleja el rango disponible para esta combinacion de filtros.
+              setLow(newMin)
+              setHigh(newMax)
+            }
           }
         })
         .catch(() => {})
@@ -238,7 +251,7 @@ function CategoryPage() {
     return () => clearTimeout(timer)
   }, [atributos, marcaId, subcatId, slug, especie, esCategoriaEspecie])
 
-  const handlePrecio = useCallback((l, h) => { setLow(l); setHigh(h); setPage(1) }, [])
+  const handlePrecio = useCallback((l, h) => { precioManualRef.current = true; setLow(l); setHigh(h); setPage(1) }, [])
 
   function setAtributo(campo, valor) {
     setAtributos(prev => {
@@ -252,6 +265,7 @@ function CategoryPage() {
   function clearFilters() {
     setMarcaId(''); setSubcatId(null); setAtributos({}); setEspecie(null)
     // Restaurar rango de precios al base de la categoría
+    precioManualRef.current = false
     setPrecioMin(precioMinBase); setPrecioMax(precioMaxBase)
     setLow(precioMinBase); setHigh(precioMaxBase); setPage(1)
   }
