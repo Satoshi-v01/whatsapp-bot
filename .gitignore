@@ -142,5 +142,10 @@ logs/*.log
 # SQL migration scripts (locales, no versionados)
 /sql/
 
-# Notas internas de diagnostico (locales, no versionadas)
-/RENDER_REDIRECT_DOMINIO.md
+# Notas/markdown sueltos en la raiz (locales, no versionados) — los .md que
+# ya estaban trackeados antes de esta regla (README.md, ECOMMERCE.md, etc.)
+# no se ven afectados, git no destrackea archivos ya versionados por esto.
+*.md
+
+# Configs locales de agentes de Claude (no versionadas)
+/.claude/agents/
