@@ -588,7 +588,10 @@ router.post('/pedidos', async (req, res) => {
       })
     }
 
-    // 3. Generar numero de pedido
+    // 3. Generar numero de pedido -- lock advisory para serializar contra
+    // cualquier otra transaccion (de esta ruta o de /pedidos-exclusivos) que
+    // este generando un numero al mismo tiempo; se libera solo al COMMIT/ROLLBACK.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('numero_pedido_ecommerce'))`)
     const numeroResult = await client.query(
       `SELECT COALESCE(MAX(CAST(NULLIF(REGEXP_REPLACE(numero_pedido, '[^0-9]', '', 'g'), '') AS INTEGER)), 0) + 1 AS siguiente
        FROM ordenes_pedido`
@@ -716,6 +719,141 @@ router.post('/pedidos', async (req, res) => {
       total,
       tipo_entrega,
       mensaje: `Tu pedido ${numeroPedido} fue registrado. Envialo por WhatsApp para que lo procesemos.`,
+      whatsapp_url: whatsappUrl,
+    })
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    manejarError(res, error)
+  } finally {
+    client.release()
+  }
+})
+
+// ─── POST /api/ecommerce/pedidos-exclusivos ───────────────────
+// "Encargo" para productos sin stock: no valida ni bloquea por stock,
+// pide solo nombre/telefono/cantidad (sin datos de entrega, el agente
+// coordina el resto por WhatsApp). Crea la orden igual que un pedido
+// normal, marcada con es_pedido_exclusivo=true.
+router.post('/pedidos-exclusivos', async (req, res) => {
+  const client = await db.pool.connect()
+  try {
+    const { presentacion_id, cliente } = req.body
+    const cantidad = parseInt(req.body.cantidad, 10)
+
+    if (!presentacion_id) {
+      return res.status(400).json({ error: 'presentacion_id es requerido' })
+    }
+    if (!Number.isInteger(cantidad) || cantidad < 1) {
+      return res.status(400).json({ error: 'Cantidad invalida' })
+    }
+    if (!cliente?.nombre?.trim()) {
+      return res.status(400).json({ error: 'El nombre del cliente es requerido' })
+    }
+    if (!cliente?.telefono?.trim()) {
+      return res.status(400).json({ error: 'El telefono es requerido' })
+    }
+
+    const telefonoLimpio = cliente.telefono.replace(/[^0-9+\s()-]/g, '').trim()
+
+    await client.query('BEGIN')
+
+    // Buscar la presentacion solo para sacar nombre/precio -- sin FOR UPDATE,
+    // sin chequeo de STOCK: este es justamente el flujo para pedirla sin stock.
+    // Si se valida "disponible" (activa en el catalogo) -- no es lo mismo que
+    // stock, un producto desactivado no deberia poder pedirse ni asi.
+    const pr = await client.query(
+      `SELECT pr.id, pr.precio_venta, pr.precio_tarjeta, pr.disponible AS pr_disponible,
+              p.nombre AS producto, pr.nombre AS presentacion, p.disponible AS p_disponible
+       FROM presentaciones pr
+       JOIN productos p ON p.id = pr.producto_id
+       WHERE pr.id = $1`,
+      [presentacion_id]
+    )
+    if (!pr.rows.length) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Producto no encontrado' })
+    }
+    const presentacion = pr.rows[0]
+    if (presentacion.pr_disponible === false || presentacion.p_disponible === false) {
+      await client.query('ROLLBACK')
+      return res.status(400).json({ error: 'Producto no disponible' })
+    }
+    const precioUnit = Number(presentacion.precio_tarjeta || presentacion.precio_venta)
+    const precioTotal = precioUnit * cantidad
+
+    // Buscar o crear cliente
+    let clienteId
+    const clienteExistente = await client.query(
+      `SELECT id FROM clientes WHERE telefono = $1 LIMIT 1`,
+      [telefonoLimpio]
+    )
+    if (clienteExistente.rows.length > 0) {
+      clienteId = clienteExistente.rows[0].id
+    } else {
+      const nuevoCliente = await client.query(
+        `INSERT INTO clientes (nombre, telefono, canal_origen)
+         VALUES ($1, $2, 'ecommerce')
+         RETURNING id`,
+        [cliente.nombre.trim(), telefonoLimpio]
+      )
+      clienteId = nuevoCliente.rows[0].id
+    }
+
+    // Generar numero de pedido -- mismo lock advisory que /pedidos, para que
+    // ambas rutas se serialicen entre si y no generen el mismo numero.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('numero_pedido_ecommerce'))`)
+    const numeroResult = await client.query(
+      `SELECT COALESCE(MAX(CAST(NULLIF(REGEXP_REPLACE(numero_pedido, '[^0-9]', '', 'g'), '') AS INTEGER)), 0) + 1 AS siguiente
+       FROM ordenes_pedido`
+    )
+    const numeroPedido = `ECO-${String(numeroResult.rows[0].siguiente).padStart(5, '0')}`
+
+    const ordenResult = await client.query(
+      `INSERT INTO ordenes_pedido (cliente_id, canal, estado, es_pedido_exclusivo, notas, numero_pedido)
+       VALUES ($1, 'pagina_web', 'pendiente', true, $2, $3)
+       RETURNING id`,
+      [
+        clienteId,
+        'Pedido exclusivo (sin stock) — sena del 20% a coordinar con el agente.',
+        numeroPedido,
+      ]
+    )
+    const ordenId = ordenResult.rows[0].id
+
+    await client.query(
+      `INSERT INTO ordenes_pedido_items (orden_id, presentacion_id, cantidad, precio_unitario, precio_total)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ordenId, presentacion.id, cantidad, precioUnit, precioTotal]
+    )
+
+    await client.query('COMMIT')
+
+    const BOT_NUMERO = '595982211934'
+    const gs = v => `Gs. ${Number(v).toLocaleString('es-PY')}`
+    const nombreProducto = `${presentacion.producto} ${presentacion.presentacion}`
+
+    const plantilla = [
+      `*PEDIDO EXCLUSIVO - ${numeroPedido}*`,
+      ``,
+      `Cliente: ${cliente.nombre.trim()}`,
+      `Tel: ${telefonoLimpio}`,
+      ``,
+      `Producto: ${nombreProducto} x ${cantidad}`,
+      `Precio estimado: ${gs(precioTotal)}`,
+      ``,
+      `Algunos productos se pueden conseguir en el dia, otros pueden tardar`,
+      `de 24 a 48 hs aproximadamente. El pedido se realiza con una sena del 20%.`,
+      ``,
+      `#PEDIDO_EXCLUSIVO#${numeroPedido}`,
+    ].join('\n')
+
+    const whatsappUrl = `https://wa.me/${BOT_NUMERO}?text=${encodeURIComponent(plantilla)}`
+
+    res.status(201).json({
+      pedido_id: ordenId,
+      numero: numeroPedido,
+      total: precioTotal,
+      mensaje: `Tu pedido especial ${numeroPedido} fue registrado. Envialo por WhatsApp para que un agente lo coordine.`,
       whatsapp_url: whatsappUrl,
     })
   } catch (error) {

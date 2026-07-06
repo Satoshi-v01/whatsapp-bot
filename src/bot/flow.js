@@ -11,6 +11,7 @@ const { esReset, esPedidoAgente, esSaludo, necesitaAclararEspecie, parsearSelecc
 const { recalcularStats } = require('../routes/clientes')
 const { estaAbierto, getMensajeFueraHorario, estaAbiertoParaDelivery, esRetiroHoy } = require('../services/horario')
 const db = require('../db/index')
+const logger = require('../middleware/logger')
 
 // ─────────────────────────────────────────────
 // HELPERS INTERNOS
@@ -76,6 +77,42 @@ async function manejarPedidoWeb(numero, texto) {
     }
 }
 
+async function manejarPedidoExclusivo(numero, texto, sesion) {
+    const match = texto.match(/#PEDIDO_EXCLUSIVO#(ECO-\d+)/)
+    const mensajeFallback = `Recibimos tu pedido especial. Un agente se va a comunicar para coordinar la seña del 20% y el tiempo de entrega. ¡Gracias!`
+    if (!match) {
+        await enviarYGuardar(numero, mensajeFallback)
+        return
+    }
+    const numeroPedido = match[1]
+    try {
+        const res = await db.query(
+            `SELECT id FROM ordenes_pedido WHERE numero_pedido = $1`,
+            [numeroPedido]
+        )
+        if (!res.rows[0]) {
+            // Numero valido en formato pero sin pedido real detras (typo,
+            // tag viejo reenviado) -- no se hace handoff, no hay pedido que coordinar.
+            await enviarYGuardar(numero, `No encontramos el pedido *${numeroPedido}*. Escribinos para ayudarte con tu pedido especial.`)
+            return
+        }
+        await db.query(
+            `UPDATE ordenes_pedido SET cliente_numero = $1 WHERE id = $2`,
+            [numero, res.rows[0].id]
+        )
+        // Handoff a agente: mismo mecanismo que "hablar con un agente"
+        await actualizarSesion(numero, { paso: 'esperando_agente', modo: 'esperando_agente', datos: sesion.datos })
+        await enviarYGuardar(numero,
+            `Recibimos tu pedido especial *${numeroPedido}*.\n\n` +
+            `Un agente se va a comunicar para coordinar la seña del 20% y el tiempo de entrega.\n\n` +
+            `¡Gracias por elegirnos!`
+        )
+    } catch (e) {
+        logger.error('Error en manejarPedidoExclusivo:', { message: e.message, numeroPedido })
+        await enviarYGuardar(numero, mensajeFallback)
+    }
+}
+
 // ─────────────────────────────────────────────
 // PROCESADOR PRINCIPAL
 // ─────────────────────────────────────────────
@@ -83,6 +120,11 @@ async function procesarMensaje(numero, texto, tipoMensaje = 'text') {
     const sesion = await obtenerSesion(numero)
 
     if (sesion.modo === 'humano') return
+
+    if (tipoMensaje === 'text' && texto?.includes('#PEDIDO_EXCLUSIVO#')) {
+        await manejarPedidoExclusivo(numero, texto, sesion)
+        return
+    }
 
     if (tipoMensaje === 'text' && texto?.includes('#PEDIDO_WEB#')) {
         await manejarPedidoWeb(numero, texto)
