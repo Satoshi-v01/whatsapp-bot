@@ -80,7 +80,7 @@ function Wordmark() {
         <div style={{ fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 18, fontWeight: 800, color: 'var(--color-text)', letterSpacing: 0.3 }}>
           Sosa <span style={{ color: 'var(--color-primary)' }}>BULLS</span>
         </div>
-        <div style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginTop: 1 }}>
+        <div style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 1 }}>
           Pet Shop · PY
         </div>
       </div>
