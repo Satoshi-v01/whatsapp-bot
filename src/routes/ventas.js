@@ -441,6 +441,10 @@ router.patch('/:id/estado', autenticar, verificarPermiso('ventas', 'editar'), va
 
         const { numero_factura } = ventaRef.rows[0]
 
+        const anterior = numero_factura
+            ? await db.query(`SELECT id, estado FROM ventas WHERE numero_factura = $1`, [numero_factura])
+            : await db.query(`SELECT id, estado FROM ventas WHERE id = $1`, [parseInt(id)])
+
         const resultado = numero_factura
             ? await db.query(
                 `UPDATE ventas SET estado = $1, agente_id = $2 WHERE numero_factura = $3 RETURNING *`,
@@ -460,7 +464,8 @@ router.patch('/:id/estado', autenticar, verificarPermiso('ventas', 'editar'), va
             modulo: 'ventas',
             entidad: 'venta',
             entidad_id: parseInt(id),
-            descripcion: `Estado${numero_factura ? ` de factura ${numero_factura}` : ''} cambiado a ${estado} (${resultado.rows.length} linea/s)`,
+            descripcion: `Estado${numero_factura ? ` de factura ${numero_factura}` : ''} cambiado de ${anterior.rows[0]?.estado ?? '?'} a ${estado} (${resultado.rows.length} linea/s)`,
+            dato_anterior: { estado: anterior.rows[0]?.estado ?? null, lineas: anterior.rows.map(r => ({ id: r.id, estado: r.estado })) },
             dato_nuevo: { estado },
             ip: req.ip
         }).catch(() => {})
@@ -698,6 +703,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             item.precio_unitario = precioEnviado
             item.diferencial_precio = precioCatalogo - precioEnviado
             item.es_precio_especial = item.diferencial_precio !== 0
+            item.nombre = stock.rows[0].nombre
             if (item.es_precio_especial) haySpecialPrice = true
         }
 
@@ -809,9 +815,8 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             recalcularStats(clienteIdFinal).catch(() => {})
         }
 
-        const descripcion = itemsNorm.length === 1
-            ? `Venta registrada — ${itemsNorm[0].cantidad}x item — Gs. ${totalPrecio.toLocaleString()}`
-            : `Venta registrada — ${itemsNorm.length} productos — Gs. ${totalPrecio.toLocaleString()}`
+        const listaItems = itemsNorm.map(it => `${it.nombre || `presentación ${it.presentacion_id}`} x${it.cantidad}`).join(', ')
+        const descripcion = `Venta registrada — ${listaItems} — Gs. ${totalPrecio.toLocaleString()}`
 
         registrarLog({
             usuario_id: req.usuario?.id || null,
@@ -821,7 +826,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             entidad: 'venta',
             entidad_id: ventaId,
             descripcion,
-            dato_nuevo: venta.rows[0],
+            dato_nuevo: { ...venta.rows[0], items: itemsNorm.map(it => ({ presentacion_id: it.presentacion_id, nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario })) },
             ip: req.ip
         }).catch(() => {})
 

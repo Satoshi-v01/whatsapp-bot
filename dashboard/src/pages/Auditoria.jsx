@@ -49,10 +49,14 @@ function Auditoria() {
             const params = { ...filtros }
             if (filtros.periodo !== 'personalizado') { delete params.fecha_desde; delete params.fecha_hasta }
             Object.keys(params).forEach(k => !params[k] && delete params[k])
+            // Los dropdowns de filtro (modulos/acciones/usuarios) son casi fijos --
+            // solo se piden la primera vez, no en cada pagina/filtro nuevo.
+            const necesitaFiltros = filtrosDisponibles.modulos.length === 0
+            if (necesitaFiltros) params.incluir_filtros = '1'
             const datos = await getLogs(params)
             setLogs(datos.logs)
             setPaginacion(datos.paginacion)
-            setFiltrosDisponibles(datos.filtros_disponibles)
+            if (necesitaFiltros) setFiltrosDisponibles(datos.filtros_disponibles)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los logs.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -67,7 +71,9 @@ function Auditoria() {
             crear: { bg: darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7', color: '#10b981' },
             editar: { bg: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe', color: '#3b82f6' },
             eliminar: { bg: darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2', color: '#ef4444' },
+            cancelar: { bg: darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2', color: '#ef4444' },
             login: { bg: darkMode ? 'rgba(99,102,241,0.15)' : '#e0e7ff', color: '#4f46e5' },
+            login_fallido: { bg: darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2', color: '#ef4444' },
             nota: { bg: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7', color: '#f59e0b' },
         }[accion] || { bg: s.surfaceLow, color: s.textMuted }
     }
@@ -83,24 +89,35 @@ function Auditoria() {
         }[modulo] || '#94a3b8'
     }
 
+    // Excel interpreta como formula cualquier celda de texto que empiece con
+    // = + - @ -- si un campo de texto libre (ej. descripcion, notas) llegara
+    // a empezar asi, se antepone un ' para forzarlo a texto plano.
+    function sanitizarCeldaExcel(valor) {
+        const texto = String(valor)
+        return /^[=+\-@]/.test(texto) ? `'${texto}` : texto
+    }
+
     async function handleExportar() {
         try {
             setExportando(true)
-            const params = { ...filtros, por_pagina: 10000, pagina: 1 }
+            // export:'1' habilita un cap mucho mayor en el backend (200 filas
+            // es el limite normal del panel, no de un export que debe traer
+            // todo el historico filtrado)
+            const params = { ...filtros, por_pagina: 50000, pagina: 1, export: '1' }
             if (filtros.periodo !== 'personalizado') { delete params.fecha_desde; delete params.fecha_hasta }
             Object.keys(params).forEach(k => !params[k] && delete params[k])
             const datos = await getLogs(params)
 
             const filas = datos.logs.map(l => ({
                 'Fecha y hora': new Date(l.created_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' }),
-                'Usuario': l.usuario_nombre || '—',
+                'Usuario': sanitizarCeldaExcel(l.usuario_nombre || '—'),
                 'Acción': l.accion,
                 'Módulo': l.modulo,
                 'Entidad': l.entidad || '—',
                 'ID Entidad': l.entidad_id || '—',
-                'Descripción': l.descripcion || '—',
-                'Dato anterior': l.dato_anterior ? JSON.stringify(l.dato_anterior) : '—',
-                'Dato nuevo': l.dato_nuevo ? JSON.stringify(l.dato_nuevo) : '—',
+                'Descripción': sanitizarCeldaExcel(l.descripcion || '—'),
+                'Dato anterior': sanitizarCeldaExcel(l.dato_anterior ? JSON.stringify(l.dato_anterior) : '—'),
+                'Dato nuevo': sanitizarCeldaExcel(l.dato_nuevo ? JSON.stringify(l.dato_nuevo) : '—'),
                 'IP': l.ip || '—'
             }))
 

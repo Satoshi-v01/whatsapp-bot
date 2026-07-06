@@ -4,6 +4,7 @@ const db = require('../db/index')
 const bcrypt = require('bcrypt')
 const { manejarError } = require('../middleware/validar')
 const { soloAdmin, verificarPermiso } = require('../middleware/auth')
+const { registrarLog } = require('../middleware/auditoria')
 
 // Listar usuarios
 router.get('/', soloAdmin, async (req, res) => {
@@ -57,6 +58,7 @@ router.post('/roles', soloAdmin, async (req, res) => {
             `INSERT INTO roles (nombre, permisos) VALUES ($1, $2) RETURNING *`,
             [nombre, JSON.stringify(permisos || {})]
         )
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'sistema', entidad: 'rol', entidad_id: resultado.rows[0].id, descripcion: `Rol creado: ${resultado.rows[0].nombre}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.status(201).json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
@@ -69,11 +71,14 @@ router.patch('/roles/:id', soloAdmin, async (req, res) => {
         const { id } = req.params
         const { nombre, permisos } = req.body
 
+        const anterior = await db.query(`SELECT * FROM roles WHERE id = $1`, [id])
+
         const resultado = await db.query(
             `UPDATE roles SET nombre = COALESCE($1, nombre), permisos = COALESCE($2, permisos)
              WHERE id = $3 RETURNING *`,
             [nombre, permisos ? JSON.stringify(permisos) : null, id]
         )
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'sistema', entidad: 'rol', entidad_id: parseInt(id), descripcion: `Permisos de rol modificados: ${resultado.rows[0]?.nombre}`, dato_anterior: anterior.rows[0], dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
@@ -89,7 +94,9 @@ router.use('/roles/:id', soloAdmin, async (req, res, next) => {
         if (parseInt(enUso.rows[0].count) > 0) {
             return res.status(400).json({ error: 'No se puede eliminar un rol que tiene usuarios asignados' })
         }
+        const anterior = await db.query(`SELECT * FROM roles WHERE id = $1`, [id])
         await db.query(`DELETE FROM roles WHERE id = $1`, [id])
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'sistema', entidad: 'rol', entidad_id: parseInt(id), descripcion: `Rol eliminado: ${anterior.rows[0]?.nombre}`, dato_anterior: anterior.rows[0], ip: req.ip }).catch(() => {})
         res.json({ ok: true })
     } catch (error) {
         manejarError(res, error)
@@ -115,6 +122,7 @@ router.post('/', soloAdmin, async (req, res) => {
              VALUES ($1, $2, $3, $4, true) RETURNING id, nombre, email, rol_id`,
             [nombre, email, hash, rol_id || null]
         )
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'sistema', entidad: 'usuario', entidad_id: resultado.rows[0].id, descripcion: `Usuario creado: ${resultado.rows[0].nombre} (${resultado.rows[0].email})`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.status(201).json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
@@ -152,6 +160,9 @@ router.patch('/:id/password', async (req, res) => {
         const nuevo_hash = await bcrypt.hash(password_nueva, 10)
         await db.query(`UPDATE usuarios SET password_hash = $1 WHERE id = $2`, [nuevo_hash, id])
 
+        // Nunca se guarda password/hash en el log -- solo el hecho del cambio y quien lo hizo
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'sistema', entidad: 'usuario', entidad_id: parseInt(id), descripcion: parseInt(id) === req.usuario?.id ? 'Contraseña propia actualizada' : `Contraseña actualizada por admin para usuario ${id}`, ip: req.ip }).catch(() => {})
+
         res.json({ ok: true })
     } catch (error) {
         manejarError(res, error)
@@ -163,7 +174,9 @@ router.use('/:id', soloAdmin, async (req, res, next) => {
     if (req.method !== 'DELETE') return next()
     try {
         const { id } = req.params
+        const anterior = await db.query(`SELECT id, nombre, email, rol_id, disponible FROM usuarios WHERE id = $1`, [id])
         await db.query(`UPDATE usuarios SET disponible = false WHERE id = $1`, [id])
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'sistema', entidad: 'usuario', entidad_id: parseInt(id), descripcion: `Usuario desactivado: ${anterior.rows[0]?.nombre}`, dato_anterior: anterior.rows[0], ip: req.ip }).catch(() => {})
         res.json({ ok: true })
     } catch (error) {
         manejarError(res, error)

@@ -3,6 +3,7 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
+const { registrarLog } = require('../middleware/auditoria')
 
 // ─────────────────────────────────────────────
 // GET lotes de una presentación
@@ -106,6 +107,27 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
         )
 
         await client.query('COMMIT')
+
+        const nombres = await db.query(
+            `SELECT p.nombre AS producto, pr.nombre AS presentacion
+             FROM presentaciones pr JOIN productos p ON p.id = pr.producto_id
+             WHERE pr.id = $1`,
+            [presentacion_id]
+        ).catch(() => ({ rows: [] }))
+        const nombreCompleto = nombres.rows[0] ? `${nombres.rows[0].producto} — ${nombres.rows[0].presentacion}` : `presentación ${presentacion_id}`
+
+        registrarLog({
+            usuario_id: req.usuario?.id,
+            usuario_nombre: req.usuario?.nombre,
+            accion: 'crear',
+            modulo: 'inventario',
+            entidad: 'lote',
+            entidad_id: lote.rows[0].id,
+            descripcion: `Ingreso de stock: ${nombreCompleto} — ${stock_inicial} unidades — lote ${numero_lote || 'sin número'} — vence ${fecha_vencimiento}`,
+            dato_nuevo: lote.rows[0],
+            ip: req.ip,
+        }).catch(() => {})
+
         res.status(201).json(lote.rows[0])
     } catch (error) {
         await client.query('ROLLBACK')
@@ -121,6 +143,7 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
 router.patch('/:id', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
         const { numero_lote, fecha_vencimiento, stock_actual } = req.body
+        const anterior = await db.query(`SELECT * FROM lotes WHERE id = $1`, [req.params.id])
         const resultado = await db.query(
             `UPDATE lotes SET
                 numero_lote = COALESCE($1, numero_lote),
@@ -131,6 +154,7 @@ router.patch('/:id', autenticar, verificarPermiso('inventario', 'editar'), async
             [numero_lote, fecha_vencimiento, stock_actual, req.params.id]
         )
         if (!resultado.rows.length) return res.status(404).json({ error: 'Lote no encontrado' })
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'lote', entidad_id: parseInt(req.params.id), descripcion: `Lote editado: numero ${resultado.rows[0].numero_lote || 'sin número'} — stock ${anterior.rows[0]?.stock_actual} → ${resultado.rows[0].stock_actual}`, dato_anterior: anterior.rows[0], dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
@@ -161,6 +185,7 @@ router.delete('/:id', autenticar, verificarPermiso('inventario', 'eliminar'), as
         )
 
         await client.query('COMMIT')
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'eliminar', modulo: 'inventario', entidad: 'lote', entidad_id: parseInt(req.params.id), descripcion: `Lote desactivado: numero ${lote.rows[0].numero_lote || 'sin número'} — ${lote.rows[0].stock_actual} unidades descontadas`, dato_anterior: lote.rows[0], ip: req.ip }).catch(() => {})
         res.json({ ok: true })
     } catch (error) {
         await client.query('ROLLBACK')

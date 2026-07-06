@@ -23,6 +23,7 @@ router.post('/login', async (req, res) => {
         )
 
         if (resultado.rows.length === 0) {
+            registrarLog({ usuario_id: null, usuario_nombre: null, accion: 'login_fallido', modulo: 'sistema', entidad: 'usuario', descripcion: `Intento de login fallido (usuario/email no encontrado): ${email}`, dato_nuevo: { email }, ip: req.ip }).catch(() => {})
             return res.status(401).json({ error: 'Credenciales incorrectas' })
         }
 
@@ -30,6 +31,7 @@ router.post('/login', async (req, res) => {
 
         const passwordValida = await bcrypt.compare(password, usuario.password_hash)
         if (!passwordValida) {
+            registrarLog({ usuario_id: usuario.id, usuario_nombre: usuario.nombre, accion: 'login_fallido', modulo: 'sistema', entidad: 'usuario', entidad_id: usuario.id, descripcion: `Intento de login fallido (contraseña incorrecta): ${email}`, ip: req.ip }).catch(() => {})
             return res.status(401).json({ error: 'Credenciales incorrectas' })
         }
 

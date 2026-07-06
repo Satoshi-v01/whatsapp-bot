@@ -3,6 +3,7 @@ const router = express.Router()
 const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { soloAdmin, verificarPermiso } = require('../middleware/auth')
+const { registrarLog } = require('../middleware/auditoria')
 
 // Obtener toda la configuración
 router.get('/', async (req, res) => {
@@ -22,6 +23,8 @@ router.patch('/:clave', soloAdmin, async (req, res) => {
         const { clave } = req.params
         const { valor } = req.body
 
+        const anterior = await db.query(`SELECT valor FROM configuracion WHERE clave = $1`, [clave])
+
         const resultado = await db.query(
             `INSERT INTO configuracion (clave, valor, updated_at)
              VALUES ($1, $2, NOW())
@@ -29,6 +32,7 @@ router.patch('/:clave', soloAdmin, async (req, res) => {
              RETURNING *`,
             [clave, valor]
         )
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'sistema', entidad: 'configuracion', descripcion: `Configuración "${clave}" actualizada`, dato_anterior: { clave, valor: anterior.rows[0]?.valor ?? null }, dato_nuevo: { clave, valor }, ip: req.ip }).catch(() => {})
         res.json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)
@@ -44,6 +48,11 @@ router.post('/bulk', soloAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Datos inválidos' })
         }
 
+        const claves = Object.keys(configuraciones)
+        const anterioresRes = await client.query(`SELECT clave, valor FROM configuracion WHERE clave = ANY($1)`, [claves])
+        const anteriores = {}
+        anterioresRes.rows.forEach(r => { anteriores[r.clave] = r.valor })
+
         await client.query('BEGIN')
         for (const [clave, valor] of Object.entries(configuraciones)) {
             await client.query(
@@ -54,6 +63,7 @@ router.post('/bulk', soloAdmin, async (req, res) => {
             )
         }
         await client.query('COMMIT')
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'sistema', entidad: 'configuracion', descripcion: `Configuración actualizada en lote: ${claves.join(', ')}`, dato_anterior: anteriores, dato_nuevo: configuraciones, ip: req.ip }).catch(() => {})
         res.json({ ok: true })
     } catch (error) {
         await client.query('ROLLBACK')
@@ -127,10 +137,12 @@ router.get('/factura', async (req, res) => {
 router.post('/factura/reiniciar-numero', soloAdmin, async (req, res) => {
     try {
         const { numero = 1 } = req.body
+        const anterior = await db.query(`SELECT valor FROM configuracion WHERE clave = 'factura_numero_actual'`)
         await db.query(
             `UPDATE configuracion SET valor = $1 WHERE clave = 'factura_numero_actual'`,
             [String(numero)]
         )
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'sistema', entidad: 'facturacion', descripcion: `Número de factura reiniciado: ${anterior.rows[0]?.valor ?? '?'} → ${numero}`, dato_anterior: { factura_numero_actual: anterior.rows[0]?.valor ?? null }, dato_nuevo: { factura_numero_actual: numero }, ip: req.ip }).catch(() => {})
         res.json({ ok: true, numero_reiniciado: numero })
     } catch (error) {
         manejarError(res, error)

@@ -12,7 +12,10 @@ router.get('/', soloAdmin, async (req, res) => {
             periodo = 'hoy',
             pagina = 1,
         } = req.query
-        const por_pagina = Math.min(parseInt(req.query.por_pagina) || 50, 200)
+        // Export explicito (Excel) permite traer todo el historico filtrado;
+        // el listado normal del panel sigue capado a 200 por pagina.
+        const capMax = req.query.export === '1' ? 50000 : 200
+        const por_pagina = Math.min(parseInt(req.query.por_pagina) || 50, capMax)
 
         const offset = (parseInt(pagina) - 1) * parseInt(por_pagina)
         let condiciones = ['1=1']
@@ -20,15 +23,19 @@ router.get('/', soloAdmin, async (req, res) => {
         let i = 1
 
         if (periodo === 'hoy') {
-            condiciones.push(`DATE(l.created_at AT TIME ZONE 'America/Asuncion') = CURRENT_DATE`)
+            // Rango sargable (usa indice en created_at) en vez de envolver la
+            // columna en DATE(...AT TIME ZONE...), que fuerza un full scan.
+            condiciones.push(`l.created_at >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion')`)
+            condiciones.push(`l.created_at < (DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' + INTERVAL '1 day')`)
         } else if (periodo === 'semana') {
             condiciones.push(`l.created_at >= DATE_TRUNC('week', NOW())`)
         } else if (periodo === 'mes') {
             condiciones.push(`l.created_at >= DATE_TRUNC('month', NOW())`)
-        } else if (periodo === 'personalizado' && fecha_desde && fecha_hasta) {
-            condiciones.push(`l.created_at >= $${i++}`)
-            condiciones.push(`l.created_at <= $${i++}`)
-            valores.push(fecha_desde, fecha_hasta + 'T23:59:59')
+        } else if (periodo === 'personalizado') {
+            // Cada cota se aplica de forma independiente -- antes, si faltaba
+            // una de las dos fechas, no se aplicaba NINGUN filtro de fecha.
+            if (fecha_desde) { condiciones.push(`l.created_at >= $${i++}`); valores.push(fecha_desde) }
+            if (fecha_hasta) { condiciones.push(`l.created_at <= $${i++}`); valores.push(fecha_hasta + 'T23:59:59') }
         }
 
         if (usuario_id) { condiciones.push(`l.usuario_id = $${i++}`); valores.push(usuario_id) }
@@ -50,17 +57,27 @@ router.get('/', soloAdmin, async (req, res) => {
             [...valores, parseInt(por_pagina), offset]
         )
 
-        // Módulos y usuarios disponibles para filtros
-        const modulosDisponibles = await db.query(
-            `SELECT DISTINCT modulo FROM logs_auditoria ORDER BY modulo ASC`
-        )
-        const accionesDisponibles = await db.query(
-            `SELECT DISTINCT accion FROM logs_auditoria ORDER BY accion ASC`
-        )
-        const usuariosDisponibles = await db.query(
-            `SELECT DISTINCT usuario_id, usuario_nombre FROM logs_auditoria 
-             WHERE usuario_id IS NOT NULL ORDER BY usuario_nombre ASC`
-        )
+        // Módulos/acciones/usuarios disponibles para los dropdowns de filtro:
+        // son un set casi fijo, no hace falta recalcularlo (3 full scans mas)
+        // en cada paginación/filtro -- el frontend solo lo pide una vez.
+        let filtros_disponibles = { modulos: [], acciones: [], usuarios: [] }
+        if (req.query.incluir_filtros === '1') {
+            const modulosDisponibles = await db.query(
+                `SELECT DISTINCT modulo FROM logs_auditoria ORDER BY modulo ASC`
+            )
+            const accionesDisponibles = await db.query(
+                `SELECT DISTINCT accion FROM logs_auditoria ORDER BY accion ASC`
+            )
+            const usuariosDisponibles = await db.query(
+                `SELECT DISTINCT usuario_id, usuario_nombre FROM logs_auditoria
+                 WHERE usuario_id IS NOT NULL ORDER BY usuario_nombre ASC`
+            )
+            filtros_disponibles = {
+                modulos: modulosDisponibles.rows.map(r => r.modulo),
+                acciones: accionesDisponibles.rows.map(r => r.accion),
+                usuarios: usuariosDisponibles.rows
+            }
+        }
 
         res.json({
             logs: logs.rows,
@@ -70,11 +87,7 @@ router.get('/', soloAdmin, async (req, res) => {
                 por_pagina: parseInt(por_pagina),
                 total_paginas: Math.ceil(parseInt(total.rows[0].total) / parseInt(por_pagina))
             },
-            filtros_disponibles: {
-                modulos: modulosDisponibles.rows.map(r => r.modulo),
-                acciones: accionesDisponibles.rows.map(r => r.accion),
-                usuarios: usuariosDisponibles.rows
-            }
+            filtros_disponibles
         })
     } catch (error) {
         manejarError(res, error)

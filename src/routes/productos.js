@@ -937,6 +937,7 @@ router.post('/importar-stock', autenticar, verificarPermiso('inventario', 'edita
         let actualizados = 0
         let lotesCreados = 0
         const errores = []
+        const detalle = []
 
         for (const [idx, fila] of filas.entries()) {
             try {
@@ -950,7 +951,12 @@ router.post('/importar-stock', autenticar, verificarPermiso('inventario', 'edita
                 if (stockAgregar <= 0 && !fila.codigo_barras?.trim() && !fila.fecha_vencimiento?.trim()) continue
 
                 // Verificar que la presentación existe
-                const prRes = await client.query(`SELECT id, stock FROM presentaciones WHERE id = $1`, [presentacionId])
+                const prRes = await client.query(
+                    `SELECT pr.id, pr.stock, pr.nombre AS presentacion, p.nombre AS producto
+                     FROM presentaciones pr JOIN productos p ON p.id = pr.producto_id
+                     WHERE pr.id = $1`,
+                    [presentacionId]
+                )
                 if (!prRes.rows.length) {
                     errores.push({ fila: idx + 2, mensaje: `Presentación ${presentacionId} no encontrada` })
                     continue
@@ -983,6 +989,15 @@ router.post('/importar-stock', autenticar, verificarPermiso('inventario', 'edita
                         [stockAgregar, codigoBarras, presentacionId]
                     )
                     actualizados++
+                    if (stockAgregar > 0) {
+                        detalle.push({
+                            presentacion_id: presentacionId,
+                            producto: `${prRes.rows[0].producto} — ${prRes.rows[0].presentacion}`,
+                            cantidad_agregada: stockAgregar,
+                            numero_lote: fila.numero_lote?.trim() || null,
+                            fecha_vencimiento: fila.fecha_vencimiento?.trim() || null,
+                        })
+                    }
                 }
             } catch (e) {
                 errores.push({ fila: idx + 2, mensaje: e.message })
@@ -998,6 +1013,7 @@ router.post('/importar-stock', autenticar, verificarPermiso('inventario', 'edita
             modulo: 'inventario',
             entidad: 'importacion_stock',
             descripcion: `Importación stock: ${actualizados} presentaciones actualizadas, ${lotesCreados} lotes creados, ${errores.length} errores`,
+            dato_nuevo: { detalle, errores },
             ip: req.ip
         }).catch(() => {})
 
