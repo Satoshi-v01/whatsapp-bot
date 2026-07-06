@@ -17,19 +17,18 @@ function FeaturedProductsSection() {
     <section style={{ padding: 'clamp(32px, 4vw, 48px) clamp(20px, 4vw, 48px)', background: 'var(--color-bg)' }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
         {/* Header row */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-          <div>
-            <h2 style={{
-              fontFamily: 'Montserrat, system-ui, sans-serif',
-              fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 900,
-              margin: 0, letterSpacing: -0.3, color: 'var(--color-text)',
-            }}>
-              Todos los productos
-            </h2>
-          </div>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{
+            fontFamily: 'Montserrat, system-ui, sans-serif',
+            fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 900,
+            margin: 0, letterSpacing: -0.3, color: 'var(--color-text)',
+          }}>
+            Todos los productos
+          </h2>
           <Link
             to="/buscar"
             style={{
+              display: 'inline-block', marginTop: 8,
               color: 'var(--color-text)', fontWeight: 700, fontSize: 14,
               textDecoration: 'none', borderBottom: '2px solid var(--color-primary)',
               paddingBottom: 2, whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif',
