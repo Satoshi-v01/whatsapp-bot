@@ -1,5 +1,13 @@
-const { Pool } = require('pg')
+const { Pool, types } = require('pg')
 const logger = require('../middleware/logger')
+
+// Las columnas "timestamp without time zone" (created_at/updated_at en casi
+// toda la DB) se calculan y guardan en UTC (la sesion de Postgres esta en
+// UTC), pero el parser por defecto de "pg" (OID 1114) construye el Date
+// interpretando el valor con la zona horaria LOCAL del proceso Node
+// (TZ=America/Asuncion en Render), sumando un desfase falso de 3 horas a
+// cada fecha leida de la DB. Se fuerza a interpretarlas como UTC.
+types.setTypeParser(1114, str => new Date(str.replace(' ', 'T') + 'Z'))
 
 let pool = null
 
