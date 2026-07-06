@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { formatPrice } from '@/utils/formatPrice'
 import { useShopConfig } from '@/hooks/useShopConfig'
+import PedidoExclusivoModal from '@/components/ui/PedidoExclusivoModal'
 
 // ─── Arrastrar con mouse para scrollear las pills (overflow-x no soporta
 // click-and-drag nativo con mouse, solo touch/trackpad) ───────
@@ -44,6 +46,13 @@ function IconCheck({ size = 16 }) {
     </svg>
   )
 }
+function IconClock({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+    </svg>
+  )
+}
 
 function PlaceholderImage({ nombre }) {
   return (
@@ -60,7 +69,7 @@ function PlaceholderImage({ nombre }) {
   )
 }
 
-function AddToCartBtn({ stock, onClick }) {
+function AddToCartBtn({ stock, onClick, canPedidoExclusivo, onPedidoExclusivo }) {
   const [added, setAdded] = useState(false)
 
   async function handleClick(e) {
@@ -72,6 +81,22 @@ function AddToCartBtn({ stock, onClick }) {
   }
 
   if (!stock || stock === 0) {
+    if (canPedidoExclusivo) {
+      return (
+        <button
+          onClick={e => { e.preventDefault(); onPedidoExclusivo() }}
+          aria-label="Hacer pedido"
+          title="Hacer pedido (sin stock)"
+          style={{
+            width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
+            background: 'var(--color-primary)', color: '#fff', display: 'grid', placeItems: 'center',
+            boxShadow: '0 4px 0 rgba(217,139,0,0.4)',
+          }}
+        >
+          <IconClock size={16} />
+        </button>
+      )
+    }
     return (
       <div style={{
         width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
@@ -109,6 +134,7 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
 
   const [hovered, setHovered] = useState(false)
   const [selectedPres, setSelectedPres] = useState(() => presentaciones.find(p => p.stock > 0) || presentaciones[0] || null)
+  const [showPedidoExclusivo, setShowPedidoExclusivo] = useState(false)
   const { trackRef, dragHandlers, wasDragged } = usePillsDrag()
 
   const precio = selectedPres?.precio_venta || product.precio_desde || 0
@@ -258,7 +284,12 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
           <div style={{ fontFamily: 'Montserrat, system-ui, sans-serif', fontSize: 19, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3, lineHeight: 1.1 }}>
             {formatPrice(precio)}
           </div>
-          <AddToCartBtn stock={stock} onClick={() => cartItem && onAddToCart?.(cartItem)} />
+          <AddToCartBtn
+            stock={stock}
+            onClick={() => cartItem && onAddToCart?.(cartItem)}
+            canPedidoExclusivo={mostrarSinStock && !!selectedPres}
+            onPedidoExclusivo={() => setShowPedidoExclusivo(true)}
+          />
         </div>
 
         {outOfStock && (
@@ -267,6 +298,16 @@ export default function ProductCard({ product, onAddToCart, eager = false }) {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showPedidoExclusivo && selectedPres && (
+          <PedidoExclusivoModal
+            presentacionId={selectedPres.id}
+            maxQty={20}
+            onClose={() => setShowPedidoExclusivo(false)}
+          />
+        )}
+      </AnimatePresence>
     </article>
   )
 }
