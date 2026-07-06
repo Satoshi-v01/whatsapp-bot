@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../services/api'
 import { useApp } from '../App'
 import { formatMiles } from '../utils/formato'
+import { formatearSoloFecha } from '../utils/fecha'
 import ModalConfirmar from '../components/ModalConfirmar'
 
 // ─── Upload de imagen ─────────────────────────────────────────
@@ -1775,7 +1776,7 @@ function TabPedidos({ s, btnSecundario, sharedProps }) {
                                     <td style={{ padding: '10px 12px' }}>
                                         <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: est.bg, color: est.color }}>{est.label}</span>
                                     </td>
-                                    <td style={{ padding: '10px 12px', fontSize: 12, color: s.textMuted }}>{new Date(p.created_at).toLocaleDateString('es-PY')}</td>
+                                    <td style={{ padding: '10px 12px', fontSize: 12, color: s.textMuted }}>{formatearSoloFecha(p.created_at)}</td>
                                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                                         <button onClick={() => handleEliminar(p)}
                                             style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
