@@ -26,10 +26,17 @@ function FeaturedProductsSection() {
             }}>
               Todos los productos
             </h2>
-            {!loading && products.length > 0 && (
-              <div style={{ fontSize: 13, color: 'rgba(61,44,30,0.65)', marginTop: 4 }}>{products.length} productos</div>
-            )}
           </div>
+          <Link
+            to="/buscar"
+            style={{
+              color: 'var(--color-text)', fontWeight: 700, fontSize: 14,
+              textDecoration: 'none', borderBottom: '2px solid var(--color-primary)',
+              paddingBottom: 2, whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif',
+            }}
+          >
+            Ver más →
+          </Link>
         </div>
 
         <ProductGrid
