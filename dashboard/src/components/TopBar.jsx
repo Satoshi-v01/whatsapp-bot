@@ -93,7 +93,7 @@ function TopBar({ usuario, onLogout }) {
 
     useEffect(() => {
         cargarNotificaciones()
-        const intervalo = setInterval(cargarNotificaciones, 60000)
+        const intervalo = setInterval(cargarNotificaciones, 30000)
         return () => {
             clearInterval(intervalo)
             popupTimersRef.current.forEach(clearTimeout)
