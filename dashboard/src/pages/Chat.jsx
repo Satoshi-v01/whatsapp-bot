@@ -6,12 +6,6 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha, formatearHora } from '../utils/fecha'
 
-function notificar(titulo, cuerpo, onClick) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return
-    const n = new Notification(titulo, { body: cuerpo, icon: '/favicon.ico', tag: `${titulo}-${cuerpo}`, requireInteraction: true })
-    if (onClick) n.onclick = () => { window.focus(); onClick(); n.close() }
-}
-
 function Chat() {
     const [sesiones, setSesiones] = useState([])
     const [sesionActiva, setSesionActiva] = useState(null)
@@ -28,12 +22,6 @@ function Chat() {
     const { darkMode } = useApp()
     const [searchParams] = useSearchParams()
     const numeroParam = searchParams.get('numero')
-
-    useEffect(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission()
-        }
-    }, [])
 
     const s = {
         bg: darkMode ? '#0b141a' : '#f8fafc',
@@ -62,14 +50,18 @@ function Chat() {
     }, [])
 
     useEffect(() => {
+        if (numeroParam && sesiones.length > 0) {
+            const target = sesiones.find(s => s.cliente_numero === numeroParam)
+            if (target && target.cliente_numero !== sesionActiva?.cliente_numero) {
+                marcarLeido(target.cliente_numero, target)
+                return
+            }
+        }
         if (sesionActiva) {
             const actualizada = sesiones.find(s => s.cliente_numero === sesionActiva.cliente_numero)
             if (actualizada) setSesionActiva(actualizada)
-        } else if (numeroParam && sesiones.length > 0) {
-            const target = sesiones.find(s => s.cliente_numero === numeroParam)
-            if (target) setSesionActiva(target)
         }
-    }, [sesiones])
+    }, [sesiones, numeroParam])
 
     useEffect(() => {
         if (!sesionActiva) return
@@ -97,14 +89,6 @@ function Chat() {
                 const anterior = prev.get(sesion.cliente_numero)
                 if (!anterior) {
                     nuevosNumeros.push(sesion.cliente_numero)
-                    notificar(
-                        'Nuevo chat WhatsApp',
-                        `${sesion.cliente_numero} inició una conversación`,
-                        () => {
-                            const live = prevSesionesRef.current?.get(sesion.cliente_numero) ?? sesion
-                            marcarLeido(sesion.cliente_numero, live)
-                        }
-                    )
                 } else if (anterior.modo !== 'esperando_agente' && sesion.modo === 'esperando_agente') {
                     nuevosNumeros.push(sesion.cliente_numero)
                 }

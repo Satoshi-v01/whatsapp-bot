@@ -60,13 +60,15 @@ function TopBar({ usuario, onLogout }) {
     const [leidas, setLeidas]               = useState(() => {
         try { return JSON.parse(localStorage.getItem('notif_leidas') || '[]') } catch { return [] }
     })
-    const [popupAgente, setPopupAgente]     = useState(null)
+    const [popupsAgente, setPopupsAgente]    = useState([])
     const [popupOrden, setPopupOrden]       = useState(null)
     const navigate                          = useNavigate()
-    const prevChatsEsperando                = useRef(0)
+    const prevNumerosEsperando              = useRef(new Set())
+    const yaHizoPrimeraCarga                = useRef(false)
     const prevNotifCount                    = useRef(0)
     const prevOrdenesCount                  = useRef(null)
     const audioCtxRef                       = useRef(null)
+    const popupTimersRef                    = useRef([])
     const notifRef                          = useRef(null)
     const perfilRef                         = useRef(null)
     const { darkMode, toggleDarkMode }      = useApp()
@@ -88,15 +90,22 @@ function TopBar({ usuario, onLogout }) {
     useEffect(() => {
         cargarNotificaciones()
         const intervalo = setInterval(cargarNotificaciones, 60000)
-        return () => clearInterval(intervalo)
+        return () => {
+            clearInterval(intervalo)
+            popupTimersRef.current.forEach(clearTimeout)
+        }
     }, [])
 
-    useEffect(() => {
-        if (popupAgente) {
-            const timer = setTimeout(() => setPopupAgente(null), 8000)
-            return () => clearTimeout(timer)
-        }
-    }, [popupAgente])
+    function cerrarPopupAgente(id) {
+        setPopupsAgente(prev => prev.filter(p => p.id !== id))
+    }
+
+    function agregarPopupAgente(notif) {
+        const id = `${notif.numero}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+        setPopupsAgente(prev => [...prev, { ...notif, id }])
+        const timer = setTimeout(() => cerrarPopupAgente(id), 8000)
+        popupTimersRef.current.push(timer)
+    }
 
     useEffect(() => {
         if (popupOrden) {
@@ -115,9 +124,15 @@ function TopBar({ usuario, onLogout }) {
             const chats   = datos.chats_esperando || 0
             const pendientes = ordenStats?.pendientes || 0
 
-            if (chats > prevChatsEsperando.current) {
-                const nuevoChat = lista.find(n => n.tipo === 'agente')
-                if (nuevoChat) { setPopupAgente(nuevoChat); reproducirSonido('agente') }
+            const chatsAgente = lista.filter(n => n.tipo === 'agente')
+            const numerosActuales = new Set(chatsAgente.map(n => n.numero))
+            const esPrimeraCarga = !yaHizoPrimeraCarga.current
+            yaHizoPrimeraCarga.current = true
+            const nuevosChats = esPrimeraCarga ? [] : chatsAgente.filter(n => !prevNumerosEsperando.current.has(n.numero))
+
+            if (nuevosChats.length > 0) {
+                nuevosChats.forEach(agregarPopupAgente)
+                reproducirSonido('agente')
             } else if (lista.length > prevNotifCount.current) {
                 reproducirSonido('normal')
             }
@@ -128,7 +143,7 @@ function TopBar({ usuario, onLogout }) {
                 reproducirSonido('orden')
             }
 
-            prevChatsEsperando.current = chats
+            prevNumerosEsperando.current = numerosActuales
             prevNotifCount.current     = lista.length
             prevOrdenesCount.current   = pendientes
             setNotificaciones(lista)
@@ -227,33 +242,36 @@ function TopBar({ usuario, onLogout }) {
                 @keyframes pulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 6px rgba(245,158,11,0)}}
             `}</style>
 
-            {/* Popup urgente de agente */}
-            {popupAgente && (
-                <div className="agent-popup">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulseRed 1.2s infinite' }} />
-                            <p style={{ fontSize: '12px', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                Chat necesita agente
-                            </p>
-                        </div>
-                        <button onClick={() => setPopupAgente(null)}
-                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
+            {/* Popups urgentes de agente — uno por cada chat nuevo */}
+            {popupsAgente.map((popup, idx) => (
+                <div key={popup.id} className="agent-popup" style={{ bottom: `${24 + idx * 196}px` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulseRed 1.2s infinite' }} />
+                        <p style={{ fontSize: '12px', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Chat necesita agente
+                        </p>
                     </div>
                     <p style={{ fontSize: '13px', color: '#e2e8f0', marginBottom: '14px', lineHeight: 1.5 }}>
-                        {popupAgente.mensaje}
+                        {popup.mensaje}
                     </p>
-                    <button
-                        onClick={() => { setPopupAgente(null); navigate('/dashboard/chat') }}
-                        style={{ width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-ui)' }}>
-                        Ir al chat →
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            onClick={() => { cerrarPopupAgente(popup.id); navigate(`/dashboard/chat?numero=${encodeURIComponent(popup.numero)}`) }}
+                            style={{ flex: 1, padding: '9px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-ui)' }}>
+                            Ir al chat →
+                        </button>
+                        <button
+                            onClick={() => cerrarPopupAgente(popup.id)}
+                            style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #475569', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-ui)' }}>
+                            Cerrar ventana
+                        </button>
+                    </div>
                 </div>
-            )}
+            ))}
 
             {/* Popup nueva orden */}
             {popupOrden && (
-                <div className="agent-popup" style={{ borderLeftColor: '#f59e0b', bottom: popupAgente ? '210px' : '24px' }}>
+                <div className="agent-popup" style={{ borderLeftColor: '#f59e0b', bottom: `${24 + popupsAgente.length * 196}px` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', animation: 'pulseAmber 1.2s infinite' }} />
