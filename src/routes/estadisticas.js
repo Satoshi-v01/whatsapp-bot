@@ -127,9 +127,16 @@ router.get('/top-productos', async (req, res) => {
 // Notificaciones activas
 router.get('/notificaciones', async (req, res) => {
     try {
-        const [chats, stockBajo, busquedasFallidas] = await Promise.all([
+        const [chats, mensajesCliente, stockBajo, busquedasFallidas] = await Promise.all([
             db.query(
                 `SELECT cliente_numero, ultimo_mensaje FROM sesiones WHERE modo = 'esperando_agente' ORDER BY ultimo_mensaje ASC`
+            ),
+            db.query(
+                `SELECT id, cliente_numero, texto, created_at AT TIME ZONE 'UTC' AS created_at
+                 FROM mensajes
+                 WHERE origen = 'cliente' AND created_at > NOW() - INTERVAL '5 minutes'
+                 ORDER BY created_at DESC
+                 LIMIT 100`
             ),
             db.query(
                 `SELECT p.nombre as producto, pr.nombre as presentacion, pr.stock
@@ -156,6 +163,14 @@ router.get('/notificaciones', async (req, res) => {
                 tiempo: c.ultimo_mensaje,
                 numero: c.cliente_numero,
                 urgente: true
+            })),
+            ...mensajesCliente.rows.map(m => ({
+                tipo: 'mensaje',
+                id: m.id,
+                mensaje: `${m.cliente_numero}: "${m.texto.length > 60 ? m.texto.slice(0, 60) + '…' : m.texto}"`,
+                tiempo: m.created_at,
+                numero: m.cliente_numero,
+                urgente: false
             })),
             ...busquedasFallidas.rows.map(r => ({
                 tipo: 'producto_ausente',
