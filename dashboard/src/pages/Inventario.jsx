@@ -8,7 +8,7 @@ import {
     getSubcategorias, crearSubcategoria, editarSubcategoria,
     verificarEliminarSubcategoria, confirmarEliminarSubcategoria,
     crearProducto, editarProducto, agregarPresentacion,
-    actualizarStock, actualizarPrecio, actualizarCodigoBarras,
+    actualizarStock, actualizarPrecio, actualizarCodigoBarras, actualizarPermiteFraccion,
     toggleDisponibleProducto, eliminarPresentacion, eliminarProducto,
     getSecciones, crearSeccion, editarSeccion, eliminarSeccion,
     importarProductos, descargarTemplatePrecios, descargarTemplateStock, importarStock
@@ -78,7 +78,7 @@ function Inventario() {
     const [errorMarca, setErrorMarca] = useState('')
     const [confirmEliminarMarca, setConfirmEliminarMarca] = useState(null)
     const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
-    const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '' })
+    const [nuevaPresentacion, setNuevaPresentacion] = useState({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '', permite_fraccion: false })
     const [precioForm, setPrecioForm] = useState({ precio_venta: '', precio_tarjeta: '', precio_compra: '', precio_descuento: '', precio_compra_descuento: '', descuento_activo: false, descuento_desde: '', descuento_hasta: '', descuento_stock: '' })
     const [editarForm, setEditarForm] = useState({ nombre: '', descripcion: '', calidad: '', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: '', subcategoria_id: '' })
     const [codigoBarrasValor, setCodigoBarrasValor] = useState('')
@@ -355,9 +355,18 @@ function Inventario() {
     async function handleAgregarPresentacion(productoId) {
         if (guardando) return
         setGuardando(true)
-        try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '' }); await cargarDatos() }
+        try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '', permite_fraccion: false }); await cargarDatos() }
         catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
         finally { setGuardando(false) }
+    }
+
+    async function handleToggleFraccion(pr) {
+        try {
+            await actualizarPermiteFraccion(pr.id, !pr.permite_fraccion)
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo actualizar el fraccionamiento.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        }
     }
 
     function handleEliminarPresentacion(pr, producto) {
@@ -960,6 +969,7 @@ function colorVencimiento(diasParaVencer) {
                                                                                                     <button onClick={() => abrirModalCodigoBarras(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cod.</button>
                                                                                                     <button onClick={() => abrirModalLotes(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Lotes</button>
                                                                                                     <button onClick={() => abrirModalFraccionar(producto, pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Fraccionar</button>
+                                                                                                    <button onClick={() => handleToggleFraccion(pr)} title="Habilita vender por monto en Caja" style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${pr.permite_fraccion ? '#fbbf24' : s.border}`, background: pr.permite_fraccion ? '#fffbeb' : s.surface, color: pr.permite_fraccion ? '#b45309' : s.textMuted, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>{pr.permite_fraccion ? 'Por monto (activo)' : 'Por monto'}</button>
                                                                                                     <button onClick={e => { e.stopPropagation(); handleEliminarPresentacion(pr, producto) }} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                                                                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                                                                                     </button>
@@ -1358,6 +1368,10 @@ function colorVencimiento(diasParaVencer) {
                         <input type="number" value={nuevaPresentacion.stock} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, stock: e.target.value })} style={inputStyle} />
                         <label style={labelStyle}>Codigo de barras (opcional)</label>
                         <input value={nuevaPresentacion.codigo_barras} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, codigo_barras: e.target.value })} placeholder="Escanea o ingresa manualmente" style={inputStyle} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0 16px' }}>
+                            <input type="checkbox" id="nuevaPresPermiteFraccion" checked={nuevaPresentacion.permite_fraccion} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, permite_fraccion: e.target.checked })} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
+                            <label htmlFor="nuevaPresPermiteFraccion" style={{ fontSize: '13px', color: s.text, cursor: 'pointer' }}>Vendible por monto/fracción en Caja (ej. balanceado fraccionado en 1kg)</label>
+                        </div>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModalPresentacion(null)} style={btnSecundario}>Cancelar</button>
                             <button onClick={() => handleAgregarPresentacion(modalPresentacion)} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.6 : 1 }}>{guardando ? 'Agregando...' : 'Agregar'}</button>

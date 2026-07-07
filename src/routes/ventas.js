@@ -11,6 +11,13 @@ const { registrarLog } = require('../middleware/auditoria')
 const { autenticar, verificarPermiso, usuarioTienePermiso } = require('../middleware/auth')
 const { calcularPrecioEfectivo } = require('../services/precios')
 
+// Cantidad admite fracciones (venta por monto de presentaciones fraccionables,
+// ej. 0.5kg); se redondea a precision de gramos para evitar arrastre de
+// error de punto flotante.
+function parseCantidad(valor) {
+    return Math.round(parseFloat(valor) * 1000) / 1000
+}
+
 let consumidorFinalId = null
 
 async function getOCrearConsumidorFinal() {
@@ -586,7 +593,7 @@ router.post('/:id/anular', autenticar, verificarPermiso('ventas', 'cancelar'), a
             for (const item of items) {
                 await client.query(
                     `UPDATE presentaciones SET stock = stock + $1 WHERE id = $2`,
-                    [parseInt(item.cantidad), parseInt(item.presentacion_id)]
+                    [parseCantidad(item.cantidad), parseInt(item.presentacion_id)]
                 )
             }
         }
@@ -652,14 +659,14 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         // Normalizar a array de items
         const itemsNorm = (Array.isArray(items) && items.length > 0)
             ? items
-            : [{ presentacion_id: parseInt(presentacion_id), cantidad: parseInt(cantidad) || 1, precio_unitario: Math.round(parseInt(precio) / (parseInt(cantidad) || 1)), tipo_iva: tipo_iva || '10' }]
+            : [{ presentacion_id: parseInt(presentacion_id), cantidad: parseCantidad(cantidad) || 1, precio_unitario: Math.round(parseFloat(precio) / (parseCantidad(cantidad) || 1)), tipo_iva: tipo_iva || '10' }]
 
         const canalFinal = canal || 'agente_presencial'
 
         // Fingerprint de contenido: mismo cliente + mismos artículos + misma cantidad + mismo método + misma modalidad
         const itemsOrdenados = [...itemsNorm]
             .sort((a, b) => parseInt(a.presentacion_id) - parseInt(b.presentacion_id))
-            .map(it => `${parseInt(it.presentacion_id)}x${parseInt(it.cantidad)}`)
+            .map(it => `${parseInt(it.presentacion_id)}x${parseCantidad(it.cantidad)}`)
             .join(',')
         const fingerprint = `${cliente_id ?? 'anon'}-${itemsOrdenados}-${metodo_pago || ''}-${canalFinal}`
 
@@ -668,7 +675,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             return res.status(200).json({ ok: true, venta: ventaCached.venta, duplicado: true })
         }
 
-        const subtotal = itemsNorm.reduce((s, it) => s + (parseInt(it.precio_unitario) * parseInt(it.cantidad)), 0)
+        const subtotal = itemsNorm.reduce((s, it) => s + Math.round(parseInt(it.precio_unitario) * parseCantidad(it.cantidad)), 0)
         const totalPrecio = subtotal + (parseInt(costo_delivery) || 0)
 
         const clienteIdFinal = cliente_id || await getOCrearConsumidorFinal()
@@ -680,7 +687,8 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         for (const item of itemsNorm) {
             const stock = await client.query(
                 `SELECT stock, nombre, precio_venta, precio_tarjeta, precio_descuento,
-                        descuento_activo, descuento_desde, descuento_hasta, descuento_stock
+                        descuento_activo, descuento_desde, descuento_hasta, descuento_stock,
+                        permite_fraccion
                  FROM presentaciones WHERE id = $1 FOR UPDATE`,
                 [parseInt(item.presentacion_id)]
             )
@@ -688,7 +696,12 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
                 await client.query('ROLLBACK')
                 return res.status(404).json({ error: `Presentación ${item.presentacion_id} no encontrada` })
             }
-            if (stock.rows[0].stock < parseInt(item.cantidad)) {
+            const cantidadItem = parseCantidad(item.cantidad)
+            if (!stock.rows[0].permite_fraccion && !Number.isInteger(cantidadItem)) {
+                await client.query('ROLLBACK')
+                return res.status(400).json({ error: `"${stock.rows[0].nombre}" no admite venta fraccionada` })
+            }
+            if (stock.rows[0].stock < cantidadItem) {
                 await client.query('ROLLBACK')
                 return res.status(400).json({ error: `Stock insuficiente para "${stock.rows[0].nombre}". Disponible: ${stock.rows[0].stock}` })
             }
@@ -731,7 +744,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
                  LIMIT 1`,
                 [cliente_id || null,
                  parseInt(itemsNorm[0].presentacion_id),
-                 parseInt(itemsNorm[0].cantidad),
+                 parseCantidad(itemsNorm[0].cantidad),
                  metodo_pago,
                  canalFinal]
             )
@@ -752,7 +765,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
 
         // Para backward compat: si es un solo item, guardar presentacion_id en la venta header
         const ventaPresentacionId = itemsNorm.length === 1 ? parseInt(itemsNorm[0].presentacion_id) : null
-        const ventaCantidad = itemsNorm.length === 1 ? parseInt(itemsNorm[0].cantidad) : null
+        const ventaCantidad = itemsNorm.length === 1 ? parseCantidad(itemsNorm[0].cantidad) : null
         const ventaTipoIva = itemsNorm.length === 1 ? (itemsNorm[0].tipo_iva || '10') : '10'
 
         const venta = await client.query(
@@ -773,8 +786,8 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             await client.query(
                 `INSERT INTO ventas_items (venta_id, presentacion_id, cantidad, precio_unitario, precio_total, tipo_iva, es_precio_especial, diferencial_precio)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [ventaId, parseInt(item.presentacion_id), parseInt(item.cantidad),
-                 parseInt(item.precio_unitario), parseInt(item.precio_unitario) * parseInt(item.cantidad),
+                [ventaId, parseInt(item.presentacion_id), parseCantidad(item.cantidad),
+                 parseInt(item.precio_unitario), Math.round(parseInt(item.precio_unitario) * parseCantidad(item.cantidad)),
                  item.tipo_iva || '10', item.es_precio_especial || false, item.diferencial_precio || 0]
             )
         }
@@ -786,11 +799,11 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
                 [parseInt(item.presentacion_id)]
             )
             if (parseInt(lotesExisten.rows[0].total) > 0) {
-                await descontarStockFEFO(client, parseInt(item.presentacion_id), parseInt(item.cantidad))
+                await descontarStockFEFO(client, parseInt(item.presentacion_id), parseCantidad(item.cantidad))
             } else {
                 await client.query(
                     `UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`,
-                    [parseInt(item.cantidad), parseInt(item.presentacion_id)]
+                    [parseCantidad(item.cantidad), parseInt(item.presentacion_id)]
                 )
             }
         }

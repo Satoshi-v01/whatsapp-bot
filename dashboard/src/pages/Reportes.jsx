@@ -135,7 +135,7 @@ function Reportes() {
                     '#': i + 1,
                     'Producto': p.nombre,
                     'Presentación': p.presentacion,
-                    'Unidades vendidas': parseInt(p.cantidad_vendida),
+                    'Unidades vendidas': Number(p.cantidad_vendida),
                     'Total (Gs.)': parseInt(p.total_ventas),
                     'Ganancia (Gs.)': parseInt(p.ganancia || 0)
                 }))
@@ -149,7 +149,7 @@ function Reportes() {
                     '#': i + 1,
                     'Producto': p.nombre,
                     'Presentación': p.presentacion,
-                    'Unidades vendidas': parseInt(p.cantidad_vendida),
+                    'Unidades vendidas': Number(p.cantidad_vendida),
                     'Total (Gs.)': parseInt(p.total_ventas),
                 }))
             )
@@ -161,7 +161,7 @@ function Reportes() {
                 clientes.map((c, i) => ({
                     '#': i + 1,
                     'Cliente': c.cliente,
-                    'Compras': parseInt(c.cantidad_compras),
+                    'Compras': Number(c.cantidad_compras),
                     'Total comprado (Gs.)': parseInt(c.total_comprado)
                 }))
             )
@@ -172,7 +172,7 @@ function Reportes() {
             const wsCanales = XLSX.utils.json_to_sheet(
                 canales.map(c => ({
                     'Canal': labelCanal(c.canal),
-                    'Ventas': parseInt(c.cantidad),
+                    'Ventas': Number(c.cantidad),
                     'Total (Gs.)': parseInt(c.total)
                 }))
             )
@@ -184,7 +184,7 @@ function Reportes() {
                 const wsZonas = XLSX.utils.json_to_sheet(
                     delZonas.por_zona.map(z => ({
                         'Zona': z.zona,
-                        'Pedidos': parseInt(z.cantidad_pedidos),
+                        'Pedidos': Number(z.cantidad_pedidos),
                         'Costo delivery (Gs.)': parseInt(z.total_delivery),
                         'Total ventas (Gs.)': parseInt(z.total_ventas)
                     }))
@@ -220,7 +220,7 @@ function Reportes() {
                 'Cantidad': v.cantidad, 'Monto (Gs.)': parseInt(v.monto), 'IVA 10% (Gs.)': parseInt(v.iva),
                 'Canal': v.canal || '', 'Método de pago': v.metodo_pago || '', 'Estado': v.estado || ''
             }))
-            filas.push({ 'Presentación': 'TOTAL', 'Cantidad': datos.reduce((s, v) => s + parseInt(v.cantidad), 0), 'Monto (Gs.)': datos.reduce((s, v) => s + parseInt(v.monto), 0), 'IVA 10% (Gs.)': datos.reduce((s, v) => s + parseInt(v.iva), 0) })
+            filas.push({ 'Presentación': 'TOTAL', 'Cantidad': datos.reduce((s, v) => s + Number(v.cantidad), 0), 'Monto (Gs.)': datos.reduce((s, v) => s + parseInt(v.monto), 0), 'IVA 10% (Gs.)': datos.reduce((s, v) => s + parseInt(v.iva), 0) })
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.json_to_sheet(filas)
             ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 16 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 15 }, { wch: 16 }, { wch: 12 }]

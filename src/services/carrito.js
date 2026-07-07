@@ -27,11 +27,15 @@ async function agregarAlCarrito(cliente_numero, item) {
     const cantidadActual = carrito.find(i => i.presentacion_id === item.presentacion_id)?.cantidad || 0
 
     if (disponible < cantidadActual + item.cantidad) {
+        // El carrito online solo vende unidades enteras; si la presentacion es
+        // fraccionable y quedo con un resto (ej. 2.99 tras una venta parcial en
+        // Caja), se muestra el piso entero para no confundir al cliente.
+        const disponibleEntero = Math.floor(disponible)
         return {
             ok: false,
-            mensaje: disponible === 0
+            mensaje: disponibleEntero === 0
                 ? `Lo sentimos, *${item.producto_nombre} - ${item.presentacion_nombre}* ya no tiene stock disponible.`
-                : `Solo quedan *${disponible}* unidades disponibles de *${item.producto_nombre} - ${item.presentacion_nombre}*.`
+                : `Solo quedan *${disponibleEntero}* unidades disponibles de *${item.producto_nombre} - ${item.presentacion_nombre}*.`
         }
     }
 

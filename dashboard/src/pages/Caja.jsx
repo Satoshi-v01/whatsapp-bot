@@ -49,7 +49,7 @@ function Caja() {
     const [zonas, setZonas] = useState([])
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
-    const [lineas, setLineas] = useState([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1, precioEspecial: '' }])
+    const [lineas, setLineas] = useState([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1, precioEspecial: '', modoMonto: false, montoTexto: '' }])
     const [precioEspecialActivo, setPrecioEspecialActivo] = useState(false)
     const [busquedaCliente, setBusquedaCliente] = useState('')
     const [resultadosCliente, setResultadosCliente] = useState([])
@@ -257,7 +257,25 @@ function Caja() {
     }
 
     function seleccionarPresentacion(lineaId, presentacion) {
-        setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, presentacionSeleccionada: presentacion, precioEspecial: '' } : l))
+        setLineas(prev => prev.map(l => l.id === lineaId ? { ...l, presentacionSeleccionada: presentacion, precioEspecial: '', modoMonto: false, montoTexto: '', cantidad: 1 } : l))
+    }
+
+    function toggleModoMonto(lineaId) {
+        setLineas(prev => prev.map(l => {
+            if (l.id !== lineaId) return l
+            const entrando = !l.modoMonto
+            return { ...l, modoMonto: entrando, montoTexto: '', cantidad: entrando ? 0 : 1 }
+        }))
+    }
+
+    function cambiarMontoFraccion(lineaId, montoTexto) {
+        setLineas(prev => prev.map(l => {
+            if (l.id !== lineaId) return l
+            const precioUnitario = calcularPrecioLinea(l).precio
+            const monto = Number(montoTexto)
+            const cantidad = (montoTexto && precioUnitario > 0) ? Math.round((monto / precioUnitario) * 1000) / 1000 : 0
+            return { ...l, montoTexto, cantidad }
+        }))
     }
 
     function cambiarCantidad(lineaId, delta) {
@@ -270,7 +288,7 @@ function Caja() {
 
     function agregarLinea() {
         const nuevoId = Math.max(...lineas.map(l => l.id)) + 1
-        setLineas(prev => [...prev, { id: nuevoId, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1 }])
+        setLineas(prev => [...prev, { id: nuevoId, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1, modoMonto: false, montoTexto: '' }])
     }
 
     function eliminarLinea(lineaId) {
@@ -343,7 +361,7 @@ function Caja() {
                 ))
             } else {
                 const nuevoId = Math.max(...lineas.map(l => l.id)) + 1
-                setLineas(prev => [...prev, { id: nuevoId, busqueda: `${pr.marca_nombre ? pr.marca_nombre + ' — ' : ''}${pr.producto_nombre}`, productosFiltrados: [], productoSeleccionado: producto, presentacionSeleccionada: pr, cantidad: 1 }])
+                setLineas(prev => [...prev, { id: nuevoId, busqueda: `${pr.marca_nombre ? pr.marca_nombre + ' — ' : ''}${pr.producto_nombre}`, productosFiltrados: [], productoSeleccionado: producto, presentacionSeleccionada: pr, cantidad: 1, modoMonto: false, montoTexto: '' }])
             }
         } catch (err) {
             if (err.response?.status === 404) {
@@ -389,6 +407,11 @@ function Caja() {
     async function handleConfirmarVenta() {
         if (lineasValidas.length === 0) {
             setModalConfirmar({ titulo: 'Falta el producto', mensaje: 'Agrega al menos un producto.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            return
+        }
+        const lineaFraccionInvalida = lineasValidas.find(l => l.modoMonto && (!(l.cantidad > 0) || l.cantidad > l.presentacionSeleccionada.stock))
+        if (lineaFraccionInvalida) {
+            setModalConfirmar({ titulo: 'Monto invalido', mensaje: 'Revisa el monto ingresado en la linea "por monto": no hay stock suficiente o el monto no es valido.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
         if (canal === 'delivery' && !formDelivery.ubicacion) {
@@ -696,18 +719,25 @@ function Caja() {
                                 const { precio, conDescuento, diferencial } = calcularPrecioLinea(linea, precioBase)
                                 return (
                                     <div key={linea.id} style={{ display: 'grid', gridTemplateColumns: '96px 1fr 100px 108px 28px', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #f0eee8' }}>
-                                        {/* Stepper */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <button onClick={() => cambiarCantidad(linea.id, -1)}
-                                                style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #e3e1db', background: '#faf9f7', color: '#6d6b65', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', padding: 0 }}>
-                                                -
-                                            </button>
-                                            <span style={{ width: '22px', textAlign: 'center', fontSize: '13px', fontWeight: '700', color: '#1a1a22' }}>{linea.cantidad}</span>
-                                            <button onClick={() => cambiarCantidad(linea.id, 1)}
-                                                style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #e3e1db', background: '#faf9f7', color: '#6d6b65', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', padding: 0 }}>
-                                                +
-                                            </button>
-                                        </div>
+                                        {/* Stepper / Monto */}
+                                        {linea.modoMonto ? (
+                                            <input type="number" min="0" value={linea.montoTexto}
+                                                onChange={e => cambiarMontoFraccion(linea.id, e.target.value)}
+                                                placeholder="Gs."
+                                                style={{ width: '84px', fontSize: '12px', textAlign: 'center', border: '1px solid #fbbf24', borderRadius: '6px', padding: '5px 4px', outline: 'none' }} />
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <button onClick={() => cambiarCantidad(linea.id, -1)}
+                                                    style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #e3e1db', background: '#faf9f7', color: '#6d6b65', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', padding: 0 }}>
+                                                    -
+                                                </button>
+                                                <span style={{ width: '22px', textAlign: 'center', fontSize: '13px', fontWeight: '700', color: '#1a1a22' }}>{linea.cantidad}</span>
+                                                <button onClick={() => cambiarCantidad(linea.id, 1)}
+                                                    style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #e3e1db', background: '#faf9f7', color: '#6d6b65', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', padding: 0 }}>
+                                                    +
+                                                </button>
+                                            </div>
+                                        )}
                                         {/* Nombre */}
                                         <div style={{ paddingRight: '8px' }}>
                                             <p style={{ fontSize: '12px', fontWeight: '600', color: '#1a1a22', lineHeight: '1.3' }}>
@@ -716,10 +746,29 @@ function Caja() {
                                             <p style={{ fontSize: '11px', color: '#9d9b96', marginTop: '1px' }}>
                                                 {pr.nombre}{pr.stock <= 3 ? ` · Stock: ${pr.stock}` : ''}
                                             </p>
-                                            <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null, precioEspecial: '' } : l))}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#9d9b96', padding: 0, marginTop: '2px' }}>
-                                                cambiar
-                                            </button>
+                                            {linea.modoMonto && linea.montoTexto !== '' && (
+                                                linea.cantidad > 0 && linea.cantidad <= pr.stock ? (
+                                                    <p style={{ fontSize: '10px', color: '#0f9d6b', fontWeight: '600', marginTop: '1px' }}>
+                                                        ≈ {(linea.cantidad * 1000).toLocaleString('es-PY')} g
+                                                    </p>
+                                                ) : (
+                                                    <p style={{ fontSize: '10px', color: '#d04545', fontWeight: '700', marginTop: '1px' }}>
+                                                        {linea.cantidad <= 0 ? 'Ingresá un monto valido' : `No hay stock suficiente (disp. ${(pr.stock * 1000).toLocaleString('es-PY')} g)`}
+                                                    </p>
+                                                )
+                                            )}
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null, precioEspecial: '' } : l))}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#9d9b96', padding: 0, marginTop: '2px' }}>
+                                                    cambiar
+                                                </button>
+                                                {pr.permite_fraccion && (
+                                                    <button onClick={() => toggleModoMonto(linea.id)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#b45309', fontWeight: '600', padding: 0, marginTop: '2px' }}>
+                                                        {linea.modoMonto ? 'vender por unidad' : 'vender por monto'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         {/* P.Unit */}
                                         {precioEspecialActivo ? (

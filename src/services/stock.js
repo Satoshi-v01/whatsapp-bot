@@ -6,7 +6,7 @@ async function stockDisponible(presentacion_id, cliente_numero = null) {
         `SELECT stock_disponible($1, $2) as disponible`,
         [presentacion_id, cliente_numero]
     )
-    return parseInt(resultado.rows[0].disponible)
+    return parseFloat(resultado.rows[0].disponible)
 }
 
 // Stock disponible para múltiples presentaciones a la vez
@@ -18,6 +18,12 @@ async function stockDisponibleBulk(presentacion_ids, cliente_numero = null) {
         [presentacion_ids, cliente_numero]
     )
     return resultado.rows
+}
+
+// Redondea a precision de gramos (3 decimales) para evitar arrastre de
+// error de punto flotante al operar con cantidades fraccionadas.
+function redondear(valor) {
+    return Math.round(valor * 1000) / 1000
 }
 
 async function descontarStockFEFO(client, presentacion_id, cantidad) {
@@ -33,18 +39,18 @@ async function descontarStockFEFO(client, presentacion_id, cantidad) {
 
     for (const lote of lotes.rows) {
         if (restante <= 0) break
-        const aDescontar = Math.min(lote.stock_actual, restante)
+        const aDescontar = redondear(Math.min(lote.stock_actual, restante))
         await client.query(
             `UPDATE lotes SET stock_actual = stock_actual - $1, updated_at = NOW() WHERE id = $2`,
             [aDescontar, lote.id]
         )
-        restante -= aDescontar
+        restante = redondear(restante - aDescontar)
     }
 
     // También descontar del stock general de la presentación
     await client.query(
         `UPDATE presentaciones SET stock = stock - $1, updated_at = NOW() WHERE id = $2`,
-        [cantidad, presentacion_id]
+        [redondear(cantidad), presentacion_id]
     )
 }
 

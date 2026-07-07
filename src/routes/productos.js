@@ -21,6 +21,7 @@ router.get('/', autenticar, verificarPermiso('inventario', 'ver'), async (req, r
             `SELECT pr.id, pr.producto_id, pr.nombre, pr.precio_venta, pr.precio_tarjeta, pr.precio_compra,
                     pr.precio_descuento, pr.descuento_activo, pr.descuento_desde,
                     pr.descuento_hasta, pr.descuento_stock, pr.stock, pr.disponible, pr.codigo_barras,
+                    pr.permite_fraccion,
                     (SELECT MIN(l.fecha_vencimiento) FROM lotes l
                      WHERE l.presentacion_id = pr.id AND l.activo = true AND l.stock_actual > 0
                      AND l.fecha_vencimiento IS NOT NULL) as fecha_vencimiento_proxima,
@@ -526,7 +527,7 @@ router.post('/marcas', autenticar, verificarPermiso('inventario', 'editar'), asy
 router.post('/:id/presentaciones', autenticar, verificarPermiso('inventario', 'crear'), async (req, res) => {
     try {
         const { id } = req.params
-        const { nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras } = req.body
+        const { nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras, permite_fraccion } = req.body
         if (!nombre || !precio_venta) return res.status(400).json({ error: 'Nombre y precio de venta son requeridos' })
 
         // Auto-generar SKU de presentacion: {sku_producto}-{n}
@@ -539,9 +540,9 @@ router.post('/:id/presentaciones', autenticar, verificarPermiso('inventario', 'c
         }
 
         const resultado = await db.query(
-            `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras, sku)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [id, nombre, precio_venta, precio_tarjeta || null, precio_compra || 0, stock || 0, codigo_barras || null, skuPresentacion]
+            `INSERT INTO presentaciones (producto_id, nombre, precio_venta, precio_tarjeta, precio_compra, stock, codigo_barras, sku, permite_fraccion)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [id, nombre, precio_venta, precio_tarjeta || null, precio_compra || 0, stock || 0, codigo_barras || null, skuPresentacion, !!permite_fraccion]
         )
         const producto = await db.query(`SELECT nombre FROM productos WHERE id = $1`, [id])
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'presentacion', entidad_id: resultado.rows[0].id, descripcion: `Presentación creada: ${nombre} — ${producto.rows[0]?.nombre} — Gs. ${precio_venta.toLocaleString()}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
@@ -644,7 +645,23 @@ router.patch('/presentaciones/:id/disponible', autenticar, verificarPermiso('inv
     }
 })
 
-// 12. Actualizar codigo de barras de una presentación
+// 12. Toggle "vendible por monto/fraccion" de una presentación
+router.patch('/presentaciones/:id/fraccion', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
+    try {
+        const { id } = req.params
+        const { permite_fraccion } = req.body
+        if (typeof permite_fraccion !== 'boolean') return res.status(400).json({ error: 'permite_fraccion debe ser boolean' })
+        const anterior = await db.query(`SELECT nombre, permite_fraccion FROM presentaciones WHERE id = $1`, [id])
+        const resultado = await db.query(`UPDATE presentaciones SET permite_fraccion = $1 WHERE id = $2 RETURNING *`, [permite_fraccion, id])
+        if (resultado.rows.length === 0) return res.status(404).json({ error: 'Presentación no encontrada' })
+        registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'presentacion', entidad_id: parseInt(id), descripcion: `Fraccionamiento ${permite_fraccion ? 'activado' : 'desactivado'}: ${anterior.rows[0]?.nombre}`, dato_anterior: { permite_fraccion: anterior.rows[0]?.permite_fraccion }, dato_nuevo: { permite_fraccion }, ip: req.ip }).catch(() => {})
+        res.json(resultado.rows[0])
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// 13. Actualizar codigo de barras de una presentación
 router.patch('/presentaciones/:id/codigos', autenticar, verificarPermiso('inventario', 'editar'), async (req, res) => {
     try {
         const { id } = req.params
