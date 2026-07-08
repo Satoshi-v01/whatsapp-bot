@@ -17,12 +17,12 @@ function CartItem({ item, onUpdateQty, onRemove }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.25 }}
-      className="flex gap-4 items-center py-4 border-b"
+      className="flex flex-wrap sm:flex-nowrap gap-x-4 gap-y-3 items-center py-4 border-b"
       style={{ borderColor: 'var(--color-border)' }}
     >
       {/* Imagen */}
       <div
-        className="w-16 h-16 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+        className="order-1 w-16 h-16 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
         style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
       >
         {item.imagen_url ? (
@@ -39,7 +39,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
+      <div className="order-2 flex-1 min-w-0">
         <p className="font-semibold text-sm leading-snug truncate" style={{ color: 'var(--color-text)' }}>
           {item.nombre}
         </p>
@@ -48,41 +48,43 @@ function CartItem({ item, onUpdateQty, onRemove }) {
         </p>
       </div>
 
-      {/* Cantidad */}
-      <div className="flex items-center gap-1 rounded-xl border overflow-hidden shrink-0" style={{ borderColor: 'var(--color-border)' }}>
-        <button
-          onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
-          aria-label="Disminuir cantidad"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-lg font-bold cursor-pointer transition-colors duration-150 hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ color: 'var(--color-secondary)' }}
-          disabled={item.cantidad <= 1}
-        >
-          -
-        </button>
-        <span className="w-8 text-center text-sm font-bold" style={{ color: 'var(--color-text)' }} aria-live="polite">
-          {item.cantidad}
-        </span>
-        <button
-          onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
-          aria-label="Aumentar cantidad"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-lg font-bold cursor-pointer transition-colors duration-150 hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ color: 'var(--color-secondary)' }}
-          disabled={item.cantidad >= (item.stock ?? 99)}
-        >
-          +
-        </button>
-      </div>
+      {/* Cantidad + Subtotal */}
+      <div className="order-4 w-full sm:w-auto flex items-center justify-between sm:justify-start gap-4">
+        <div className="flex items-center gap-1 rounded-xl border overflow-hidden shrink-0" style={{ borderColor: 'var(--color-border)' }}>
+          <button
+            onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
+            aria-label="Disminuir cantidad"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-lg font-bold cursor-pointer transition-colors duration-150 hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: 'var(--color-secondary)' }}
+            disabled={item.cantidad <= 1}
+          >
+            -
+          </button>
+          <span className="w-8 text-center text-sm font-bold" style={{ color: 'var(--color-text)' }} aria-live="polite">
+            {item.cantidad}
+          </span>
+          <button
+            onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
+            aria-label="Aumentar cantidad"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-lg font-bold cursor-pointer transition-colors duration-150 hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: 'var(--color-secondary)' }}
+            disabled={item.cantidad >= (item.stock ?? 99)}
+          >
+            +
+          </button>
+        </div>
 
-      {/* Subtotal */}
-      <p className="text-sm font-bold w-24 text-right shrink-0" style={{ color: 'var(--color-secondary)' }}>
-        {formatPrice(item.precio_venta * item.cantidad)}
-      </p>
+        {/* Subtotal */}
+        <p className="text-sm font-bold sm:w-24 text-right shrink-0" style={{ color: 'var(--color-secondary)' }}>
+          {formatPrice(item.precio_venta * item.cantidad)}
+        </p>
+      </div>
 
       {/* Eliminar */}
       <button
         onClick={() => onRemove(item.id)}
         aria-label={`Eliminar ${item.nombre} del carrito`}
-        className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors duration-150 hover:bg-red-50 shrink-0"
+        className="order-3 sm:order-5 w-8 h-8 flex items-center justify-center rounded-lg transition-colors duration-150 hover:bg-red-50 shrink-0"
         style={{ color: 'var(--color-text-muted)' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
