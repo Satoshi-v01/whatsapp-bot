@@ -81,8 +81,8 @@ router.get('/resumen', async (req, res) => {
 router.get('/ventas-semana', async (req, res) => {
     try {
         const resultado = await db.query(
-            `SELECT 
-                DATE(v.created_at) as fecha,
+            `SELECT
+                DATE((v.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as fecha,
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
                 COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
@@ -90,7 +90,7 @@ router.get('/ventas-semana', async (req, res) => {
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE v.created_at >= NOW() - INTERVAL '7 days'
              AND v.estado != 'cancelado'
-             GROUP BY DATE(v.created_at)
+             GROUP BY DATE((v.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion')
              ORDER BY fecha ASC`
         )
         res.json(resultado.rows)
@@ -220,14 +220,14 @@ router.get('/ventas-por-dia', async (req, res) => {
 
         const resultado = await db.query(
             `SELECT
-                DATE(v.created_at AT TIME ZONE 'America/Asuncion') as fecha,
+                DATE((v.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as fecha,
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total,
                 COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE ${condiciones.join(' AND ')}
-             GROUP BY DATE(v.created_at AT TIME ZONE 'America/Asuncion')
+             GROUP BY DATE((v.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion')
              ORDER BY fecha ASC`,
             valores
         )
