@@ -422,7 +422,7 @@ function Caja() {
             setModalConfirmar({ titulo: 'Falta el tipo de tarjeta', mensaje: 'Selecciona si es debito o credito.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
-        if (tipoVenta === 'credito' && !clienteSeleccionado) {
+        if (tipoVenta === 'credito' && !clienteSeleccionado?.id) {
             setModalConfirmar({ titulo: 'Cliente requerido', mensaje: 'Para venta a credito debes seleccionar un cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
@@ -448,7 +448,7 @@ function Caja() {
 
                 let numeroFactura = null
                 let datosImpresion = null
-                const esConsumidorFinal = !facturaManual && !clienteSeleccionado && !razonSocial && !rucFactura
+                const esConsumidorFinal = !facturaManual && !clienteSeleccionado?.id && !razonSocial && !rucFactura
                 try {
                     if (facturaManual) {
                         numeroFactura = numeroFacturaManual.trim() || null
