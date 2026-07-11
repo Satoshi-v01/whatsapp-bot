@@ -72,14 +72,14 @@ function Ventas() {
                     }
                 }
 
-                const cliente = anulada ? '—' : (v.razon_social || v.cliente_nombre || 'CONSUMIDOR FINAL')
-                const ruc = anulada ? '—' : (v.ruc_factura || v.cliente_ruc || '—')
-                const nroFactura = v.numero_factura || `#${String(v.id).padStart(7, '0')}`
+                const cliente = anulada ? '—' : (v.es_ticket ? 'CONSUMIDOR FINAL' : (v.razon_social || v.cliente_nombre || 'CONSUMIDOR FINAL'))
+                const ruc = anulada || v.es_ticket ? '—' : (v.ruc_factura || v.cliente_ruc || '—')
+                const nroFactura = v.es_ticket ? '' : (v.numero_factura || `#${String(v.id).padStart(7, '0')}`)
 
                 return {
                     'N°': idx + 1,
                     'Fecha': new Date(v.fecha).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' }),
-                    'Tipo Documento': 'Factura',
+                    'Tipo Documento': v.es_ticket ? 'Ticket' : 'Factura',
                     'N° Factura': nroFactura,
                     'Cliente': cliente,
                     'RUC / CI': ruc,
@@ -402,7 +402,9 @@ function Ventas() {
                                                 <td style={{ padding: '16px 24px' }}>
                                                     <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: '600', color: s.text }}>#{String(venta.id).padStart(4, '0')}</span>
                                                     {venta.numero_factura && (
-                                                        <p style={{ fontSize: '10px', color: s.textMuted, marginTop: '3px', fontFamily: 'monospace' }}>{venta.numero_factura}</p>
+                                                        <p style={{ fontSize: '10px', color: s.textMuted, marginTop: '3px', fontFamily: 'monospace' }}>
+                                                            {venta.numero_factura.startsWith('TICKET-') ? 'Ticket' : venta.numero_factura}
+                                                        </p>
                                                     )}
                                                 </td>
                                                 <td style={{ padding: '16px', fontSize: '13px' }}>
@@ -516,7 +518,7 @@ function Ventas() {
                             </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'flex-end', flexDirection: 'column', gap: '5px' }}>
-                            {ventaDetalle.numero_factura && <p style={{ margin: 0, fontSize: '11px', color: 'rgb(148,163,184)', fontFamily: 'ui-monospace,monospace' }}>{ventaDetalle.numero_factura}</p>}
+                            {ventaDetalle.numero_factura && <p style={{ margin: 0, fontSize: '11px', color: 'rgb(148,163,184)', fontFamily: 'ui-monospace,monospace' }}>{ventaDetalle.numero_factura.startsWith('TICKET-') ? 'Ticket' : ventaDetalle.numero_factura}</p>}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ fontSize: '11px', fontWeight: '600', color: ventaDetalle.tipo_venta === 'credito' ? 'rgb(161,98,7)' : 'rgb(5,150,105)', background: ventaDetalle.tipo_venta === 'credito' ? 'rgb(254,243,199)' : 'rgb(209,250,229)', padding: '2px 9px', borderRadius: '999px' }}>
                                     {ventaDetalle.tipo_venta === 'credito' ? `Crédito ${ventaDetalle.plazo_dias}d` : 'Contado'}

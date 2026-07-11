@@ -448,9 +448,16 @@ function Caja() {
 
                 let numeroFactura = null
                 let datosImpresion = null
+                const esConsumidorFinal = !facturaManual && !clienteSeleccionado && !razonSocial && !rucFactura
                 try {
                     if (facturaManual) {
                         numeroFactura = numeroFacturaManual.trim() || null
+                    } else if (esConsumidorFinal) {
+                        // Ticket interno: no consume numeracion fiscal SET
+                        const idTicket = typeof crypto !== 'undefined' && crypto.randomUUID
+                            ? crypto.randomUUID()
+                            : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`
+                        numeroFactura = `TICKET-${idTicket}`
                     } else {
                         const resNumero = await api.post('/configuracion/factura/siguiente-numero')
                         numeroFactura = resNumero.data.numero_formateado
@@ -503,6 +510,7 @@ function Caja() {
 
                     datosImpresion = {
                         numero_factura: numeroFactura,
+                        es_ticket: esConsumidorFinal,
                         cliente_nombre: razonSocial || clienteSeleccionado?.nombre || null,
                         cliente_ruc: rucFactura || clienteSeleccionado?.ruc || null,
                         tipo_venta: tipoVenta,
@@ -536,7 +544,7 @@ function Caja() {
                     resetCaja()
                     setModalConfirmar({
                         titulo: 'Venta registrada',
-                        mensaje: `Factura ${numeroFactura} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
+                        mensaje: `${esConsumidorFinal ? 'Ticket' : `Factura ${numeroFactura}`} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
                         textoBoton: 'Nueva venta', colorBoton: '#0f9d6b',
                         onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
                     })

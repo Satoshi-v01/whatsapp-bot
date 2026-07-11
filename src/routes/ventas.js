@@ -332,12 +332,13 @@ router.get('/libro-ventas', autenticar, verificarPermiso('ventas', 'ver'), async
             `SELECT
                 DATE(v.created_at AT TIME ZONE 'America/Asuncion') as fecha,
                 v.id,
-                v.numero_factura,
+                CASE WHEN v.numero_factura LIKE 'TICKET-%' THEN NULL ELSE v.numero_factura END as numero_factura,
                 v.tipo_iva,
                 v.precio as total,
                 v.estado,
-                v.ruc_factura,
-                v.razon_social,
+                CASE WHEN v.numero_factura LIKE 'TICKET-%' THEN NULL ELSE v.ruc_factura END as ruc_factura,
+                CASE WHEN v.numero_factura LIKE 'TICKET-%' THEN NULL ELSE v.razon_social END as razon_social,
+                (v.numero_factura LIKE 'TICKET-%') as es_ticket,
                 c.nombre as cliente_nombre,
                 c.ruc as cliente_ruc
              FROM ventas v

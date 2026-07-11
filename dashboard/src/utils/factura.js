@@ -46,6 +46,7 @@ export function numeroALetras(numero) {
 export function imprimirFactura(datos) {
     const {
         numero_factura,
+        es_ticket = false,
         es_prueba = false,
         cliente_nombre,
         cliente_ruc,
@@ -74,8 +75,15 @@ export function imprimirFactura(datos) {
 
     const formatGs = n => parseInt(n || 0).toLocaleString('es-PY')
 
-    const vigenciaInicio = config.timbrado_inicio ? new Date(config.timbrado_inicio).toLocaleDateString('es-PY') : '--'
-    const vigenciaFin    = config.timbrado_fin    ? new Date(config.timbrado_fin).toLocaleDateString('es-PY')    : '--'
+    // Fechas guardadas como texto plano "YYYY-MM-DD" (sin hora): se formatean
+    // directo, sin pasar por Date/timeZone, para no correr un dia por UTC-3.
+    const formatFechaPlana = str => {
+        if (!str) return '--'
+        const [y, m, d] = String(str).split('T')[0].split('-')
+        return `${d}/${m}/${y}`
+    }
+    const vigenciaInicio = formatFechaPlana(config.timbrado_inicio)
+    const vigenciaFin    = formatFechaPlana(config.timbrado_fin)
 
     const SEP  = '-'.repeat(W)
     const SEP2 = '='.repeat(W)
@@ -129,10 +137,14 @@ export function imprimirFactura(datos) {
     if (config.correo)              add(c(config.correo))
 
     add(SEP2)
-    add(c('TIMBRADO Nro ' + (config.timbrado || '--')))
-    add(c('Vigente: ' + vigenciaInicio + ' al ' + vigenciaFin))
-    add(SEP)
-    add(c('FACTURA Nro ' + numero_factura))
+    if (!es_ticket) {
+        add(c('TIMBRADO Nro ' + (config.timbrado || '--')))
+        add(c('Vigente: ' + vigenciaInicio + ' al ' + vigenciaFin))
+        add(SEP)
+        add(c('FACTURA Nro ' + numero_factura))
+    } else {
+        add(c('COMPROBANTE INTERNO - NO VALIDO COMO FACTURA'))
+    }
     add(lr('Condicion: ' + (tipo_venta === 'credito' ? 'CREDITO' : 'CONTADO'), fecha))
     add(SEP)
 
@@ -192,7 +204,7 @@ export function imprimirFactura(datos) {
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Factura ${numero_factura}</title>
+<title>${es_ticket ? 'Ticket' : `Factura ${numero_factura}`}</title>
 <style>
   * { margin: 0; padding: 0; }
   body { background: #fff; }
