@@ -1,4 +1,5 @@
 const express = require('express')
+const crypto = require('crypto')
 const router = express.Router()
 const db = require('../db/index')
 
@@ -769,6 +770,32 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         const ventaCantidad = itemsNorm.length === 1 ? parseCantidad(itemsNorm[0].cantidad) : null
         const ventaTipoIva = itemsNorm.length === 1 ? (itemsNorm[0].tipo_iva || '10') : '10'
 
+        // Autoridad de numeracion: el backend decide, no el frontend. Si no viene
+        // numero_factura (caso normal, i=0 de una venta nueva), se decide aca mismo
+        // segun los datos de la venta, para que ningun frontend desactualizado
+        // pueda forzar el consumo del correlativo fiscal SET.
+        let numeroFacturaFinal = numero_factura || null
+        if (!numeroFacturaFinal) {
+            const requiereFacturaReal = !!(quiere_factura || cliente_id || ruc_factura || razon_social)
+            if (requiereFacturaReal) {
+                const cfgActual = await client.query(
+                    `SELECT valor FROM configuracion WHERE clave = 'factura_numero_actual' FOR UPDATE`
+                )
+                const numeroActual = parseInt(cfgActual.rows[0]?.valor || '1')
+                await client.query(
+                    `UPDATE configuracion SET valor = $1 WHERE clave = 'factura_numero_actual'`,
+                    [String(numeroActual + 1)]
+                )
+                const cfgPrefijo = await client.query(
+                    `SELECT valor FROM configuracion WHERE clave = 'factura_numero_prefijo'`
+                )
+                const prefijoValor = cfgPrefijo.rows[0]?.valor || '001-002'
+                numeroFacturaFinal = `${prefijoValor}-${String(numeroActual).padStart(7, '0')}`
+            } else {
+                numeroFacturaFinal = `TICKET-${crypto.randomUUID()}`
+            }
+        }
+
         const venta = await client.query(
             `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery, numero_factura)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
@@ -777,7 +804,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
             razon_social || null, agente_id || null,
             tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, ventaTipoIva,
-            costo_delivery || 0, zona_delivery || null, numero_factura || null]
+            costo_delivery || 0, zona_delivery || null, numeroFacturaFinal]
         )
 
         const ventaId = venta.rows[0].id

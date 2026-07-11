@@ -446,23 +446,12 @@ function Caja() {
                 if (procesandoVenta.current) return
                 procesandoVenta.current = true
 
-                let numeroFactura = null
+                // El numero de factura (real, ticket interno, o manual) lo decide y
+                // genera el backend en POST /presencial, no el frontend: asi ninguna
+                // pestana desactualizada puede forzar el consumo del correlativo SET.
+                let numeroFactura = facturaManual ? (numeroFacturaManual.trim() || null) : null
                 let datosImpresion = null
-                const esConsumidorFinal = !facturaManual && !clienteSeleccionado?.id && !razonSocial && !rucFactura
                 try {
-                    if (facturaManual) {
-                        numeroFactura = numeroFacturaManual.trim() || null
-                    } else if (esConsumidorFinal) {
-                        // Ticket interno: no consume numeracion fiscal SET
-                        const idTicket = typeof crypto !== 'undefined' && crypto.randomUUID
-                            ? crypto.randomUUID()
-                            : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`
-                        numeroFactura = `TICKET-${idTicket}`
-                    } else {
-                        const resNumero = await api.post('/configuracion/factura/siguiente-numero')
-                        numeroFactura = resNumero.data.numero_formateado
-                    }
-
                     const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
                         const linea = lineasValidas[i]
@@ -485,8 +474,12 @@ function Caja() {
                             zona_delivery: i === 0 ? (formDelivery.zona_nombre || null) : null,
                             numero_factura: numeroFactura
                         })
+                        if (i === 0 && !numeroFactura) {
+                            numeroFactura = respuesta?.venta?.numero_factura || null
+                        }
                         ventasIds.push(respuesta?.venta?.id)
                     }
+                    const esTicket = !!numeroFactura && numeroFactura.startsWith('TICKET-')
 
                     if (canal === 'delivery' && ventasIds[0]) {
                         await api.post('/deliveries/simple', {
@@ -510,7 +503,7 @@ function Caja() {
 
                     datosImpresion = {
                         numero_factura: numeroFactura,
-                        es_ticket: esConsumidorFinal,
+                        es_ticket: esTicket,
                         cliente_nombre: razonSocial || clienteSeleccionado?.nombre || null,
                         cliente_ruc: rucFactura || clienteSeleccionado?.ruc || null,
                         tipo_venta: tipoVenta,
@@ -544,7 +537,7 @@ function Caja() {
                     resetCaja()
                     setModalConfirmar({
                         titulo: 'Venta registrada',
-                        mensaje: `${esConsumidorFinal ? 'Ticket' : `Factura ${numeroFactura}`} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
+                        mensaje: `${esTicket ? 'Ticket' : `Factura ${numeroFactura}`} — Gs. ${total.toLocaleString()}${canal === 'delivery' ? ' · Delivery creado.' : ''}`,
                         textoBoton: 'Nueva venta', colorBoton: '#0f9d6b',
                         onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
                     })
