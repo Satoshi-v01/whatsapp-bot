@@ -426,6 +426,10 @@ function Caja() {
             setModalConfirmar({ titulo: 'Cliente requerido', mensaje: 'Para venta a credito debes seleccionar un cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
+        if (facturaManual && !numeroFacturaManual.trim()) {
+            setModalConfirmar({ titulo: 'Falta el numero de factura', mensaje: 'Ingresa el numero del talonario fisico o destilda "Factura manual".', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            return
+        }
 
         if (canal === 'delivery' && clienteSeleccionado?.id && formDelivery.referencia) {
             api.patch(`/clientes/${clienteSeleccionado.id}`, { referencia_delivery: formDelivery.referencia }).catch(() => {})

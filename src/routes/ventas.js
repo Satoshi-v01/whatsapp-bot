@@ -781,7 +781,11 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
                 const cfgActual = await client.query(
                     `SELECT valor FROM configuracion WHERE clave = 'factura_numero_actual' FOR UPDATE`
                 )
-                const numeroActual = parseInt(cfgActual.rows[0]?.valor || '1')
+                const numeroActual = parseInt(cfgActual.rows[0]?.valor || '1', 10)
+                if (!Number.isFinite(numeroActual)) {
+                    await client.query('ROLLBACK')
+                    return res.status(500).json({ error: 'Contador de numeracion de factura invalido. Revisa Configuracion > Facturacion.' })
+                }
                 await client.query(
                     `UPDATE configuracion SET valor = $1 WHERE clave = 'factura_numero_actual'`,
                     [String(numeroActual + 1)]
