@@ -186,7 +186,7 @@ function FilaOrden({ orden, s, darkMode }) {
                                         <div key={k} style={{ display: 'contents' }}>
                                             <dt style={{ color: s.textMuted, fontWeight: 600, whiteSpace: 'nowrap' }}>{k}:</dt>
                                             <dd style={{ color: s.text, margin: 0, wordBreak: 'break-word' }}>
-                                                {v?.link
+                                                {typeof v === 'object' && v?.link
                                                     ? <a href={v.link} target="_blank" rel="noopener noreferrer" style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}>Abrir Maps</a>
                                                     : v
                                                 }

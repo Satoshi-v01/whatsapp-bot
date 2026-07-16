@@ -185,11 +185,10 @@ function Reportes() {
                     delZonas.por_zona.map(z => ({
                         'Zona': z.zona,
                         'Pedidos': Number(z.cantidad_pedidos),
-                        'Costo delivery (Gs.)': parseInt(z.total_delivery),
                         'Total ventas (Gs.)': parseInt(z.total_ventas)
                     }))
                 )
-                wsZonas['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 22 }, { wch: 20 }]
+                wsZonas['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 20 }]
                 XLSX.utils.book_append_sheet(wb, wsZonas, 'Delivery por Zonas')
             }
 
@@ -570,9 +569,6 @@ function Reportes() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <div>
                         <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text }}>Delivery por zonas</h2>
-                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>
-                            Total recaudado en costos de delivery: <strong style={{ color: s.text }}>{formatearGs(deliveryZonas.total_delivery_periodo)}</strong>
-                        </p>
                     </div>
                 </div>
 
@@ -590,13 +586,12 @@ function Reportes() {
                                     <tr style={{ background: s.surfaceLow }}>
                                         <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Zona</th>
                                         <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Pedidos</th>
-                                        <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Delivery</th>
                                         <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase' }}>Ventas</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {deliveryZonas.por_zona.length === 0 ? (
-                                        <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos en este período</td></tr>
+                                        <tr><td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos en este período</td></tr>
                                     ) : deliveryZonas.por_zona.map((z, i) => (
                                         <tr key={i} style={{ borderTop: `1px solid ${s.borderLight}` }}
                                             onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
@@ -608,7 +603,6 @@ function Reportes() {
                                                 </div>
                                             </td>
                                             <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '700', color: s.text }}>{z.cantidad_pedidos}</td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#10b981' }}>{formatearGs(z.total_delivery)}</td>
                                             <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', color: s.textMuted }}>{formatearGs(z.total_ventas)}</td>
                                         </tr>
                                     ))}
