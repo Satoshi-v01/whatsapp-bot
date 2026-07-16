@@ -137,7 +137,7 @@ router.get('/estado/:estado', autenticar, verificarPermiso('delivery', 'ver'), a
 router.post('/', autenticar, verificarPermiso('delivery', 'crear'), async (req, res) => {
     const client = await db.pool.connect()
     try {
-        const { cliente_id, cliente_nuevo, lineas, presentacion_id, precio, metodo_pago, estado_pago, quiere_factura, ruc_factura, razon_social, ubicacion, referencia, horario, contacto_entrega, notas } = req.body
+        const { cliente_id, cliente_nuevo, lineas, presentacion_id, precio, metodo_pago, estado_pago, quiere_factura, ruc_factura, razon_social, ubicacion, referencia, horario, contacto_entrega, costo_delivery, notas } = req.body
 
         const lineasFinal = lineas?.length > 0 ? lineas : [{ presentacion_id, precio, cantidad: 1 }]
         if (!lineasFinal.length || !lineasFinal[0].presentacion_id) return res.status(400).json({ error: 'Al menos un producto es requerido' })
@@ -163,12 +163,16 @@ router.post('/', autenticar, verificarPermiso('delivery', 'crear'), async (req, 
 
         const deliveriesCreados = []
 
-        for (const linea of lineasFinal) {
+        for (let i = 0; i < lineasFinal.length; i++) {
+            const linea = lineasFinal[i]
             const cantidad = linea.cantidad || 1
+            // El costo de delivery no se multiplica por linea: va una sola vez,
+            // en la primera venta del pedido (mismo criterio que Caja.jsx/ventas.js).
+            const costoDeliveryLinea = i === 0 ? (parseInt(costo_delivery) || 0) : 0
             const venta = await client.query(
-                `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, quiere_factura, ruc_factura, razon_social, cliente_numero)
-                 VALUES ($1, $2, $3, $4, 'manual', $5, $6, $7, $8, $9, $10) RETURNING id`,
-                [clienteIdFinal, linea.presentacion_id, cantidad, linea.precio, estado_pago || 'pendiente_pago', metodo_pago || 'efectivo', quiere_factura || false, ruc_factura || null, razon_social || null, cliente_nuevo?.telefono || null]
+                `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, quiere_factura, ruc_factura, razon_social, cliente_numero, costo_delivery)
+                 VALUES ($1, $2, $3, $4, 'manual', $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+                [clienteIdFinal, linea.presentacion_id, cantidad, linea.precio, estado_pago || 'pendiente_pago', metodo_pago || 'efectivo', quiere_factura || false, ruc_factura || null, razon_social || null, cliente_nuevo?.telefono || null, costoDeliveryLinea]
             )
 
             const lotesExisten = await client.query(`SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`, [linea.presentacion_id])

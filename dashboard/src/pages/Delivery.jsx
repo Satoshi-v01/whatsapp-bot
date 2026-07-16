@@ -649,7 +649,7 @@ function ModalNuevoDelivery({ s, darkMode, onClose, onCreado, setModalConfirmar 
     const [lineas, setLineas] = useState([]) // [{ producto, presentacion, cantidad }]
     const [buscarProducto, setBuscarProducto] = useState('')
     const [productoActual, setProductoActual] = useState(null)
-    const [formEntrega, setFormEntrega] = useState({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', metodo_pago: 'efectivo', estado_pago: 'pendiente_pago', notas: '' })
+    const [formEntrega, setFormEntrega] = useState({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', metodo_pago: 'efectivo', estado_pago: 'pendiente_pago', costo_delivery: 0, notas: '' })
     const [enviando, setEnviando] = useState(false)
 
     const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, marginBottom: '10px', fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text, outline: 'none' }
@@ -899,6 +899,8 @@ function ModalNuevoDelivery({ s, darkMode, onClose, onCreado, setModalConfirmar 
                             <input value={formEntrega.horario} onChange={e => setFormEntrega({ ...formEntrega, horario: e.target.value })} style={inputStyle} placeholder="Ej: Desde las 14hs" />
                             <label style={labelStyle}>Contacto que recibe</label>
                             <input value={formEntrega.contacto_entrega} onChange={e => setFormEntrega({ ...formEntrega, contacto_entrega: e.target.value })} style={inputStyle} placeholder="Nombre y teléfono" />
+                            <label style={labelStyle}>Costo de delivery (lo cobra el repartidor, no es venta nuestra)</label>
+                            <input type="number" min="0" value={formEntrega.costo_delivery} onChange={e => setFormEntrega({ ...formEntrega, costo_delivery: parseInt(e.target.value) || 0 })} style={inputStyle} placeholder="0" />
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
                                 <div>
                                     <label style={labelStyle}>Método de pago</label>

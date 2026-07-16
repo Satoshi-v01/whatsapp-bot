@@ -6,6 +6,54 @@ const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 router.use(autenticar, verificarPermiso('reportes', 'ver'))
 
+// Ganancia real de una venta: suma el margen por producto desde ventas_items
+// (donde SIEMPRE se registran todos los productos de la venta, sea 1 o varios).
+// Antes esto se calculaba contra v.presentacion_id/v.cantidad de la cabecera de
+// `ventas`, que quedan NULL cuando la venta tiene mas de un producto -> el JOIN
+// no encontraba nada y la "ganancia" terminaba siendo el precio total de la
+// venta (0% de costo descontado). Fallback a la cabecera solo para ventas
+// legacy que no tienen filas en ventas_items (ej. las creadas directo desde
+// deliveries.js, que no inserta items).
+//
+// El costo de delivery NUNCA es ganancia ni costo nuestro: el cliente lo paga
+// y va integro para el repartidor, es plata de paso por la caja. vi.precio_total
+// (ventas_items) ya es solo precio de producto, pero v.precio de la cabecera SI
+// incluye costo_delivery -> se resta antes de calcular margen en el fallback.
+const GANANCIA_VENTA = `COALESCE(
+    (SELECT SUM(vi.precio_total - COALESCE(pri.precio_compra, 0) * vi.cantidad)
+     FROM ventas_items vi
+     LEFT JOIN presentaciones pri ON vi.presentacion_id = pri.id
+     WHERE vi.venta_id = v.id),
+    (v.precio - COALESCE(v.costo_delivery, 0)) - COALESCE(pr.precio_compra, 0) * COALESCE(v.cantidad, 0)
+)`
+
+// v.precio incluye costo_delivery (plata de paso para el repartidor, no es
+// venta nuestra). "Ventas del dia" y demas totales de ingresos deben
+// mostrar solo lo que efectivamente es venta de productos.
+const VENTA_SIN_DELIVERY = `(v.precio - COALESCE(v.costo_delivery, 0))`
+
+// Fuente unica de "items vendidos" para los reportes por producto (top-productos,
+// ranking-productos, rentabilidad). Combina ventas_items (caso normal) con un
+// fallback por venta para las que NO tienen filas ahi (ej. deliveries.js, que
+// inserta directo en `ventas` con presentacion_id/cantidad en la cabecera y
+// nunca crea ventas_items). Antes estos reportes hacian JOIN directo contra
+// `ventas`, lo que los rompio dos veces: primero excluia ventas multi-producto
+// (header NULL), y al migrar a ventas_items paso a excluir SIN AVISAR las
+// ventas que nunca tuvieron items (las de delivery manual) -- se perdian
+// enteras, no solo su margen. Este UNION ALL las devuelve TODAS: unicamente se
+// resta costo_delivery del precio (no se toca ni se descarta la venta).
+const ITEMS_VENTA_CTE = `WITH items_venta AS (
+    SELECT vi.venta_id, vi.presentacion_id, vi.cantidad, vi.precio_total
+    FROM ventas_items vi
+    UNION ALL
+    SELECT v2.id as venta_id, v2.presentacion_id, v2.cantidad,
+           (v2.precio - COALESCE(v2.costo_delivery, 0)) as precio_total
+    FROM ventas v2
+    WHERE v2.presentacion_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM ventas_items vix WHERE vix.venta_id = v2.id)
+)
+`
+
 // Resumen del día
 router.get('/resumen', async (req, res) => {
     try {
@@ -13,10 +61,10 @@ router.get('/resumen', async (req, res) => {
         hoy.setHours(0, 0, 0, 0)
 
         const ventasHoy = await db.query(
-            `SELECT 
+            `SELECT
                 COUNT(*) as cantidad,
-                COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
+                COALESCE(SUM(${VENTA_SIN_DELIVERY}), 0) as total,
+                COALESCE(SUM(${GANANCIA_VENTA}), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE v.created_at >= $1
@@ -84,8 +132,8 @@ router.get('/ventas-semana', async (req, res) => {
             `SELECT
                 DATE((v.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as fecha,
                 COUNT(*) as cantidad,
-                COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
+                COALESCE(SUM(${VENTA_SIN_DELIVERY}), 0) as total,
+                COALESCE(SUM(${GANANCIA_VENTA}), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE v.created_at >= NOW() - INTERVAL '7 days'
@@ -100,17 +148,22 @@ router.get('/ventas-semana', async (req, res) => {
 })
 
 // Productos más vendidos del mes
+// Fuente: items_venta (ver ITEMS_VENTA_CTE) -- incluye TODAS las ventas
+// (multi-producto y las de delivery manual sin ventas_items), restando
+// solo costo_delivery cuando corresponde, nunca excluyendo la venta entera.
 router.get('/top-productos', async (req, res) => {
     try {
         const resultado = await db.query(
-            `SELECT 
+            `${ITEMS_VENTA_CTE}
+             SELECT
                 p.nombre as producto,
                 pr.nombre as presentacion,
                 COUNT(*) as cantidad_vendida,
-                SUM(v.precio) as total_generado,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_generada
-             FROM ventas v
-             JOIN presentaciones pr ON v.presentacion_id = pr.id
+                COALESCE(SUM(iv.precio_total), 0) as total_generado,
+                COALESCE(SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad), 0) as ganancia_generada
+             FROM items_venta iv
+             JOIN ventas v ON iv.venta_id = v.id
+             JOIN presentaciones pr ON iv.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              WHERE v.created_at >= DATE_TRUNC('month', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'
              AND v.estado != 'cancelado'
@@ -222,8 +275,8 @@ router.get('/ventas-por-dia', async (req, res) => {
             `SELECT
                 DATE((v.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as fecha,
                 COUNT(*) as cantidad,
-                COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia
+                COALESCE(SUM(${VENTA_SIN_DELIVERY}), 0) as total,
+                COALESCE(SUM(${GANANCIA_VENTA}), 0) as ganancia
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              WHERE ${condiciones.join(' AND ')}
@@ -268,6 +321,7 @@ router.get('/ventas-por-canal', async (req, res) => {
     }
 })
 
+// Fuente: items_venta (ver ITEMS_VENTA_CTE, mismo motivo que /top-productos).
 router.get('/ranking-productos', async (req, res) => {
     try {
         const { periodo = 'mes', limite = 10 } = req.query
@@ -275,13 +329,15 @@ router.get('/ranking-productos', async (req, res) => {
         const intervalo = intervalos[periodo] || '30 days'
 
         const top = await db.query(
-            `SELECT
+            `${ITEMS_VENTA_CTE}
+             SELECT
                 p.nombre as producto, pr.nombre as presentacion, m.nombre as marca,
                 COUNT(*) as cantidad_vendida,
-                COALESCE(SUM(v.precio), 0) as total_generado,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_generada
-             FROM ventas v
-             JOIN presentaciones pr ON v.presentacion_id = pr.id
+                COALESCE(SUM(iv.precio_total), 0) as total_generado,
+                COALESCE(SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad), 0) as ganancia_generada
+             FROM items_venta iv
+             JOIN ventas v ON iv.venta_id = v.id
+             JOIN presentaciones pr ON iv.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
              WHERE v.created_at >= NOW() - ($1::interval)
@@ -293,12 +349,14 @@ router.get('/ranking-productos', async (req, res) => {
         )
 
         const bottom = await db.query(
-            `SELECT
+            `${ITEMS_VENTA_CTE}
+             SELECT
                 p.nombre as producto, pr.nombre as presentacion, m.nombre as marca,
                 COUNT(*) as cantidad_vendida,
-                COALESCE(SUM(v.precio), 0) as total_generado
-             FROM ventas v
-             JOIN presentaciones pr ON v.presentacion_id = pr.id
+                COALESCE(SUM(iv.precio_total), 0) as total_generado
+             FROM items_venta iv
+             JOIN ventas v ON iv.venta_id = v.id
+             JOIN presentaciones pr ON iv.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
              WHERE v.created_at >= NOW() - ($1::interval)
@@ -343,6 +401,7 @@ router.get('/top-clientes', async (req, res) => {
     }
 })
 
+// Fuente: items_venta (ver ITEMS_VENTA_CTE, mismo motivo que /top-productos).
 router.get('/rentabilidad', async (req, res) => {
     try {
         const { periodo = 'mes', agrupar = 'producto' } = req.query
@@ -363,24 +422,26 @@ router.get('/rentabilidad', async (req, res) => {
         }
 
         const resultado = await db.query(
-            `SELECT
+            `${ITEMS_VENTA_CTE}
+             SELECT
                 ${selectGroup},
                 COUNT(*) as unidades_vendidas,
-                COALESCE(SUM(v.precio), 0) as ingresos,
-                COALESCE(SUM(COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as costo,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia,
+                COALESCE(SUM(iv.precio_total), 0) as ingresos,
+                COALESCE(SUM(COALESCE(pr.precio_compra, 0) * iv.cantidad), 0) as costo,
+                COALESCE(SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad), 0) as ganancia,
                 CASE
-                    WHEN SUM(v.precio) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(v.precio))::numeric, 1)
+                    WHEN SUM(iv.precio_total) > 0
+                    THEN ROUND((SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad) * 100.0 / SUM(iv.precio_total))::numeric, 1)
                     ELSE 0
                 END as margen_pct,
                 CASE
-                    WHEN SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad))::numeric, 1)
+                    WHEN SUM(COALESCE(pr.precio_compra, 0) * iv.cantidad) > 0
+                    THEN ROUND((SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad) * 100.0 / SUM(COALESCE(pr.precio_compra, 0) * iv.cantidad))::numeric, 1)
                     ELSE 0
                 END as markup_pct
-             FROM ventas v
-             JOIN presentaciones pr ON v.presentacion_id = pr.id
+             FROM items_venta iv
+             JOIN ventas v ON iv.venta_id = v.id
+             JOIN presentaciones pr ON iv.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
              LEFT JOIN categorias cat ON p.categoria_id = cat.id
@@ -393,22 +454,24 @@ router.get('/rentabilidad', async (req, res) => {
 
         // Resumen total
         const resumen = await db.query(
-            `SELECT
-                COALESCE(SUM(v.precio), 0) as ingresos_total,
-                COALESCE(SUM(COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as costo_total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia_total,
+            `${ITEMS_VENTA_CTE}
+             SELECT
+                COALESCE(SUM(iv.precio_total), 0) as ingresos_total,
+                COALESCE(SUM(COALESCE(pr.precio_compra, 0) * iv.cantidad), 0) as costo_total,
+                COALESCE(SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad), 0) as ganancia_total,
                 CASE
-                    WHEN SUM(v.precio) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(v.precio))::numeric, 1)
+                    WHEN SUM(iv.precio_total) > 0
+                    THEN ROUND((SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad) * 100.0 / SUM(iv.precio_total))::numeric, 1)
                     ELSE 0
                 END as margen_promedio_pct,
                 CASE
-                    WHEN SUM(COALESCE(pr.precio_compra, 0) * v.cantidad) > 0
-                    THEN ROUND((SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad) * 100.0 / SUM(COALESCE(pr.precio_compra, 0) * v.cantidad))::numeric, 1)
+                    WHEN SUM(COALESCE(pr.precio_compra, 0) * iv.cantidad) > 0
+                    THEN ROUND((SUM(iv.precio_total - COALESCE(pr.precio_compra, 0) * iv.cantidad) * 100.0 / SUM(COALESCE(pr.precio_compra, 0) * iv.cantidad))::numeric, 1)
                     ELSE 0
                 END as markup_promedio_pct
-             FROM ventas v
-             JOIN presentaciones pr ON v.presentacion_id = pr.id
+             FROM items_venta iv
+             JOIN ventas v ON iv.venta_id = v.id
+             JOIN presentaciones pr ON iv.presentacion_id = pr.id
              WHERE v.created_at >= NOW() - ($1::interval)
              AND v.estado != 'cancelado'`,
             [intervalo]
@@ -451,10 +514,10 @@ router.get('/metricas', async (req, res) => {
         const resultado = await db.query(
             `SELECT
                 COUNT(*) as cantidad,
-                COALESCE(SUM(v.precio), 0) as total,
-                COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0) * v.cantidad), 0) as ganancia,
-                COALESCE(AVG(v.precio), 0) as ticket_promedio,
-                FLOOR(COALESCE(SUM(v.precio), 0) / 11) as iva_total
+                COALESCE(SUM(${VENTA_SIN_DELIVERY}), 0) as total,
+                COALESCE(SUM(${GANANCIA_VENTA}), 0) as ganancia,
+                COALESCE(AVG(${VENTA_SIN_DELIVERY}), 0) as ticket_promedio,
+                FLOOR(COALESCE(SUM(${VENTA_SIN_DELIVERY}), 0) / 11) as iva_total
              FROM ventas v
              LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
              LEFT JOIN productos p ON pr.producto_id = p.id
@@ -652,6 +715,123 @@ router.get('/delivery-zonas', async (req, res) => {
         })
     } catch (error) {
         res.status(500).json({ error: error.message })
+    }
+})
+
+// Estadistica APARTE de lo que se gana por delivery: el costo_delivery no es
+// venta/ganancia nuestra (ver GANANCIA_VENTA), pero es plata real que pasa por
+// la caja y hay que poder verla sola -- cuanto entro hoy/semana/mes/total,
+// promedio diario/semanal/mensual, y a que zonas se entrega mas.
+// Las semanas se cuentan de LUNES a DOMINGO: DATE_TRUNC('week', ...) en
+// Postgres ya trunca al lunes de esa semana (ISO 8601), asi que no hace
+// falta ningun ajuste manual de dia de la semana.
+router.get('/delivery-ganancias', async (req, res) => {
+    try {
+        const HOY = `DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`
+        const SEMANA_ACTUAL = `DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`
+        const MES_ACTUAL = `DATE_TRUNC('month', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`
+        // costo_delivery puede ser NULL en ventas viejas creadas por deliveries.js
+        // sin ese dato -- COALESCE(...,0) explicito para que cantidad (COUNT, cuenta
+        // el envio igual) y total (SUM) nunca representen conjuntos distintos.
+        const COSTO = `COALESCE(v.costo_delivery, 0)`
+
+        // Antes esto eran 12 queries en paralelo (4 totales + 4 por zona + 3
+        // promedios + 1 de fechas), suficiente para saturar el pool (max: 10,
+        // ver src/db/index.js) con una sola request. Ahora son 3: totales y
+        // fechas de semana en una sola query con FILTER, zonas en otra con
+        // FILTER, y los 3 promedios en una tercera via subqueries escalares.
+        const [totales, zonas, promedios] = await Promise.all([
+            db.query(
+                `SELECT
+                    COUNT(*) FILTER (WHERE d.created_at >= ${HOY}) as hoy_cantidad,
+                    COALESCE(SUM(${COSTO}) FILTER (WHERE d.created_at >= ${HOY}), 0) as hoy_total,
+                    COUNT(*) FILTER (WHERE d.created_at >= ${SEMANA_ACTUAL}) as semana_cantidad,
+                    COALESCE(SUM(${COSTO}) FILTER (WHERE d.created_at >= ${SEMANA_ACTUAL}), 0) as semana_total,
+                    COUNT(*) FILTER (WHERE d.created_at >= ${MES_ACTUAL}) as mes_cantidad,
+                    COALESCE(SUM(${COSTO}) FILTER (WHERE d.created_at >= ${MES_ACTUAL}), 0) as mes_total,
+                    COUNT(*) as total_cantidad,
+                    COALESCE(SUM(${COSTO}), 0) as total_total,
+                    (DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion'))::date as semana_desde,
+                    (DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion') + INTERVAL '6 days')::date as semana_hasta
+                 FROM deliveries d
+                 JOIN ventas v ON d.venta_id = v.id
+                 WHERE d.estado != 'cancelado'`
+            ),
+            db.query(
+                `SELECT
+                    COALESCE(v.zona_delivery, 'Sin zona') as zona,
+                    COUNT(*) FILTER (WHERE d.created_at >= ${HOY}) as cantidad_hoy,
+                    COALESCE(SUM(${COSTO}) FILTER (WHERE d.created_at >= ${HOY}), 0) as total_hoy,
+                    COUNT(*) FILTER (WHERE d.created_at >= ${SEMANA_ACTUAL}) as cantidad_semana,
+                    COALESCE(SUM(${COSTO}) FILTER (WHERE d.created_at >= ${SEMANA_ACTUAL}), 0) as total_semana,
+                    COUNT(*) FILTER (WHERE d.created_at >= ${MES_ACTUAL}) as cantidad_mes,
+                    COALESCE(SUM(${COSTO}) FILTER (WHERE d.created_at >= ${MES_ACTUAL}), 0) as total_mes,
+                    COUNT(*) as cantidad_total,
+                    COALESCE(SUM(${COSTO}), 0) as total_total
+                 FROM deliveries d
+                 JOIN ventas v ON d.venta_id = v.id
+                 WHERE d.estado != 'cancelado'
+                 GROUP BY v.zona_delivery`
+            ),
+            db.query(
+                `SELECT
+                    (SELECT COALESCE(AVG(total_dia), 0) FROM (
+                        SELECT DATE((d.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as dia,
+                               SUM(${COSTO}) as total_dia
+                        FROM deliveries d JOIN ventas v ON d.venta_id = v.id
+                        WHERE d.estado != 'cancelado' AND d.created_at >= NOW() - INTERVAL '30 days'
+                        GROUP BY dia
+                    ) t_dia) as promedio_diario,
+                    (SELECT COALESCE(AVG(total_semana), 0) FROM (
+                        SELECT DATE_TRUNC('week', (d.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as semana,
+                               SUM(${COSTO}) as total_semana
+                        FROM deliveries d JOIN ventas v ON d.venta_id = v.id
+                        WHERE d.estado != 'cancelado' AND d.created_at >= NOW() - INTERVAL '84 days'
+                        GROUP BY semana
+                    ) t_semana) as promedio_semanal,
+                    (SELECT COALESCE(AVG(total_mes), 0) FROM (
+                        SELECT DATE_TRUNC('month', (d.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Asuncion') as mes,
+                               SUM(${COSTO}) as total_mes
+                        FROM deliveries d JOIN ventas v ON d.venta_id = v.id
+                        WHERE d.estado != 'cancelado' AND d.created_at >= NOW() - INTERVAL '365 days'
+                        GROUP BY mes
+                    ) t_mes) as promedio_mensual`
+            )
+        ])
+
+        const t = totales.rows[0]
+
+        // El orden por cantidad (mayor a menor) que antes hacia SQL por
+        // periodo ahora se hace en JS, ya sobre las 4 columnas ya traidas.
+        const zonaPeriodo = (cantidadCol, totalCol) => zonas.rows
+            .map(r => ({ zona: r.zona, cantidad: parseInt(r[cantidadCol]), total: parseInt(r[totalCol]) }))
+            .filter(r => r.cantidad > 0)
+            .sort((a, b) => b.cantidad - a.cantidad)
+
+        res.json({
+            hoy: { cantidad: parseInt(t.hoy_cantidad), total: parseInt(t.hoy_total) },
+            semana_actual: {
+                cantidad: parseInt(t.semana_cantidad),
+                total: parseInt(t.semana_total),
+                desde: t.semana_desde,
+                hasta: t.semana_hasta
+            },
+            mes_actual: { cantidad: parseInt(t.mes_cantidad), total: parseInt(t.mes_total) },
+            total_historico: { cantidad: parseInt(t.total_cantidad), total: parseInt(t.total_total) },
+            promedios: {
+                diario: Math.round(parseFloat(promedios.rows[0].promedio_diario)),
+                semanal: Math.round(parseFloat(promedios.rows[0].promedio_semanal)),
+                mensual: Math.round(parseFloat(promedios.rows[0].promedio_mensual))
+            },
+            zonas: {
+                hoy: zonaPeriodo('cantidad_hoy', 'total_hoy'),
+                semana: zonaPeriodo('cantidad_semana', 'total_semana'),
+                mes: zonaPeriodo('cantidad_mes', 'total_mes'),
+                total: zonaPeriodo('cantidad_total', 'total_total')
+            }
+        })
+    } catch (error) {
+        manejarError(res, error)
     }
 })
 

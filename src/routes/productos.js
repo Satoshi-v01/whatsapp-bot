@@ -687,7 +687,9 @@ router.delete('/presentaciones/:id', autenticar, verificarPermiso('inventario', 
         const enVentas = await client.query(
             `SELECT COUNT(*) as c FROM ventas_items WHERE presentacion_id = $1
              UNION ALL
-             SELECT COUNT(*) as c FROM ordenes_pedido_items WHERE presentacion_id = $1`,
+             SELECT COUNT(*) as c FROM ordenes_pedido_items WHERE presentacion_id = $1
+             UNION ALL
+             SELECT COUNT(*) as c FROM ventas WHERE presentacion_id = $1`,
             [id]
         )
         const totalEnVentas = enVentas.rows.reduce((sum, r) => sum + parseInt(r.c), 0)
@@ -724,7 +726,8 @@ router.delete('/:id', autenticar, verificarPermiso('inventario', 'eliminar'), as
         if (ids.length > 0) {
             const enVentas = await client.query(
                 `SELECT (SELECT COUNT(*) FROM ventas_items WHERE presentacion_id = ANY($1)) +
-                        (SELECT COUNT(*) FROM ordenes_pedido_items WHERE presentacion_id = ANY($1)) AS total`,
+                        (SELECT COUNT(*) FROM ordenes_pedido_items WHERE presentacion_id = ANY($1)) +
+                        (SELECT COUNT(*) FROM ventas WHERE presentacion_id = ANY($1)) AS total`,
                 [ids]
             )
             if (parseInt(enVentas.rows[0].total) > 0) {
