@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getProductos, buscarPorCodigoBarras } from '../services/productos'
 import { buscarClientes, crearCliente, getCliente } from '../services/clientes'
 import { registrarVentaPresencial } from '../services/ventas'
-import { confirmarOrden } from '../services/ordenes'
+import { confirmarOrden, reclamarOrden, liberarOrden } from '../services/ordenes'
 import { getZonas } from '../services/zonas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { imprimirFactura, imprimirCierre } from '../utils/factura'
@@ -450,13 +450,27 @@ function Caja() {
                 if (procesandoVenta.current) return
                 procesandoVenta.current = true
 
+                // Si la venta viene de un pedido del bot, reclamamos la orden ANTES de
+                // crear ninguna venta: evita que dos agentes procesen el mismo pedido
+                // 'pendiente' en simultaneo y generen ventas/stock duplicados.
+                if (opOrigen) {
+                    try {
+                        await reclamarOrden(opOrigen.id)
+                    } catch (err) {
+                        procesandoVenta.current = false
+                        const detalle = err.response?.data?.error || 'La orden ya esta siendo procesada por otro agente.'
+                        setModalConfirmar({ titulo: 'No se pudo reclamar la orden', mensaje: detalle, textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                        return
+                    }
+                }
+
                 // El numero de factura (real, ticket interno, o manual) lo decide y
                 // genera el backend en POST /presencial, no el frontend: asi ninguna
                 // pestana desactualizada puede forzar el consumo del correlativo SET.
                 let numeroFactura = facturaManual ? (numeroFacturaManual.trim() || null) : null
                 let datosImpresion = null
+                const ventasIds = []
                 try {
-                    const ventasIds = []
                     for (let i = 0; i < lineasValidas.length; i++) {
                         const linea = lineasValidas[i]
                         const { precio } = calcularPrecioLinea(linea)
@@ -485,22 +499,9 @@ function Caja() {
                     }
                     const esTicket = !!numeroFactura && numeroFactura.startsWith('TICKET-')
 
-                    if (canal === 'delivery' && ventasIds[0]) {
-                        await api.post('/deliveries/simple', {
-                            venta_id: ventasIds[0],
-                            cliente_numero: clienteSeleccionado?.telefono || null,
-                            ubicacion: formDelivery.ubicacion,
-                            referencia: formDelivery.referencia,
-                            horario: formDelivery.horario,
-                            contacto_entrega: formDelivery.contacto_entrega,
-                            metodo_pago: metodoPago
-                        })
-                    }
-
-                    if (opOrigen) {
-                        try { await confirmarOrden(opOrigen.id, { modalidad: canal, metodo_pago: metodoPago }) } catch (e) {}
-                    }
-
+                    // A partir de aca las ventas ya estan commiteadas (stock descontado,
+                    // cobro hecho): armamos el recibo antes de los pasos siguientes para
+                    // poder imprimirlo igual si delivery/confirmarOrden fallan despues.
                     const metodoImpresion = metodoPago === 'tarjeta'
                         ? (subtipoPago === 'debito' ? 'tarjeta_debito' : 'tarjeta_credito')
                         : metodoPago
@@ -538,6 +539,22 @@ function Caja() {
                         config: configFactura
                     }
 
+                    if (canal === 'delivery' && ventasIds[0]) {
+                        await api.post('/deliveries/simple', {
+                            venta_id: ventasIds[0],
+                            cliente_numero: clienteSeleccionado?.telefono || null,
+                            ubicacion: formDelivery.ubicacion,
+                            referencia: formDelivery.referencia,
+                            horario: formDelivery.horario,
+                            contacto_entrega: formDelivery.contacto_entrega,
+                            metodo_pago: metodoPago
+                        })
+                    }
+
+                    if (opOrigen) {
+                        await confirmarOrden(opOrigen.id, { modalidad: canal, ventas_ids: ventasIds })
+                    }
+
                     resetCaja()
                     setModalConfirmar({
                         titulo: 'Venta registrada',
@@ -548,7 +565,26 @@ function Caja() {
                 } catch (err) {
                     const detalle = err.response?.data?.error
                         || (err.response ? `Error HTTP ${err.response.status}` : `Sin respuesta del servidor (${err.message})`)
-                    setModalConfirmar({ titulo: 'Error al registrar', mensaje: detalle, textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+
+                    if (ventasIds.length > 0) {
+                        // La(s) venta(s) YA se registraron (stock descontado, cobro hecho)
+                        // antes de que fallara delivery/confirmarOrden. No liberamos la
+                        // orden ni reintentamos desde aca: hacerlo crearia una segunda
+                        // venta duplicada para el mismo pedido. Se imprime igual el
+                        // recibo y se avisa al cajero para seguimiento manual.
+                        resetCaja()
+                        setModalConfirmar({
+                            titulo: 'Venta registrada con advertencia',
+                            mensaje: `La venta SI se registro, pero: ${detalle}. ${opOrigen ? `Avisa a soporte para revisar el pedido ${opOrigen.numero || opOrigen.id} manualmente.` : ''}`,
+                            textoBoton: 'Entendido', colorBoton: '#d97706',
+                            onConfirmar: () => { setModalConfirmar(null); busquedaProductoRef.current?.focus() }
+                        })
+                    } else {
+                        if (opOrigen) {
+                            try { await liberarOrden(opOrigen.id) } catch (e) {}
+                        }
+                        setModalConfirmar({ titulo: 'Error al registrar', mensaje: detalle, textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                    }
                 } finally {
                     procesandoVenta.current = false
                 }

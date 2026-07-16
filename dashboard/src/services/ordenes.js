@@ -16,6 +16,16 @@ export async function crearOrden(datos) {
     return res.data
 }
 
+export async function reclamarOrden(id) {
+    const res = await api.post(`/ordenes/${id}/reclamar`)
+    return res.data
+}
+
+export async function liberarOrden(id) {
+    const res = await api.post(`/ordenes/${id}/liberar`)
+    return res.data
+}
+
 export async function confirmarOrden(id, datos = {}) {
     const res = await api.post(`/ordenes/${id}/confirmar`, datos)
     return res.data

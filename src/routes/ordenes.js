@@ -1,11 +1,9 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../db/index')
-const { descontarStockFEFO } = require('../services/stock')
 const { manejarError } = require('../middleware/validar')
 const { enviarMensaje } = require('../services/whatsapp')
 const { guardarMensaje } = require('../services/mensajes')
-const { recalcularStats } = require('./clientes')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
 
 
@@ -213,100 +211,111 @@ router.post('/', autenticar, verificarPermiso('ventas', 'crear'), async (req, re
 })
 
 
-// POST /ordenes/:id/confirmar — confirmar y convertir a venta
+// POST /ordenes/:id/reclamar — reservar la orden para procesarla en Caja
+//
+// Transicion atomica pendiente -> procesando. Debe llamarse ANTES de crear
+// ninguna venta (POST /presencial), para que dos agentes no puedan abrir la
+// misma orden 'pendiente' en Caja y crear cada uno su propio set de ventas
+// antes de que ninguno llegue a /confirmar. Si la orden ya fue reclamada por
+// otro agente, devuelve 409.
+router.post('/:id/reclamar', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `UPDATE ordenes_pedido
+             SET estado = 'procesando', updated_at = NOW()
+             WHERE id = $1 AND estado = 'pendiente'
+             RETURNING *`,
+            [req.params.id]
+        )
+        if (!resultado.rows.length) {
+            const actual = await db.query(`SELECT estado FROM ordenes_pedido WHERE id = $1`, [req.params.id])
+            if (!actual.rows.length) return res.status(404).json({ error: 'Orden no encontrada' })
+            return res.status(409).json({ error: 'La orden ya esta siendo procesada por otro agente o ya fue confirmada' })
+        }
+        res.json({ ok: true, orden: resultado.rows[0] })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+
+// POST /ordenes/:id/liberar — devolver una orden reclamada a 'pendiente'
+//
+// Best-effort: se llama cuando falla el procesamiento en Caja despues de
+// reclamar la orden (sin llegar a confirmar), para que no quede trabada en
+// 'procesando' para siempre.
+router.post('/:id/liberar', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `UPDATE ordenes_pedido
+             SET estado = 'pendiente', updated_at = NOW()
+             WHERE id = $1 AND estado = 'procesando'
+             RETURNING *`,
+            [req.params.id]
+        )
+        if (!resultado.rows.length) return res.status(404).json({ error: 'Orden no encontrada o no estaba en procesamiento' })
+        res.json({ ok: true, orden: resultado.rows[0] })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+
+// POST /ordenes/:id/confirmar — marcar la orden como confirmada
+//
+// Las ventas ya fueron creadas por el caller (Caja.jsx llama a POST /presencial
+// por cada linea antes de llegar aca, que a su vez descuenta stock y crea el
+// delivery si corresponde). Este endpoint solo enlaza la orden con esas ventas
+// y dispara los efectos que le son propios (notificar al cliente, liberar el
+// carrito). Antes este endpoint volvia a insertar en ventas/stock/deliveries,
+// duplicando todo lo que /presencial ya habia hecho.
+//
+// Requiere que la orden haya sido reclamada primero (estado = 'procesando'
+// via POST /:id/reclamar), y valida que el venta_id recibido efectivamente
+// corresponda a esta orden antes de enlazarlo.
 router.post('/:id/confirmar', autenticar, verificarPermiso('ventas', 'editar'), async (req, res) => {
     const client = await db.pool.connect()
     try {
         const { id } = req.params
-        const { modalidad, metodo_pago, ubicacion, referencia, horario, contacto_entrega } = req.body
+        const { modalidad, venta_id, ventas_ids } = req.body
 
-        // Obtener orden con items
+        const idsVentas = Array.isArray(ventas_ids) && ventas_ids.length > 0
+            ? ventas_ids
+            : (venta_id ? [venta_id] : [])
+        if (idsVentas.length === 0) {
+            return res.status(400).json({ error: 'Falta venta_id: la venta debe crearse antes de confirmar la orden' })
+        }
+        const ventaIdFinal = idsVentas[0]
+
         const ordenRes = await db.query(
-            `SELECT op.*, json_agg(
-                json_build_object(
-                    'presentacion_id', opi.presentacion_id,
-                    'cantidad', opi.cantidad,
-                    'precio_unitario', opi.precio_unitario,
-                    'precio_total', opi.precio_total
-                )
-             ) as items
-             FROM ordenes_pedido op
-             JOIN ordenes_pedido_items opi ON op.id = opi.orden_id
-             WHERE op.id = $1 AND op.estado = 'pendiente'
-             GROUP BY op.id`,
+            `SELECT * FROM ordenes_pedido WHERE id = $1 AND estado = 'procesando'`,
             [id]
         )
-
         if (!ordenRes.rows.length) {
-            return res.status(404).json({ error: 'Orden no encontrada o ya procesada' })
+            return res.status(404).json({ error: 'Orden no encontrada o no esta reclamada para procesamiento' })
         }
-
         const orden = ordenRes.rows[0]
-        const items = orden.items
         const modalidadFinal = modalidad || orden.modalidad
-        const metodoPagoFinal = metodo_pago || orden.metodo_pago || 'efectivo'
+
+        const ventasRes = await db.query(`SELECT id, cliente_id FROM ventas WHERE id = ANY($1)`, [idsVentas])
+        if (ventasRes.rows.length !== idsVentas.length) {
+            return res.status(400).json({ error: 'Una o mas ventas indicadas no existen' })
+        }
+        const clienteMismatch = ventasRes.rows.find(v => orden.cliente_id && v.cliente_id && v.cliente_id !== orden.cliente_id)
+        if (clienteMismatch) {
+            return res.status(400).json({ error: 'Una de las ventas indicadas no corresponde al cliente de esta orden' })
+        }
+        const yaUsadas = await db.query(
+            `SELECT venta_id FROM ordenes_pedido_ventas WHERE venta_id = ANY($1)
+             UNION SELECT venta_id FROM ordenes_pedido WHERE venta_id = ANY($1) AND id != $2`,
+            [idsVentas, id]
+        )
+        if (yaUsadas.rows.length) {
+            return res.status(409).json({ error: 'Una de las ventas indicadas ya esta enlazada a otra orden' })
+        }
 
         await client.query('BEGIN')
 
-        const ventasIds = []
-
-        // Crear ventas por cada item
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i]
-
-            const venta = await client.query(
-                `INSERT INTO ventas (
-                    cliente_id, cliente_numero, presentacion_id, cantidad, precio,
-                    canal, estado, metodo_pago,
-                    quiere_factura, ruc_factura, razon_social,
-                    costo_delivery, zona_delivery
-                 ) VALUES ($1,$2,$3,$4,$5,$6,'pagado',$7,$8,$9,$10,$11,$12)
-                 RETURNING id`,
-                [
-                    orden.cliente_id, orden.cliente_numero,
-                    item.presentacion_id, item.cantidad,
-                    item.precio_total,
-                    modalidadFinal === 'delivery' ? 'agente_delivery' : 'agente_presencial',
-                    metodoPagoFinal,
-                    orden.quiere_factura, orden.ruc_factura, orden.razon_social,
-                    i === 0 ? (orden.costo_delivery || 0) : 0,
-                    i === 0 ? (orden.zona_delivery || null) : null
-                ]
-            )
-
-            // Descontar stock
-            const lotesExisten = await db.query(`SELECT COUNT(*) as total FROM lotes WHERE presentacion_id = $1 AND activo = true AND stock_actual > 0`, [item.presentacion_id])
-            if (parseInt(lotesExisten.rows[0].total) > 0) {
-                const client = await db.pool.connect()
-                try { await descontarStockFEFO(client, item.presentacion_id, item.cantidad) }
-                finally { client.release() }
-            } else {
-                await db.query(`UPDATE presentaciones SET stock = stock - $1 WHERE id = $2`, [item.cantidad, item.presentacion_id])
-            }
-
-            ventasIds.push(venta.rows[0].id)
-        }
-
-        // Crear delivery si corresponde
-        if (modalidadFinal === 'delivery') {
-            await client.query(
-                `INSERT INTO deliveries (
-                    venta_id, cliente_numero, ubicacion, referencia,
-                    horario, contacto_entrega, metodo_pago, estado
-                 ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pendiente')`,
-                [
-                    ventasIds[0],
-                    orden.cliente_numero,
-                    ubicacion || orden.ubicacion,
-                    referencia || orden.referencia,
-                    horario || orden.horario,
-                    contacto_entrega || orden.contacto_entrega,
-                    metodoPagoFinal
-                ]
-            )
-        }
-
-        // Marcar orden como confirmada
         await client.query(
             `UPDATE ordenes_pedido
              SET estado = 'confirmada',
@@ -315,8 +324,16 @@ router.post('/:id/confirmar', autenticar, verificarPermiso('ventas', 'editar'), 
                  modalidad = $2,
                  updated_at = NOW()
              WHERE id = $3`,
-            [ventasIds[0], modalidadFinal, id]
+            [ventaIdFinal, modalidadFinal, id]
         )
+
+        for (const ventaIdItem of idsVentas) {
+            await client.query(
+                `INSERT INTO ordenes_pedido_ventas (orden_id, venta_id) VALUES ($1, $2)
+                 ON CONFLICT (venta_id) DO NOTHING`,
+                [id, ventaIdItem]
+            )
+        }
 
         await client.query('COMMIT')
 
@@ -334,13 +351,10 @@ router.post('/:id/confirmar', autenticar, verificarPermiso('ventas', 'editar'), 
             } catch (e) {}
         }
 
-        // Recalcular stats
-        if (orden.cliente_id) recalcularStats(orden.cliente_id).catch(() => {})
-
-        res.json({ ok: true, ventas_ids: ventasIds })
+        res.json({ ok: true, ventas_ids: idsVentas })
 
     } catch (error) {
-        await client.query('ROLLBACK')
+        await client.query('ROLLBACK').catch(() => {})
         manejarError(res, error)
     } finally {
         client.release()

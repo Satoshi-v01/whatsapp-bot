@@ -774,9 +774,15 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
         // numero_factura (caso normal, i=0 de una venta nueva), se decide aca mismo
         // segun los datos de la venta, para que ningun frontend desactualizado
         // pueda forzar el consumo del correlativo fiscal SET.
+        // Importante: tener cliente_id NO implica que quiera factura — los clientes
+        // creados por el bot de WhatsApp siempre tienen cliente_id real (nunca
+        // consumidor_final) pero rara vez piden factura. Solo la intencion explicita
+        // (quiere_factura / ruc_factura / razon_social) consume el correlativo SET.
+        // Las ventas a credito son la excepcion: quedan como deuda contra un cliente
+        // identificado y siempre deben emitirse con factura real, la pida o no.
         let numeroFacturaFinal = numero_factura || null
         if (!numeroFacturaFinal) {
-            const requiereFacturaReal = !!(quiere_factura || cliente_id || ruc_factura || razon_social)
+            const requiereFacturaReal = !!(quiere_factura || ruc_factura || razon_social || tipo_venta === 'credito')
             if (requiereFacturaReal) {
                 const cfgActual = await client.query(
                     `SELECT valor FROM configuracion WHERE clave = 'factura_numero_actual' FOR UPDATE`

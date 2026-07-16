@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getOrdenes, cancelarOrden } from '../services/ordenes'
+import { getOrdenes, cancelarOrden, liberarOrden } from '../services/ordenes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../App'
@@ -30,6 +30,7 @@ function Ordenes() {
 
     const estadoConfig = {
         pendiente:  { label: 'Pendiente',  color: '#f59e0b', bg: '#fef3c7', textColor: '#92400e' },
+        procesando: { label: 'En proceso', color: '#3b82f6', bg: '#dbeafe', textColor: '#1e40af' },
         confirmada: { label: 'Confirmada', color: '#10b981', bg: '#d1fae5', textColor: '#065f46' },
         expirada:   { label: 'Expirada',   color: '#94a3b8', bg: '#f1f5f9', textColor: '#475569' },
         cancelada:  { label: 'Cancelada',  color: '#ef4444', bg: '#fee2e2', textColor: '#991b1b' },
@@ -37,6 +38,7 @@ function Ordenes() {
 
     const filtros = [
         { valor: 'pendiente', label: 'Pendientes' },
+        { valor: 'procesando', label: 'En proceso' },
         { valor: 'confirmada', label: 'Confirmadas' },
         { valor: 'expirada', label: 'Expiradas' },
         { valor: 'cancelada', label: 'Canceladas' },
@@ -93,6 +95,25 @@ function Ordenes() {
                     await cargarOrdenes()
                 } catch (err) {
                     setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo cancelar la orden.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+                }
+            }
+        })
+    }
+
+    function handleLiberar(orden) {
+        setModalConfirmar({
+            titulo: 'Liberar orden',
+            mensaje: `La orden ${orden.numero} quedo "en proceso" sin confirmarse (probablemente el agente cerro Caja antes de terminar). Liberarla la vuelve a dejar "pendiente" para procesarla de nuevo.`,
+            textoBoton: 'Liberar',
+            colorBoton: '#3b82f6',
+            onConfirmar: async () => {
+                try {
+                    await liberarOrden(orden.id)
+                    setModalConfirmar(null)
+                    if (ordenSeleccionada?.id === orden.id) setOrdenSeleccionada(null)
+                    await cargarOrdenes()
+                } catch (err) {
+                    setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo liberar la orden.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
                 }
             }
         })
@@ -278,6 +299,14 @@ function Ordenes() {
                                             <button onClick={() => handleCancelar(ordenSeleccionada)}
                                                 style={{ padding: '10px 16px', borderRadius: '8px', border: `1px solid #fca5a5`, background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
                                                 Cancelar
+                                            </button>
+                                        </div>
+                                    )}
+                                    {ordenSeleccionada.estado === 'procesando' && (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button onClick={() => handleLiberar(ordenSeleccionada)}
+                                                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '800' }}>
+                                                Liberar (quedo atascada)
                                             </button>
                                         </div>
                                     )}
