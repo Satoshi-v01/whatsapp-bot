@@ -21,6 +21,11 @@ function Caja() {
     const procesandoVenta = useRef(false)
     const { darkMode, puedo } = useApp()
     const [pestana, setPestana] = useState('venta')
+    // Decide explicitamente si la venta consume numerador de factura real o no.
+    // Antes esto se inferia de si razonSocial/rucFactura tenian algo cargado, y esos
+    // campos se autocompletaban solos al seleccionar un cliente (para seguimiento),
+    // lo que terminaba consumiendo un numero de factura sin que el cajero lo pidiera.
+    const [tipoComprobante, setTipoComprobante] = useState('ticket')
     const [tipoVenta, setTipoVenta] = useState('contado')
     const [plazoDias, setPlazoDias] = useState(30)
     const [montoEfectivo, setMontoEfectivo] = useState('')
@@ -208,6 +213,7 @@ function Caja() {
         }
         if (op.razon_social) setRazonSocial(op.razon_social)
         if (op.ruc_factura) setRucFactura(op.ruc_factura)
+        if (op.razon_social || op.ruc_factura) setTipoComprobante('factura')
         if (op.metodo_pago) setMetodoPago(op.metodo_pago)
 
         if (op.modalidad === 'delivery') {
@@ -392,10 +398,16 @@ function Caja() {
         }
     }
 
+    function handleTipoComprobante(valor) {
+        setTipoComprobante(valor)
+        if (valor === 'ticket') { setFacturaManual(false); setNumeroFacturaManual('') }
+    }
+
     function resetCaja() {
         setLineas([{ id: 1, busqueda: '', productosFiltrados: [], productoSeleccionado: null, presentacionSeleccionada: null, cantidad: 1, precioEspecial: '' }])
         setPrecioEspecialActivo(false)
         setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial(''); setFacturaManual(false); setNumeroFacturaManual('')
+        setTipoComprobante('ticket')
         setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setOpOrigen(null)
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
         setFacturarDelivery(true)
@@ -426,7 +438,7 @@ function Caja() {
             setModalConfirmar({ titulo: 'Cliente requerido', mensaje: 'Para venta a credito debes seleccionar un cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
-        if (facturaManual && !numeroFacturaManual.trim()) {
+        if (tipoComprobante === 'factura' && facturaManual && !numeroFacturaManual.trim()) {
             setModalConfirmar({ titulo: 'Falta el numero de factura', mensaje: 'Ingresa el numero del talonario fisico o destilda "Factura manual".', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
             return
         }
@@ -467,7 +479,11 @@ function Caja() {
                 // El numero de factura (real, ticket interno, o manual) lo decide y
                 // genera el backend en POST /presencial, no el frontend: asi ninguna
                 // pestana desactualizada puede forzar el consumo del correlativo SET.
-                let numeroFactura = facturaManual ? (numeroFacturaManual.trim() || null) : null
+                // esFactura es la unica fuente de verdad de si se consume el correlativo:
+                // en modo ticket, ruc_factura/razon_social SIEMPRE viajan null, aunque la
+                // barra de cliente (arriba) haya autocompletado esos campos por conveniencia.
+                const esFactura = tipoComprobante === 'factura'
+                let numeroFactura = (esFactura && facturaManual) ? (numeroFacturaManual.trim() || null) : null
                 let datosImpresion = null
                 const ventasIds = []
                 try {
@@ -482,9 +498,9 @@ function Caja() {
                             metodo_pago: metodoPago,
                             subtipo_pago: subtipoPago || null,
                             tipo_iva: '10',
-                            quiere_factura: !!(razonSocial || rucFactura),
-                            ruc_factura: rucFactura || null,
-                            razon_social: razonSocial || null,
+                            quiere_factura: esFactura,
+                            ruc_factura: esFactura ? (rucFactura || null) : null,
+                            razon_social: esFactura ? (razonSocial || null) : null,
                             canal: canalFinal,
                             tipo_venta: tipoVenta,
                             plazo_dias: tipoVenta === 'credito' ? plazoDias : null,
@@ -509,8 +525,8 @@ function Caja() {
                     datosImpresion = {
                         numero_factura: numeroFactura,
                         es_ticket: esTicket,
-                        cliente_nombre: razonSocial || clienteSeleccionado?.nombre || null,
-                        cliente_ruc: rucFactura || clienteSeleccionado?.ruc || null,
+                        cliente_nombre: (esFactura ? razonSocial : null) || clienteSeleccionado?.nombre || null,
+                        cliente_ruc: (esFactura ? rucFactura : null) || clienteSeleccionado?.ruc || null,
                         tipo_venta: tipoVenta,
                         metodo_pago: metodoImpresion,
                         monto_efectivo: montoEfectivoNum || total,
@@ -935,35 +951,37 @@ function Caja() {
                         </div>
 
                         {/* Factura */}
-                        <div style={{ background: '#fff', border: '1px solid #e3e1db', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>
-                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#1a1a22', marginBottom: '10px' }}>Factura</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                                <input type="checkbox" id="factManual" checked={facturaManual} onChange={e => { setFacturaManual(e.target.checked); setNumeroFacturaManual('') }} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
-                                <label htmlFor="factManual" style={{ fontSize: '12px', color: facturaManual ? '#d04545' : '#6d6b65', fontWeight: '600', cursor: 'pointer' }}>
-                                    Factura manual (talonario fisico)
-                                </label>
+                        {tipoComprobante === 'factura' && (
+                            <div style={{ background: '#fff', border: '1px solid #e3e1db', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>
+                                <p style={{ fontSize: '12px', fontWeight: '700', color: '#1a1a22', marginBottom: '10px' }}>Factura</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                    <input type="checkbox" id="factManual" checked={facturaManual} onChange={e => { setFacturaManual(e.target.checked); setNumeroFacturaManual('') }} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
+                                    <label htmlFor="factManual" style={{ fontSize: '12px', color: facturaManual ? '#d04545' : '#6d6b65', fontWeight: '600', cursor: 'pointer' }}>
+                                        Factura manual (talonario fisico)
+                                    </label>
+                                </div>
+                                {facturaManual ? (
+                                    <div style={{ background: '#fff5f5', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px' }}>
+                                        <p style={{ fontSize: '11px', color: '#d04545', fontWeight: '600', marginBottom: '8px' }}>
+                                            NO se generara numero del sistema. Ingresa el numero del talonario fisico.
+                                        </p>
+                                        <input placeholder="Ej: 001-002-0000123" value={numeroFacturaManual} onChange={e => setNumeroFacturaManual(e.target.value)}
+                                            style={{ ...fieldInput, borderColor: '#fca5a5' }} />
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <div>
+                                            <label style={fieldLabel}>Razon social</label>
+                                            <input placeholder="Consumidor final" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={fieldInput} />
+                                        </div>
+                                        <div>
+                                            <label style={fieldLabel}>RUC</label>
+                                            <input placeholder="Ej: 5.578.584-9" value={rucFactura} onChange={e => setRucFactura(e.target.value)} style={fieldInput} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            {facturaManual ? (
-                                <div style={{ background: '#fff5f5', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px' }}>
-                                    <p style={{ fontSize: '11px', color: '#d04545', fontWeight: '600', marginBottom: '8px' }}>
-                                        NO se generara numero del sistema. Ingresa el numero del talonario fisico.
-                                    </p>
-                                    <input placeholder="Ej: 001-002-0000123" value={numeroFacturaManual} onChange={e => setNumeroFacturaManual(e.target.value)}
-                                        style={{ ...fieldInput, borderColor: '#fca5a5' }} />
-                                </div>
-                            ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                    <div>
-                                        <label style={fieldLabel}>Razon social</label>
-                                        <input placeholder="Consumidor final" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={fieldInput} />
-                                    </div>
-                                    <div>
-                                        <label style={fieldLabel}>RUC</label>
-                                        <input placeholder="Ej: 5.578.584-9" value={rucFactura} onChange={e => setRucFactura(e.target.value)} style={fieldInput} />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        )}
 
                         {/* Datos de delivery */}
                         {canal === 'delivery' && (
@@ -1023,6 +1041,19 @@ function Caja() {
                                     <button key={c.val} onClick={() => setCanal(c.val)} style={segBtn(canal === c.val)}>{c.label}</button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Comprobante */}
+                        <div>
+                            <p style={{ fontSize: '11px', fontWeight: '700', color: '#9d9b96', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Comprobante</p>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                {[{ val: 'ticket', label: 'Ticket' }, { val: 'factura', label: 'Factura' }].map(c => (
+                                    <button key={c.val} onClick={() => handleTipoComprobante(c.val)} style={segBtn(tipoComprobante === c.val)}>{c.label}</button>
+                                ))}
+                            </div>
+                            {tipoComprobante === 'ticket' && (
+                                <p style={{ fontSize: '11px', color: '#6d6b65', marginTop: '6px' }}>No consume numero de factura. Si cargaste un cliente arriba, igual queda guardado para su historial.</p>
+                            )}
                         </div>
 
                         {/* Metodo de pago */}
@@ -1093,7 +1124,7 @@ function Caja() {
 
                         {/* Resumen y boton */}
                         <div style={{ marginTop: 'auto' }}>
-                            {(razonSocial || rucFactura) && (
+                            {tipoComprobante === 'factura' && (razonSocial || rucFactura) && (
                                 <div style={{ background: '#faf9f7', border: '1px solid #e3e1db', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px' }}>
                                     <p style={{ fontSize: '10px', color: '#9d9b96', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Factura a</p>
                                     <p style={{ fontSize: '12px', fontWeight: '600', color: '#1a1a22' }}>{razonSocial || 'Cliente'}</p>
