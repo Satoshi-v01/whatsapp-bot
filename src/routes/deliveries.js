@@ -8,6 +8,7 @@ const { descontarStockFEFO } = require('../services/stock')
 const { registrarLog } = require('../middleware/auditoria')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
 const logger = require('../middleware/logger')
+const { normalizarRuc } = require('../utils/ruc')
 
 
 // Ver todos los deliveries
@@ -154,9 +155,20 @@ router.post('/', autenticar, verificarPermiso('delivery', 'crear'), async (req, 
 
         let clienteIdFinal = cliente_id || null
         if (!clienteIdFinal && cliente_nuevo?.nombre) {
+            const rucNuevoCliente = normalizarRuc(cliente_nuevo.ruc) || null
+            // Este endpoint lo usa un agente desde el panel de Delivery (no es un flujo
+            // desatendido del bot): si el RUC ya pertenece a otro cliente, se avisa con
+            // error para que el agente reaccione, igual que en Caja/Clientes.
+            if (rucNuevoCliente) {
+                const existente = await client.query(`SELECT id, nombre FROM clientes WHERE ruc = $1 AND activo = true LIMIT 1`, [rucNuevoCliente])
+                if (existente.rows.length > 0) {
+                    await client.query('ROLLBACK')
+                    return res.status(409).json({ error: `RUC duplicado o existente — ya pertenece a ${existente.rows[0].nombre}` })
+                }
+            }
             const nuevoCliente = await client.query(
                 `INSERT INTO clientes (nombre, telefono, tipo, ruc, ciudad, direccion, origen) VALUES ($1, $2, $3, $4, $5, $6, 'manual') RETURNING id`,
-                [cliente_nuevo.nombre, cliente_nuevo.telefono || null, cliente_nuevo.tipo || 'persona', cliente_nuevo.ruc || null, cliente_nuevo.ciudad || null, cliente_nuevo.direccion || null]
+                [cliente_nuevo.nombre, cliente_nuevo.telefono || null, cliente_nuevo.tipo || 'persona', rucNuevoCliente, cliente_nuevo.ciudad || null, cliente_nuevo.direccion || null]
             )
             clienteIdFinal = nuevoCliente.rows[0].id
         }

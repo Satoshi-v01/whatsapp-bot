@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getClientes, getCliente, crearCliente, editarCliente, eliminarCliente } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
@@ -6,7 +6,7 @@ import api from '../services/api'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 
 // ANTES del function Clientes() — componente separado
-function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, darkMode }) {
+function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, darkMode, guardando }) {
     const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, marginBottom: '10px', fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text, outline: 'none' }
     const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
     const btnPrimario = { padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
@@ -52,7 +52,7 @@ function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, d
                 <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
                     <button onClick={onClose} style={btnSecundario}>Cancelar</button>
-                    <button onClick={onSubmit} style={btnPrimario}>{submitLabel}</button>
+                    <button onClick={onSubmit} disabled={guardando} style={{ ...btnPrimario, background: guardando ? '#9ca3af' : btnPrimario.background, cursor: guardando ? 'not-allowed' : 'pointer' }}>{guardando ? 'Guardando...' : submitLabel}</button>
                 </div>
             </div>
         </div>
@@ -75,6 +75,8 @@ function Clientes() {
     const [modalPagoCC, setModalPagoCC] = useState(null)
     const [formPago, setFormPago] = useState({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', tipo_pago: 'parcial', notas: '' })
     const [form, setForm] = useState({ tipo: 'persona', nombre: '', ruc: '', telefono: '', email: '', direccion: '', ciudad: '', notas: '' })
+    const [guardandoCliente, setGuardandoCliente] = useState(false)
+    const procesandoCliente = useRef(false)
     const { darkMode } = useApp()
     const [pestanaHistorial, setPestanaHistorial] = useState('historial') // 'historial' | 'cuenta_corriente'
     const [paginaHistorial, setPaginaHistorial] = useState(1)
@@ -160,6 +162,9 @@ function Clientes() {
 
     async function handleCrearCliente() {
         if (!form.nombre.trim()) return
+        if (procesandoCliente.current) return
+        procesandoCliente.current = true
+        setGuardandoCliente(true)
         try {
             await crearCliente(form)
             setModalNuevo(false)
@@ -167,10 +172,16 @@ function Clientes() {
             await cargarClientes()
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally {
+            procesandoCliente.current = false
+            setGuardandoCliente(false)
         }
     }
 
     async function handleEditarCliente() {
+        if (procesandoCliente.current) return
+        procesandoCliente.current = true
+        setGuardandoCliente(true)
         try {
             await editarCliente(clienteSeleccionado.id, form)
             setModalEditar(false)
@@ -178,6 +189,9 @@ function Clientes() {
             await cargarClientes()
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo editar el cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally {
+            procesandoCliente.current = false
+            setGuardandoCliente(false)
         }
     }
 
@@ -816,6 +830,7 @@ function Clientes() {
                     setForm={setForm}
                     s={s}
                     darkMode={darkMode}
+                    guardando={guardandoCliente}
                 />
             )}
             {modalEditar && (
@@ -828,6 +843,7 @@ function Clientes() {
                     setForm={setForm}
                     s={s}
                     darkMode={darkMode}
+                    guardando={guardandoCliente}
                 />
             )}
             {modalConfirmar && (

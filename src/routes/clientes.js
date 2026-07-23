@@ -4,6 +4,7 @@ const db = require('../db/index')
 const { manejarError } = require('../middleware/validar')
 const { registrarLog } = require('../middleware/auditoria')
 const { autenticar, verificarPermiso } = require('../middleware/auth')
+const { normalizarRuc } = require('../utils/ruc')
 
 async function recalcularStats(cliente_id) {
     try {
@@ -128,10 +129,21 @@ router.post('/', autenticar, verificarPermiso('clientes', 'crear'), async (req, 
         const { tipo, nombre, ruc, telefono, email, direccion, ciudad, notas, origen } = req.body
         if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' })
 
+        const rucNormalizado = normalizarRuc(ruc)
+        if (rucNormalizado) {
+            const existente = await db.query(
+                `SELECT id, nombre FROM clientes WHERE ruc = $1 AND activo = true LIMIT 1`,
+                [rucNormalizado]
+            )
+            if (existente.rows.length > 0) {
+                return res.status(409).json({ error: `RUC duplicado o existente — ya pertenece a ${existente.rows[0].nombre}` })
+            }
+        }
+
         const resultado = await db.query(
             `INSERT INTO clientes (tipo, nombre, ruc, telefono, email, direccion, ciudad, notas, origen)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [tipo || 'persona', nombre, ruc, telefono, email, direccion, ciudad, notas, origen || 'manual']
+            [tipo || 'persona', nombre, rucNormalizado, telefono, email, direccion, ciudad, notas, origen || 'manual']
         )
         const nuevoCliente = resultado.rows[0]
         await recalcularStats(nuevoCliente.id)
@@ -150,6 +162,17 @@ router.patch('/:id', autenticar, verificarPermiso('clientes', 'editar'), async (
         const { id } = req.params
         const { tipo, nombre, ruc, telefono, email, direccion, ciudad, notas, activo } = req.body
 
+        const rucNormalizado = normalizarRuc(ruc)
+        if (rucNormalizado) {
+            const existente = await db.query(
+                `SELECT id, nombre FROM clientes WHERE ruc = $1 AND activo = true AND id != $2 LIMIT 1`,
+                [rucNormalizado, id]
+            )
+            if (existente.rows.length > 0) {
+                return res.status(409).json({ error: `RUC duplicado o existente — ya pertenece a ${existente.rows[0].nombre}` })
+            }
+        }
+
         const anterior = await db.query(`SELECT * FROM clientes WHERE id = $1`, [id])
 
         const resultado = await db.query(
@@ -160,7 +183,7 @@ router.patch('/:id', autenticar, verificarPermiso('clientes', 'editar'), async (
                 ciudad = COALESCE($7, ciudad), notas = COALESCE($8, notas),
                 activo = COALESCE($9, activo), updated_at = NOW()
              WHERE id = $10 RETURNING *`,
-            [tipo, nombre, ruc, telefono, email, direccion, ciudad, notas, activo, id]
+            [tipo, nombre, rucNormalizado, telefono, email, direccion, ciudad, notas, activo, id]
         )
         if (resultado.rows.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' })
 

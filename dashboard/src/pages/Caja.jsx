@@ -19,6 +19,7 @@ function Caja() {
     const codigoBarrasRef = useRef('')
     const codigoBarrasTimer = useRef(null)
     const procesandoVenta = useRef(false)
+    const procesandoCliente = useRef(false)
     const { darkMode, puedo } = useApp()
     const [pestana, setPestana] = useState('venta')
     // Decide explicitamente si la venta consume numerador de factura real o no.
@@ -60,6 +61,7 @@ function Caja() {
     const [resultadosCliente, setResultadosCliente] = useState([])
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
     const [creandoCliente, setCreandoCliente] = useState(false)
+    const [guardandoCliente, setGuardandoCliente] = useState(false)
     const [formCliente, setFormCliente] = useState({ tipo: 'persona', nombre: '', ruc: '', telefono: '' })
     const [razonSocial, setRazonSocial] = useState('')
     const [rucFactura, setRucFactura] = useState('')
@@ -390,11 +392,17 @@ function Caja() {
 
     async function handleCrearCliente() {
         if (!formCliente.nombre.trim()) return
+        if (procesandoCliente.current) return
+        procesandoCliente.current = true
+        setGuardandoCliente(true)
         try {
             const nuevo = await crearCliente({ ...formCliente, origen: 'presencial' })
             setClienteSeleccionado(nuevo); setCreandoCliente(false); setResultadosCliente([]); setBusquedaCliente(nuevo.nombre)
         } catch (err) {
-            setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear el cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo crear el cliente.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        } finally {
+            procesandoCliente.current = false
+            setGuardandoCliente(false)
         }
     }
 
@@ -730,9 +738,9 @@ function Caja() {
                                         <input placeholder="RUC" value={formCliente.ruc} onChange={e => setFormCliente({ ...formCliente, ruc: e.target.value })} style={fieldInput} />
                                         <input placeholder="Telefono" value={formCliente.telefono} onChange={e => setFormCliente({ ...formCliente, telefono: e.target.value })} style={fieldInput} />
                                     </div>
-                                    <button onClick={handleCrearCliente}
-                                        style={{ marginTop: '8px', width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: '#1a1a22', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
-                                        Crear y seleccionar
+                                    <button onClick={handleCrearCliente} disabled={guardandoCliente}
+                                        style={{ marginTop: '8px', width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: guardandoCliente ? '#9d9b96' : '#1a1a22', color: 'white', cursor: guardandoCliente ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                                        {guardandoCliente ? 'Creando...' : 'Crear y seleccionar'}
                                     </button>
                                 </div>
                             )}

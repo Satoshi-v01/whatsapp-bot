@@ -479,14 +479,14 @@ function Reportes() {
                     {ventasPorDia.length === 0 ? (
                         <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos en este período</div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '200px', overflowX: 'auto' }}>
                             {ventasPorDia.map((dia, i) => {
                                 const altura = Math.max((parseInt(dia.total) / maxVenta) * 100, 2)
                                 return (
-                                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', height: '100%', justifyContent: 'flex-end' }}>
-                                        <div style={{ fontSize: '9px', color: s.textFaint, textAlign: 'center' }}>{formatearGs(dia.total).replace('Gs. ', '')}</div>
+                                    <div key={i} style={{ flex: '1 1 0', minWidth: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', height: '100%', justifyContent: 'flex-end' }}>
+                                        <div style={{ fontSize: '9px', color: s.textFaint, textAlign: 'center', whiteSpace: 'nowrap' }}>{formatearGs(dia.total).replace('Gs. ', '')}</div>
                                         <div style={{ width: '100%', height: `${altura}%`, background: s.barColor, borderRadius: '4px 4px 0 0', minHeight: '4px', transition: 'height 0.3s ease' }} title={`${formatearGs(dia.total)} — ${dia.cantidad} ventas`} />
-                                        <p style={{ fontSize: '9px', color: s.textMuted, textAlign: 'center' }}>{formatearFecha(dia.fecha)}</p>
+                                        <p style={{ fontSize: '9px', color: s.textMuted, textAlign: 'center', whiteSpace: 'nowrap' }}>{formatearSoloFecha(dia.fecha)}</p>
                                     </div>
                                 )
                             })}
