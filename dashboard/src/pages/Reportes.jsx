@@ -474,7 +474,7 @@ function Reportes() {
 
             {/* Gráficos */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
-                <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                <div style={{ minWidth: 0, background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                     <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text, marginBottom: '24px' }}>Ventas por día</h3>
                     {ventasPorDia.length === 0 ? (
                         <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos en este período</div>
