@@ -18,6 +18,7 @@ import Repartidor from './pages/Repartidor'
 import Auditoria from './pages/Auditoria'
 import TiendaWeb from './pages/TiendaWeb'
 import HistorialPedidos from './pages/HistorialPedidos'
+import Reposicion from './pages/Reposicion'
 import './App.css'
 
 export const AppContext = createContext({})
@@ -137,6 +138,9 @@ function App() {
                                     } />
                                     <Route path="/dashboard/clientes" element={
                                         <RutaProtegida modulo="clientes"><Clientes /></RutaProtegida>
+                                    } />
+                                    <Route path="/dashboard/reposicion" element={
+                                        <RutaProtegida modulo="clientes"><Reposicion /></RutaProtegida>
                                     } />
                                     <Route path="/dashboard/caja" element={
                                         <RutaProtegida modulo="ventas"><Caja /></RutaProtegida>
