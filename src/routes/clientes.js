@@ -92,10 +92,18 @@ router.get('/:id', autenticar, verificarPermiso('clientes', 'ver'), async (req, 
         )
 
         const estadisticas = await db.query(
-            `SELECT COUNT(*) as total_compras, COALESCE(SUM(v.precio), 0) as monto_total,
-                COALESCE(AVG(v.precio), 0) as ticket_promedio,
-                MAX(v.created_at) as ultima_compra, MIN(v.created_at) as primera_compra
-             FROM ventas v WHERE v.cliente_id = $1 AND v.estado != 'cancelado'`, [id]
+            `WITH facturas AS (
+                SELECT COALESCE(v.numero_factura, v.id::text) as factura,
+                    SUM(v.precio) as total_factura,
+                    MIN(v.created_at) as fecha
+                FROM ventas v
+                WHERE v.cliente_id = $1 AND v.estado != 'cancelado'
+                GROUP BY COALESCE(v.numero_factura, v.id::text)
+            )
+            SELECT COUNT(*) as total_compras, COALESCE(SUM(total_factura), 0) as monto_total,
+                COALESCE(AVG(total_factura), 0) as ticket_promedio,
+                MAX(fecha) as ultima_compra, MIN(fecha) as primera_compra
+             FROM facturas`, [id]
         )
 
         const productoFavorito = await db.query(
