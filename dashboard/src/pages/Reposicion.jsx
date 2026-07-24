@@ -1,29 +1,27 @@
 import { useState, useEffect } from 'react'
 import { getAlertasReposicion } from '../services/reposicion'
 import { getCliente } from '../services/clientes'
-import { useApp } from '../App'
+import { Card } from '@/components/ui/card'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+
+function estadoAlertaCls(diasRestantes) {
+    if (diasRestantes < 0) return 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400'
+    return 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400'
+}
+
+function estadoAlertaTexto(diasRestantes) {
+    if (diasRestantes < 0) return `Vencido hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) === 1 ? '' : 's'}`
+    if (diasRestantes === 0) return 'Hoy'
+    return `En ${diasRestantes} día${diasRestantes === 1 ? '' : 's'}`
+}
 
 function Reposicion() {
-    const { darkMode } = useApp()
     const [alertas, setAlertas] = useState([])
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState(false)
     const [diasUmbral, setDiasUmbral] = useState(5)
     const [clienteModal, setClienteModal] = useState(null)
     const [cargandoCliente, setCargandoCliente] = useState(false)
-
-    const s = {
-        bg: darkMode ? '#0f172a' : '#f6f6f8',
-        surface: darkMode ? '#1e293b' : 'white',
-        surfaceLow: darkMode ? '#1a2536' : '#f8fafc',
-        border: darkMode ? '#334155' : '#e2e8f0',
-        borderLight: darkMode ? '#2d3f55' : '#f1f5f9',
-        text: darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted: darkMode ? '#94a3b8' : '#64748b',
-        textFaint: darkMode ? '#64748b' : '#94a3b8',
-        inputBg: darkMode ? '#0f172a' : 'white',
-        rowHover: darkMode ? '#1a2536' : '#f8fafc',
-    }
 
     useEffect(() => { cargarAlertas() }, [diasUmbral])
 
@@ -58,25 +56,19 @@ function Reposicion() {
         return new Date(fecha).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', day: '2-digit', month: '2-digit', year: 'numeric' })
     }
 
-    function estadoAlerta(diasRestantes) {
-        if (diasRestantes < 0) return { texto: `Vencido hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) === 1 ? '' : 's'}`, bg: darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2', color: '#ef4444' }
-        if (diasRestantes === 0) return { texto: 'Hoy', bg: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7', color: '#f59e0b' }
-        return { texto: `En ${diasRestantes} día${diasRestantes === 1 ? '' : 's'}`, bg: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7', color: '#f59e0b' }
-    }
-
     return (
-        <div className="page-scroll" style={{ padding: '32px', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll min-h-full bg-slate-50 p-8 dark:bg-slate-950">
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 style={{ fontSize: '24px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>Reposiciones</h1>
-                    <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '4px' }}>Clientes que probablemente necesiten reponer balanceados pronto, según su historial de compra</p>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Reposiciones</h1>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Clientes que probablemente necesiten reponer balanceados pronto, según su historial de compra</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', color: s.textMuted, fontWeight: '600' }}>Avisar con</label>
+                <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Avisar con</label>
                     <select value={diasUmbral} onChange={e => setDiasUmbral(parseInt(e.target.value))}
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, fontSize: '12px', background: s.inputBg, color: s.text, outline: 'none' }}>
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                         <option value={5}>5 días de anticipación</option>
                         <option value={7}>7 días de anticipación</option>
                         <option value={10}>10 días de anticipación</option>
@@ -86,108 +78,100 @@ function Reposicion() {
             </div>
 
             {/* Tabla */}
-            <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ background: s.surfaceLow }}>
+            <Card className="overflow-hidden py-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50 dark:bg-slate-900">
                             {['Cliente', 'Producto', 'Última compra', 'Frecuencia estimada', 'Próxima reposición', 'Estado'].map(h => (
-                                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                <TableHead key={h}>{h}</TableHead>
                             ))}
-                        </tr>
-                    </thead>
-                    <tbody>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {cargando ? (
-                            <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: s.textMuted }}>Cargando...</td></tr>
+                            <TableRow><TableCell colSpan={6} className="p-10 text-center text-slate-500 dark:text-slate-400">Cargando...</TableCell></TableRow>
                         ) : error ? (
-                            <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>No se pudieron cargar las alertas.</td></tr>
+                            <TableRow><TableCell colSpan={6} className="p-10 text-center text-red-500">No se pudieron cargar las alertas.</TableCell></TableRow>
                         ) : alertas.length === 0 ? (
-                            <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: s.textMuted }}>
-                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.4 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+                            <TableRow><TableCell colSpan={6} className="p-12 text-center text-slate-500 dark:text-slate-400">
+                                <span className="mb-2 flex justify-center opacity-40"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg></span>
                                 <p>No hay clientes que necesiten reponer balanceados en los próximos {diasUmbral} días.</p>
-                            </td></tr>
-                        ) : alertas.map(a => {
-                            const estado = estadoAlerta(a.dias_restantes)
-                            return (
-                                <tr key={`${a.cliente_id}-${a.presentacion_id}`} style={{ borderTop: `1px solid ${s.borderLight}`, cursor: 'pointer' }}
-                                    onClick={() => abrirHistorial(a.cliente_id)}
-                                    onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{a.cliente_nombre}</span>
-                                        {a.cliente_telefono && <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '1px' }}>{a.cliente_telefono}</p>}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ fontSize: '12px', color: s.text }}>{a.producto_nombre}{a.marca_nombre ? ` — ${a.marca_nombre}` : ''}</span>
-                                        <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '1px' }}>{a.presentacion_nombre}</p>
-                                    </td>
-                                    <td style={{ padding: '12px 16px', fontSize: '12px', color: s.textMuted, whiteSpace: 'nowrap' }}>
-                                        {formatFecha(a.ultima_compra)}
-                                    </td>
-                                    <td style={{ padding: '12px 16px', fontSize: '12px', color: s.text }}>
-                                        cada {a.dias_estimados} días
-                                        {!a.con_historial_propio && <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '1px' }}>estimado (1ra compra)</p>}
-                                    </td>
-                                    <td style={{ padding: '12px 16px', fontSize: '12px', color: s.textMuted, whiteSpace: 'nowrap' }}>
-                                        {formatFecha(a.proxima_reposicion_estimada)}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px', background: estado.bg, color: estado.color }}>
-                                            {estado.texto}
-                                        </span>
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
-            </div>
+                            </TableCell></TableRow>
+                        ) : alertas.map(a => (
+                            <TableRow key={`${a.cliente_id}-${a.presentacion_id}`} className="cursor-pointer" onClick={() => abrirHistorial(a.cliente_id)}>
+                                <TableCell>
+                                    <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{a.cliente_nombre}</span>
+                                    {a.cliente_telefono && <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{a.cliente_telefono}</p>}
+                                </TableCell>
+                                <TableCell>
+                                    <span className="text-xs text-slate-900 dark:text-slate-100">{a.producto_nombre}{a.marca_nombre ? ` — ${a.marca_nombre}` : ''}</span>
+                                    <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{a.presentacion_nombre}</p>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap text-slate-500 dark:text-slate-400">
+                                    {formatFecha(a.ultima_compra)}
+                                </TableCell>
+                                <TableCell className="text-slate-900 dark:text-slate-100">
+                                    cada {a.dias_estimados} días
+                                    {!a.con_historial_propio && <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">estimado (1ra compra)</p>}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap text-slate-500 dark:text-slate-400">
+                                    {formatFecha(a.proxima_reposicion_estimada)}
+                                </TableCell>
+                                <TableCell>
+                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${estadoAlertaCls(a.dias_restantes)}`}>
+                                        {estadoAlertaTexto(a.dias_restantes)}
+                                    </span>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Card>
 
             {/* Modal historial cliente */}
             {clienteModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-                    onClick={() => setClienteModal(null)}>
-                    <div style={{ background: s.surface, borderRadius: '14px', padding: '24px', width: '640px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
-                        onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" onClick={() => setClienteModal(null)}>
+                    <div className="max-h-[85vh] w-[640px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800" onClick={e => e.stopPropagation()}>
                         {cargandoCliente ? (
-                            <p style={{ textAlign: 'center', color: s.textMuted, padding: '40px' }}>Cargando historial...</p>
+                            <p className="p-10 text-center text-slate-500 dark:text-slate-400">Cargando historial...</p>
                         ) : (
                             <>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                <div className="mb-4 flex items-start justify-between">
                                     <div>
-                                        <h3 style={{ fontSize: '16px', fontWeight: '800', color: s.text }}>{clienteModal.nombre}</h3>
-                                        <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '2px' }}>{clienteModal.telefono || '—'}</p>
+                                        <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">{clienteModal.nombre}</h3>
+                                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{clienteModal.telefono || '—'}</p>
                                     </div>
-                                    <button onClick={() => setClienteModal(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                                    <button onClick={() => setClienteModal(null)} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
-                                    <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '10px 12px' }}>
-                                        <p style={{ fontSize: '10px', color: s.textFaint, textTransform: 'uppercase', fontWeight: '700' }}>Compras totales</p>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: s.text }}>{clienteModal.estadisticas?.total_compras ?? '—'}</p>
+                                <div className="mb-4.5 grid grid-cols-3 gap-2.5">
+                                    <div className="rounded-[10px] bg-slate-50 px-3 py-2.5 dark:bg-slate-900">
+                                        <p className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Compras totales</p>
+                                        <p className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{clienteModal.estadisticas?.total_compras ?? '—'}</p>
                                     </div>
-                                    <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '10px 12px' }}>
-                                        <p style={{ fontSize: '10px', color: s.textFaint, textTransform: 'uppercase', fontWeight: '700' }}>Ticket promedio</p>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: s.text }}>Gs. {Math.round(clienteModal.estadisticas?.ticket_promedio || 0).toLocaleString('es-PY')}</p>
+                                    <div className="rounded-[10px] bg-slate-50 px-3 py-2.5 dark:bg-slate-900">
+                                        <p className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Ticket promedio</p>
+                                        <p className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">Gs. {Math.round(clienteModal.estadisticas?.ticket_promedio || 0).toLocaleString('es-PY')}</p>
                                     </div>
-                                    <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '10px 12px' }}>
-                                        <p style={{ fontSize: '10px', color: s.textFaint, textTransform: 'uppercase', fontWeight: '700' }}>Última compra</p>
-                                        <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{formatFecha(clienteModal.estadisticas?.ultima_compra)}</p>
+                                    <div className="rounded-[10px] bg-slate-50 px-3 py-2.5 dark:bg-slate-900">
+                                        <p className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Última compra</p>
+                                        <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{formatFecha(clienteModal.estadisticas?.ultima_compra)}</p>
                                     </div>
                                 </div>
 
-                                <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Historial de compras</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Historial de compras</p>
+                                <div className="flex flex-col gap-1.5">
                                     {(clienteModal.ventas || []).map(v => (
-                                        <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: s.surfaceLow, borderRadius: '8px', fontSize: '12px' }}>
+                                        <div key={v.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-xs dark:bg-slate-900">
                                             <div>
-                                                <span style={{ color: s.text, fontWeight: '600' }}>{v.producto_nombre || '—'}</span>
-                                                <span style={{ color: s.textFaint }}> · {v.presentacion_nombre || '—'}</span>
+                                                <span className="font-semibold text-slate-900 dark:text-slate-100">{v.producto_nombre || '—'}</span>
+                                                <span className="text-slate-400 dark:text-slate-500"> · {v.presentacion_nombre || '—'}</span>
                                             </div>
-                                            <span style={{ color: s.textMuted, whiteSpace: 'nowrap', marginLeft: '12px' }}>{formatFecha(v.created_at)}</span>
+                                            <span className="ml-3 whitespace-nowrap text-slate-500 dark:text-slate-400">{formatFecha(v.created_at)}</span>
                                         </div>
                                     ))}
                                     {(!clienteModal.ventas || clienteModal.ventas.length === 0) && (
-                                        <p style={{ fontSize: '12px', color: s.textFaint, textAlign: 'center', padding: '16px' }}>Sin compras registradas.</p>
+                                        <p className="p-4 text-center text-xs text-slate-400 dark:text-slate-500">Sin compras registradas.</p>
                                     )}
                                 </div>
                             </>
