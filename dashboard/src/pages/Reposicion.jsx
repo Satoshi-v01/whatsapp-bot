@@ -106,6 +106,17 @@ function Reposicion() {
                                 <TableCell>
                                     <span className="text-xs text-slate-900 dark:text-slate-100">{a.producto_nombre}{a.marca_nombre ? ` — ${a.marca_nombre}` : ''}</span>
                                     <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{a.presentacion_nombre}</p>
+                                    <p className="mt-1">
+                                        {parseInt(a.stock_disponible) > 0 ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Stock disponible ({a.stock_disponible})
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-500/15 dark:text-red-400">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" /> Sin stock — reponer inventario
+                                            </span>
+                                        )}
+                                    </p>
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap text-slate-500 dark:text-slate-400">
                                     {formatFecha(a.ultima_compra)}

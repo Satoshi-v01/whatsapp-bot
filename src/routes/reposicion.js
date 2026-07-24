@@ -65,7 +65,8 @@ router.get('/', autenticar, verificarPermiso('clientes', 'ver'), async (req, res
                 cal.presentacion_id, pr.nombre as presentacion_nombre, p.nombre as producto_nombre, m.nombre as marca_nombre,
                 cal.total_compras, cal.ultima_compra, cal.dias_estimados, cal.con_historial_propio,
                 cal.proxima_reposicion_estimada,
-                EXTRACT(DAY FROM (cal.proxima_reposicion_estimada - NOW()))::int as dias_restantes
+                EXTRACT(DAY FROM (cal.proxima_reposicion_estimada - NOW()))::int as dias_restantes,
+                pr.stock as stock_disponible
             FROM calculado cal
             JOIN clientes c ON c.id = cal.cliente_id
             JOIN presentaciones pr ON pr.id = cal.presentacion_id
