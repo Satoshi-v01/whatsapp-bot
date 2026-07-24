@@ -42,6 +42,9 @@ const logger = require('./logger')
 
 function manejarError(res, error) {
     logger.error('[error]', { message: error.message, code: error.code || '' })
+    if (error.code === '23505') {
+        return res.status(409).json({ error: 'Ya existe un registro con esos datos.' })
+    }
     if (process.env.NODE_ENV === 'production') {
         res.status(500).json({ error: 'Error interno del servidor' })
     } else {

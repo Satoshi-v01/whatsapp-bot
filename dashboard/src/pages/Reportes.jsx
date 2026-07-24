@@ -240,15 +240,15 @@ function Reportes() {
             }
             const filas = datos.map(v => ({
                 'Fecha': new Date(v.fecha).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', day: '2-digit', month: '2-digit', year: 'numeric' }),
-                'Cliente': v.cliente || 'Cliente', 'RUC': v.ruc || '', 'Teléfono': v.telefono || '',
-                'Marca': v.marca || '', 'Producto': v.producto || '', 'Presentación': v.presentacion || '',
-                'Cantidad': v.cantidad, 'Monto (Gs.)': parseInt(v.monto), 'IVA 10% (Gs.)': parseInt(v.iva),
+                'Nº Comprobante': v.numero_factura || '', 'Cliente': v.cliente || 'Cliente', 'RUC': v.ruc || '', 'Teléfono': v.telefono || '',
+                'Marca': v.marca || '', 'Productos': v.producto || '',
+                'Cantidad': v.cantidad, 'Monto (Gs.)': parseInt(v.monto), 'IVA (Gs.)': parseInt(v.iva),
                 'Canal': v.canal || '', 'Método de pago': v.metodo_pago || '', 'Estado': v.estado || ''
             }))
-            filas.push({ 'Presentación': 'TOTAL', 'Cantidad': datos.reduce((s, v) => s + Number(v.cantidad), 0), 'Monto (Gs.)': datos.reduce((s, v) => s + parseInt(v.monto), 0), 'IVA 10% (Gs.)': datos.reduce((s, v) => s + parseInt(v.iva), 0) })
+            filas.push({ 'Productos': 'TOTAL', 'Cantidad': datos.reduce((s, v) => s + Number(v.cantidad), 0), 'Monto (Gs.)': datos.reduce((s, v) => s + parseInt(v.monto), 0), 'IVA (Gs.)': datos.reduce((s, v) => s + parseInt(v.iva), 0) })
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.json_to_sheet(filas)
-            ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 16 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 15 }, { wch: 16 }, { wch: 12 }]
+            ws['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 30 }, { wch: 15 }, { wch: 16 }, { wch: 15 }, { wch: 45 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 15 }, { wch: 16 }, { wch: 12 }]
             XLSX.utils.book_append_sheet(wb, ws, 'Ventas')
             XLSX.writeFile(wb, `reporte_ventas_${exportDesde}_${exportHasta}.xlsx`)
         } catch (err) {
@@ -1045,7 +1045,7 @@ function Reportes() {
                 <Card>
                     <CardContent>
                         <h3 className="mb-1 text-[15px] font-bold text-slate-900 dark:text-slate-100">Exportar reporte contable</h3>
-                        <p className="mb-4 text-[11px] text-slate-400 dark:text-slate-500">Detalle de ventas por transacción para contabilidad.</p>
+                        <p className="mb-4 text-[11px] text-slate-400 dark:text-slate-500">Una línea por comprobante/factura para contabilidad.</p>
                         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div><label className={labelCls}>Desde</label><input type="date" value={exportDesde} onChange={e => setExportDesde(e.target.value)} className={inputCls} /></div>
                             <div><label className={labelCls}>Hasta</label><input type="date" value={exportHasta} onChange={e => setExportHasta(e.target.value)} className={inputCls} /></div>
@@ -1065,7 +1065,7 @@ function Reportes() {
                             {exportando ? 'Generando...' : 'Exportar Excel contable'}
                         </Button>
                         <p className="mt-2.5 text-[11px] text-slate-400 dark:text-slate-500">
-                            Incluye: fecha, cliente, RUC, producto, cantidad, monto, IVA 10%, canal y método de pago.
+                            Incluye: fecha, N° comprobante, cliente, RUC, productos, cantidad, monto, IVA, canal y método de pago.
                         </p>
                     </CardContent>
                 </Card>

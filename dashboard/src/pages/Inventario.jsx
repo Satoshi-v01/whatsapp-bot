@@ -128,7 +128,7 @@ function Inventario() {
     async function handleCrearMarca() {
         if (!nuevaMarca.trim()) return
         try { setErrorMarca(''); await crearMarca({ nombre: nuevaMarca }); setNuevaMarca(''); await cargarDatos() }
-        catch (err) { setErrorMarca(err.response?.data?.error?.includes('duplicate key') ? 'Esta marca ya existe.' : 'Error al crear la marca.') }
+        catch (err) { setErrorMarca(err.response?.status === 409 ? 'Esta marca ya existe.' : 'Error al crear la marca.') }
     }
     async function handleEliminarMarca(marca) {
         try { const r = await verificarEliminarMarca(marca.id); setConfirmEliminarMarca({ ...marca, cantidad: r.productos_asociados }) }
@@ -299,7 +299,7 @@ function Inventario() {
     async function handleCrearCategoria() {
         if (!nuevaCategoria.nombre.trim()) return
         try { await crearCategoria(nuevaCategoria); setNuevaCategoria({ nombre: '', descripcion: '', seccion: nuevaCategoria.seccion }); await cargarDatos() }
-        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear la categoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.status === 409 ? 'Ya existe una categoría con ese nombre en esta sección.' : 'No se pudo crear la categoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleEditarCategoria(id, datos) {
         try { await editarCategoria(id, datos); setEditandoCategoria(null); await cargarDatos() }
@@ -336,7 +336,7 @@ function Inventario() {
             await crearSubcategoria({ ...nuevaSubcategoria, seccion: pestanaActiva !== 'sin_categoria' ? pestanaActiva : null })
             setNuevaSubcategoria({ nombre: '', descripcion: '', ecommerce_categoria: '', ecommerce_campo: '', ecommerce_valor: '' })
             await cargarDatos()
-        } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo crear la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+        } catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.status === 409 ? 'Ya existe una subcategoría con ese nombre en esta sección.' : 'No se pudo crear la subcategoría.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
     }
     async function handleEditarSubcategoria() {
         if (!editandoSubcategoria?.nombre?.trim()) return
@@ -355,7 +355,7 @@ function Inventario() {
         if (guardando) return
         setGuardando(true)
         try { await agregarPresentacion(productoId, nuevaPresentacion); setModalPresentacion(null); setNuevaPresentacion({ nombre: '', precio_venta: '', precio_tarjeta: '', precio_compra: '', stock: 0, codigo_barras: '', permite_fraccion: false }); await cargarDatos() }
-        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+        catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: err.response?.status === 409 ? 'Ya existe una presentación con ese código de barras.' : 'No se pudo agregar la presentación.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
         finally { setGuardando(false) }
     }
 

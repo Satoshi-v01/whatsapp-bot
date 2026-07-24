@@ -494,7 +494,7 @@ router.patch('/:id', autenticar, verificarPermiso('inventario', 'editar'), async
             'seccion_inventario = $9',
             'subcategoria_id = $10',
         ]
-        const vals = [nombre, descripcion, calidad, disponible, categoria_id || null, marca_id || null, sku, especie || null, seccion_inventario || null, subcategoria_id || null]
+        const vals = [nombre, descripcion, calidad, disponible, categoria_id || null, marca_id || null, sku || null, especie || null, seccion_inventario || null, subcategoria_id || null]
         let n = 11
 
         if (subcatCambio && eco.ecommerce_categoria) { sets.push(`ecommerce_categoria = $${n++}`); vals.push(eco.ecommerce_categoria) }

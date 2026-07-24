@@ -388,28 +388,58 @@ router.get('/reporte/exportar', autenticar, verificarPermiso('ventas', 'ver'), a
 
         const where = condiciones.join(' AND ')
 
+        // Se agrupa por numero_factura (o por id si la venta no tiene factura/es ticket)
+        // para que cada comprobante aparezca en una sola linea, sumando todos sus
+        // productos, en vez de una linea por cada producto vendido.
         const resultado = await db.query(
             `SELECT
-                DATE(v.created_at) as fecha,
-                COALESCE(c.nombre, v.razon_social, 'Consumidor final') as cliente,
-                COALESCE(c.ruc, v.ruc_factura, '') as ruc,
-                COALESCE(c.telefono, v.cliente_numero, '') as telefono,
-                m.nombre as marca,
-                p.nombre as producto,
-                pr.nombre as presentacion,
-                v.cantidad,
-                v.precio as monto,
-                FLOOR(v.precio::numeric / 11) as iva,
-                v.canal,
-                v.metodo_pago,
-                v.estado
-             FROM ventas v
-             LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
-             LEFT JOIN productos p ON pr.producto_id = p.id
-             LEFT JOIN marcas m ON p.marca_id = m.id
-             LEFT JOIN clientes c ON v.cliente_id = c.id
-             WHERE ${where}
-             ORDER BY v.created_at ASC`,
+                MIN(x.numero_factura) as numero_factura,
+                MIN(x.fecha) as fecha,
+                MIN(x.cliente) as cliente,
+                MIN(x.ruc) as ruc,
+                MIN(x.telefono) as telefono,
+                STRING_AGG(DISTINCT x.marca, ', ') as marca,
+                STRING_AGG(x.producto || ' (' || x.presentacion || ') x' || x.cantidad, '; ' ORDER BY x.producto || ' (' || x.presentacion || ') x' || x.cantidad) as producto,
+                SUM(x.cantidad) as cantidad,
+                SUM(x.monto) as monto,
+                SUM(x.iva_linea) as iva,
+                MIN(x.canal) as canal,
+                MIN(x.metodo_pago) as metodo_pago,
+                CASE
+                    WHEN BOOL_AND(x.estado = 'cancelado') THEN 'cancelado'
+                    WHEN BOOL_OR(x.estado = 'pagado') THEN 'pagado'
+                    ELSE 'pendiente_pago'
+                END as estado
+             FROM (
+                SELECT
+                    COALESCE(v.numero_factura, v.id::text) as grupo,
+                    v.numero_factura,
+                    DATE(v.created_at) as fecha,
+                    COALESCE(c.nombre, v.razon_social, 'Consumidor final') as cliente,
+                    COALESCE(c.ruc, v.ruc_factura, '') as ruc,
+                    COALESCE(c.telefono, v.cliente_numero, '') as telefono,
+                    m.nombre as marca,
+                    p.nombre as producto,
+                    pr.nombre as presentacion,
+                    v.cantidad,
+                    v.precio as monto,
+                    CASE v.tipo_iva
+                        WHEN '5' THEN FLOOR(v.precio::numeric / 21)
+                        WHEN 'exento' THEN 0
+                        ELSE FLOOR(v.precio::numeric / 11)
+                    END as iva_linea,
+                    v.canal,
+                    v.metodo_pago,
+                    v.estado
+                 FROM ventas v
+                 LEFT JOIN presentaciones pr ON v.presentacion_id = pr.id
+                 LEFT JOIN productos p ON pr.producto_id = p.id
+                 LEFT JOIN marcas m ON p.marca_id = m.id
+                 LEFT JOIN clientes c ON v.cliente_id = c.id
+                 WHERE ${where}
+             ) x
+             GROUP BY x.grupo
+             ORDER BY MIN(x.fecha) ASC`,
             valores
         )
 
