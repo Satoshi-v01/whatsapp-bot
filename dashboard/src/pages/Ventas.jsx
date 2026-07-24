@@ -201,9 +201,9 @@ function Ventas() {
         }
     }
 
-    async function cambiarMetodoPago(id, nuevoMetodo, cuentaTransferenciaId = null) {
+    async function cambiarMetodoPago(id, nuevoMetodo, cuentaTransferenciaId = null, subtipoPago = null) {
         try {
-            await actualizarMetodoPago(id, nuevoMetodo, cuentaTransferenciaId)
+            await actualizarMetodoPago(id, nuevoMetodo, cuentaTransferenciaId, subtipoPago)
             await cargarHistorial()
             const cuenta = cuentasTransferencia.find(c => c.id === parseInt(cuentaTransferenciaId))
             setVentaDetalle(prev => prev?.id === id ? {
@@ -213,6 +213,7 @@ function Ventas() {
                 cuenta_transferencia_banco: cuenta?.banco || null,
                 cuenta_transferencia_titular: cuenta?.titular || null,
                 cuenta_transferencia_alias: cuenta?.alias || null,
+                subtipo_pago: nuevoMetodo === 'tarjeta' ? subtipoPago : null,
             } : prev)
         } catch (err) {
             setModalConfirmar({
@@ -423,6 +424,9 @@ function Ventas() {
                                                 {venta.metodo_pago === 'transferencia' && venta.cuenta_transferencia_banco && (
                                                     <p className="mt-0.5 text-[9px] font-semibold text-indigo-500 dark:text-indigo-400">{venta.cuenta_transferencia_banco}</p>
                                                 )}
+                                                {venta.metodo_pago === 'tarjeta' && venta.subtipo_pago && (
+                                                    <p className="mt-0.5 text-[9px] font-semibold text-indigo-500 dark:text-indigo-400">{venta.subtipo_pago === 'debito' ? 'Débito' : 'Crédito'}</p>
+                                                )}
                                                 {venta.tipo_venta === 'credito' && (
                                                     <span className="mt-1 block rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
                                                         Crédito
@@ -615,6 +619,28 @@ function Ventas() {
                                             {cuentasTransferencia.map(c => (
                                                 <SelectItem key={c.id} value={String(c.id)}>{c.banco} — {c.titular}{c.alias ? ` (${c.alias})` : ''}</SelectItem>
                                             ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </div>
+                        )}
+                        {ventaDetalle.metodo_pago === 'tarjeta' && (
+                            <div className="col-span-2">
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Tipo de tarjeta</p>
+                                {ventaDetalle.estado === 'cancelado' ? (
+                                    <p className="m-0 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                        {ventaDetalle.subtipo_pago === 'debito' ? 'Débito' : ventaDetalle.subtipo_pago === 'credito' ? 'Crédito' : '— Sin definir —'}
+                                    </p>
+                                ) : (
+                                    <Select
+                                        value={ventaDetalle.subtipo_pago || ''}
+                                        onValueChange={v => cambiarMetodoPago(ventaDetalle.id, 'tarjeta', null, v || null)}
+                                    >
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">— Sin definir —</SelectItem>
+                                            <SelectItem value="debito">Débito</SelectItem>
+                                            <SelectItem value="credito">Crédito</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 )}

@@ -527,15 +527,19 @@ router.patch('/:id/metodo-pago', autenticar, verificarPermiso('ventas', 'editar'
     const client = await db.pool.connect()
     try {
         const { id } = req.params
-        const { metodo_pago, cuenta_transferencia_id } = req.body
+        const { metodo_pago, cuenta_transferencia_id, subtipo_pago } = req.body
 
         const metodos = ['efectivo', 'tarjeta', 'transferencia']
         if (!metodo_pago || !metodos.includes(metodo_pago)) {
             return res.status(400).json({ error: 'Método de pago inválido' })
         }
+        if (subtipo_pago && !['debito', 'credito'].includes(subtipo_pago)) {
+            return res.status(400).json({ error: 'Subtipo de pago inválido' })
+        }
 
-        // La cuenta solo tiene sentido si el metodo es transferencia
+        // La cuenta solo tiene sentido si el metodo es transferencia; el subtipo (debito/credito) solo si es tarjeta
         const cuentaId = metodo_pago === 'transferencia' && cuenta_transferencia_id ? parseInt(cuenta_transferencia_id) : null
+        const subtipo = metodo_pago === 'tarjeta' ? (subtipo_pago || null) : null
 
         await client.query('BEGIN')
 
@@ -553,12 +557,12 @@ router.patch('/:id/metodo-pago', autenticar, verificarPermiso('ventas', 'editar'
 
         const resultado = numero_factura
             ? await client.query(
-                `UPDATE ventas SET metodo_pago = $1, cuenta_transferencia_id = $2 WHERE numero_factura = $3 RETURNING *`,
-                [metodo_pago, cuentaId, numero_factura]
+                `UPDATE ventas SET metodo_pago = $1, cuenta_transferencia_id = $2, subtipo_pago = $3 WHERE numero_factura = $4 RETURNING *`,
+                [metodo_pago, cuentaId, subtipo, numero_factura]
               )
             : await client.query(
-                `UPDATE ventas SET metodo_pago = $1, cuenta_transferencia_id = $2 WHERE id = $3 RETURNING *`,
-                [metodo_pago, cuentaId, parseInt(id)]
+                `UPDATE ventas SET metodo_pago = $1, cuenta_transferencia_id = $2, subtipo_pago = $3 WHERE id = $4 RETURNING *`,
+                [metodo_pago, cuentaId, subtipo, parseInt(id)]
               )
 
         if (!resultado.rows.length) {
