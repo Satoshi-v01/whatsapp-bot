@@ -935,4 +935,236 @@ router.get('/clientes-retencion', async (req, res) => {
     }
 })
 
+// Segmentacion RFM (Recencia, Frecuencia, Monetario) de clientes.
+// Score 1-5 por dimension via NTILE, clasificados en segmentos de negocio.
+router.get('/rfm', async (req, res) => {
+    try {
+        const resultado = await db.query(
+            `WITH base AS (
+                SELECT
+                    c.id, c.nombre, c.telefono,
+                    EXTRACT(DAY FROM NOW() - MAX(v.created_at))::int as recencia_dias,
+                    COUNT(DISTINCT COALESCE(v.numero_factura, v.id::text)) as frecuencia,
+                    COALESCE(SUM(v.precio), 0) as monetario
+                FROM clientes c
+                JOIN ventas v ON v.cliente_id = c.id
+                WHERE v.estado != 'cancelado' AND c.tipo != 'consumidor_final'
+                GROUP BY c.id, c.nombre, c.telefono
+            ),
+            puntuado AS (
+                SELECT *,
+                    6 - NTILE(5) OVER (ORDER BY recencia_dias ASC) as r_score,
+                    NTILE(5) OVER (ORDER BY frecuencia ASC) as f_score,
+                    NTILE(5) OVER (ORDER BY monetario ASC) as m_score
+                FROM base
+            )
+            SELECT *,
+                CASE
+                    WHEN r_score >= 4 AND f_score >= 4 THEN 'Campeones'
+                    WHEN f_score >= 4 THEN 'Leales'
+                    WHEN r_score >= 4 AND f_score <= 2 THEN 'Nuevos'
+                    WHEN r_score >= 4 THEN 'Prometedores'
+                    WHEN r_score <= 2 AND f_score >= 3 THEN 'En riesgo'
+                    WHEN r_score <= 2 AND f_score <= 2 THEN 'Perdidos'
+                    ELSE 'Regulares'
+                END as segmento
+            FROM puntuado
+            ORDER BY monetario DESC`
+        )
+
+        const resumenMap = {}
+        resultado.rows.forEach(c => {
+            if (!resumenMap[c.segmento]) resumenMap[c.segmento] = { segmento: c.segmento, cantidad: 0, monetario_total: 0 }
+            resumenMap[c.segmento].cantidad++
+            resumenMap[c.segmento].monetario_total += parseInt(c.monetario)
+        })
+        const orden = ['Campeones', 'Leales', 'Prometedores', 'Nuevos', 'Regulares', 'En riesgo', 'Perdidos']
+        const resumen = orden.filter(s => resumenMap[s]).map(s => resumenMap[s])
+
+        res.json({ resumen, clientes: resultado.rows })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Historial global de cambios de precio (venta/compra) recientes
+router.get('/historial-precios', async (req, res) => {
+    try {
+        const { dias = 30, limite = 50 } = req.query
+        const resultado = await db.query(
+            `SELECT hp.id, hp.presentacion_id, hp.precio_venta_anterior, hp.precio_venta_nuevo,
+                    hp.precio_compra_anterior, hp.precio_compra_nuevo, hp.usuario_nombre, hp.created_at,
+                    pr.nombre as presentacion_nombre, p.nombre as producto_nombre, m.nombre as marca_nombre
+             FROM historial_precios hp
+             JOIN presentaciones pr ON hp.presentacion_id = pr.id
+             JOIN productos p ON pr.producto_id = p.id
+             LEFT JOIN marcas m ON p.marca_id = m.id
+             WHERE hp.created_at >= NOW() - ($1 || ' days')::interval
+             ORDER BY hp.created_at DESC
+             LIMIT $2`,
+            [dias, limite]
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Stock muerto: productos con stock disponible pero sin ventas recientes
+router.get('/stock-muerto', async (req, res) => {
+    try {
+        const { dias = 60 } = req.query
+        const resultado = await db.query(
+            `WITH ultima_venta AS (
+                SELECT presentacion_id, MAX(fecha) as fecha FROM (
+                    SELECT vi.presentacion_id, v.created_at as fecha
+                    FROM ventas_items vi JOIN ventas v ON vi.venta_id = v.id
+                    WHERE v.estado != 'cancelado'
+                    UNION ALL
+                    SELECT v.presentacion_id, v.created_at as fecha
+                    FROM ventas v
+                    WHERE v.estado != 'cancelado' AND v.presentacion_id IS NOT NULL
+                      AND NOT EXISTS (SELECT 1 FROM ventas_items vi2 WHERE vi2.venta_id = v.id)
+                ) u
+                GROUP BY presentacion_id
+            )
+            SELECT pr.id, pr.nombre as presentacion_nombre, p.nombre as producto_nombre, m.nombre as marca_nombre,
+                   pr.stock, pr.precio_compra,
+                   (pr.stock * COALESCE(pr.precio_compra, 0)) as valor_inmovilizado,
+                   uv.fecha as ultima_venta,
+                   CASE WHEN uv.fecha IS NULL THEN NULL ELSE EXTRACT(DAY FROM NOW() - uv.fecha)::int END as dias_sin_venta
+            FROM presentaciones pr
+            JOIN productos p ON pr.producto_id = p.id
+            LEFT JOIN marcas m ON p.marca_id = m.id
+            LEFT JOIN ultima_venta uv ON uv.presentacion_id = pr.id
+            WHERE pr.disponible = true AND pr.stock > 0
+              AND (uv.fecha IS NULL OR uv.fecha < NOW() - ($1 || ' days')::interval)
+            ORDER BY valor_inmovilizado DESC
+            LIMIT 50`,
+            [dias]
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Rotacion de inventario: cuantas veces "roto" el stock actual segun ventas del periodo
+router.get('/rotacion-inventario', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
+        const intervalo = intervalos[periodo] || '30 days'
+
+        const resultado = await db.query(
+            `WITH periodo_ventas AS (
+                SELECT presentacion_id, cantidad, fecha FROM (
+                    SELECT vi.presentacion_id, vi.cantidad, v.created_at as fecha
+                    FROM ventas_items vi JOIN ventas v ON vi.venta_id = v.id
+                    WHERE v.estado != 'cancelado'
+                    UNION ALL
+                    SELECT v.presentacion_id, v.cantidad, v.created_at as fecha
+                    FROM ventas v
+                    WHERE v.estado != 'cancelado' AND v.presentacion_id IS NOT NULL
+                      AND NOT EXISTS (SELECT 1 FROM ventas_items vi2 WHERE vi2.venta_id = v.id)
+                ) u
+                WHERE fecha >= NOW() - ($1::interval)
+            ),
+            agregado AS (
+                SELECT presentacion_id, SUM(cantidad) as cantidad_vendida
+                FROM periodo_ventas
+                GROUP BY presentacion_id
+            )
+            SELECT pr.id, pr.nombre as presentacion_nombre, p.nombre as producto_nombre, m.nombre as marca_nombre,
+                   pr.stock, a.cantidad_vendida,
+                   ROUND((a.cantidad_vendida / NULLIF(pr.stock, 0))::numeric, 2) as veces_rotado
+            FROM agregado a
+            JOIN presentaciones pr ON pr.id = a.presentacion_id
+            JOIN productos p ON pr.producto_id = p.id
+            LEFT JOIN marcas m ON p.marca_id = m.id
+            WHERE pr.stock > 0
+            ORDER BY veces_rotado DESC`,
+            [intervalo]
+        )
+
+        res.json({
+            rapida: resultado.rows.slice(0, 10),
+            lenta: [...resultado.rows].reverse().slice(0, 10)
+        })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Efectividad de precio especial (descuentos aplicados en Caja)
+router.get('/precio-especial', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '30 days'
+
+        const resumen = await db.query(
+            `SELECT
+                COUNT(*) FILTER (WHERE vi.es_precio_especial) as items_con_descuento,
+                COUNT(*) as items_totales,
+                COALESCE(SUM(vi.diferencial_precio) FILTER (WHERE vi.es_precio_especial AND vi.diferencial_precio > 0), 0) as total_descontado,
+                COALESCE(SUM(vi.precio_total) FILTER (WHERE vi.es_precio_especial), 0) as monto_vendido_con_descuento
+             FROM ventas_items vi
+             JOIN ventas v ON vi.venta_id = v.id
+             WHERE v.estado != 'cancelado' AND v.created_at >= NOW() - ($1::interval)`,
+            [intervalo]
+        )
+
+        const porAgente = await db.query(
+            `SELECT v.agente_id, u.nombre as agente_nombre,
+                    COUNT(*) as cantidad, COALESCE(SUM(vi.diferencial_precio), 0) as total_descontado
+             FROM ventas_items vi
+             JOIN ventas v ON vi.venta_id = v.id
+             LEFT JOIN usuarios u ON u.id = v.agente_id
+             WHERE vi.es_precio_especial AND vi.diferencial_precio > 0
+               AND v.estado != 'cancelado' AND v.created_at >= NOW() - ($1::interval)
+             GROUP BY v.agente_id, u.nombre
+             ORDER BY total_descontado DESC
+             LIMIT 10`,
+            [intervalo]
+        )
+
+        res.json({ resumen: resumen.rows[0], por_agente: porAgente.rows })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
+// Carritos abandonados en la tienda web
+router.get('/carritos-abandonados', async (req, res) => {
+    try {
+        const { horas = 24 } = req.query
+
+        const resumen = await db.query(
+            `SELECT COUNT(*) as cantidad, COALESCE(SUM(total), 0) as total
+             FROM carritos_web
+             WHERE convertido = false
+               AND updated_at < NOW() - ($1 || ' hours')::interval
+               AND updated_at > NOW() - INTERVAL '30 days'`,
+            [horas]
+        )
+
+        const topProductos = await db.query(
+            `SELECT elem->>'nombre' as nombre, COUNT(*) as veces, COALESCE(SUM((elem->>'cantidad')::numeric), 0) as unidades
+             FROM carritos_web cw, jsonb_array_elements(cw.items) elem
+             WHERE cw.convertido = false
+               AND cw.updated_at < NOW() - ($1 || ' hours')::interval
+               AND cw.updated_at > NOW() - INTERVAL '30 days'
+             GROUP BY elem->>'nombre'
+             ORDER BY veces DESC
+             LIMIT 10`,
+            [horas]
+        )
+
+        res.json({ resumen: resumen.rows[0], top_productos: topProductos.rows })
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 module.exports = router

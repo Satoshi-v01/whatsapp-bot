@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import SEOHead from '@/components/seo/SEOHead'
 import { useCart } from '@/hooks/useCart'
+import { getSesionCarrito } from '@/context/CartContext'
 import { useAuth } from '@/hooks/useAuth'
 import { formatPrice } from '@/utils/formatPrice'
 import { getDeliveryPrefs, saveDeliveryPrefs } from '@/utils/deliveryPrefs'
@@ -753,6 +754,7 @@ export default function Cart() {
         quiere_factura:    clienteData.quiere_factura || false,
         razon_social:      clienteData.razon_social || null,
         ruc_factura:       clienteData.ruc_factura || null,
+        sesion_id:         getSesionCarrito(),
       }
 
       const { data } = await api.post('/api/ecommerce/pedidos', payload)

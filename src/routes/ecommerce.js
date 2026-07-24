@@ -506,7 +506,7 @@ router.post('/pedidos', async (req, res) => {
       zona_id, zona_nombre, zona_costo,
       referencia, horario, contacto_entrega, metodo_pago,
       quiere_factura = false, razon_social, ruc_factura,
-      maps_url,
+      maps_url, sesion_id,
     } = req.body
 
     // Validaciones basicas
@@ -651,6 +651,10 @@ router.post('/pedidos', async (req, res) => {
     }
 
     await client.query('COMMIT')
+
+    if (sesion_id) {
+      db.query(`UPDATE carritos_web SET convertido = true WHERE sesion_id = $1`, [sesion_id]).catch(() => {})
+    }
 
     const presentacionIds = itemsVerificados.map(it => it.presentacion_id)
     const nombresRes = await db.query(

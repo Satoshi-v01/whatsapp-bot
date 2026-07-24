@@ -564,6 +564,17 @@ router.patch('/presentaciones/:id/precio', autenticar, verificarPermiso('inventa
         )
         if (resultado.rows.length === 0) return res.status(404).json({ error: 'Presentación no encontrada' })
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'editar', modulo: 'inventario', entidad: 'presentacion', entidad_id: parseInt(id), descripcion: `Precio actualizado: ${resultado.rows[0].nombre} — Gs. ${anterior.rows[0]?.precio_venta?.toLocaleString()} → Gs. ${precio_venta?.toLocaleString()}`, dato_anterior: { precio_venta: anterior.rows[0]?.precio_venta, precio_compra: anterior.rows[0]?.precio_compra }, dato_nuevo: { precio_venta, precio_compra }, ip: req.ip }).catch(() => {})
+
+        const cambioVenta = precio_venta !== undefined && precio_venta !== null && parseInt(precio_venta) !== anterior.rows[0]?.precio_venta
+        const cambioCompra = precio_compra !== undefined && precio_compra !== null && parseInt(precio_compra) !== anterior.rows[0]?.precio_compra
+        if (cambioVenta || cambioCompra) {
+            db.query(
+                `INSERT INTO historial_precios (presentacion_id, precio_venta_anterior, precio_venta_nuevo, precio_compra_anterior, precio_compra_nuevo, usuario_id, usuario_nombre)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [id, anterior.rows[0]?.precio_venta ?? null, resultado.rows[0].precio_venta, anterior.rows[0]?.precio_compra ?? null, resultado.rows[0].precio_compra, req.usuario?.id || null, req.usuario?.nombre || 'Sistema']
+            ).catch(() => {})
+        }
+
         res.json(resultado.rows[0])
     } catch (error) {
         manejarError(res, error)

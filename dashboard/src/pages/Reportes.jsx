@@ -4,7 +4,7 @@ import { getMarcas, getCategorias } from '../services/productos'
 import { getReporte } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas, getClientesRetencion, getRentabilidad, getTransferenciasPorCuenta } from '../services/estadisticas'
+import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas, getClientesRetencion, getRentabilidad, getTransferenciasPorCuenta, getRfm, getHistorialPrecios, getStockMuerto, getRotacionInventario, getPrecioEspecialEfectividad, getCarritosAbandonados } from '../services/estadisticas'
 import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
@@ -52,6 +52,28 @@ function Reportes() {
     const [statsHasta, setStatsHasta] = useState('')
     const [exportandoStats, setExportandoStats] = useState(false)
     const [deliveryZonas, setDeliveryZonas] = useState({ por_zona: [], clientes_por_zona: [], total_delivery_periodo: 0 })
+
+    // Reportes avanzados (independientes del filtro de periodo principal, salvo aclaracion)
+    const [rfm, setRfm] = useState(null)
+    const [segmentoRfmActivo, setSegmentoRfmActivo] = useState(null)
+    const [historialPrecios, setHistorialPrecios] = useState([])
+    const [stockMuerto, setStockMuerto] = useState([])
+    const [diasStockMuerto, setDiasStockMuerto] = useState(60)
+    const [rotacionInventario, setRotacionInventario] = useState({ rapida: [], lenta: [] })
+    const [precioEspecial, setPrecioEspecial] = useState(null)
+    const [carritosAbandonados, setCarritosAbandonados] = useState(null)
+
+    useEffect(() => {
+        getRfm().then(setRfm).catch(() => {})
+        getHistorialPrecios().then(setHistorialPrecios).catch(() => {})
+        getRotacionInventario({ periodo }).then(setRotacionInventario).catch(() => {})
+        getPrecioEspecialEfectividad({ periodo }).then(setPrecioEspecial).catch(() => {})
+        getCarritosAbandonados().then(setCarritosAbandonados).catch(() => {})
+    }, [periodo])
+
+    useEffect(() => {
+        getStockMuerto({ dias: diasStockMuerto }).then(setStockMuerto).catch(() => {})
+    }, [diasStockMuerto])
 
     useEffect(() => { cargarFiltros() }, [])
     useEffect(() => { cargarDatos() }, [periodo, canal, marcaId, categoriaId])
@@ -768,6 +790,247 @@ function Reportes() {
                                             </TableRow>
                                         )
                                     })}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Segmentación RFM */}
+            {rfm && (
+                <div className="mb-6">
+                    <h2 className="mb-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">Segmentación de clientes (RFM)</h2>
+                    <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Recencia, frecuencia y monto gastado — clic en un segmento para ver los clientes.</p>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+                        {rfm.resumen.map(s => {
+                            const colores = {
+                                'Campeones': '#10b981', 'Leales': '#3b82f6', 'Prometedores': '#8b5cf6',
+                                'Nuevos': '#06b6d4', 'Regulares': '#94a3b8', 'En riesgo': '#f59e0b', 'Perdidos': '#ef4444'
+                            }
+                            const activo = segmentoRfmActivo === s.segmento
+                            return (
+                                <button key={s.segmento} onClick={() => setSegmentoRfmActivo(activo ? null : s.segmento)}
+                                    className={`rounded-xl border p-3 text-left transition-all ${activo ? 'border-slate-900 dark:border-slate-100 shadow-md' : 'border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500'} bg-white dark:bg-slate-800`}>
+                                    <span className="mb-1.5 block h-1.5 w-6 rounded-full" style={{ background: colores[s.segmento] }} />
+                                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{s.segmento}</p>
+                                    <p className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{s.cantidad}</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500">{formatearGs(s.monetario_total)}</p>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {segmentoRfmActivo && (
+                        <Card className="mt-3 py-0 gap-0">
+                            <CardContent className="p-0 max-h-[360px] overflow-y-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                            {['Cliente', 'Última compra', 'Compras', 'Total gastado'].map(h => (
+                                                <TableHead key={h} className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-4">{h}</TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {rfm.clientes.filter(c => c.segmento === segmentoRfmActivo).map(c => (
+                                            <TableRow key={c.id} className="border-slate-100 dark:border-slate-700">
+                                                <TableCell className="py-2.5 px-4">
+                                                    <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{c.nombre}</span>
+                                                    {c.telefono && <p className="text-[11px] text-slate-400 dark:text-slate-500">{c.telefono}</p>}
+                                                </TableCell>
+                                                <TableCell className="text-xs text-slate-500 dark:text-slate-400 py-2.5 px-4">hace {c.recencia_dias} días</TableCell>
+                                                <TableCell className="text-xs text-slate-500 dark:text-slate-400 py-2.5 px-4">{c.frecuencia}</TableCell>
+                                                <TableCell className="text-xs font-bold text-slate-900 dark:text-slate-100 py-2.5 px-4">{formatearGs(c.monetario)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            )}
+
+            {/* Stock muerto + Rotación de inventario */}
+            <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <Card className="py-0 gap-0">
+                    <CardContent className="p-5 pb-0">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Stock muerto</h3>
+                                <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">Con stock disponible pero sin ventas recientes</p>
+                            </div>
+                            <select value={diasStockMuerto} onChange={e => setDiasStockMuerto(parseInt(e.target.value))}
+                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                                <option value={30}>30+ días</option>
+                                <option value={60}>60+ días</option>
+                                <option value={90}>90+ días</option>
+                            </select>
+                        </div>
+                    </CardContent>
+                    <CardContent className="p-0 max-h-[320px] overflow-y-auto">
+                        {stockMuerto.length === 0 ? (
+                            <p className="p-5 text-center text-xs text-slate-400 dark:text-slate-500">Sin productos con stock muerto en este período.</p>
+                        ) : (
+                            <Table>
+                                <TableBody>
+                                    {stockMuerto.map(p => (
+                                        <TableRow key={p.id} className="border-slate-100 dark:border-slate-700">
+                                            <TableCell className="py-2.5 px-4">
+                                                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{p.producto_nombre}{p.marca_nombre ? ` — ${p.marca_nombre}` : ''}</span>
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500">{p.presentacion_nombre} · stock {p.stock}</p>
+                                            </TableCell>
+                                            <TableCell className="text-right py-2.5 px-4">
+                                                <span className="text-xs font-bold text-red-500">{formatearGs(p.valor_inmovilizado)}</span>
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500">{p.dias_sin_venta !== null ? `${p.dias_sin_venta}d sin vender` : 'nunca vendido'}</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="py-0 gap-0">
+                    <CardContent className="p-5 pb-3">
+                        <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Rotación de inventario</h3>
+                        <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">Veces que rotó el stock actual en el período</p>
+                    </CardContent>
+                    <CardContent className="p-0 max-h-[320px] overflow-y-auto">
+                        {rotacionInventario.rapida.length === 0 ? (
+                            <p className="p-5 text-center text-xs text-slate-400 dark:text-slate-500">Sin datos en este período.</p>
+                        ) : (
+                            <>
+                                <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-green-600 dark:text-green-400">Rotación más rápida</p>
+                                {rotacionInventario.rapida.map(p => (
+                                    <div key={`r-${p.id}`} className="flex items-center justify-between border-b border-slate-100 px-4 py-2 dark:border-slate-700">
+                                        <span className="text-xs text-slate-900 dark:text-slate-100">{p.producto_nombre} <span className="text-slate-400 dark:text-slate-500">· {p.presentacion_nombre}</span></span>
+                                        <span className="text-xs font-bold text-green-600 dark:text-green-400">{p.veces_rotado}x</span>
+                                    </div>
+                                ))}
+                                <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">Rotación más lenta</p>
+                                {rotacionInventario.lenta.map(p => (
+                                    <div key={`l-${p.id}`} className="flex items-center justify-between border-b border-slate-100 px-4 py-2 dark:border-slate-700">
+                                        <span className="text-xs text-slate-900 dark:text-slate-100">{p.producto_nombre} <span className="text-slate-400 dark:text-slate-500">· {p.presentacion_nombre}</span></span>
+                                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{p.veces_rotado}x</span>
+                                    </div>
+                                ))}
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Efectividad de precio especial + Carritos abandonados */}
+            <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                {precioEspecial && (
+                    <Card>
+                        <CardContent>
+                            <h3 className="mb-4 text-[15px] font-bold text-slate-900 dark:text-slate-100">Efectividad de precio especial</h3>
+                            <div className="mb-4 grid grid-cols-2 gap-3">
+                                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Total descontado</p>
+                                    <p className="mt-1 text-lg font-extrabold text-red-500">{formatearGs(precioEspecial.resumen?.total_descontado)}</p>
+                                </div>
+                                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Items con descuento</p>
+                                    <p className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                                        {precioEspecial.resumen?.items_con_descuento}
+                                        <span className="ml-1 text-xs font-medium text-slate-400 dark:text-slate-500">
+                                            de {precioEspecial.resumen?.items_totales} ({precioEspecial.resumen?.items_totales > 0 ? Math.round((precioEspecial.resumen.items_con_descuento / precioEspecial.resumen.items_totales) * 100) : 0}%)
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                            {precioEspecial.por_agente?.length > 0 && (
+                                <>
+                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Por vendedor</p>
+                                    <div className="flex flex-col gap-1.5">
+                                        {precioEspecial.por_agente.map((a, i) => (
+                                            <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-900">
+                                                <span className="text-slate-900 dark:text-slate-100">{a.agente_nombre || 'Sin asignar'}</span>
+                                                <span className="font-bold text-red-500">{formatearGs(a.total_descontado)} <span className="font-normal text-slate-400 dark:text-slate-500">({a.cantidad})</span></span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {carritosAbandonados && (
+                    <Card>
+                        <CardContent>
+                            <h3 className="mb-1 text-[15px] font-bold text-slate-900 dark:text-slate-100">Carritos abandonados (tienda web)</h3>
+                            <p className="mb-4 text-[11px] text-slate-400 dark:text-slate-500">Sin actividad hace más de 24 horas, últimos 30 días</p>
+                            <div className="mb-4 grid grid-cols-2 gap-3">
+                                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Carritos</p>
+                                    <p className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">{carritosAbandonados.resumen?.cantidad}</p>
+                                </div>
+                                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Valor potencial</p>
+                                    <p className="mt-1 text-lg font-extrabold text-amber-500">{formatearGs(carritosAbandonados.resumen?.total)}</p>
+                                </div>
+                            </div>
+                            {carritosAbandonados.top_productos?.length > 0 ? (
+                                <>
+                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Productos más dejados en el carrito</p>
+                                    <div className="flex flex-col gap-1.5">
+                                        {carritosAbandonados.top_productos.map((p, i) => (
+                                            <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-900">
+                                                <span className="text-slate-900 dark:text-slate-100">{p.nombre}</span>
+                                                <span className="text-slate-400 dark:text-slate-500">{p.veces} carrito{parseInt(p.veces) === 1 ? '' : 's'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-center text-xs text-slate-400 dark:text-slate-500">Sin carritos abandonados en este período.</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+
+            {/* Historial de cambios de precio */}
+            {historialPrecios.length > 0 && (
+                <div className="mb-6">
+                    <h2 className="mb-4 text-lg font-extrabold text-slate-900 dark:text-slate-100">Historial de cambios de precio</h2>
+                    <Card className="py-0 gap-0">
+                        <CardContent className="p-0 max-h-[360px] overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                        {['Producto', 'Precio venta', 'Precio compra', 'Usuario', 'Fecha'].map(h => (
+                                            <TableHead key={h} className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-4">{h}</TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {historialPrecios.map(h => (
+                                        <TableRow key={h.id} className="border-slate-100 dark:border-slate-700">
+                                            <TableCell className="py-2.5 px-4">
+                                                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{h.producto_nombre}{h.marca_nombre ? ` — ${h.marca_nombre}` : ''}</span>
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500">{h.presentacion_nombre}</p>
+                                            </TableCell>
+                                            <TableCell className="text-xs py-2.5 px-4">
+                                                {h.precio_venta_anterior !== h.precio_venta_nuevo ? (
+                                                    <span className="text-slate-500 dark:text-slate-400">{formatearGs(h.precio_venta_anterior)} → <span className={`font-bold ${h.precio_venta_nuevo > h.precio_venta_anterior ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>{formatearGs(h.precio_venta_nuevo)}</span></span>
+                                                ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                                            </TableCell>
+                                            <TableCell className="text-xs py-2.5 px-4">
+                                                {h.precio_compra_anterior !== h.precio_compra_nuevo ? (
+                                                    <span className="text-slate-500 dark:text-slate-400">{formatearGs(h.precio_compra_anterior)} → <span className="font-bold text-slate-900 dark:text-slate-100">{formatearGs(h.precio_compra_nuevo)}</span></span>
+                                                ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-slate-500 dark:text-slate-400 py-2.5 px-4">{h.usuario_nombre}</TableCell>
+                                            <TableCell className="text-xs text-slate-500 dark:text-slate-400 py-2.5 px-4 whitespace-nowrap">{new Date(h.created_at).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', day: '2-digit', month: '2-digit', year: 'numeric' })}</TableCell>
+                                        </TableRow>
+                                    ))}
                                 </TableBody>
                             </Table>
                         </CardContent>

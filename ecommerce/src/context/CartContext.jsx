@@ -1,6 +1,22 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useRef } from 'react'
+import api from '../services/api'
 
 const STORAGE_KEY = 'sosa_bulls_cart'
+const SESSION_KEY = 'sosa_bulls_cart_sesion'
+
+// Se usa solo para detectar carritos abandonados en el dashboard — no identifica a la persona.
+export function getSesionCarrito() {
+  try {
+    let id = localStorage.getItem(SESSION_KEY)
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem(SESSION_KEY, id)
+    }
+    return id
+  } catch {
+    return null
+  }
+}
 
 // ─── Estado inicial ──────────────────────────────────────────
 function loadFromStorage() {
@@ -62,6 +78,21 @@ export function CartProvider({ children }) {
 
   const itemCount = items.reduce((sum, i) => sum + i.cantidad, 0)
   const total = items.reduce((sum, i) => sum + i.precio_venta * i.cantidad, 0)
+
+  // Sincroniza el carrito al backend (debounced) para poder detectar carritos abandonados.
+  // No bloquea ni afecta la experiencia de compra si falla.
+  const syncTimeout = useRef(null)
+  const primerRender = useRef(true)
+  useEffect(() => {
+    if (primerRender.current) { primerRender.current = false; if (items.length === 0) return }
+    const sesionId = getSesionCarrito()
+    if (!sesionId) return
+    clearTimeout(syncTimeout.current)
+    syncTimeout.current = setTimeout(() => {
+      api.post('/api/carrito-web/sync', { sesion_id: sesionId, items, total }).catch(() => {})
+    }, 1500)
+    return () => clearTimeout(syncTimeout.current)
+  }, [items, total])
 
   function addItem(item) {
     dispatch({ type: 'ADD_ITEM', item })

@@ -79,3 +79,38 @@ export async function getTransferenciasPorCuenta(params = {}) {
     const res = await api.get(`/estadisticas/transferencias-por-cuenta?${query}`)
     return res.data
 }
+
+export async function getRfm() {
+    const res = await api.get('/estadisticas/rfm')
+    return res.data
+}
+
+export async function getHistorialPrecios(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/historial-precios?${query}`)
+    return res.data
+}
+
+export async function getStockMuerto(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/stock-muerto?${query}`)
+    return res.data
+}
+
+export async function getRotacionInventario(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/rotacion-inventario?${query}`)
+    return res.data
+}
+
+export async function getPrecioEspecialEfectividad(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/precio-especial?${query}`)
+    return res.data
+}
+
+export async function getCarritosAbandonados(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/carritos-abandonados?${query}`)
+    return res.data
+}
