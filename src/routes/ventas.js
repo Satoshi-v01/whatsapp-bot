@@ -278,7 +278,7 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
         }
 
         const resumenDia = await db.query(
-            `SELECT COUNT(*) as cantidad,
+            `SELECT COUNT(DISTINCT COALESCE(v.numero_factura, v.id::text)) as cantidad,
                     COALESCE(SUM(v.precio), 0) as total,
                     COALESCE(SUM(v.precio - COALESCE(pr.precio_compra, 0)), 0) as ganancia
              FROM ventas v
@@ -287,14 +287,14 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
         )
 
         const resumenSemana = await db.query(
-            `SELECT COUNT(*) as cantidad,
+            `SELECT COUNT(DISTINCT COALESCE(v.numero_factura, v.id::text)) as cantidad,
                     COALESCE(SUM(v.precio), 0) as total
              FROM ventas v
              WHERE v.created_at >= DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' AND v.estado != 'cancelado'`
         )
 
         const resumenMes = await db.query(
-            `SELECT COUNT(*) as cantidad,
+            `SELECT COUNT(DISTINCT COALESCE(v.numero_factura, v.id::text)) as cantidad,
                     COALESCE(SUM(v.precio), 0) as total
              FROM ventas v
              WHERE v.created_at >= DATE_TRUNC('month', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' AND v.estado != 'cancelado'`

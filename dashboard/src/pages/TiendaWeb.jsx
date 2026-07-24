@@ -1,12 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../services/api'
-import { useApp } from '../App'
 import { formatMiles } from '../utils/formato'
 import { formatearSoloFecha } from '../utils/fecha'
 import ModalConfirmar from '../components/ModalConfirmar'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+
+const inputCls = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none box-border focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+
+const IconMas = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+const IconBasura = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></svg>
+const IconLapiz = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+const IconImagen = ({ size = 28 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+const IconMascota = () => <svg width="20" height="20" viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="65" rx="24" ry="20" /><circle cx="22" cy="38" r="11" /><circle cx="42" cy="26" r="11" /><circle cx="62" cy="26" r="11" /><circle cx="78" cy="38" r="11" /></svg>
 
 // ─── Upload de imagen ─────────────────────────────────────────
-function InputImagen({ value, onChange, s, inputStyle }) {
+function InputImagen({ value, onChange }) {
     const inputRef = useRef(null)
     const [subiendo, setSubiendo] = useState(false)
     const [errorImg, setErrorImg] = useState('')
@@ -32,24 +42,19 @@ function InputImagen({ value, onChange, s, inputStyle }) {
 
     return (
         <div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="flex items-center gap-2">
                 <input
                     type="text"
                     placeholder="URL de imagen o subí un archivo..."
                     value={value}
                     onChange={e => onChange(e.target.value)}
-                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                    className={`${inputCls} flex-1`}
                 />
                 <button
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={subiendo}
-                    style={{
-                        padding: '9px 14px', borderRadius: 8, border: `1px solid ${s.border}`,
-                        background: s.surface, color: s.text, cursor: subiendo ? 'not-allowed' : 'pointer',
-                        fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
-                        opacity: subiendo ? 0.7 : 1,
-                    }}
+                    className="flex-shrink-0 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 >
                     {subiendo ? 'Subiendo...' : 'Subir archivo'}
                 </button>
@@ -57,16 +62,16 @@ function InputImagen({ value, onChange, s, inputStyle }) {
                     ref={inputRef}
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif"
-                    style={{ display: 'none' }}
+                    className="hidden"
                     onChange={handleArchivo}
                 />
             </div>
-            {errorImg && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{errorImg}</p>}
+            {errorImg && <p className="mt-1 text-xs text-red-500">{errorImg}</p>}
             {value && (
                 <img
                     src={value}
                     alt=""
-                    style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, marginTop: 8, display: 'block' }}
+                    className="mt-2 block h-20 w-20 rounded-lg object-cover"
                     onError={e => { e.target.style.display = 'none' }}
                 />
             )}
@@ -75,17 +80,20 @@ function InputImagen({ value, onChange, s, inputStyle }) {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-function Modal({ children, s, onClose, title, width = 520 }) {
+function Modal({ children, onClose, title, width = 520 }) {
     return (
         <div
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
             onClick={e => { if (e.target === e.currentTarget) onClose() }}
         >
-            <div style={{ background: s.surface, borderRadius: '14px', padding: '24px', width: '100%', maxWidth: width, maxHeight: '90vh', overflowY: 'auto', color: s.text, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div
+                className="max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 text-slate-900 shadow-2xl dark:bg-slate-800 dark:text-slate-100"
+                style={{ maxWidth: width }}
+            >
                 {title && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: s.text }}>{title}</h3>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, fontSize: '20px', lineHeight: 1 }}>×</button>
+                    <div className="mb-5 flex items-center justify-between">
+                        <h3 className="m-0 text-base font-bold text-slate-900 dark:text-slate-100">{title}</h3>
+                        <button onClick={onClose} className="cursor-pointer border-none bg-transparent text-xl leading-none text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">×</button>
                     </div>
                 )}
                 {children}
@@ -94,33 +102,10 @@ function Modal({ children, s, onClose, title, width = 520 }) {
     )
 }
 
-function Toggle({ checked, onChange, disabled }) {
-    return (
-        <button
-            type="button"
-            onClick={() => !disabled && onChange(!checked)}
-            disabled={disabled}
-            style={{
-                width: 40, height: 22, borderRadius: 11, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-                background: checked ? '#22c55e' : '#cbd5e1',
-                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-            }}
-            aria-checked={checked}
-            role="switch"
-        >
-            <span style={{
-                position: 'absolute', top: 3, left: checked ? 21 : 3,
-                width: 16, height: 16, borderRadius: '50%', background: 'white',
-                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} />
-        </button>
-    )
-}
-
 // ─── Selector de subcategoria dinamico ───────────────────────
 const SUBCATS_CACHE = {}
 
-function SubcatSelect({ categoriaSlug, value, onChange, inputStyle }) {
+function SubcatSelect({ categoriaSlug, value, onChange }) {
     const [opciones, setOpciones] = useState([])
     const [cargando, setCargando] = useState(false)
 
@@ -139,7 +124,8 @@ function SubcatSelect({ categoriaSlug, value, onChange, inputStyle }) {
             value={value ?? ''}
             onChange={e => onChange(e.target.value)}
             disabled={!categoriaSlug || cargando}
-            style={{ ...inputStyle, marginBottom: 0, opacity: (!categoriaSlug || cargando) ? 0.5 : 1 }}
+            className={inputCls}
+            style={{ opacity: (!categoriaSlug || cargando) ? 0.5 : 1 }}
         >
             <option value="">{cargando ? 'Cargando...' : '-- Todas --'}</option>
             {opciones.map(sc => (
@@ -152,7 +138,7 @@ function SubcatSelect({ categoriaSlug, value, onChange, inputStyle }) {
 // ════════════════════════════════════════════════════════════════
 // TAB — PRODUCTOS
 // ════════════════════════════════════════════════════════════════
-function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, sharedProps }) {
+function TabProductos() {
     const [productos, setProductos] = useState([])
     const [cargando, setCargando] = useState(true)
     const [buscar, setBuscar] = useState('')
@@ -296,23 +282,20 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
         }
     }
 
-    const thStyle = { padding: '10px 14px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', background: s.tableTh, borderBottom: `1px solid ${s.border}` }
-    const tdStyle = { padding: '10px 14px', fontSize: '13px', borderBottom: `1px solid ${s.borderLight}`, verticalAlign: 'middle' }
-
     return (
         <div>
             {/* Buscador + filtro categoria */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div className="mb-4 flex flex-wrap gap-2.5">
                 <input
                     placeholder="Buscar producto o presentación..."
                     value={buscar}
                     onChange={e => setBuscar(e.target.value)}
-                    style={{ ...inputStyle, marginBottom: 0, flex: '1 1 200px' }}
+                    className={`${inputCls} flex-[1_1_200px]`}
                 />
                 <select
                     value={filtrocat}
                     onChange={e => setFiltrocat(e.target.value)}
-                    style={{ ...inputStyle, marginBottom: 0, flex: '0 0 180px' }}
+                    className={`${inputCls} flex-[0_0_180px]`}
                 >
                     <option value="">Todas las categorias</option>
                     <option value="sin">Sin categoria web</option>
@@ -325,10 +308,10 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                 </select>
             </div>
 
-            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
 
             {cargando ? (
-                <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando productos...</p>
+                <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando productos...</p>
             ) : (() => {
                 const CAT_COLORS = {
                     perros: '#ffa601', gatos: '#7c3aed', medicamentos: '#0ea5e9',
@@ -340,24 +323,24 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                     if (filtrocat === 'ofertas') return !!prod.en_oferta
                     return prod.ecommerce_categoria === filtrocat
                 })
-                if (filtered.length === 0) return <p style={{ color: s.textMuted, fontSize: 13 }}>No hay productos con este filtro.</p>
+                if (filtered.length === 0) return <p className="text-[13px] text-slate-500 dark:text-slate-400">No hay productos con este filtro.</p>
                 return (
                     <div>
-                        <p style={{ fontSize: 12, color: s.textMuted, marginBottom: 10 }}>{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</p>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <p className="mb-2.5 text-xs text-slate-500 dark:text-slate-400">{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</p>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
                                 <thead>
                                     <tr>
-                                        <th style={thStyle}>Imagen</th>
-                                        <th style={thStyle}>Producto</th>
-                                        <th style={thStyle}>Presentación</th>
-                                        <th style={thStyle}>Cat. Web</th>
-                                        <th style={thStyle}>Precio</th>
-                                        <th style={thStyle}>Stock</th>
-                                        <th style={{ ...thStyle, textAlign: 'center' }}>Disp.</th>
-                                        <th style={{ ...thStyle, textAlign: 'center' }}>Nov.</th>
-                                        <th style={{ ...thStyle, textAlign: 'center' }}>Dest.</th>
-                                        <th style={thStyle}></th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Imagen</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Producto</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Presentación</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Cat. Web</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Precio</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Stock</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Disp.</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Nov.</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400">Dest.</th>
+                                        <th className="whitespace-nowrap bg-slate-50 px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-400"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -377,70 +360,72 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                         const catColor = CAT_COLORS[prod.ecommerce_categoria] || null
                                         const esFirst = pi === 0
                                         return (
-                                            <tr key={prod.presentacion_id} style={{ background: s.surface, borderTop: esFirst ? `2px solid ${s.border}` : undefined }}>
-                                                <td style={tdStyle}>
+                                            <tr key={prod.presentacion_id} className={`bg-white dark:bg-slate-800 ${esFirst ? 'border-t-2 border-slate-200 dark:border-slate-700' : ''}`}>
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 align-middle text-[13px] dark:border-slate-700">
                                                     <button
                                                         type="button"
                                                         onClick={() => { setErrorImagenPres(''); setEditandoImagenPres(prod); setImagenPresValue(prod.imagen_presentacion_url || '') }}
                                                         title="Imagen de esta presentación"
-                                                        style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: s.surfaceLow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${prod.imagen_presentacion_url ? '#6366f1' : s.border}`, padding: 0, cursor: 'pointer' }}
+                                                        className="flex h-11 w-11 cursor-pointer items-center justify-center overflow-hidden rounded-lg border bg-slate-50 p-0 dark:bg-slate-900"
+                                                        style={{ borderColor: prod.imagen_presentacion_url ? '#6366f1' : undefined }}
                                                     >
                                                         {(prod.imagen_presentacion_url || prod.imagen_url) && !imagenesRotas.has(prod.presentacion_id) ? (
                                                             <img
                                                                 src={prod.imagen_presentacion_url || prod.imagen_url}
                                                                 alt=""
-                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                                className="h-full w-full object-cover"
                                                                 onError={() => setImagenesRotas(prev => new Set(prev).add(prod.presentacion_id))}
                                                             />
                                                         ) : (
-                                                            <svg width="20" height="20" viewBox="0 0 100 100" fill={s.textFaint}>
-                                                                <ellipse cx="50" cy="65" rx="24" ry="20" />
-                                                                <circle cx="22" cy="38" r="11" />
-                                                                <circle cx="42" cy="26" r="11" />
-                                                                <circle cx="62" cy="26" r="11" />
-                                                                <circle cx="78" cy="38" r="11" />
-                                                            </svg>
+                                                            <span className="text-slate-400 dark:text-slate-500"><IconMascota /></span>
                                                         )}
                                                     </button>
                                                 </td>
-                                                <td style={tdStyle}>
-                                                    {esFirst && <span style={{ fontWeight: 600, color: s.text }}>{nombreWeb(prod)}</span>}
-                                                    {esFirst && prod.categoria_nombre && <span style={{ display: 'block', fontSize: 11, color: s.textMuted }}>{prod.categoria_nombre}</span>}
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 align-middle text-[13px] dark:border-slate-700">
+                                                    {esFirst && <span className="font-semibold text-slate-900 dark:text-slate-100">{nombreWeb(prod)}</span>}
+                                                    {esFirst && prod.categoria_nombre && <span className="block text-[11px] text-slate-500 dark:text-slate-400">{prod.categoria_nombre}</span>}
                                                 </td>
-                                                <td style={{ ...tdStyle, color: s.textMuted, fontSize: 12, paddingLeft: esFirst ? undefined : 24 }}>
-                                                    {!esFirst && <span style={{ color: s.textFaint, marginRight: 4 }}>└</span>}
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 align-middle text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400" style={{ paddingLeft: esFirst ? undefined : 24 }}>
+                                                    {!esFirst && <span className="mr-1 text-slate-400 dark:text-slate-500">└</span>}
                                                     {prod.presentacion_nombre}
                                                 </td>
-                                                <td style={tdStyle}>
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 align-middle text-[13px] dark:border-slate-700">
                                                     {prod.ecommerce_categoria ? (
-                                                        <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: catColor ? `${catColor}18` : s.surfaceLow, color: catColor || s.textMuted, border: `1px solid ${catColor ? `${catColor}35` : s.border}`, whiteSpace: 'nowrap' }}>
+                                                        <span
+                                                            className="inline-block whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-bold"
+                                                            style={{
+                                                                background: catColor ? `${catColor}18` : undefined,
+                                                                color: catColor || undefined,
+                                                                borderColor: catColor ? `${catColor}35` : undefined,
+                                                            }}
+                                                        >
                                                             {prod.ecommerce_categoria}
                                                         </span>
                                                     ) : (
-                                                        <span style={{ fontSize: 11, color: s.textFaint }}>—</span>
+                                                        <span className="text-[11px] text-slate-400 dark:text-slate-500">—</span>
                                                     )}
                                                 </td>
-                                                <td style={{ ...tdStyle, fontWeight: 600, color: s.text }}>Gs. {formatMiles(prod.precio_venta)}</td>
-                                                <td style={{ ...tdStyle, color: prod.stock <= 0 ? '#ef4444' : prod.stock <= 5 ? '#f59e0b' : '#22c55e', fontWeight: 600 }}>{prod.stock}</td>
-                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                                    <Toggle checked={prod.disponible} onChange={v => toggleCampo(prod, 'disponible', v)} />
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 align-middle text-[13px] font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">Gs. {formatMiles(prod.precio_venta)}</td>
+                                                <td className={`border-b border-slate-100 px-3.5 py-2.5 align-middle text-[13px] font-semibold dark:border-slate-700 ${prod.stock <= 0 ? 'text-red-500' : prod.stock <= 5 ? 'text-amber-500' : 'text-green-500'}`}>{prod.stock}</td>
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 text-center align-middle dark:border-slate-700">
+                                                    <Switch checked={prod.disponible} onCheckedChange={v => toggleCampo(prod, 'disponible', v)} />
                                                 </td>
-                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                                    {esFirst && <Toggle checked={prod.es_novedad} onChange={v => toggleCampo(prod, 'es_novedad', v)} />}
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 text-center align-middle dark:border-slate-700">
+                                                    {esFirst && <Switch checked={prod.es_novedad} onCheckedChange={v => toggleCampo(prod, 'es_novedad', v)} />}
                                                 </td>
-                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                                    {esFirst && <Toggle checked={prod.es_destacado} onChange={v => toggleCampo(prod, 'es_destacado', v)} />}
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 text-center align-middle dark:border-slate-700">
+                                                    {esFirst && <Switch checked={prod.es_destacado} onCheckedChange={v => toggleCampo(prod, 'es_destacado', v)} />}
                                                 </td>
-                                                <td style={tdStyle}>
-                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                <td className="border-b border-slate-100 px-3.5 py-2.5 align-middle text-[13px] dark:border-slate-700">
+                                                    <div className="flex gap-1.5">
                                                         {esFirst && (
-                                                            <button onClick={() => abrirEditar(prod)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>
+                                                            <Button variant="outline" size="sm" onClick={() => abrirEditar(prod)}>
                                                                 Editar
-                                                            </button>
+                                                            </Button>
                                                         )}
-                                                        <button onClick={() => handleEliminarProducto(prod)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                                                        </button>
+                                                        <Button variant="destructive" size="sm" onClick={() => handleEliminarProducto(prod)}>
+                                                            <IconBasura />
+                                                        </Button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -469,21 +454,21 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
             {editandoImagenPres && (() => {
                 const guardandoEsta = guardandoImagenId === editandoImagenPres.presentacion_id
                 return (
-                    <Modal s={s} onClose={() => setEditandoImagenPres(null)} title={`Imagen — ${editandoImagenPres.presentacion_nombre}`} width={420}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {errorImagenPres && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{errorImagenPres}</p>}
+                    <Modal onClose={() => setEditandoImagenPres(null)} title={`Imagen — ${editandoImagenPres.presentacion_nombre}`} width={420}>
+                        <div className="flex flex-col gap-3.5">
+                            {errorImagenPres && <p className="m-0 text-[13px] text-red-500">{errorImagenPres}</p>}
                             <div>
-                                <label style={labelStyle}>Imagen de esta presentación (opcional)</label>
-                                <InputImagen value={imagenPresValue} onChange={setImagenPresValue} s={s} inputStyle={inputStyle} />
-                                <p style={{ fontSize: 11, color: s.textFaint, margin: '4px 0 0' }}>
+                                <label className={labelCls}>Imagen de esta presentación (opcional)</label>
+                                <InputImagen value={imagenPresValue} onChange={setImagenPresValue} />
+                                <p className="mt-1 mb-0 text-[11px] text-slate-400 dark:text-slate-500">
                                     Si no se define, se usa la imagen general del producto.
                                 </p>
                             </div>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                                <button onClick={() => setEditandoImagenPres(null)} style={btnSecundario}>Cancelar</button>
-                                <button onClick={guardarImagenPres} disabled={guardandoEsta} style={{ ...btnPrimario, opacity: guardandoEsta ? 0.7 : 1 }}>
+                            <div className="mt-1 flex justify-end gap-2">
+                                <Button variant="outline" onClick={() => setEditandoImagenPres(null)}>Cancelar</Button>
+                                <Button onClick={guardarImagenPres} disabled={guardandoEsta}>
                                     {guardandoEsta ? 'Guardando...' : 'Guardar'}
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </Modal>
@@ -492,37 +477,35 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
 
             {/* Modal editar producto */}
             {editando && (
-                <Modal s={s} onClose={() => setEditando(null)} title={nombreWeb(editando)}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <Modal onClose={() => setEditando(null)} title={nombreWeb(editando)}>
+                    <div className="flex flex-col gap-4">
                         <div>
-                            <label style={labelStyle}>Imagen</label>
+                            <label className={labelCls}>Imagen</label>
                             <InputImagen
                                 value={editForm.imagen_url}
                                 onChange={url => setEditForm(f => ({ ...f, imagen_url: url }))}
-                                s={s}
-                                inputStyle={inputStyle}
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-3 gap-3">
                             {[
                                 { key: 'disponible', label: 'Disponible en tienda' },
                                 { key: 'es_novedad', label: 'Marcar como novedad' },
                                 { key: 'es_destacado', label: 'Producto destacado' },
                             ].map(({ key, label }) => (
-                                <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: 12, borderRadius: 8, background: s.surfaceLow, border: `1px solid ${s.border}` }}>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: s.textMuted, textAlign: 'center' }}>{label}</span>
-                                    <Toggle checked={editForm[key]} onChange={v => setEditForm(f => ({ ...f, [key]: v }))} />
+                                <div key={key} className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <span className="text-center text-[11px] font-bold text-slate-500 dark:text-slate-400">{label}</span>
+                                    <Switch checked={editForm[key]} onCheckedChange={v => setEditForm(f => ({ ...f, [key]: v }))} />
                                 </div>
                             ))}
                         </div>
 
                         <div>
-                            <label style={labelStyle}>Especie</label>
+                            <label className={labelCls}>Especie</label>
                             <select
                                 value={editForm.especie}
                                 onChange={e => setEditForm(f => ({ ...f, especie: e.target.value }))}
-                                style={{ ...inputStyle, marginBottom: 0 }}
+                                className={inputCls}
                             >
                                 <option value="">Sin especificar</option>
                                 <option value="perro">Perro</option>
@@ -531,9 +514,9 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                             </select>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label style={labelStyle}>Categoria web</label>
+                                <label className={labelCls}>Categoria web</label>
                                 <select
                                     value={editForm.ecommerce_categoria}
                                     onChange={e => {
@@ -545,7 +528,7 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                                 .catch(() => setFiltrosConfig([]))
                                         } else { setFiltrosConfig([]) }
                                     }}
-                                    style={{ ...inputStyle, marginBottom: 0 }}
+                                    className={inputCls}
                                 >
                                     <option value="">-- Sin categoria --</option>
                                     <option value="perros">Perros</option>
@@ -554,22 +537,21 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                                     <option value="accesorios">Accesorios</option>
                                     <option value="cuidado">Cuidado</option>
                                 </select>
-                                <p style={{ fontSize: 11, color: s.textFaint, margin: '4px 0 0' }}>
+                                <p className="mt-1 mb-0 text-[11px] text-slate-400 dark:text-slate-500">
                                     "Ofertas" no se asigna acá: aparece solo cuando activás el descuento en Inventario.
                                 </p>
                             </div>
                             <div>
-                                <label style={labelStyle}>Subcategoria web</label>
+                                <label className={labelCls}>Subcategoria web</label>
                                 <SubcatSelect
                                     categoriaSlug={editForm.ecommerce_categoria}
                                     value={editForm.ecommerce_subcategoria_id}
                                     onChange={v => setEditForm(f => ({ ...f, ecommerce_subcategoria_id: v }))}
-                                    inputStyle={inputStyle}
                                 />
                             </div>
                         </div>
 
-                        <p style={{ fontSize: '11px', color: '#6366f1', background: '#ede9fe', padding: '6px 10px', borderRadius: '6px', margin: '0 0 4px' }}>
+                        <p className="m-0 mb-1 rounded-md bg-violet-100 px-2.5 py-1.5 text-[11px] text-indigo-500 dark:bg-indigo-500/15 dark:text-indigo-300">
                             La categoría web y los atributos de filtro se auto-asignan desde la subcategoría del inventario. Editá la subcategoría en Inventario para cambiarlos. Podés sobreescribir manualmente si necesitás.
                         </p>
 
@@ -583,17 +565,17 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                             })
                             const campos = Object.entries(grupos)
                             return (
-                                <div style={{ display: 'grid', gridTemplateColumns: campos.length === 1 ? '1fr' : '1fr 1fr', gap: 12 }}>
+                                <div className={`grid gap-3 ${campos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                                     {campos.map(([campo, { label, valores }]) => (
                                         <div key={campo}>
-                                            <label style={labelStyle}>{label}</label>
+                                            <label className={labelCls}>{label}</label>
                                             <select
                                                 value={editForm.atributos?.[campo] ?? ''}
                                                 onChange={e => setEditForm(f => ({
                                                     ...f,
                                                     atributos: { ...f.atributos, [campo]: e.target.value || undefined }
                                                 }))}
-                                                style={{ ...inputStyle, marginBottom: 0 }}
+                                                className={inputCls}
                                             >
                                                 <option value="">-- Sin especificar --</option>
                                                 {valores.map(({ valor, label_valor }) => (
@@ -606,11 +588,11 @@ function TabProductos({ s, inputStyle, labelStyle, btnPrimario, btnSecundario, s
                             )
                         })()}
 
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                            <button onClick={() => setEditando(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={guardarEditar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                        <div className="mt-1 flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
+                            <Button onClick={guardarEditar} disabled={guardando}>
                                 {guardando ? 'Guardando...' : 'Guardar cambios'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </Modal>
@@ -636,7 +618,7 @@ const ESPECIE_LABELS = [
     { valor: 'ambos', label: 'Ambos' },
 ]
 
-function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
+function TabSubcategorias() {
     const [subcats, setSubcats] = useState([])
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState('')
@@ -689,63 +671,67 @@ function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundari
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="mb-5 flex items-center justify-between">
                 <div>
-                    <p style={{ margin: 0, fontSize: 13, color: s.textMuted }}>
+                    <p className="m-0 text-[13px] text-slate-500 dark:text-slate-400">
                         Las subcategorías aparecen como filtros en la tienda web dentro de cada categoría.
                     </p>
                 </div>
-                <button onClick={() => { setForm(SUBCAT_VACIA); setModal('crear') }} style={btnPrimario}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Button onClick={() => { setForm(SUBCAT_VACIA); setModal('crear') }}>
+                    <IconMas />
                     Nueva subcategoría
-                </button>
+                </Button>
             </div>
 
-            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
 
             {cargando ? (
-                <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando...</p>
+                <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando...</p>
             ) : subcats.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0', color: s.textMuted }}>
-                    <p style={{ fontSize: 14 }}>No hay subcategorías todavía.</p>
-                    <p style={{ fontSize: 13, marginTop: 4 }}>
-                        Creá las primeras, o ejecutá el SQL <code style={{ background: s.surfaceLow, padding: '2px 6px', borderRadius: 4 }}>sql/subcategorias_ecommerce.sql</code> en Supabase para cargar las predeterminadas.
+                <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+                    <p className="text-sm">No hay subcategorías todavía.</p>
+                    <p className="mt-1 text-[13px]">
+                        Creá las primeras, o ejecutá el SQL <code className="rounded bg-slate-50 px-1.5 py-0.5 dark:bg-slate-900">sql/subcategorias_ecommerce.sql</code> en Supabase para cargar las predeterminadas.
                     </p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div className="flex flex-col gap-6">
                     {CAT_SLUGS_LABELS.map(cat => {
                         const items = subcats.filter(x => x.categoria_slug === cat.slug).sort((a, b) => a.orden - b.orden)
                         if (!items.length) return null
                         const color = CAT_COLORS[cat.slug] || '#64748b'
                         return (
                             <div key={cat.slug}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: s.text }}>{cat.label}</span>
-                                    <span style={{ fontSize: 11, color: s.textFaint }}>({items.length})</span>
+                                <div className="mb-2.5 flex items-center gap-2">
+                                    <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: color }} />
+                                    <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{cat.label}</span>
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">({items.length})</span>
                                 </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                <div className="flex flex-wrap gap-2">
                                     {items.map(sub => (
-                                        <div key={sub.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 14px', borderRadius: 99, border: `1.5px solid ${color}30`, background: `${color}0e` }}>
-                                            <span style={{ fontSize: 13, fontWeight: 600, color }}>{sub.nombre}</span>
-                                            <span style={{ fontSize: 10, color: s.textFaint }}>
+                                        <div
+                                            key={sub.id}
+                                            className="inline-flex items-center gap-1.5 rounded-full border py-1.5 pr-2.5 pl-3.5"
+                                            style={{ borderColor: `${color}30`, background: `${color}0e` }}
+                                        >
+                                            <span className="text-[13px] font-semibold" style={{ color }}>{sub.nombre}</span>
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
                                                 {ESPECIE_LABELS.find(e => e.valor === sub.especie)?.label || 'Ambos'}
                                             </span>
-                                            <span style={{ fontSize: 10, color: s.textFaint, marginRight: 2 }}>#{sub.orden}</span>
+                                            <span className="mr-0.5 text-[10px] text-slate-400 dark:text-slate-500">#{sub.orden}</span>
                                             <button
                                                 onClick={() => { setForm({ nombre: sub.nombre, categoria_slug: sub.categoria_slug, orden: sub.orden, especie: sub.especie || 'ambos' }); setModal(sub) }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'flex', padding: '2px' }}
+                                                className="flex cursor-pointer border-none bg-transparent p-0.5 text-slate-500 dark:text-slate-400"
                                                 title="Editar"
                                             >
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                <IconLapiz />
                                             </button>
                                             <button
                                                 onClick={() => setConfirmar(sub)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', padding: '2px' }}
+                                                className="flex cursor-pointer border-none bg-transparent p-0.5 text-red-500"
                                                 title="Eliminar"
                                             >
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                                <IconBasura />
                                             </button>
                                         </div>
                                     ))}
@@ -758,34 +744,34 @@ function TabSubcategorias({ s, inputStyle, labelStyle, btnPrimario, btnSecundari
 
             {/* Modal crear/editar */}
             {modal !== null && (
-                <Modal s={s} onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nueva subcategoría' : 'Editar subcategoría'} width={420}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        {error && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{error}</p>}
+                <Modal onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nueva subcategoría' : 'Editar subcategoría'} width={420}>
+                    <div className="flex flex-col gap-3.5">
+                        {error && <p className="m-0 text-[13px] text-red-500">{error}</p>}
                         <div>
-                            <label style={labelStyle}>Categoría</label>
-                            <select value={form.categoria_slug} onChange={e => setForm(f => ({ ...f, categoria_slug: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
+                            <label className={labelCls}>Categoría</label>
+                            <select value={form.categoria_slug} onChange={e => setForm(f => ({ ...f, categoria_slug: e.target.value }))} className={inputCls}>
                                 {CAT_SLUGS_LABELS.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label style={labelStyle}>Especie</label>
-                            <select value={form.especie} onChange={e => setForm(f => ({ ...f, especie: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
+                            <label className={labelCls}>Especie</label>
+                            <select value={form.especie} onChange={e => setForm(f => ({ ...f, especie: e.target.value }))} className={inputCls}>
                                 {ESPECIE_LABELS.map(e => <option key={e.valor} value={e.valor}>{e.label}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label style={labelStyle}>Nombre</label>
-                            <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Adulto Mini" style={{ ...inputStyle, marginBottom: 0 }} />
+                            <label className={labelCls}>Nombre</label>
+                            <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Adulto Mini" className={inputCls} />
                         </div>
                         <div>
-                            <label style={labelStyle}>Orden (menor = primero)</label>
-                            <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, marginBottom: 0 }} />
+                            <label className={labelCls}>Orden (menor = primero)</label>
+                            <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} className={inputCls} />
                         </div>
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                            <button onClick={() => { setModal(null); setError('') }} style={btnSecundario}>Cancelar</button>
-                            <button onClick={guardar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                        <div className="mt-1 flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => { setModal(null); setError('') }}>Cancelar</Button>
+                            <Button onClick={guardar} disabled={guardando}>
                                 {guardando ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Guardar'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </Modal>
@@ -815,7 +801,7 @@ const CAT_OPTS = [
     { v: 'cuidado', l: 'Cuidado' }, { v: 'ofertas', l: 'Ofertas' },
 ]
 
-function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
+function TabFiltros() {
     const [rows, setRows] = useState([])
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState('')
@@ -865,50 +851,57 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-                <p style={{ margin: 0, fontSize: 13, color: s.textMuted, maxWidth: 520 }}>
+            <div className="mb-5 flex items-start justify-between">
+                <p className="m-0 max-w-[520px] text-[13px] text-slate-500 dark:text-slate-400">
                     Define los filtros que aparecen en el ecommerce por categoría. Chips se muestran arriba del grid; Sidebar se muestra en el panel lateral.
                 </p>
-                <button onClick={() => { setForm(FILTRO_VACIO); setModal('crear') }} style={btnPrimario}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Button onClick={() => { setForm(FILTRO_VACIO); setModal('crear') }}>
+                    <IconMas />
                     Nuevo valor
-                </button>
+                </Button>
             </div>
 
-            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
 
-            {cargando ? <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando...</p> : rows.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0', color: s.textMuted }}>
-                    <p style={{ fontSize: 14 }}>No hay filtros configurados.</p>
-                    <p style={{ fontSize: 13 }}>Ejecutá <code style={{ background: s.surfaceLow, padding: '2px 6px', borderRadius: 4 }}>sql/atributos_productos.sql</code> en Supabase para cargar los valores por defecto.</p>
+            {cargando ? <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando...</p> : rows.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+                    <p className="text-sm">No hay filtros configurados.</p>
+                    <p className="text-[13px]">Ejecutá <code className="rounded bg-slate-50 px-1.5 py-0.5 dark:bg-slate-900">sql/atributos_productos.sql</code> en Supabase para cargar los valores por defecto.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div className="flex flex-col gap-5">
                     {Object.entries(grupos).map(([campo, { label, display_as, items }]) => {
                         const color = display_as === 'chip' ? CHIP_COLOR : SIDEBAR_COLOR
                         return (
                             <div key={campo}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: s.text }}>{label}</span>
-                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: `${color}18`, color, border: `1px solid ${color}30` }}>
+                                <div className="mb-2.5 flex items-center gap-2">
+                                    <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{label}</span>
+                                    <span
+                                        className="rounded-full border px-2 py-0.5 text-[10px] font-bold"
+                                        style={{ background: `${color}18`, color, borderColor: `${color}30` }}
+                                    >
                                         {DISPLAY_AS_LABELS[display_as] || display_as}
                                     </span>
-                                    <span style={{ fontSize: 11, color: s.textFaint, fontFamily: 'monospace' }}>{campo}</span>
+                                    <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500">{campo}</span>
                                 </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                <div className="flex flex-wrap gap-2">
                                     {items.sort((a, b) => a.orden - b.orden).map(item => (
-                                        <div key={item.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 14px', borderRadius: 99, border: `1.5px solid ${color}30`, background: `${color}0e` }}>
-                                            <span style={{ fontSize: 13, fontWeight: 600, color }}>{item.label_valor}</span>
-                                            {item.invisible && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Solo dashboard</span>}
-                                            <span style={{ fontSize: 10, color: s.textFaint, marginRight: 2 }}>"{item.valor}"</span>
-                                            <span style={{ fontSize: 10, color: s.textFaint }}>#{item.orden}</span>
+                                        <div
+                                            key={item.id}
+                                            className="inline-flex items-center gap-1.5 rounded-full border py-1.5 pr-2.5 pl-3.5"
+                                            style={{ borderColor: `${color}30`, background: `${color}0e` }}
+                                        >
+                                            <span className="text-[13px] font-semibold" style={{ color }}>{item.label_valor}</span>
+                                            {item.invisible && <span className="rounded-full border border-amber-200 bg-amber-100 px-1.5 py-px text-[9px] font-bold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">Solo dashboard</span>}
+                                            <span className="mr-0.5 text-[10px] text-slate-400 dark:text-slate-500">"{item.valor}"</span>
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500">#{item.orden}</span>
                                             <button onClick={() => { setForm({ campo: item.campo, label: item.label, valor: item.valor, label_valor: item.label_valor, categorias: item.categorias || [], display_as: item.display_as, orden: item.orden, invisible: !!item.invisible }); setModal(item) }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'flex', padding: '2px' }}>
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                className="flex cursor-pointer border-none bg-transparent p-0.5 text-slate-500 dark:text-slate-400">
+                                                <IconLapiz />
                                             </button>
                                             <button onClick={() => setConfirmar(item)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', padding: '2px' }}>
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                                className="flex cursor-pointer border-none bg-transparent p-0.5 text-red-500">
+                                                <IconBasura />
                                             </button>
                                         </div>
                                     ))}
@@ -920,41 +913,41 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
             )}
 
             {modal !== null && (
-                <Modal s={s} onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nuevo valor de filtro' : 'Editar valor'} width={480}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        {error && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{error}</p>}
+                <Modal onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nuevo valor de filtro' : 'Editar valor'} width={480}>
+                    <div className="flex flex-col gap-3.5">
+                        {error && <p className="m-0 text-[13px] text-red-500">{error}</p>}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label style={labelStyle}>Campo (clave interna)</label>
-                                <input value={form.campo} onChange={e => setForm(f => ({ ...f, campo: e.target.value }))} placeholder="etapa_vida" style={{ ...inputStyle, marginBottom: 0, fontFamily: 'monospace' }} />
+                                <label className={labelCls}>Campo (clave interna)</label>
+                                <input value={form.campo} onChange={e => setForm(f => ({ ...f, campo: e.target.value }))} placeholder="etapa_vida" className={`${inputCls} font-mono`} />
                             </div>
                             <div>
-                                <label style={labelStyle}>Label del grupo</label>
-                                <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Etapa de vida" style={{ ...inputStyle, marginBottom: 0 }} />
+                                <label className={labelCls}>Label del grupo</label>
+                                <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Etapa de vida" className={inputCls} />
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label style={labelStyle}>Valor (clave guardada)</label>
-                                <input value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="adulto" style={{ ...inputStyle, marginBottom: 0, fontFamily: 'monospace' }} />
+                                <label className={labelCls}>Valor (clave guardada)</label>
+                                <input value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="adulto" className={`${inputCls} font-mono`} />
                             </div>
                             <div>
-                                <label style={labelStyle}>Label visible</label>
-                                <input value={form.label_valor} onChange={e => setForm(f => ({ ...f, label_valor: e.target.value }))} placeholder="Adulto" style={{ ...inputStyle, marginBottom: 0 }} />
+                                <label className={labelCls}>Label visible</label>
+                                <input value={form.label_valor} onChange={e => setForm(f => ({ ...f, label_valor: e.target.value }))} placeholder="Adulto" className={inputCls} />
                             </div>
                         </div>
 
                         <div>
-                            <label style={labelStyle}>Categorías (vacío = todas)</label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            <label className={labelCls}>Categorías (vacío = todas)</label>
+                            <div className="flex flex-wrap gap-2">
                                 {CAT_OPTS.map(({ v, l }) => {
                                     const activo = form.categorias?.includes(v)
                                     return (
                                         <button key={v} type="button"
                                             onClick={() => setForm(f => ({ ...f, categorias: activo ? f.categorias.filter(c => c !== v) : [...(f.categorias || []), v] }))}
-                                            style={{ padding: '5px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${activo ? '#6366f1' : s.border}`, background: activo ? '#ede9fe' : s.surfaceLow, color: activo ? '#4338ca' : s.textMuted }}>
+                                            className={`rounded-full border-[1.5px] px-3 py-1.5 text-xs font-semibold ${activo ? 'border-indigo-500 bg-violet-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
                                             {l}
                                         </button>
                                     )
@@ -962,32 +955,32 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-3 gap-3">
                             <div>
-                                <label style={labelStyle}>Mostrar como</label>
-                                <select value={form.display_as} onChange={e => setForm(f => ({ ...f, display_as: e.target.value }))} style={{ ...inputStyle, marginBottom: 0 }}>
+                                <label className={labelCls}>Mostrar como</label>
+                                <select value={form.display_as} onChange={e => setForm(f => ({ ...f, display_as: e.target.value }))} className={inputCls}>
                                     <option value="chip">Chip (arriba del grid)</option>
                                     <option value="sidebar">Sidebar (panel lateral)</option>
                                 </select>
                             </div>
                             <div>
-                                <label style={labelStyle}>Orden</label>
-                                <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, marginBottom: 0 }} />
+                                <label className={labelCls}>Orden</label>
+                                <input type="number" value={form.orden} onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} className={inputCls} />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                <label style={labelStyle}>Solo dashboard</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
-                                    <Toggle checked={!!form.invisible} onChange={v => setForm(f => ({ ...f, invisible: v }))} />
-                                    <span style={{ fontSize: 12, color: s.textMuted }}>Oculto en tienda</span>
+                            <div className="flex flex-col gap-2">
+                                <label className={labelCls}>Solo dashboard</label>
+                                <div className="flex items-center gap-2 pt-1">
+                                    <Switch checked={!!form.invisible} onCheckedChange={v => setForm(f => ({ ...f, invisible: v }))} />
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">Oculto en tienda</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                            <button onClick={() => { setModal(null); setError('') }} style={btnSecundario}>Cancelar</button>
-                            <button onClick={guardar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                        <div className="mt-1 flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => { setModal(null); setError('') }}>Cancelar</Button>
+                            <Button onClick={guardar} disabled={guardando}>
                                 {guardando ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Guardar'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </Modal>
@@ -1011,7 +1004,7 @@ function TabFiltros({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
 // ════════════════════════════════════════════════════════════════
 const BANNER_VACIO = { titulo: '', subtitulo: '', badge: '', cta_texto: '', cta_url: '', imagen_url: '', orden: 0, activo: true }
 
-function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
+function TabBanners() {
     const [banners, setBanners] = useState([])
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState('')
@@ -1084,59 +1077,57 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-                <button onClick={abrirCrear} style={btnPrimario}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <div className="mb-4 flex justify-end">
+                <Button onClick={abrirCrear}>
+                    <IconMas />
                     Nuevo banner
-                </button>
+                </Button>
             </div>
 
-            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
 
             {cargando ? (
-                <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando banners...</p>
+                <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando banners...</p>
             ) : banners.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: s.textMuted }}>
-                    <p style={{ fontSize: 14 }}>No hay banners configurados.</p>
-                    <p style={{ fontSize: 13 }}>Creá uno para que aparezca en la tienda.</p>
+                <div className="py-10 text-center text-slate-500 dark:text-slate-400">
+                    <p className="text-sm">No hay banners configurados.</p>
+                    <p className="text-[13px]">Creá uno para que aparezca en la tienda.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="flex flex-col gap-3">
                     {banners.map(banner => (
-                        <div key={banner.id} style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 12, overflow: 'hidden', display: 'flex', gap: 0 }}>
+                        <div key={banner.id} className="flex overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
                             {/* Preview imagen */}
-                            <div style={{ width: 120, minHeight: 80, background: s.surfaceLow, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+                            <div className="relative w-[120px] flex-shrink-0 overflow-hidden bg-slate-50 dark:bg-slate-900" style={{ minHeight: 80 }}>
                                 {banner.imagen_url ? (
-                                    <img src={banner.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                                    <img src={banner.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
                                 ) : (
-                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
-                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={s.textFaint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                                        </svg>
+                                    <div className="flex h-full w-full items-center justify-center" style={{ minHeight: 80 }}>
+                                        <span className="text-slate-400 dark:text-slate-500"><IconImagen /></span>
                                     </div>
                                 )}
                             </div>
 
                             {/* Info */}
-                            <div style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontWeight: 700, fontSize: 14, color: s.text }}>{banner.titulo}</span>
-                                    {banner.badge && <span style={{ fontSize: 10, fontWeight: 700, background: '#ffa601', color: 'white', borderRadius: 4, padding: '2px 6px' }}>{banner.badge}</span>}
-                                    <span style={{ fontSize: 11, fontWeight: 600, color: banner.activo ? '#22c55e' : '#94a3b8', marginLeft: 'auto' }}>
+                            <div className="flex flex-1 flex-col justify-center gap-1 px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{banner.titulo}</span>
+                                    {banner.badge && <span className="rounded bg-[#ffa601] px-1.5 py-0.5 text-[10px] font-bold text-white">{banner.badge}</span>}
+                                    <span className={`ml-auto text-[11px] font-semibold ${banner.activo ? 'text-green-500' : 'text-slate-400'}`}>
                                         {banner.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
-                                {banner.subtitulo && <p style={{ fontSize: 12, color: s.textMuted, margin: 0 }}>{banner.subtitulo}</p>}
-                                <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                                    {banner.cta_texto && <span style={{ fontSize: 11, color: s.textMuted }}>CTA: {banner.cta_texto}</span>}
-                                    <span style={{ fontSize: 11, color: s.textFaint }}>Orden: {banner.orden}</span>
+                                {banner.subtitulo && <p className="m-0 text-xs text-slate-500 dark:text-slate-400">{banner.subtitulo}</p>}
+                                <div className="mt-1 flex gap-3">
+                                    {banner.cta_texto && <span className="text-[11px] text-slate-500 dark:text-slate-400">CTA: {banner.cta_texto}</span>}
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">Orden: {banner.orden}</span>
                                 </div>
                             </div>
 
                             {/* Acciones */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px', justifyContent: 'center' }}>
-                                <button onClick={() => abrirEditar(banner)} style={{ ...btnSecundario, padding: '6px 12px', fontSize: 12 }}>Editar</button>
-                                <button onClick={() => setConfirmarEliminar(banner)} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 8, border: '1px solid #fee2e2', background: '#fff5f5', color: '#ef4444', cursor: 'pointer', fontWeight: 500 }}>Eliminar</button>
+                            <div className="flex flex-col justify-center gap-1.5 p-3">
+                                <Button variant="outline" size="sm" onClick={() => abrirEditar(banner)}>Editar</Button>
+                                <Button variant="destructive" size="sm" onClick={() => setConfirmarEliminar(banner)}>Eliminar</Button>
                             </div>
                         </div>
                     ))}
@@ -1145,9 +1136,9 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
 
             {/* Modal crear/editar */}
             {modal !== null && (
-                <Modal s={s} onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nuevo banner' : 'Editar banner'} width={560}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        {error && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{error}</p>}
+                <Modal onClose={() => { setModal(null); setError('') }} title={modal === 'crear' ? 'Nuevo banner' : 'Editar banner'} width={560}>
+                    <div className="flex flex-col gap-3.5">
+                        {error && <p className="m-0 text-[13px] text-red-500">{error}</p>}
 
                         {[
                             { key: 'titulo', label: 'Título *', placeholder: 'Gran promoción de temporada' },
@@ -1157,56 +1148,54 @@ function TabBanners({ s, inputStyle, labelStyle, btnPrimario, btnSecundario }) {
                             { key: 'cta_url', label: 'URL del botón CTA', placeholder: '/categoria/perros' },
                         ].map(({ key, label, placeholder }) => (
                             <div key={key}>
-                                <label style={labelStyle}>{label}</label>
+                                <label className={labelCls}>{label}</label>
                                 <input
                                     value={form[key]}
                                     onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                                     placeholder={placeholder}
-                                    style={{ ...inputStyle, marginBottom: 0 }}
+                                    className={inputCls}
                                 />
                             </div>
                         ))}
 
                         <div>
-                            <label style={labelStyle}>Imagen del banner</label>
-                            <div style={{ fontSize: 11, color: s.textMuted, background: s.surfaceLow, border: `1px solid ${s.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 8, lineHeight: 1.6 }}>
-                                <strong style={{ color: s.text }}>Tamano recomendado: 900 × 540 px</strong> (relacion 16:9)<br />
+                            <label className={labelCls}>Imagen del banner</label>
+                            <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                                <strong className="text-slate-900 dark:text-slate-100">Tamano recomendado: 900 × 540 px</strong> (relacion 16:9)<br />
                                 Minimo: 600 × 360 px — Formato: JPG, PNG o WEBP — Peso max: 2 MB<br />
-                                La imagen ocupa <strong style={{ color: s.text }}>solo el lado derecho</strong> del banner (columna derecha, aprox. 55% del ancho).<br />
-                                <span style={{ color: '#f97316' }}>Pone el producto centrado o ligeramente a la derecha. Evita texto en la imagen porque se superpone con el badge.</span>
+                                La imagen ocupa <strong className="text-slate-900 dark:text-slate-100">solo el lado derecho</strong> del banner (columna derecha, aprox. 55% del ancho).<br />
+                                <span className="text-orange-500">Pone el producto centrado o ligeramente a la derecha. Evita texto en la imagen porque se superpone con el badge.</span>
                             </div>
                             <InputImagen
                                 value={form.imagen_url}
                                 onChange={url => setForm(f => ({ ...f, imagen_url: url }))}
-                                s={s}
-                                inputStyle={inputStyle}
                             />
                             {form.imagen_url && (
-                                <img src={form.imagen_url} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginTop: 8 }} onError={e => { e.target.style.display = 'none' }} />
+                                <img src={form.imagen_url} alt="" className="mt-2 h-[120px] w-full rounded-lg object-cover" onError={e => { e.target.style.display = 'none' }} />
                             )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label style={labelStyle}>Orden</label>
+                                <label className={labelCls}>Orden</label>
                                 <input
                                     type="number"
                                     value={form.orden}
                                     onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))}
-                                    style={{ ...inputStyle, marginBottom: 0 }}
+                                    className={inputCls}
                                 />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                <label style={labelStyle}>Activo</label>
-                                <Toggle checked={form.activo} onChange={v => setForm(f => ({ ...f, activo: v }))} />
+                            <div className="flex flex-col gap-1.5">
+                                <label className={labelCls}>Activo</label>
+                                <Switch checked={form.activo} onCheckedChange={v => setForm(f => ({ ...f, activo: v }))} />
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                            <button onClick={() => { setModal(null); setError('') }} style={btnSecundario}>Cancelar</button>
-                            <button onClick={guardar} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => { setModal(null); setError('') }}>Cancelar</Button>
+                            <Button onClick={guardar} disabled={guardando}>
                                 {guardando ? 'Guardando...' : modal === 'crear' ? 'Crear banner' : 'Guardar cambios'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </Modal>
@@ -1237,7 +1226,7 @@ const CAT_LABELS = {
 }
 const CAT_SLUGS = Object.keys(CAT_LABELS)
 
-function TabCategorias({ s, inputStyle, labelStyle, btnPrimario }) {
+function TabCategorias() {
     const [cats, setCats] = useState([])
     const [cargando, setCargando] = useState(true)
     const [guardando, setGuardando] = useState(null) // slug o null
@@ -1275,28 +1264,24 @@ function TabCategorias({ s, inputStyle, labelStyle, btnPrimario }) {
         }
     }
 
-    if (cargando) return <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando categorías...</p>
+    if (cargando) return <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando categorías...</p>
 
     return (
         <div>
-            <p style={{ fontSize: 13, color: s.textMuted, marginBottom: 20, marginTop: 0 }}>
+            <p className="mt-0 mb-5 text-[13px] text-slate-500 dark:text-slate-400">
                 Cargá una imagen para cada categoría. Se muestra en los tiles de la tienda web.
-                Tamaño recomendado: <strong style={{ color: s.text }}>600 × 400 px</strong>.
+                Tamaño recomendado: <strong className="text-slate-900 dark:text-slate-100">600 × 400 px</strong>.
             </p>
 
-            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-            {exito && <p style={{ color: '#22c55e', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{exito}</p>}
+            {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
+            {exito && <p className="mb-3 text-[13px] font-semibold text-green-500">{exito}</p>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
                 {cats.map(cat => (
                     <CatImageCard
                         key={cat.slug}
                         cat={cat}
                         label={CAT_LABELS[cat.slug]}
-                        s={s}
-                        inputStyle={inputStyle}
-                        labelStyle={labelStyle}
-                        btnPrimario={btnPrimario}
                         saving={guardando === cat.slug}
                         onSave={imagen_url => handleGuardar(cat.slug, imagen_url)}
                     />
@@ -1306,7 +1291,7 @@ function TabCategorias({ s, inputStyle, labelStyle, btnPrimario }) {
     )
 }
 
-function CatImageCard({ cat, label, s, inputStyle, labelStyle, btnPrimario, saving, onSave }) {
+function CatImageCard({ cat, label, saving, onSave }) {
     const [url, setUrl] = useState(cat.imagen_url || '')
     const inputRef = useRef(null)
     const [subiendo, setSubiendo] = useState(false)
@@ -1333,56 +1318,50 @@ function CatImageCard({ cat, label, s, inputStyle, labelStyle, btnPrimario, savi
     }
 
     return (
-        <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffa601', flexShrink: 0 }} />
-                <span style={{ fontWeight: 700, fontSize: 14, color: s.text }}>{label}</span>
+        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center gap-2.5">
+                <div className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#ffa601]" />
+                <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{label}</span>
             </div>
 
             {/* Preview */}
-            <div style={{ width: '100%', height: 120, borderRadius: 8, background: s.surfaceLow, border: `1px solid ${s.border}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="flex h-[120px] w-full items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
                 {url ? (
-                    <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                    <img src={url} alt={label} className="h-full w-full object-cover" onError={e => { e.target.style.display = 'none' }} />
                 ) : (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={s.textFaint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                    </svg>
+                    <span className="text-slate-400 dark:text-slate-500"><IconImagen size={32} /></span>
                 )}
             </div>
 
             {/* URL input */}
             <div>
-                <label style={labelStyle}>URL de imagen</label>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <label className={labelCls}>URL de imagen</label>
+                <div className="flex gap-1.5">
                     <input
                         type="text"
                         value={url}
                         onChange={e => setUrl(e.target.value)}
                         placeholder="https://... o subí un archivo"
-                        style={{ ...inputStyle, marginBottom: 0, flex: 1, fontSize: 12 }}
+                        className={`${inputCls} flex-1 text-xs`}
                     />
                     <button
                         type="button"
                         onClick={() => inputRef.current?.click()}
                         disabled={subiendo}
-                        style={{ padding: '9px 10px', borderRadius: 8, border: `1px solid ${s.border}`, background: s.surfaceLow, color: s.text, cursor: subiendo ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, opacity: subiendo ? 0.7 : 1 }}
+                        className="flex-shrink-0 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2.5 text-[11px] font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                     >
                         {subiendo ? '...' : 'Subir'}
                     </button>
-                    <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleArchivo} />
+                    <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleArchivo} />
                 </div>
                 {uploadError && (
-                    <p style={{ color: '#ef4444', fontSize: 11, marginTop: 6, marginBottom: 0 }}>{uploadError}</p>
+                    <p className="mt-1.5 mb-0 text-[11px] text-red-500">{uploadError}</p>
                 )}
             </div>
 
-            <button
-                onClick={() => onSave(url)}
-                disabled={saving || subiendo}
-                style={{ ...btnPrimario, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}
-            >
+            <Button onClick={() => onSave(url)} disabled={saving || subiendo} className="justify-center">
                 {saving ? 'Guardando...' : 'Guardar imagen'}
-            </button>
+            </Button>
         </div>
     )
 }
@@ -1404,7 +1383,7 @@ const TOGGLES_CONFIG = [
     { key: 'mostrar_sin_stock',  label: 'Mostrar productos sin stock', hint: 'Los clientes verán los productos pero con badge "Fuera de stock". Pueden seleccionar presentaciones sin stock pero no agregarlas al carrito.' },
 ]
 
-function TabConfiguracion({ s, inputStyle, labelStyle, btnPrimario }) {
+function TabConfiguracion() {
     const [config, setConfig] = useState({})
     const [cargando, setCargando] = useState(true)
     const [guardando, setGuardando] = useState(false)
@@ -1448,53 +1427,53 @@ function TabConfiguracion({ s, inputStyle, labelStyle, btnPrimario }) {
         }
     }
 
-    if (cargando) return <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando configuración...</p>
+    if (cargando) return <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando configuración...</p>
 
     return (
-        <form onSubmit={guardar} style={{ maxWidth: 560 }}>
-            {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-            {exito && <p style={{ color: '#22c55e', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>Configuración guardada correctamente.</p>}
+        <form onSubmit={guardar} className="max-w-[560px]">
+            {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
+            {exito && <p className="mb-3 text-[13px] font-semibold text-green-500">Configuración guardada correctamente.</p>}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div className="flex flex-col gap-[18px]">
                 {CAMPOS_CONFIG.map(({ key, label, placeholder, type, hint }) => (
                     <div key={key}>
-                        <label style={labelStyle}>{label}</label>
+                        <label className={labelCls}>{label}</label>
                         {type === 'textarea' ? (
                             <textarea
                                 value={config[key] || ''}
                                 onChange={e => setConfig(c => ({ ...c, [key]: e.target.value }))}
                                 placeholder={placeholder}
                                 rows={3}
-                                style={{ ...inputStyle, resize: 'vertical', marginBottom: 0 }}
+                                className={`${inputCls} resize-y`}
                             />
                         ) : (
                             <input
                                 value={config[key] || ''}
                                 onChange={e => setConfig(c => ({ ...c, [key]: e.target.value }))}
                                 placeholder={placeholder}
-                                style={{ ...inputStyle, marginBottom: 0 }}
+                                className={inputCls}
                             />
                         )}
-                        {hint && <p style={{ fontSize: 11, color: s.textMuted, marginTop: 4 }}>{hint}</p>}
+                        {hint && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{hint}</p>}
                     </div>
                 ))}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="flex flex-col gap-2.5">
                     {TOGGLES_CONFIG.map(({ key, label, hint }) => (
-                        <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderRadius: 8, background: s.surfaceLow, border: `1px solid ${s.border}` }}>
-                            <Toggle checked={config[key] !== false && config[key] !== 'false'} onChange={v => setConfig(c => ({ ...c, [key]: v }))} />
+                        <div key={key} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                            <Switch checked={config[key] !== false && config[key] !== 'false'} onCheckedChange={v => setConfig(c => ({ ...c, [key]: v }))} />
                             <div>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: s.text }}>{label}</span>
-                                {hint && <p style={{ fontSize: 11, color: s.textMuted, marginTop: 2 }}>{hint}</p>}
+                                <span className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{label}</span>
+                                {hint && <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{hint}</p>}
                             </div>
                         </div>
                     ))}
                 </div>
 
                 <div>
-                    <button type="submit" disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.7 : 1 }}>
+                    <Button type="submit" disabled={guardando}>
                         {guardando ? 'Guardando...' : 'Guardar configuración'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </form>
@@ -1504,17 +1483,17 @@ function TabConfiguracion({ s, inputStyle, labelStyle, btnPrimario }) {
 // ════════════════════════════════════════════════════════════════
 // TAB — TRAFICO
 // ════════════════════════════════════════════════════════════════
-function KpiCard({ label, valor, sub, s }) {
+function KpiCard({ label, valor, sub }) {
     return (
-        <div style={{ background: s.surfaceLow, borderRadius: 10, padding: '18px 20px', border: `1px solid ${s.border}` }}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-            <p style={{ margin: '6px 0 0', fontSize: 22, fontWeight: 800, color: s.text }}>{valor}</p>
-            {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: s.textFaint }}>{sub}</p>}
+        <div className="rounded-[10px] border border-slate-200 bg-slate-50 px-5 py-[18px] dark:border-slate-700 dark:bg-slate-900">
+            <p className="m-0 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+            <p className="mt-1.5 mb-0 text-[22px] font-extrabold text-slate-900 dark:text-slate-100">{valor}</p>
+            {sub && <p className="mt-0.5 mb-0 text-[11px] text-slate-400 dark:text-slate-500">{sub}</p>}
         </div>
     )
 }
 
-function TabTrafico({ s }) {
+function TabTrafico() {
     const [periodo, setPeriodo] = useState('mes')
     const [datos, setDatos] = useState(null)
     const [cargando, setCargando] = useState(true)
@@ -1529,13 +1508,10 @@ function TabTrafico({ s }) {
             .finally(() => setCargando(false))
     }, [periodo])
 
-    const barColor = s.barColor || '#1a1a2e'
-    const barTrack = s.barTrack || '#f1f5f9'
-
     const gs = v => `Gs. ${formatMiles(v)}`
 
-    if (cargando) return <p style={{ color: s.textMuted, fontSize: 13 }}>Cargando estadísticas...</p>
-    if (error)    return <p style={{ color: '#ef4444', fontSize: 13 }}>{error}</p>
+    if (cargando) return <p className="text-[13px] text-slate-500 dark:text-slate-400">Cargando estadísticas...</p>
+    if (error)    return <p className="text-[13px] text-red-500">{error}</p>
     if (!datos)   return null
 
     const {
@@ -1562,61 +1538,57 @@ function TabTrafico({ s }) {
     return (
         <div>
             {/* Selector de periodo */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+            <div className="mb-6 flex gap-1.5">
                 {[{ key: 'semana', label: '7 dias' }, { key: 'mes', label: '30 dias' }, { key: 'trimestre', label: '90 dias' }].map(p => (
                     <button
                         key={p.key}
                         onClick={() => setPeriodo(p.key)}
-                        style={{
-                            padding: '7px 14px', borderRadius: 7, border: `1px solid ${s.border}`, cursor: 'pointer',
-                            fontSize: 12, fontWeight: 600,
-                            background: periodo === p.key ? '#1a1a2e' : s.surfaceLow,
-                            color: periodo === p.key ? 'white' : s.textMuted,
-                        }}
+                        className={`rounded-[7px] border border-slate-200 px-3.5 py-[7px] text-xs font-semibold dark:border-slate-700 ${periodo === p.key ? 'bg-[#1a1a2e] text-white' : 'bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400'}`}
                     >{p.label}</button>
                 ))}
             </div>
 
             {/* KPIs principales */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-                <KpiCard label="Total pedidos"    valor={formatMiles(kpis.total_pedidos)}  sub="en el periodo" s={s} />
-                <KpiCard label="Ingresos"         valor={gs(kpis.total_ingresos)}          sub="ecommerce" s={s} />
-                <KpiCard label="Ticket promedio"  valor={gs(Math.round(kpis.ticket_promedio))} sub="por pedido" s={s} />
-                <KpiCard label="Nuevos clientes"  valor={formatMiles(nuevos_clientes)}     sub="registrados via web" s={s} />
+            <div className="mb-6 grid grid-cols-4 gap-3.5">
+                <KpiCard label="Total pedidos"    valor={formatMiles(kpis.total_pedidos)}  sub="en el periodo" />
+                <KpiCard label="Ingresos"         valor={gs(kpis.total_ingresos)}          sub="ecommerce" />
+                <KpiCard label="Ticket promedio"  valor={gs(Math.round(kpis.ticket_promedio))} sub="por pedido" />
+                <KpiCard label="Nuevos clientes"  valor={formatMiles(nuevos_clientes)}     sub="registrados via web" />
             </div>
 
             {/* Estados de pedidos */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
+            <div className="mb-6 grid grid-cols-4 gap-2.5">
                 {estadosKpi.map(e => (
-                    <div key={e.key} style={{ padding: '12px 16px', borderRadius: 9, border: `1px solid ${s.border}`, background: s.surfaceLow, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: e.color, flexShrink: 0 }} />
+                    <div key={e.key} className="flex items-center gap-2.5 rounded-[9px] border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                        <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: e.color }} />
                         <div>
-                            <p style={{ margin: 0, fontSize: 11, color: s.textMuted, fontWeight: 600 }}>{e.label}</p>
-                            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: s.text }}>{kpis[e.key] || 0}</p>
+                            <p className="m-0 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{e.label}</p>
+                            <p className="m-0 text-lg font-extrabold text-slate-900 dark:text-slate-100">{kpis[e.key] || 0}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
             {/* Pedidos por dia + Delivery vs Retiro */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
-                <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
-                    <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 700, color: s.text }}>Pedidos por dia</h3>
+            <div className="mb-6 grid grid-cols-[2fr_1fr] gap-5">
+                <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+                    <h3 className="mb-5 mt-0 text-sm font-bold text-slate-900 dark:text-slate-100">Pedidos por dia</h3>
                     {safeArr(por_dia).length === 0 ? (
-                        <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: 13 }}>Sin pedidos en este periodo</div>
+                        <div className="flex h-40 items-center justify-center text-[13px] text-slate-400 dark:text-slate-500">Sin pedidos en este periodo</div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 160 }}>
+                        <div className="flex h-40 items-end gap-1">
                             {safeArr(por_dia).map((d, i) => {
                                 const altura = Math.max((parseInt(d.total) / maxDia) * 100, 3)
                                 const fecha = new Date(d.fecha)
                                 const label = `${fecha.getDate()}/${fecha.getMonth() + 1}`
                                 return (
-                                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+                                    <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                                         <div
                                             title={`${gs(d.total)} — ${d.cantidad} pedidos`}
-                                            style={{ width: '100%', height: `${altura}%`, background: barColor, borderRadius: '3px 3px 0 0', minHeight: 4, transition: 'height 0.3s' }}
+                                            className="w-full rounded-t-[3px] bg-[#1a1a2e] transition-[height] duration-300 dark:bg-indigo-600"
+                                            style={{ height: `${altura}%`, minHeight: 4 }}
                                         />
-                                        <p style={{ fontSize: 8, color: s.textFaint, margin: 0, textAlign: 'center' }}>{label}</p>
+                                        <p className="m-0 text-center text-[8px] text-slate-400 dark:text-slate-500">{label}</p>
                                     </div>
                                 )
                             })}
@@ -1624,25 +1596,25 @@ function TabTrafico({ s }) {
                     )}
                 </div>
 
-                <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
-                    <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 700, color: s.text }}>Tipo de entrega</h3>
+                <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+                    <h3 className="mb-5 mt-0 text-sm font-bold text-slate-900 dark:text-slate-100">Tipo de entrega</h3>
                     {safeArr(por_entrega).length === 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: 13, height: 100 }}>Sin datos</div>
+                        <div className="flex h-[100px] items-center justify-center text-[13px] text-slate-400 dark:text-slate-500">Sin datos</div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div className="flex flex-col gap-3">
                             {safeArr(por_entrega).map((e, i) => {
                                 const pct = totalEntrega > 0 ? Math.round((parseInt(e.cantidad) / totalEntrega) * 100) : 0
                                 const colores = ['#3b82f6', '#f59e0b', '#22c55e']
                                 return (
                                     <div key={i}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                            <span style={{ fontSize: 12, color: s.text, fontWeight: 600, textTransform: 'capitalize' }}>{e.tipo_entrega || 'delivery'}</span>
-                                            <span style={{ fontSize: 12, fontWeight: 700, color: s.text }}>{pct}% ({e.cantidad})</span>
+                                        <div className="mb-1 flex justify-between">
+                                            <span className="text-xs font-semibold capitalize text-slate-900 dark:text-slate-100">{e.tipo_entrega || 'delivery'}</span>
+                                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{pct}% ({e.cantidad})</span>
                                         </div>
-                                        <div style={{ height: 7, background: barTrack, borderRadius: 4, overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${pct}%`, background: colores[i % colores.length], borderRadius: 4, transition: 'width 0.5s' }} />
+                                        <div className="h-[7px] overflow-hidden rounded bg-slate-100 dark:bg-slate-700">
+                                            <div className="h-full rounded transition-[width] duration-500" style={{ width: `${pct}%`, background: colores[i % colores.length] }} />
                                         </div>
-                                        <p style={{ fontSize: 10, color: s.textFaint, marginTop: 2 }}>{gs(e.total)}</p>
+                                        <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">{gs(e.total)}</p>
                                     </div>
                                 )
                             })}
@@ -1652,16 +1624,16 @@ function TabTrafico({ s }) {
             </div>
 
             {/* Top productos */}
-            <div style={{ background: s.surfaceLow, borderRadius: 10, padding: 20, border: `1px solid ${s.border}` }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: s.text }}>Top productos mas pedidos</h3>
+            <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="mb-4 mt-0 text-sm font-bold text-slate-900 dark:text-slate-100">Top productos mas pedidos</h3>
                 {safeArr(top_productos).length === 0 ? (
-                    <p style={{ color: s.textFaint, fontSize: 13 }}>Sin datos en este periodo.</p>
+                    <p className="text-[13px] text-slate-400 dark:text-slate-500">Sin datos en este periodo.</p>
                 ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table className="w-full border-collapse">
                         <thead>
                             <tr>
                                 {['#', 'Producto', 'Presentacion', 'Unidades', 'Total'].map(h => (
-                                    <th key={h} style={{ padding: '8px 10px', textAlign: h === '#' || h === 'Unidades' || h === 'Total' ? 'right' : 'left', fontSize: 10, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${s.border}` }}>{h}</th>
+                                    <th key={h} className={`border-b border-slate-200 px-2.5 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400 ${h === '#' || h === 'Unidades' || h === 'Total' ? 'text-right' : 'text-left'}`}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -1670,17 +1642,17 @@ function TabTrafico({ s }) {
                                 const maxUnidades = parseInt(safeArr(top_productos)[0]?.unidades || 1)
                                 const pct = Math.round((parseInt(p.unidades) / maxUnidades) * 100)
                                 return (
-                                    <tr key={i} style={{ borderBottom: `1px solid ${s.border}` }}>
-                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: 12, color: s.textFaint, fontWeight: 700 }}>{i + 1}</td>
-                                        <td style={{ padding: '10px', fontSize: 13, color: s.text, fontWeight: 600 }}>
+                                    <tr key={i} className="border-b border-slate-200 dark:border-slate-700">
+                                        <td className="px-2.5 py-2.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500">{i + 1}</td>
+                                        <td className="px-2.5 py-2.5 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
                                             {p.nombre}
-                                            <div style={{ marginTop: 4, height: 3, background: barTrack, borderRadius: 2, overflow: 'hidden', maxWidth: 180 }}>
-                                                <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2 }} />
+                                            <div className="mt-1 h-[3px] max-w-[180px] overflow-hidden rounded bg-slate-100 dark:bg-slate-700">
+                                                <div className="h-full rounded bg-[#1a1a2e] dark:bg-indigo-600" style={{ width: `${pct}%` }} />
                                             </div>
                                         </td>
-                                        <td style={{ padding: '10px', fontSize: 12, color: s.textMuted }}>{p.presentacion}</td>
-                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: s.text }}>{formatMiles(p.unidades)}</td>
-                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: 12, color: s.textMuted }}>{gs(p.total)}</td>
+                                        <td className="px-2.5 py-2.5 text-xs text-slate-500 dark:text-slate-400">{p.presentacion}</td>
+                                        <td className="px-2.5 py-2.5 text-right text-[13px] font-bold text-slate-900 dark:text-slate-100">{formatMiles(p.unidades)}</td>
+                                        <td className="px-2.5 py-2.5 text-right text-xs text-slate-500 dark:text-slate-400">{gs(p.total)}</td>
                                     </tr>
                                 )
                             })}
@@ -1695,7 +1667,7 @@ function TabTrafico({ s }) {
 // ════════════════════════════════════════════════════════════════
 // TAB — PEDIDOS WEB
 // ════════════════════════════════════════════════════════════════
-function TabPedidos({ s, btnSecundario, sharedProps }) {
+function TabPedidos() {
     const [pedidos, setPedidos] = useState([])
     const [cargando, setCargando] = useState(true)
     const [filtroEstado, setFiltroEstado] = useState('')
@@ -1734,31 +1706,30 @@ function TabPedidos({ s, btnSecundario, sharedProps }) {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: s.text }}>Pedidos de la tienda web</h3>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${s.border}`, background: s.inputBg || s.surface, color: s.text, fontSize: 13 }}>
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="m-0 text-[15px] font-bold text-slate-900 dark:text-slate-100">Pedidos de la tienda web</h3>
+                <div className="flex items-center gap-2">
+                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={`${inputCls} py-2 px-3`}>
                         <option value="">Todos los estados</option>
                         <option value="pendiente">Pendiente</option>
                         <option value="confirmado">Confirmado</option>
                         <option value="entregado">Entregado</option>
                         <option value="cancelado">Cancelado</option>
                     </select>
-                    <button onClick={cargar} style={{ ...btnSecundario, padding: '8px 14px', fontSize: 12 }}>↻</button>
+                    <Button variant="outline" size="sm" onClick={cargar}>↻</Button>
                 </div>
             </div>
 
             {cargando ? (
-                <p style={{ color: s.textMuted, fontSize: 13, padding: '24px 0', textAlign: 'center' }}>Cargando pedidos...</p>
+                <p className="py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">Cargando pedidos...</p>
             ) : pedidos.length === 0 ? (
-                <p style={{ color: s.textMuted, fontSize: 13, padding: '48px 0', textAlign: 'center' }}>No hay pedidos{filtroEstado ? ` con estado "${filtroEstado}"` : ''}.</p>
+                <p className="py-12 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay pedidos{filtroEstado ? ` con estado "${filtroEstado}"` : ''}.</p>
             ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table className="w-full border-collapse">
                     <thead>
-                        <tr style={{ background: s.tableTh || s.surfaceLow }}>
+                        <tr className="bg-slate-50 dark:bg-slate-900">
                             {['N° Pedido', 'Cliente', 'Entrega', 'Estado', 'Fecha', ''].map(h => (
-                                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+                                <th key={h} className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -1766,23 +1737,22 @@ function TabPedidos({ s, btnSecundario, sharedProps }) {
                         {pedidos.map(p => {
                             const est = ESTADOS[p.estado] || ESTADOS.pendiente
                             return (
-                                <tr key={p.id} style={{ borderTop: `1px solid ${s.borderLight || s.border}` }}>
-                                    <td style={{ padding: '10px 12px', fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: s.text }}>{p.numero_pedido}</td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: s.text }}>{p.cliente_nombre || '—'}</p>
-                                        <p style={{ margin: 0, fontSize: 11, color: s.textMuted }}>{p.cliente_telefono || ''}</p>
+                                <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700">
+                                    <td className="px-3 py-2.5 font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{p.numero_pedido}</td>
+                                    <td className="px-3 py-2.5">
+                                        <p className="m-0 text-[13px] font-semibold text-slate-900 dark:text-slate-100">{p.cliente_nombre || '—'}</p>
+                                        <p className="m-0 text-[11px] text-slate-500 dark:text-slate-400">{p.cliente_telefono || ''}</p>
                                     </td>
-                                    <td style={{ padding: '10px 12px', fontSize: 12, color: s.textMuted }}>{p.tipo_entrega === 'delivery' ? 'Delivery' : 'Retiro'}</td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: est.bg, color: est.color }}>{est.label}</span>
+                                    <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{p.tipo_entrega === 'delivery' ? 'Delivery' : 'Retiro'}</td>
+                                    <td className="px-3 py-2.5">
+                                        <span className="rounded-[20px] px-2.5 py-[3px] text-[11px] font-bold" style={{ background: est.bg, color: est.color }}>{est.label}</span>
                                     </td>
-                                    <td style={{ padding: '10px 12px', fontSize: 12, color: s.textMuted }}>{formatearSoloFecha(p.created_at)}</td>
-                                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                                        <button onClick={() => handleEliminar(p)}
-                                            style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                    <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{formatearSoloFecha(p.created_at)}</td>
+                                    <td className="px-3 py-2.5 text-right">
+                                        <Button variant="destructive" size="sm" onClick={() => handleEliminar(p)}>
+                                            <IconBasura />
                                             Eliminar
-                                        </button>
+                                        </Button>
                                     </td>
                                 </tr>
                             )
@@ -1819,66 +1789,23 @@ const TABS = [
 ]
 
 function TiendaWeb() {
-    const { darkMode } = useApp()
     const [tab, setTab] = useState('productos')
 
-    const s = {
-        bg:          darkMode ? '#0f172a' : '#f6f6f8',
-        surface:     darkMode ? '#1e293b' : 'white',
-        surfaceLow:  darkMode ? '#1a2536' : '#f8fafc',
-        border:      darkMode ? '#334155' : 'rgba(26,26,127,0.08)',
-        borderLight: darkMode ? '#2d3f55' : 'rgba(26,26,127,0.04)',
-        text:        darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted:   darkMode ? '#94a3b8' : '#64748b',
-        textFaint:   darkMode ? '#64748b' : '#94a3b8',
-        inputBg:     darkMode ? '#0f172a' : '#f8fafc',
-        tableTh:     darkMode ? '#1a2536' : 'rgba(26,26,127,0.02)',
-        barColor:    darkMode ? '#4f46e5' : '#1a1a2e',
-        barTrack:    darkMode ? '#334155' : '#f1f5f9',
-    }
-
-    const inputStyle = {
-        width: '100%', padding: '10px 14px', borderRadius: 8,
-        border: `1px solid ${s.border}`, fontSize: 13, boxSizing: 'border-box',
-        background: s.inputBg, color: s.text, marginBottom: 10,
-    }
-    const labelStyle = {
-        fontSize: 11, fontWeight: 700, color: s.textMuted,
-        textTransform: 'uppercase', letterSpacing: '0.05em',
-        display: 'block', marginBottom: 6,
-    }
-    const btnPrimario = {
-        padding: '10px 18px', borderRadius: 8, border: 'none',
-        background: '#1a1a2e', color: 'white', cursor: 'pointer',
-        fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
-    }
-    const btnSecundario = {
-        padding: '10px 18px', borderRadius: 8,
-        border: `1px solid ${s.border}`, background: s.surface,
-        color: s.text, cursor: 'pointer', fontSize: 13, fontWeight: 500,
-    }
-
-    const sharedProps = { s, inputStyle, labelStyle, btnPrimario, btnSecundario }
-
     return (
-        <div style={{ padding: '24px', background: s.bg, minHeight: '100%', color: s.text }}>
+        <div className="page-scroll min-h-full bg-slate-50 p-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
             {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: s.text }}>Tienda Web</h1>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: s.textMuted }}>Gestioná productos, banners y configuración de tu tienda online.</p>
+            <div className="mb-6">
+                <h1 className="m-0 text-[22px] font-bold text-slate-900 dark:text-slate-100">Tienda Web</h1>
+                <p className="mt-1 mb-0 text-[13px] text-slate-500 dark:text-slate-400">Gestioná productos, banners y configuración de tu tienda online.</p>
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: s.surface, borderRadius: 10, padding: 4, border: `1px solid ${s.border}`, width: 'fit-content' }}>
+            <div className="mb-6 flex w-fit gap-1 rounded-[10px] border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
                 {TABS.map(t => (
                     <button
                         key={t.key}
                         onClick={() => setTab(t.key)}
-                        style={{
-                            padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-                            background: tab === t.key ? '#1a1a2e' : 'transparent',
-                            color: tab === t.key ? 'white' : s.textMuted,
-                        }}
+                        className={`rounded-[7px] border-none px-4.5 py-2 text-xs font-semibold transition-all ${tab === t.key ? 'bg-[#1a1a2e] text-white' : 'bg-transparent text-slate-500 dark:text-slate-400'}`}
                     >
                         {t.label}
                     </button>
@@ -1886,14 +1813,14 @@ function TiendaWeb() {
             </div>
 
             {/* Contenido */}
-            <div style={{ background: s.surface, borderRadius: 12, padding: 24, border: `1px solid ${s.border}` }}>
-                {tab === 'productos'     && <TabProductos     {...sharedProps} />}
-                {tab === 'filtros'       && <TabFiltros       {...sharedProps} />}
-                {tab === 'subcategorias' && <TabSubcategorias {...sharedProps} />}
-                {tab === 'categorias'    && <TabCategorias    {...sharedProps} />}
-                {tab === 'banners'       && <TabBanners       {...sharedProps} />}
-                {tab === 'configuracion' && <TabConfiguracion {...sharedProps} />}
-                {tab === 'trafico'       && <TabTrafico       s={s} />}
+            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+                {tab === 'productos'     && <TabProductos />}
+                {tab === 'filtros'       && <TabFiltros />}
+                {tab === 'subcategorias' && <TabSubcategorias />}
+                {tab === 'categorias'    && <TabCategorias />}
+                {tab === 'banners'       && <TabBanners />}
+                {tab === 'configuracion' && <TabConfiguracion />}
+                {tab === 'trafico'       && <TabTrafico />}
             </div>
         </div>
     )

@@ -62,7 +62,7 @@ router.get('/resumen', async (req, res) => {
 
         const ventasHoy = await db.query(
             `SELECT
-                COUNT(*) as cantidad,
+                COUNT(DISTINCT COALESCE(v.numero_factura, v.id::text)) as cantidad,
                 COALESCE(SUM(${VENTA_SIN_DELIVERY}), 0) as total,
                 COALESCE(SUM(${GANANCIA_VENTA}), 0) as ganancia
              FROM ventas v
