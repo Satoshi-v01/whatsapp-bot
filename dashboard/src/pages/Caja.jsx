@@ -702,13 +702,19 @@ function Caja() {
                                                 placeholder="Buscar cliente por nombre, RUC o telefono..."
                                                 value={busquedaCliente}
                                                 onChange={e => handleBuscarCliente(e.target.value)}
-                                                className="w-full border-none bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+                                                autoComplete="off"
+                                                className="w-full rounded-lg border-none bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
                                             />
                                         )}
                                     </div>
                                     {!clienteSeleccionado && (
                                         <Button variant="outline" size="sm" onClick={() => setCreandoCliente(!creandoCliente)} className="shrink-0">
-                                            {creandoCliente ? 'Cancelar' : '+ Nuevo'}
+                                            {creandoCliente ? 'Cancelar' : (
+                                                <>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                    Nuevo
+                                                </>
+                                            )}
                                         </Button>
                                     )}
                                 </div>
@@ -761,7 +767,10 @@ function Caja() {
                                             </label>
                                         </div>
                                     )}
-                                    <Button variant="outline" size="xs" onClick={agregarLinea}>+ Agregar</Button>
+                                    <Button variant="outline" size="xs" onClick={agregarLinea}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                        Agregar
+                                    </Button>
                                 </div>
                             </div>
 
@@ -884,17 +893,22 @@ function Caja() {
                                     {!linea.productoSeleccionado ? (
                                         <>
                                             <div className="flex items-center gap-2">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9d9b96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                                </svg>
-                                                <input
-                                                    ref={idx === 0 ? busquedaProductoRef : null}
-                                                    placeholder="Buscar producto por nombre o marca..."
-                                                    value={linea.busqueda}
-                                                    onChange={e => handleBuscarProducto(linea.id, e.target.value)}
-                                                    className="flex-1 border-none bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
-                                                    autoFocus={idx === 0 && lineasValidas.length === 0}
-                                                />
+                                                <div className="relative flex-1">
+                                                    <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-slate-400">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                                        </svg>
+                                                    </span>
+                                                    <input
+                                                        ref={idx === 0 ? busquedaProductoRef : null}
+                                                        placeholder="Buscar producto por nombre o marca..."
+                                                        value={linea.busqueda}
+                                                        onChange={e => handleBuscarProducto(linea.id, e.target.value)}
+                                                        autoComplete="off"
+                                                        className="w-full rounded-lg border-none bg-transparent pl-[23px] text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+                                                        autoFocus={idx === 0 && lineasValidas.length === 0}
+                                                    />
+                                                </div>
                                                 {lineas.length > 1 && (
                                                     <button onClick={() => eliminarLinea(linea.id)} className="text-base text-slate-400 hover:text-slate-600">x</button>
                                                 )}
@@ -1294,7 +1308,10 @@ function Caja() {
                                                 className={inputCls} />
                                             <input type="number" placeholder="Monto Gs." value={nuevoGasto.monto} onChange={e => setNuevoGasto({ ...nuevoGasto, monto: e.target.value })}
                                                 className={`${inputCls} w-[120px]`} />
-                                            <Button onClick={agregarGasto} className="whitespace-nowrap">+ Agregar</Button>
+                                            <Button onClick={agregarGasto} className="whitespace-nowrap">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                Agregar
+                                            </Button>
                                         </div>
                                         {gastos.length === 0 ? (
                                             <p className="py-2.5 text-center text-xs text-slate-400">No hay gastos registrados para esta sesion.</p>

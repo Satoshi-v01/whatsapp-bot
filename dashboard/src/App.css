@@ -137,6 +137,18 @@ html, body {
   line-height: 1.5;
 }
 
+/* El navegador pinta el fondo de autocompletado (nombre/telefono/email guardados)
+   como un rectangulo azul/amarillo opaco que ignora el border-radius del input
+   -- se transiciona a un fondo transparente muy retrasado para que el color
+   propio del input (heredado via -webkit-text-fill-color) se mantenga y el
+   radio se respete visualmente. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: inherit;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-ui);
   letter-spacing: -0.025em;
