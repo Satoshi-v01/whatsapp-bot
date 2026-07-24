@@ -99,7 +99,9 @@ function GraficoTendenciaVentas({ datos, colorLinea, colorTexto, colorTextoMuted
                     position: 'absolute',
                     left: `${(puntos[hoverIndex].x / W) * 100}%`,
                     top: `${(puntos[hoverIndex].y / H) * 100}%`,
-                    transform: 'translate(-50%, -130%)',
+                    // Cerca de los extremos, el tooltip centrado se sale del Card (overflow-hidden)
+                    // y queda cortado — se ancla al costado en vez de centrarlo en esos casos.
+                    transform: `translate(${hoverIndex === 0 ? '0%' : hoverIndex === n - 1 ? '-100%' : '-50%'}, -130%)`,
                     background: colorFondo,
                     border: `1px solid ${colorGrid}`,
                     borderRadius: '8px',
