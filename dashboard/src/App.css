@@ -111,11 +111,17 @@
   --notif-urgent-bg: rgba(239,68,68,0.09);
 }
 
-/* ── RESET & BASE ── */
-*, *::before, *::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ── RESET & BASE ──
+   En @layer base: sin esto, este reset (sin capa) le gana en cascada a
+   CUALQUIER utilidad de Tailwind (p-, px-, m-, etc) sin importar
+   especificidad -- las reglas sin @layer siempre ganan sobre las que si
+   estan en una capa, aunque su selector sea mas especifico. */
+@layer base {
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 html, body {
