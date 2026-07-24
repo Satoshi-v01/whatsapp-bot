@@ -440,6 +440,37 @@ router.get('/:id', autenticar, verificarPermiso('inventario', 'ver'), async (req
     }
 })
 
+// Helper: generar SKU automático a partir de las iniciales del nombre + numero secuencial
+const CONECTORES_SKU = new Set(['Y', 'DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS', 'EN', 'CON', 'PARA', 'A', 'AL', 'SIN', 'O', 'U'])
+
+function inicialesProducto(nombre) {
+    const palabras = String(nombre || '')
+        .toUpperCase()
+        .replace(/[^A-ZÁÉÍÓÚÑ0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(p => p && !/^\d+$/.test(p) && !CONECTORES_SKU.has(p))
+    const iniciales = palabras.map(p => p[0]).join('').slice(0, 4)
+    return iniciales || 'PR'
+}
+
+// dbClient acepta tanto el pool (db) como un client de transaccion
+async function siguienteSkuAuto(dbClient, nombre, cache) {
+    const prefijo = inicialesProducto(nombre)
+    let max = cache?.get(prefijo)
+    if (max === undefined) {
+        const existentes = await dbClient.query(`SELECT sku FROM productos WHERE sku LIKE $1`, [`${prefijo}-%`])
+        max = 0
+        const patron = new RegExp(`^${prefijo}-(\\d+)$`)
+        for (const row of existentes.rows) {
+            const m = row.sku?.match(patron)
+            if (m) max = Math.max(max, parseInt(m[1]))
+        }
+    }
+    max += 1
+    cache?.set(prefijo, max)
+    return `${prefijo}-${String(max).padStart(3, '0')}`
+}
+
 // Helper: derivar campos ecommerce desde subcategoria
 async function ecommerceDesdeSubcategoria(subcategoria_id) {
     if (!subcategoria_id) return {}
@@ -458,12 +489,26 @@ router.post('/', autenticar, verificarPermiso('inventario', 'crear'), async (req
         const { categoria_id, marca_id, nombre, descripcion, calidad, sku, especie, seccion_inventario, subcategoria_id } = req.body
         if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' })
         const eco = await ecommerceDesdeSubcategoria(subcategoria_id)
-        const resultado = await db.query(
-            `INSERT INTO productos (categoria_id, marca_id, nombre, descripcion, calidad, sku, especie, seccion_inventario, subcategoria_id, ecommerce_categoria, atributos)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [categoria_id || null, marca_id || null, nombre, descripcion || null, calidad || 'standard', sku || null, especie || null, seccion_inventario || null, subcategoria_id || null,
-             eco.ecommerce_categoria || null, JSON.stringify(eco.atributos || {})]
-        )
+
+        let skuFinal = sku || null
+        let resultado
+        for (let intento = 0; intento < 5; intento++) {
+            if (!sku) skuFinal = await siguienteSkuAuto(db, nombre)
+            try {
+                resultado = await db.query(
+                    `INSERT INTO productos (categoria_id, marca_id, nombre, descripcion, calidad, sku, especie, seccion_inventario, subcategoria_id, ecommerce_categoria, atributos)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+                    [categoria_id || null, marca_id || null, nombre, descripcion || null, calidad || 'standard', skuFinal, especie || null, seccion_inventario || null, subcategoria_id || null,
+                     eco.ecommerce_categoria || null, JSON.stringify(eco.atributos || {})]
+                )
+                break
+            } catch (err) {
+                // Si el SKU autogenerado choco por una carrera entre dos creaciones simultaneas, reintentar
+                if (err.code === '23505' && !sku && intento < 4) continue
+                throw err
+            }
+        }
+
         registrarLog({ usuario_id: req.usuario?.id, usuario_nombre: req.usuario?.nombre, accion: 'crear', modulo: 'inventario', entidad: 'producto', entidad_id: resultado.rows[0].id, descripcion: `Producto creado: ${resultado.rows[0].nombre}`, dato_nuevo: resultado.rows[0], ip: req.ip }).catch(() => {})
         res.status(201).json(resultado.rows[0])
     } catch (error) {
@@ -790,6 +835,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
         const pressPorProdNombre = new Map(presentacionesRes.rows.map(r => [`${r.producto_id}__${r.nombre}`, r]))
         const seccionesValidas = new Set(seccionesRes.rows.map(r => r.slug.toLowerCase()))
         const subcatPorNombre = new Map(subcatRes.rows.map(r => [r.nombre, r.id]))
+        const skuAutoCache = new Map() // cache de prefijo -> ultimo numero usado, para SKU autogenerado
 
         // Contador O(n) en vez de O(n²)
         const contadorPres = new Map()
@@ -842,7 +888,7 @@ router.post('/importar', autenticar, verificarPermiso('inventario', 'crear'), as
                 const subcategoriaId = fila.subcategoria?.trim()
                     ? (subcatPorNombre.get(fila.subcategoria.trim().toLowerCase()) ?? null)
                     : null
-                const skuVal = fila.sku?.trim() || null
+                const skuVal = fila.sku?.trim() || await siguienteSkuAuto(client, nombre, skuAutoCache)
 
                 // Placeholder negativo para identificar productos pendientes de crear
                 productoId = -(nuevosProductosDatos.length + 1)
