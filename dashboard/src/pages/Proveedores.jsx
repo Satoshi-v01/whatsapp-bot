@@ -7,8 +7,9 @@ import api from '../services/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'mb-2.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const inputCls = 'mb-2.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 outline-none transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 const IconBuscar = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -678,10 +679,13 @@ function Proveedores() {
                             </div>
                             <div>
                                 <label className={labelCls}>Tipo *</label>
-                                <select value={formFactura.tipo} onChange={e => setFormFactura({...formFactura, tipo: e.target.value, metodo_pago: e.target.value === 'credito' ? '' : 'efectivo'})} className={inputCls}>
-                                    <option value="contado">Contado</option>
-                                    <option value="credito">Crédito</option>
-                                </select>
+                                <Select value={formFactura.tipo} onValueChange={v => setFormFactura({...formFactura, tipo: v, metodo_pago: v === 'credito' ? '' : 'efectivo'})}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="contado">Contado</SelectItem>
+                                        <SelectItem value="credito">Crédito</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             {formFactura.tipo === 'credito' ? (
                                 <div>
@@ -691,10 +695,13 @@ function Proveedores() {
                             ) : (
                                 <div>
                                     <label className={labelCls}>Método de pago *</label>
-                                    <select value={formFactura.metodo_pago} onChange={e => setFormFactura({...formFactura, metodo_pago: e.target.value})} className={inputCls}>
-                                        <option value="efectivo">Efectivo</option>
-                                        <option value="transferencia">Transferencia</option>
-                                    </select>
+                                    <Select value={formFactura.metodo_pago} onValueChange={v => setFormFactura({...formFactura, metodo_pago: v})}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="efectivo">Efectivo</SelectItem>
+                                            <SelectItem value="transferencia">Transferencia</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
 
@@ -863,10 +870,13 @@ function Proveedores() {
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className={labelCls}>Método de pago *</label>
-                                <select value={formPago.metodo_pago} onChange={e => setFormPago({...formPago, metodo_pago: e.target.value})} className={inputCls}>
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="transferencia">Transferencia</option>
-                                </select>
+                                <Select value={formPago.metodo_pago} onValueChange={v => setFormPago({...formPago, metodo_pago: v})}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="efectivo">Efectivo</SelectItem>
+                                        <SelectItem value="transferencia">Transferencia</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div>
                                 <label className={labelCls}>Fecha de pago *</label>

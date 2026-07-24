@@ -4,6 +4,7 @@ import api from '../services/api'
 import { formatearFecha, fechaHoyPY } from '../utils/fecha'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function gs(n) {
@@ -275,7 +276,7 @@ export default function HistorialPedidos() {
         { v: 'expirada',   l: 'Expirada' },
     ]
 
-    const inputCls = 'rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
+    const inputCls = 'rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none transition-shadow focus:border-slate-300 dark:focus:border-slate-600 focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-slate-100/5'
 
     return (
         <div className="min-h-screen bg-slate-50 px-5 pb-12 pt-6 dark:bg-slate-900">
@@ -314,12 +315,18 @@ export default function HistorialPedidos() {
                             onChange={e => setBuscar(e.target.value)}
                             className={`${inputCls} min-w-[140px] flex-1 basis-[180px]`}
                         />
-                        <select value={periodo} onChange={e => setPeriodo(e.target.value)} className={`${inputCls} cursor-pointer`}>
-                            {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                        </select>
-                        <select value={estado} onChange={e => setEstado(e.target.value)} className={`${inputCls} cursor-pointer`}>
-                            {ESTADOS.map(e => <option key={e.v} value={e.v}>{e.l}</option>)}
-                        </select>
+                        <Select value={periodo} onValueChange={setPeriodo}>
+                            <SelectTrigger className="w-auto"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {PERIODOS.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={estado} onValueChange={setEstado}>
+                            <SelectTrigger className="w-auto"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {ESTADOS.map(e => <SelectItem key={e.v} value={e.v}>{e.l}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         <Button variant="outline" onClick={cargar} className="shrink-0">
                             Actualizar
                         </Button>

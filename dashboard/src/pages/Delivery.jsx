@@ -10,8 +10,9 @@ import { asignarRepartidor } from '../services/deliveries'
 import { formatearCalidad } from '../utils/formato'
 import { fechaHoyPY } from '../utils/fecha'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'mb-2.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const inputCls = 'mb-2.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 const estadoConfig = {
@@ -465,11 +466,13 @@ function Delivery() {
                                     {repartidores.length > 0 && (
                                         <div className="rounded-[10px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
                                             <p className="mb-2.5 text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-400">Repartidor asignado</p>
-                                            <select value={detalle.repartidor_id || ''} onChange={e => handleAsignarRepartidor(detalle.id, e.target.value ? parseInt(e.target.value) : null)}
-                                                className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                                                <option value="">Sin asignar</option>
-                                                {repartidores.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                                            </select>
+                                            <Select value={String(detalle.repartidor_id || '')} onValueChange={v => handleAsignarRepartidor(detalle.id, v ? parseInt(v) : null)}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="">Sin asignar</SelectItem>
+                                                    {repartidores.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.nombre}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
                                             {detalle.repartidor_id && detalle.asignado_at && (
                                                 <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
                                                     Asignado: {new Date(detalle.asignado_at).toLocaleString('es-PY', { timeZone: 'America/Asuncion' })}
@@ -871,18 +874,24 @@ function ModalNuevoDelivery({ onClose, onCreado, setModalConfirmar }) {
                             <div className="mb-2.5 grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelCls}>Método de pago</label>
-                                    <select value={formEntrega.metodo_pago} onChange={e => setFormEntrega({ ...formEntrega, metodo_pago: e.target.value })} className={inputCls}>
-                                        <option value="efectivo">Efectivo</option>
-                                        <option value="transferencia">Transferencia</option>
-                                        <option value="tarjeta">Tarjeta</option>
-                                    </select>
+                                    <Select value={formEntrega.metodo_pago} onValueChange={v => setFormEntrega({ ...formEntrega, metodo_pago: v })}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="efectivo">Efectivo</SelectItem>
+                                            <SelectItem value="transferencia">Transferencia</SelectItem>
+                                            <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div>
                                     <label className={labelCls}>Estado de pago</label>
-                                    <select value={formEntrega.estado_pago} onChange={e => setFormEntrega({ ...formEntrega, estado_pago: e.target.value })} className={inputCls}>
-                                        <option value="pendiente_pago">Pendiente</option>
-                                        <option value="pagado">Pagado</option>
-                                    </select>
+                                    <Select value={formEntrega.estado_pago} onValueChange={v => setFormEntrega({ ...formEntrega, estado_pago: v })}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="pendiente_pago">Pendiente</SelectItem>
+                                            <SelectItem value="pagado">Pagado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                             <label className={labelCls}>Notas internas (opcional)</label>
