@@ -14,16 +14,36 @@ import {
     importarProductos, descargarTemplatePrecios, descargarTemplateStock, importarStock
 } from '../services/productos'
 import ModalConfirmar from '../components/ModalConfirmar'
-import { useApp } from '../App'
 import { formatearFecha } from '../utils/fecha'
 import { getLotesPresentacion, crearLote, eliminarLote } from '../services/lotes'
 import { formatearCalidad, formatMiles, parseMiles } from '../utils/formato'
 import { registrarTransformacion } from '../services/transformaciones'
 
-function Modal({ children, zIndex = 1000, s }) {
+const inputCls = 'mb-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+const btnPrimarioCls = 'inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4.5 py-2.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
+const btnSecundarioCls = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4.5 py-2.5 text-[13px] font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700/60'
+const chipBtnCls = 'rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/60'
+const chipDeleteCls = 'inline-flex items-center rounded-md border border-red-300 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-800 hover:bg-red-200 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25'
+
+const IconAdvertencia = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+const IconDescargar = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+const IconSubir = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+const IconRefrescar = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+const IconLapiz = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+const IconBasura = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></svg>
+const IconBuscar = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+const IconChevronUp = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15" /></svg>
+const IconChevronDown = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
+const IconCaja = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
+const IconCapas = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
+const IconProhibido = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+const IconCaja3D = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
+
+function Modal({ children, zIndex = 1000 }) {
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex }}>
-            <div style={{ background: s.surface, borderRadius: '14px', padding: '24px', maxHeight: '90vh', overflowY: 'auto', color: s.text, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50" style={{ zIndex }}>
+            <div className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 text-slate-900 shadow-2xl dark:bg-slate-800 dark:text-slate-100">
                 {children}
             </div>
         </div>
@@ -31,27 +51,6 @@ function Modal({ children, zIndex = 1000, s }) {
 }
 
 function Inventario() {
-    const { darkMode } = useApp()
-
-    const s = {
-        bg: darkMode ? '#0f172a' : '#f6f6f8',
-        surface: darkMode ? '#1e293b' : 'white',
-        surfaceLow: darkMode ? '#1a2536' : '#f8fafc',
-        border: darkMode ? '#334155' : 'rgba(26,26,127,0.08)',
-        borderLight: darkMode ? '#2d3f55' : 'rgba(26,26,127,0.05)',
-        text: darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted: darkMode ? '#94a3b8' : '#64748b',
-        textFaint: darkMode ? '#64748b' : '#94a3b8',
-        inputBg: darkMode ? '#0f172a' : '#f8fafc',
-        rowHover: darkMode ? '#1a2536' : 'rgba(26,26,127,0.01)',
-        tableTh: darkMode ? '#1a2536' : 'rgba(26,26,127,0.02)',
-    }
-
-    const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, marginBottom: '10px', fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text }
-    const labelStyle = { fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
-    const btnPrimario = { padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }
-    const btnSecundario = { padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
-
     const [pestanaActiva, setPestanaActiva] = useState('balanceados')
     const [buscar, setBuscar] = useState('')
     const [modalCategorias, setModalCategorias] = useState(false)
@@ -649,61 +648,61 @@ function colorVencimiento(diasParaVencer) {
             : productos.filter(p => p.seccion_inventario === t.id).length
     })
 
-    
+
     if (cargando) return (
-        <div style={{ padding: '32px', background: s.bg, color: s.textMuted, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="flex h-full items-center justify-center bg-slate-50 p-8 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
             Cargando inventario...
         </div>
     )
 
     return (
-        <div className="page-scroll" style={{ padding: '32px', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll min-h-full bg-slate-50 p-8 dark:bg-slate-950">
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
+            <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 style={{ fontSize: '26px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>Inventario</h1>
-                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px' }}>Gestioná productos, precios y stock.</p>
+                    <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Inventario</h1>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Gestioná productos, precios y stock.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setModalSecciones(true)} style={btnSecundario}>Secciones</button>
-                    <button onClick={() => setModalMarca(true)} style={btnSecundario}>Marcas</button>
-                    {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} style={btnSecundario}>Subcategorías</button>}
-                    <button onClick={() => descargarTemplatePrecios().catch(() => {})} style={btnSecundario}>⬇ Template precios</button>
-                    <button onClick={() => inputImportRef.current?.click()} style={btnSecundario}>⬆ Importar precios</button>
-                    <input ref={inputImportRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcel} style={{ display: 'none' }} />
-                    <button onClick={() => descargarTemplateStock().catch(() => {})} style={btnSecundario}>⬇ Template stock</button>
-                    <button onClick={() => inputImportStockRef.current?.click()} style={btnSecundario}>⬆ Importar stock</button>
-                    <input ref={inputImportStockRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcelStock} style={{ display: 'none' }} />
-                    <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} style={btnPrimario}>+ Producto</button>
+                <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setModalSecciones(true)} className={btnSecundarioCls}>Secciones</button>
+                    <button onClick={() => setModalMarca(true)} className={btnSecundarioCls}>Marcas</button>
+                    {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} className={btnSecundarioCls}>Subcategorías</button>}
+                    <button onClick={() => descargarTemplatePrecios().catch(() => {})} className={btnSecundarioCls}><IconDescargar /> Template precios</button>
+                    <button onClick={() => inputImportRef.current?.click()} className={btnSecundarioCls}><IconSubir /> Importar precios</button>
+                    <input ref={inputImportRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcel} className="hidden" />
+                    <button onClick={() => descargarTemplateStock().catch(() => {})} className={btnSecundarioCls}><IconDescargar /> Template stock</button>
+                    <button onClick={() => inputImportStockRef.current?.click()} className={btnSecundarioCls}><IconSubir /> Importar stock</button>
+                    <input ref={inputImportStockRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcelStock} className="hidden" />
+                    <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} className={btnPrimarioCls}>+ Producto</button>
                 </div>
             </div>
 
             {/* Métricas */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
+            <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                    { label: 'Total productos',  valor: totalProductos,      icono: 'box',     color: s.text,    bg: s.surface },
-                    { label: 'Presentaciones',   valor: totalPresentaciones, icono: 'layers',  color: s.text,    bg: s.surface },
-                    { label: 'Stock bajo',       valor: stockBajo,           icono: 'warning', color: '#f59e0b', bg: darkMode ? '#451a03' : '#fffbeb' },
-                    { label: 'Sin stock',        valor: sinStock,            icono: 'banned',  color: '#ef4444', bg: darkMode ? '#450a0a' : '#fef2f2' },
+                    { label: 'Total productos',  valor: totalProductos,      icono: 'box',     cls: 'text-slate-900 dark:text-slate-100', bgCls: 'bg-white dark:bg-slate-800' },
+                    { label: 'Presentaciones',   valor: totalPresentaciones, icono: 'layers',  cls: 'text-slate-900 dark:text-slate-100', bgCls: 'bg-white dark:bg-slate-800' },
+                    { label: 'Stock bajo',       valor: stockBajo,           icono: 'warning', cls: 'text-amber-500',                     bgCls: 'bg-amber-50 dark:bg-amber-950/40' },
+                    { label: 'Sin stock',        valor: sinStock,            icono: 'banned',  cls: 'text-red-500',                       bgCls: 'bg-red-50 dark:bg-red-950/40' },
                 ].map((m, i) => (
-                    <div key={i} style={{ background: m.bg, borderRadius: '12px', padding: '20px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</p>
-                            <span style={{ color: m.color, display: 'flex' }}>
-                                {m.icono === 'box'     && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>}
-                                {m.icono === 'layers'  && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
-                                {m.icono === 'warning' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-                                {m.icono === 'banned'  && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>}
+                    <div key={i} className={`rounded-xl border border-slate-200 p-5 shadow-sm dark:border-slate-700 ${m.bgCls}`}>
+                        <div className="mb-3 flex items-center justify-between">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{m.label}</p>
+                            <span className={`flex ${m.cls}`}>
+                                {m.icono === 'box'     && <IconCaja />}
+                                {m.icono === 'layers'  && <IconCapas />}
+                                {m.icono === 'warning' && <IconAdvertencia />}
+                                {m.icono === 'banned'  && <IconProhibido />}
                             </span>
                         </div>
-                        <p style={{ fontSize: '28px', fontWeight: '800', color: m.color, letterSpacing: '-1px' }}>{m.valor}</p>
+                        <p className={`text-[28px] font-extrabold tracking-tight ${m.cls}`}>{m.valor}</p>
                     </div>
                 ))}
             </div>
 
             {/* Pestanas tipo Chrome */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '0', borderBottom: `2px solid ${s.border}`, marginBottom: '0' }}>
+            <div className="flex gap-1 border-b-2 border-slate-200 dark:border-slate-700">
                 {PESTANAS.map(t => {
                     const activa = pestanaActiva === t.id
                     const color = t.color || '#1a1a2e'
@@ -711,35 +710,36 @@ function colorVencimiento(diasParaVencer) {
                     const contadorAlerta = esSinCat && contadorPorPestana[t.id] > 0
                     return (
                         <button key={t.id} onClick={() => { setPestanaActiva(t.id); setBuscar('') }}
-                            style={{ padding: '10px 20px', border: 'none', borderBottom: activa ? `2px solid ${color}` : '2px solid transparent', marginBottom: '-2px', background: activa ? s.surface : 'transparent', color: activa ? s.text : s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: activa ? '700' : '500', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s' }}>
-                            {!esSinCat && <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0, opacity: activa ? 1 : 0.4 }} />}
+                            className={`-mb-0.5 flex items-center gap-2 rounded-t-lg border-b-2 px-5 py-2.5 text-[13px] transition-colors ${activa ? 'bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100' : 'bg-transparent text-slate-500 dark:text-slate-400'}`}
+                            style={{ borderBottomColor: activa ? color : 'transparent', fontWeight: activa ? 700 : 500 }}>
+                            {!esSinCat && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color, opacity: activa ? 1 : 0.4 }} />}
                             {t.label}
-                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 7px', borderRadius: '10px', background: activa ? color : (contadorAlerta ? '#fee2e2' : s.border), color: activa ? 'white' : (contadorAlerta ? '#dc2626' : s.textMuted) }}>{contadorPorPestana[t.id]}</span>
+                            <span className={`rounded-[10px] px-1.75 py-px text-[11px] font-bold ${activa ? 'text-white' : contadorAlerta ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`} style={activa ? { background: color } : undefined}>{contadorPorPestana[t.id]}</span>
                         </button>
                     )
                 })}
             </div>
 
             {/* Buscador */}
-            <div style={{ background: s.surface, borderRadius: '0 12px 0 0', border: `1px solid ${s.border}`, borderBottom: 'none', padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div className="flex items-center gap-3 rounded-b-none rounded-t-none border border-b-0 border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+                <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+                        <IconBuscar />
                     </span>
                     <input
                         placeholder="Buscar por nombre, marca, categoría o SKU..."
                         value={buscar}
                         onChange={e => setBuscar(e.target.value)}
-                        style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surfaceLow, color: s.text, fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                        className={`${inputCls} mb-0 pl-[38px]`}
                     />
                 </div>
-                <button onClick={cargarDatos} style={{ ...btnSecundario, padding: '10px 14px', fontSize: '12px' }}>↻ Actualizar</button>
+                <button onClick={cargarDatos} className={`${btnSecundarioCls} px-3.5 py-2.5 text-xs`}><IconRefrescar /> Actualizar</button>
             </div>
 
             {/* Vista agrupada: Marca → Categoría → Productos */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="flex flex-col gap-3">
                 {marcasOrdenadas.length === 0 ? (
-                    <div style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, padding: '48px', textAlign: 'center', color: s.textMuted, fontSize: '14px' }}>
+                    <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                         No hay productos que coincidan con la búsqueda.
                     </div>
                 ) : marcasOrdenadas.map(marca => {
@@ -751,54 +751,50 @@ function colorVencimiento(diasParaVencer) {
                     const catsOrdenadas = Object.keys(catsPorMarca).sort((a, b) => a === sinLabel ? 1 : b === sinLabel ? -1 : a.localeCompare(b))
 
                     return (
-                        <div key={marca} style={{ background: s.surface, borderRadius: '12px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                        <div key={marca} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
 
                             {/* Header marca */}
                             <div onClick={() => toggleMarca(marca)}
-                                style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: darkMode ? '#1a2536' : '#f8fafc', borderBottom: expandida ? `1px solid ${s.border}` : 'none', userSelect: 'none' }}
-                                onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
-                                onMouseLeave={e => e.currentTarget.style.background = darkMode ? '#1a2536' : '#f8fafc'}
+                                className={`flex cursor-pointer select-none items-center justify-between bg-slate-50 px-5 py-4 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800/70 ${expandida ? 'border-b border-slate-200 dark:border-slate-700' : ''}`}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <span style={{ fontSize: '14px', fontWeight: '800', color: 'white' }}>{marca.charAt(0).toUpperCase()}</span>
+                                <div className="flex items-center gap-3.5">
+                                    <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-slate-900 dark:bg-slate-100">
+                                        <span className="text-sm font-extrabold text-white dark:text-slate-900">{marca.charAt(0).toUpperCase()}</span>
                                     </div>
                                     <div>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: s.text, letterSpacing: '-0.3px' }}>{marca}</p>
-                                        <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '1px' }}>
+                                        <p className="text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{marca}</p>
+                                        <p className="mt-px text-[11px] text-slate-500 dark:text-slate-400">
                                             {totalProdsMarca} producto{totalProdsMarca !== 1 ? 's' : ''} · {catsOrdenadas.length} categoría{catsOrdenadas.length !== 1 ? 's' : ''} · Stock total: {totalStockMarca}
                                         </p>
                                     </div>
                                 </div>
-                                <span style={{ color: s.textFaint, display: 'flex' }}>
-                                    {expandida
-                                        ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>
-                                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                                    }
+                                <span className="flex text-slate-400 dark:text-slate-500">
+                                    {expandida ? <IconChevronUp /> : <IconChevronDown />}
                                 </span>
                             </div>
 
                             {/* Categorías dentro de la marca */}
                             {expandida && catsOrdenadas.map((cat, catIdx) => (
-                                <div key={cat} style={{ borderTop: catIdx > 0 ? `1px solid ${s.borderLight}` : 'none' }}>
+                                <div key={cat} className={catIdx > 0 ? 'border-t border-slate-100 dark:border-slate-700' : ''}>
 
                                     {/* Sub-header */}
-                                    <div style={{ padding: '8px 20px 8px 72px', background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(26,26,127,0.025)', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${s.borderLight}` }}>
-                                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#3730a3', background: '#e0e7ff', padding: '2px 10px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{cat}</span>
-                                        <span style={{ fontSize: '11px', color: s.textFaint }}>{catsPorMarca[cat].length} producto{catsPorMarca[cat].length !== 1 ? 's' : ''}</span>
+                                    <div className="flex items-center gap-2.5 border-b border-slate-100 bg-indigo-50/40 py-2 pl-[72px] pr-5 dark:border-slate-700 dark:bg-slate-900/50">
+                                        <span className="rounded-[10px] bg-indigo-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300">{cat}</span>
+                                        <span className="text-[11px] text-slate-400 dark:text-slate-500">{catsPorMarca[cat].length} producto{catsPorMarca[cat].length !== 1 ? 's' : ''}</span>
                                     </div>
 
                                     {/* Tabla de productos */}
-                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
                                         <thead>
-                                            <tr style={{ background: s.tableTh }}>
+                                            <tr className="bg-slate-50 dark:bg-slate-900">
                                                 {(tipoActivo === 'con_calidad_especie'
                                                     ? ['Producto', 'SKU', 'Calidad', 'Especie', 'Presentaciones', 'Acciones']
                                                     : tipoActivo === 'con_especie'
                                                     ? ['Producto', 'SKU', 'Subcategoria', 'Especie', 'Presentaciones', 'Acciones']
                                                     : ['Producto', 'SKU', 'Presentaciones', 'Acciones']
                                                 ).map(h => (
-                                                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
+                                                    <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -810,70 +806,68 @@ function colorVencimiento(diasParaVencer) {
                                                 return (
                                                     <Fragment key={producto.id}>
                                                         <tr
-                                                            style={{ borderBottom: `1px solid ${expandido ? 'transparent' : s.borderLight}`, transition: 'background 0.1s', cursor: 'pointer' }}
+                                                            className={`cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60 ${expandido ? 'border-b border-transparent' : 'border-b border-slate-100 dark:border-slate-700'}`}
                                                             onClick={() => setProductoExpandido(expandido ? null : producto.id)}
-                                                            onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
-                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                                         >
-                                                            <td style={{ padding: '14px 16px' }}>
-                                                                <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{producto.nombre}</p>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
-                                                                    <span style={{ fontSize: '11px', color: s.textFaint }}>Stock: {stockTotal}</span>
-                                                                    {alertas > 0 && <span style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', background: darkMode ? '#450a0a' : '#fee2e2', padding: '1px 6px', borderRadius: '10px' }}>{alertas} bajo stock</span>}
+                                                            <td className="px-4 py-3.5">
+                                                                <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{producto.nombre}</p>
+                                                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">Stock: {stockTotal}</span>
+                                                                    {alertas > 0 && <span className="rounded-[10px] bg-red-100 px-1.5 py-px text-[10px] font-bold text-red-500 dark:bg-red-950/60">{alertas} bajo stock</span>}
                                                                 </div>
                                                             </td>
-                                                            <td style={{ padding: '14px 16px' }}>
+                                                            <td className="px-4 py-3.5">
                                                                 {producto.sku
-                                                                    ? <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', padding: '3px 8px', borderRadius: '6px', background: darkMode ? '#1e3a5f' : '#eff6ff', color: darkMode ? '#93c5fd' : '#1d4ed8' }}>{producto.sku}</span>
-                                                                    : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
+                                                                    ? <span className="rounded-md bg-blue-50 px-2 py-0.5 font-mono text-[11px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">{producto.sku}</span>
+                                                                    : <span className="text-[11px] text-slate-400 dark:text-slate-500">—</span>}
                                                             </td>
                                                             {tipoActivo === 'con_calidad_especie' && (
-                                                                <td style={{ padding: '14px 16px' }}>
-                                                                    <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#e0e7ff', color: '#3730a3' }}>{formatearCalidad(producto.calidad)}</span>
+                                                                <td className="px-4 py-3.5">
+                                                                    <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300">{formatearCalidad(producto.calidad)}</span>
                                                                 </td>
                                                             )}
                                                             {tipoActivo === 'con_especie' && (
-                                                                <td style={{ padding: '14px 16px' }}>
-                                                                    <span style={{ fontSize: '12px', color: producto.subcategoria_nombre ? s.text : s.textFaint }}>{producto.subcategoria_nombre || '—'}</span>
+                                                                <td className="px-4 py-3.5">
+                                                                    <span className={`text-xs ${producto.subcategoria_nombre ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>{producto.subcategoria_nombre || '—'}</span>
                                                                 </td>
                                                             )}
                                                             {(tipoActivo === 'con_calidad_especie' || tipoActivo === 'con_especie') && (
-                                                                <td style={{ padding: '14px 16px' }}>
+                                                                <td className="px-4 py-3.5">
                                                                     {producto.especie ? (
-                                                                        <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px', background: producto.especie === 'perro' ? (darkMode ? '#1e3a5f' : '#dbeafe') : producto.especie === 'gato' ? (darkMode ? '#2d1b4e' : '#ede9fe') : (darkMode ? '#1a2e1a' : '#dcfce7'), color: producto.especie === 'perro' ? '#2563eb' : producto.especie === 'gato' ? '#7c3aed' : '#16a34a' }}>
+                                                                        <span className={`rounded-[10px] px-2 py-0.5 text-[10px] font-semibold ${producto.especie === 'perro' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300' : producto.especie === 'gato' ? 'bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300' : 'bg-green-100 text-green-600 dark:bg-green-950/50 dark:text-green-300'}`}>
                                                                             {producto.especie === 'ambos' ? 'Perro/Gato' : producto.especie.charAt(0).toUpperCase() + producto.especie.slice(1)}
                                                                         </span>
-                                                                    ) : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
+                                                                    ) : <span className="text-[11px] text-slate-400 dark:text-slate-500">—</span>}
                                                                 </td>
                                                             )}
-                                                            <td style={{ padding: '14px 16px' }}>
-                                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                            <td className="px-4 py-3.5">
+                                                                <div className="flex flex-wrap gap-1">
                                                                     {ordenarPresentaciones(producto.presentaciones).map(pr => (
-                                                                        <span key={pr.id} style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '6px', background: s.surfaceLow, color: pr.stock <= 3 ? '#ef4444' : s.textMuted, border: `1px solid ${pr.stock <= 3 ? '#fca5a5' : s.border}` }}>
+                                                                        <span key={pr.id} className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${pr.stock <= 3 ? 'border-red-300 text-red-500' : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'} bg-slate-50 dark:bg-slate-900`}>
                                                                             {pr.nombre}
                                                                         </span>
                                                                     ))}
                                                                 </div>
                                                             </td>
-                                                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                            <td className="px-4 py-3.5 text-right">
+                                                                <div className="flex items-center justify-end gap-1.5">
                                                                     <button onClick={e => { e.stopPropagation(); handleToggleDisponibleProducto(producto) }}
-                                                                        style={{ padding: '6px 10px', borderRadius: '8px', border: `1px solid ${producto.disponible ? s.border : '#fca5a5'}`, background: producto.disponible ? 'transparent' : (darkMode ? '#450a0a' : '#fef2f2'), color: producto.disponible ? s.textMuted : '#ef4444', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>
+                                                                        className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold ${producto.disponible ? 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400' : 'border-red-300 bg-red-50 text-red-500 dark:bg-red-950/40'}`}>
                                                                         {producto.disponible ? 'Activo' : 'Inactivo'}
                                                                     </button>
                                                                     <button onClick={e => { e.stopPropagation(); abrirModalEditar(producto) }}
-                                                                        style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                                                                        <IconLapiz />
                                                                         Editar
                                                                     </button>
                                                                     <button onClick={e => { e.stopPropagation(); handleEliminarProducto(producto) }}
-                                                                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #fca5a5', background: darkMode ? '#450a0a' : '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                                        className="flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-500 dark:bg-red-950/40">
+                                                                        <IconBasura />
                                                                     </button>
-                                                                    <span style={{ color: s.textFaint, display: 'flex', alignItems: 'center' }}>
+                                                                    <span className="flex items-center text-slate-400 dark:text-slate-500">
                                                                         {expandido
-                                                                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-                                                                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>}
+                                                                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+                                                                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>}
                                                                     </span>
                                                                 </div>
                                                             </td>
@@ -881,20 +875,21 @@ function colorVencimiento(diasParaVencer) {
 
                                                         {expandido && (
                                                             <tr key={`${producto.id}-expand`}>
-                                                                <td colSpan={tipoActivo === 'con_calidad_especie' ? 6 : tipoActivo === 'con_especie' ? 5 : 4} style={{ padding: '0', background: s.surfaceLow, borderBottom: `1px solid ${s.border}` }}>
-                                                                    <div style={{ padding: '16px 20px' }}>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Presentaciones</p>
+                                                                <td colSpan={tipoActivo === 'con_calidad_especie' ? 6 : tipoActivo === 'con_especie' ? 5 : 4} className="border-b border-slate-200 bg-slate-50 p-0 dark:border-slate-700 dark:bg-slate-900">
+                                                                    <div className="p-5">
+                                                                        <div className="mb-3 flex items-center justify-between">
+                                                                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Presentaciones</p>
                                                                             <button onClick={() => setModalPresentacion(producto.id)}
-                                                                                style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                                                                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                                                                                 + Agregar presentación
                                                                             </button>
                                                                         </div>
-                                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                                        <div className="overflow-x-auto">
+                                                                        <table className="w-full border-collapse">
                                                                             <thead>
-                                                                                <tr style={{ background: s.surface }}>
+                                                                                <tr className="bg-white dark:bg-slate-800">
                                                                                     {['Nombre', 'Cod. Barras', 'P. Compra', 'P. Venta', 'P. Tarjeta', 'Descuento', 'Margen', 'Stock', 'Vencimiento', 'Acciones'].map(h => (
-                                                                                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                                                                        <th key={h} className="whitespace-nowrap px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{h}</th>
                                                                                     ))}
                                                                                 </tr>
                                                                             </thead>
@@ -903,75 +898,75 @@ function colorVencimiento(diasParaVencer) {
                                                                                     const { precio, conDescuento } = calcularPrecioEfectivo(pr)
                                                                                     const mg = margen(pr)
                                                                                     return (
-                                                                                        <tr key={pr.id} style={{ borderTop: `1px solid ${s.borderLight}` }}>
-                                                                                            <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: '600', color: s.text }}>{pr.nombre}</td>
-                                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                                {pr.codigo_barras ? <span style={{ fontSize: '11px', fontFamily: 'monospace', color: s.text }}>{pr.codigo_barras}</span> : <span style={{ fontSize: '11px', color: s.textFaint }}>—</span>}
+                                                                                        <tr key={pr.id} className="border-t border-slate-100 dark:border-slate-700">
+                                                                                            <td className="px-3 py-2.5 text-[13px] font-semibold text-slate-900 dark:text-slate-100">{pr.nombre}</td>
+                                                                                            <td className="px-3 py-2.5">
+                                                                                                {pr.codigo_barras ? <span className="font-mono text-[11px] text-slate-900 dark:text-slate-100">{pr.codigo_barras}</span> : <span className="text-[11px] text-slate-400 dark:text-slate-500">—</span>}
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>{pr.precio_compra ? `Gs. ${pr.precio_compra.toLocaleString()}` : '—'}</td>
-                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.text }}>
+                                                                                            <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{pr.precio_compra ? `Gs. ${pr.precio_compra.toLocaleString()}` : '—'}</td>
+                                                                                            <td className="px-3 py-2.5 text-xs text-slate-900 dark:text-slate-100">
                                                                                                 {conDescuento ? (
                                                                                                     <span>
-                                                                                                        <span style={{ textDecoration: 'line-through', color: s.textFaint, fontSize: '11px' }}>Gs. {pr.precio_venta.toLocaleString()}</span>
-                                                                                                        <span style={{ marginLeft: '6px', color: '#10b981', fontWeight: '700' }}>Gs. {precio.toLocaleString()}</span>
-                                                                                                        <span style={{ marginLeft: '4px', fontSize: '10px', background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '8px', fontWeight: '700' }}>%</span>
+                                                                                                        <span className="text-[11px] text-slate-400 line-through dark:text-slate-500">Gs. {pr.precio_venta.toLocaleString()}</span>
+                                                                                                        <span className="ml-1.5 font-bold text-emerald-500">Gs. {precio.toLocaleString()}</span>
+                                                                                                        <span className="ml-1 rounded-[8px] bg-emerald-100 px-1.5 py-px text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">%</span>
                                                                                                     </span>
                                                                                                 ) : `Gs. ${(pr.precio_venta || 0).toLocaleString()}`}
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>
-                                                                                                {pr.precio_tarjeta ? `Gs. ${pr.precio_tarjeta.toLocaleString()}` : <span style={{ color: s.textFaint }}>—</span>}
+                                                                                            <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                                                                                                {pr.precio_tarjeta ? `Gs. ${pr.precio_tarjeta.toLocaleString()}` : <span className="text-slate-400 dark:text-slate-500">—</span>}
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px', fontSize: '12px' }}>
-                                                                                                {pr.descuento_activo && pr.precio_descuento ? <span style={{ color: '#10b981', fontWeight: '600' }}>Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span> : <span style={{ color: s.textFaint }}>—</span>}
+                                                                                            <td className="px-3 py-2.5 text-xs">
+                                                                                                {pr.descuento_activo && pr.precio_descuento ? <span className="font-semibold text-emerald-500">Activo hasta {new Date(pr.descuento_hasta).toLocaleDateString('es-PY')}</span> : <span className="text-slate-400 dark:text-slate-500">—</span>}
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                            <td className="px-3 py-2.5">
                                                                                                 {mg !== null ? (
                                                                                                     <div>
-                                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                                                                                                            <span style={{ fontSize: '12px', fontWeight: '700', color: mg.markup >= 20 ? '#10b981' : mg.markup >= 10 ? '#f59e0b' : '#ef4444' }}>{mg.markup}%</span>
-                                                                                                            <div style={{ width: '40px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
-                                                                                                                <div style={{ width: `${Math.min(mg.markup, 100)}%`, height: '100%', background: mg.markup >= 20 ? '#10b981' : mg.markup >= 10 ? '#f59e0b' : '#ef4444', borderRadius: '2px' }} />
+                                                                                                        <div className="mb-0.5 flex items-center gap-1.5">
+                                                                                                            <span className={`text-xs font-bold ${mg.markup >= 20 ? 'text-emerald-500' : mg.markup >= 10 ? 'text-amber-500' : 'text-red-500'}`}>{mg.markup}%</span>
+                                                                                                            <div className="h-1 w-10 overflow-hidden rounded-sm bg-slate-200 dark:bg-slate-700">
+                                                                                                                <div className={`h-full rounded-sm ${mg.markup >= 20 ? 'bg-emerald-500' : mg.markup >= 10 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(mg.markup, 100)}%` }} />
                                                                                                             </div>
-                                                                                                            <span style={{ fontSize: '10px', color: s.textFaint }}>ganancia</span>
+                                                                                                            <span className="text-[10px] text-slate-400 dark:text-slate-500">ganancia</span>
                                                                                                         </div>
-                                                                                                        <div style={{ fontSize: '10px', color: s.textFaint }}>{mg.margenVenta}% venta</div>
+                                                                                                        <div className="text-[10px] text-slate-400 dark:text-slate-500">{mg.margenVenta}% venta</div>
                                                                                                     </div>
-                                                                                                ) : <span style={{ color: s.textFaint }}>—</span>}
+                                                                                                ) : <span className="text-slate-400 dark:text-slate-500">—</span>}
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981' }}>{pr.stock}</span>
-                                                                                                    <div style={{ width: '48px', height: '4px', background: s.border, borderRadius: '2px', overflow: 'hidden' }}>
-                                                                                                        <div style={{ width: `${Math.min((pr.stock / 20) * 100, 100)}%`, height: '100%', background: pr.stock === 0 ? '#ef4444' : pr.stock <= 3 ? '#f59e0b' : '#10b981', borderRadius: '2px' }} />
+                                                                                            <td className="px-3 py-2.5">
+                                                                                                <div className="flex items-center gap-2">
+                                                                                                    <span className={`text-sm font-extrabold ${pr.stock === 0 ? 'text-red-500' : pr.stock <= 3 ? 'text-amber-500' : 'text-emerald-500'}`}>{pr.stock}</span>
+                                                                                                    <div className="h-1 w-12 overflow-hidden rounded-sm bg-slate-200 dark:bg-slate-700">
+                                                                                                        <div className={`h-full rounded-sm ${pr.stock === 0 ? 'bg-red-500' : pr.stock <= 3 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min((pr.stock / 20) * 100, 100)}%` }} />
                                                                                                     </div>
                                                                                                 </div>
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px' }}>
+                                                                                            <td className="px-3 py-2.5">
                                                                                                 {(() => {
-                                                                                                    if (!pr.fecha_vencimiento_proxima) return <span style={{ color: s.textFaint, fontSize: '11px' }}>—</span>
+                                                                                                    if (!pr.fecha_vencimiento_proxima) return <span className="text-[11px] text-slate-400 dark:text-slate-500">—</span>
                                                                                                     const dias = Math.ceil((new Date(pr.fecha_vencimiento_proxima) - new Date()) / (1000 * 60 * 60 * 24))
-                                                                                                    const color = dias < 0 ? '#ef4444' : dias <= 7 ? '#ef4444' : dias <= 30 ? '#f59e0b' : '#10b981'
+                                                                                                    const cls = dias < 0 ? 'bg-red-100 text-red-500 dark:bg-red-950/50' : dias <= 7 ? 'bg-red-100 text-red-500 dark:bg-red-950/50' : dias <= 30 ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/50' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50'
                                                                                                     const count = parseInt(pr.lotes_con_vencimiento) || 0
                                                                                                     return (
-                                                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                                                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: `${color}20`, color, whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                                                                                        <div className="flex flex-col gap-0.5">
+                                                                                                            <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${cls}`}>
                                                                                                                 {dias < 0 ? 'Vencido' : dias === 0 ? 'Hoy' : `${dias}d`}
                                                                                                             </span>
-                                                                                                            {count > 1 && <span style={{ fontSize: '10px', color: s.textFaint }}>{count} lotes</span>}
+                                                                                                            {count > 1 && <span className="text-[10px] text-slate-400 dark:text-slate-500">{count} lotes</span>}
                                                                                                         </div>
                                                                                                     )
                                                                                                 })()}
                                                                                             </td>
-                                                                                            <td style={{ padding: '10px 12px' }}>
-                                                                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                                                                    <button onClick={() => { setNuevoStockValor(String(pr.stock)); setModalStock({ id: pr.id, nombre: pr.nombre, stockActual: pr.stock }) }} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Stock</button>
-                                                                                                    <button onClick={() => abrirModalPrecio(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Precio</button>
-                                                                                                    <button onClick={() => abrirModalCodigoBarras(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cod.</button>
-                                                                                                    <button onClick={() => abrirModalLotes(pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Lotes</button>
-                                                                                                    <button onClick={() => abrirModalFraccionar(producto, pr)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Fraccionar</button>
-                                                                                                    <button onClick={() => handleToggleFraccion(pr)} title="Habilita vender por monto en Caja" style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${pr.permite_fraccion ? '#fbbf24' : s.border}`, background: pr.permite_fraccion ? '#fffbeb' : s.surface, color: pr.permite_fraccion ? '#b45309' : s.textMuted, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>{pr.permite_fraccion ? 'Por monto (activo)' : 'Por monto'}</button>
-                                                                                                    <button onClick={e => { e.stopPropagation(); handleEliminarPresentacion(pr, producto) }} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                                                            <td className="px-3 py-2.5">
+                                                                                                <div className="flex flex-wrap gap-1">
+                                                                                                    <button onClick={() => { setNuevoStockValor(String(pr.stock)); setModalStock({ id: pr.id, nombre: pr.nombre, stockActual: pr.stock }) }} className={chipBtnCls}>Stock</button>
+                                                                                                    <button onClick={() => abrirModalPrecio(pr)} className={chipBtnCls}>Precio</button>
+                                                                                                    <button onClick={() => abrirModalCodigoBarras(pr)} className={chipBtnCls}>Cod.</button>
+                                                                                                    <button onClick={() => abrirModalLotes(pr)} className={chipBtnCls}>Lotes</button>
+                                                                                                    <button onClick={() => abrirModalFraccionar(producto, pr)} className="rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-300">Fraccionar</button>
+                                                                                                    <button onClick={() => handleToggleFraccion(pr)} title="Habilita vender por monto en Caja" className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${pr.permite_fraccion ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}>{pr.permite_fraccion ? 'Por monto (activo)' : 'Por monto'}</button>
+                                                                                                    <button onClick={e => { e.stopPropagation(); handleEliminarPresentacion(pr, producto) }} className={chipDeleteCls}>
+                                                                                                        <IconBasura />
                                                                                                     </button>
                                                                                                 </div>
                                                                                             </td>
@@ -980,6 +975,7 @@ function colorVencimiento(diasParaVencer) {
                                                                                 })}
                                                                             </tbody>
                                                                         </table>
+                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -989,6 +985,7 @@ function colorVencimiento(diasParaVencer) {
                                             })}
                                         </tbody>
                                     </table>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -996,99 +993,99 @@ function colorVencimiento(diasParaVencer) {
                 })}
             </div>
 
-            <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <p style={{ fontSize: '12px', color: s.textFaint }}>Mostrando <strong style={{ color: s.text }}>{productosFiltrados.length}</strong> de <strong style={{ color: s.text }}>{productos.length}</strong> productos</p>
-                <p style={{ fontSize: '12px', color: s.textFaint }}>{totalPresentaciones} presentaciones en total</p>
+            <div className="mt-2 flex justify-between">
+                <p className="text-xs text-slate-400 dark:text-slate-500">Mostrando <strong className="text-slate-900 dark:text-slate-100">{productosFiltrados.length}</strong> de <strong className="text-slate-900 dark:text-slate-100">{productos.length}</strong> productos</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">{totalPresentaciones} presentaciones en total</p>
             </div>
 
             {/* ===== MODALES ===== */}
 
             {modalSecciones && (
-                <Modal s={s}>
-                    <div style={{ width: '460px', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <Modal>
+                    <div className="flex max-h-[82vh] w-[460px] flex-col">
+                        <div className="mb-4 flex items-center justify-between">
                             <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Secciones de inventario</h3>
-                                <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>Las secciones son las pestañas principales del inventario.</p>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Secciones de inventario</h3>
+                                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Las secciones son las pestañas principales del inventario.</p>
                             </div>
-                            <button onClick={() => { setModalSecciones(false); setEditandoSeccion(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                            <button onClick={() => { setModalSecciones(false); setEditandoSeccion(null) }} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                         </div>
 
                         {/* Crear nueva seccion */}
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                            <label style={labelStyle}>Nueva sección</label>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <div className="mb-4 rounded-[10px] bg-slate-50 p-4 dark:bg-slate-900">
+                            <label className={labelCls}>Nueva sección</label>
+                            <div className="mb-2 flex gap-2">
                                 <input
                                     value={nuevaSeccion.nombre}
                                     onChange={e => setNuevaSeccion({ ...nuevaSeccion, nombre: e.target.value })}
                                     placeholder="Ej: Reptiles, Aves, Peces..."
-                                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                                    className={`${inputCls} mb-0 flex-1`}
                                 />
                                 <input
                                     type="color"
                                     value={nuevaSeccion.color}
                                     onChange={e => setNuevaSeccion({ ...nuevaSeccion, color: e.target.value })}
                                     title="Color de la sección"
-                                    style={{ width: '42px', height: '42px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+                                    className="h-[42px] w-[42px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-transparent p-0.5 dark:border-slate-700"
                                 />
                             </div>
-                            <label style={labelStyle}>Comportamiento</label>
-                            <select value={nuevaSeccion.tipo} onChange={e => setNuevaSeccion({ ...nuevaSeccion, tipo: e.target.value })} style={{ ...inputStyle, marginBottom: '8px' }}>
+                            <label className={labelCls}>Comportamiento</label>
+                            <select value={nuevaSeccion.tipo} onChange={e => setNuevaSeccion({ ...nuevaSeccion, tipo: e.target.value })} className={`${inputCls} mb-2`}>
                                 <option value="generico">Genérico — solo categoría (como Medicamentos)</option>
                                 <option value="con_especie">Con especie — categoría + especie (como Accesorios)</option>
                                 <option value="con_calidad_especie">Con calidad y especie — subcategoría + calidad + especie (como Balanceados)</option>
                             </select>
                             {nuevaSeccion.nombre && (
-                                <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '8px' }}>
-                                    Slug: <strong style={{ color: s.text, fontFamily: 'monospace' }}>{toSlug(nuevaSeccion.nombre)}</strong>
+                                <p className="mb-2 text-[11px] text-slate-400 dark:text-slate-500">
+                                    Slug: <strong className="font-mono text-slate-900 dark:text-slate-100">{toSlug(nuevaSeccion.nombre)}</strong>
                                 </p>
                             )}
-                            <button onClick={handleCrearSeccion} disabled={!nuevaSeccion.nombre.trim()} style={{ ...btnPrimario, width: '100%', justifyContent: 'center', opacity: nuevaSeccion.nombre.trim() ? 1 : 0.5 }}>
+                            <button onClick={handleCrearSeccion} disabled={!nuevaSeccion.nombre.trim()} className={`${btnPrimarioCls} w-full`}>
                                 + Agregar sección
                             </button>
                         </div>
 
                         {/* Lista de secciones */}
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="flex-1 overflow-y-auto">
                             {secciones.map(sec => (
-                                <div key={sec.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div key={sec.id} className="flex items-center gap-2.5 border-b border-slate-100 py-2.5 px-3 dark:border-slate-700">
                                     {editandoSeccion?.id === sec.id ? (
-                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div className="flex flex-1 flex-col gap-1.5">
+                                            <div className="flex items-center gap-2">
                                                 <input
                                                     value={editandoSeccion.nombre}
                                                     onChange={e => setEditandoSeccion({ ...editandoSeccion, nombre: e.target.value })}
-                                                    style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                                                    className={`${inputCls} mb-0 flex-1`}
                                                 />
                                                 <input
                                                     type="color"
                                                     value={editandoSeccion.color}
                                                     onChange={e => setEditandoSeccion({ ...editandoSeccion, color: e.target.value })}
-                                                    style={{ width: '38px', height: '38px', borderRadius: '8px', border: `1px solid ${s.border}`, padding: '2px', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+                                                    className="h-[38px] w-[38px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-transparent p-0.5 dark:border-slate-700"
                                                 />
                                             </div>
-                                            <select value={editandoSeccion.tipo} onChange={e => setEditandoSeccion({ ...editandoSeccion, tipo: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                            <select value={editandoSeccion.tipo} onChange={e => setEditandoSeccion({ ...editandoSeccion, tipo: e.target.value })} className={`${inputCls} mb-0`}>
                                                 <option value="generico">Genérico (como Medicamentos)</option>
                                                 <option value="con_especie">Con especie (como Accesorios)</option>
                                                 <option value="con_calidad_especie">Con calidad y especie (como Balanceados)</option>
                                             </select>
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                <button onClick={() => handleEditarSeccion(editandoSeccion)} style={{ ...btnPrimario, padding: '8px 12px', fontSize: '12px', flex: 1, justifyContent: 'center' }}>Guardar</button>
-                                                <button onClick={() => setEditandoSeccion(null)} style={{ ...btnSecundario, padding: '8px 10px', fontSize: '12px' }}>✕</button>
+                                            <div className="flex gap-1.5">
+                                                <button onClick={() => handleEditarSeccion(editandoSeccion)} className={`${btnPrimarioCls} flex-1 px-3 py-2 text-xs`}>Guardar</button>
+                                                <button onClick={() => setEditandoSeccion(null)} className={`${btnSecundarioCls} px-2.5 py-2 text-xs`}>✕</button>
                                             </div>
                                         </div>
                                     ) : (
                                         <>
-                                            <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: sec.color, flexShrink: 0, border: `2px solid ${sec.color}40` }} />
-                                            <div style={{ flex: 1 }}>
-                                                <p style={{ fontSize: '13px', fontWeight: '600', color: s.text, margin: 0 }}>{sec.nombre}</p>
-                                                <p style={{ fontSize: '11px', color: s.textFaint, margin: 0, fontFamily: 'monospace' }}>{sec.slug} · {contadorPorPestana[sec.slug] || 0} productos</p>
+                                            <span className="h-3.5 w-3.5 shrink-0 rounded-full border-2" style={{ background: sec.color, borderColor: `${sec.color}40` }} />
+                                            <div className="flex-1">
+                                                <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{sec.nombre}</p>
+                                                <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">{sec.slug} · {contadorPorPestana[sec.slug] || 0} productos</p>
                                             </div>
-                                            <button onClick={() => setEditandoSeccion({ ...sec })} style={{ ...btnSecundario, padding: '5px 10px', fontSize: '12px' }}>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            <button onClick={() => setEditandoSeccion({ ...sec })} className={`${btnSecundarioCls} px-2.5 py-1 text-xs`}>
+                                                <IconLapiz />
                                             </button>
-                                            <button onClick={() => handleEliminarSeccion(sec)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                            <button onClick={() => handleEliminarSeccion(sec)} className={chipDeleteCls}>
+                                                <IconBasura />
                                             </button>
                                         </>
                                     )}
@@ -1100,23 +1097,23 @@ function colorVencimiento(diasParaVencer) {
             )}
 
             {modalMarca && (
-                <Modal s={s}>
-                    <div style={{ width: '400px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Gestión de marcas</h3>
-                            <button onClick={() => { setModalMarca(false); setErrorMarca('') }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                <Modal>
+                    <div className="flex max-h-[80vh] w-[400px] flex-col">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Gestión de marcas</h3>
+                            <button onClick={() => { setModalMarca(false); setErrorMarca('') }} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                         </div>
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                            <label style={labelStyle}>Nueva marca</label>
-                            <input value={nuevaMarca} onChange={e => { setNuevaMarca(e.target.value); setErrorMarca('') }} placeholder="Ej: CIBAU" style={inputStyle} />
-                            {errorMarca && <div style={{ padding: '8px 12px', background: '#fee2e2', borderRadius: '8px', fontSize: '12px', color: '#991b1b', marginBottom: '8px' }}>{errorMarca}</div>}
-                            <button onClick={handleCrearMarca} style={{ ...btnPrimario, width: '100%', justifyContent: 'center' }}>+ Agregar marca</button>
+                        <div className="mb-4 rounded-[10px] bg-slate-50 p-4 dark:bg-slate-900">
+                            <label className={labelCls}>Nueva marca</label>
+                            <input value={nuevaMarca} onChange={e => { setNuevaMarca(e.target.value); setErrorMarca('') }} placeholder="Ej: CIBAU" className={inputCls} />
+                            {errorMarca && <div className="mb-2 rounded-lg bg-red-100 px-3 py-2 text-xs text-red-800 dark:bg-red-950/50 dark:text-red-300">{errorMarca}</div>}
+                            <button onClick={handleCrearMarca} className={`${btnPrimarioCls} w-full`}>+ Agregar marca</button>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="flex-1 overflow-y-auto">
                             {marcas.map(marca => (
-                                <div key={marca.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <p style={{ flex: 1, fontSize: '13px', fontWeight: '500', color: s.text }}>{marca.nombre}</p>
-                                    <button onClick={() => handleEliminarMarca(marca)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                                <div key={marca.id} className="flex items-center gap-2 border-b border-slate-100 py-2.5 px-3 dark:border-slate-700">
+                                    <p className="flex-1 text-[13px] font-medium text-slate-900 dark:text-slate-100">{marca.nombre}</p>
+                                    <button onClick={() => handleEliminarMarca(marca)} className={chipDeleteCls}><IconBasura /></button>
                                 </div>
                             ))}
                         </div>
@@ -1125,40 +1122,40 @@ function colorVencimiento(diasParaVencer) {
             )}
 
             {modalProducto && (
-                <Modal s={s}>
-                    <div style={{ width: '420px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Nuevo producto</h3>
-                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '10px', background: nuevoProducto.seccion_inventario ? '#1a1a2e' : '#dc2626', color: 'white', textTransform: 'uppercase' }}>{nuevoProducto.seccion_inventario || 'Sin categoria'}</span>
+                <Modal>
+                    <div className="w-[420px]">
+                        <div className="mb-5 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Nuevo producto</h3>
+                            <span className={`rounded-[10px] px-2.5 py-0.5 text-[11px] font-bold uppercase text-white ${nuevoProducto.seccion_inventario ? 'bg-slate-900 dark:bg-slate-700' : 'bg-red-600'}`}>{nuevoProducto.seccion_inventario || 'Sin categoria'}</span>
                         </div>
                         {!nuevoProducto.seccion_inventario && (
-                            <div style={{ marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', background: darkMode ? '#450a0a' : '#fef2f2', border: '1px solid #fca5a5' }}>
-                                <label style={{ ...labelStyle, color: '#dc2626', marginBottom: '8px' }}>Categoria del producto</label>
-                                <select value={nuevoProducto.seccion_inventario} onChange={e => setNuevoProducto({ ...nuevoProducto, seccion_inventario: e.target.value })} style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}>
+                            <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3.5 py-2.5 dark:bg-red-950/30">
+                                <label className={`${labelCls} mb-2 text-red-600`}>Categoria del producto</label>
+                                <select value={nuevoProducto.seccion_inventario} onChange={e => setNuevoProducto({ ...nuevoProducto, seccion_inventario: e.target.value })} className={`${inputCls} mb-0 border-red-300`}>
                                     <option value="">-- Seleccionar --</option>
                                     {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                                 </select>
                             </div>
                         )}
-                        <label style={labelStyle}>Marca</label>
-                        <select value={nuevoProducto.marca_id} onChange={e => setNuevoProducto({ ...nuevoProducto, marca_id: e.target.value })} style={inputStyle}>
+                        <label className={labelCls}>Marca</label>
+                        <select value={nuevoProducto.marca_id} onChange={e => setNuevoProducto({ ...nuevoProducto, marca_id: e.target.value })} className={inputCls}>
                             <option value="">Sin marca</option>
                             {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                         </select>
-                        <label style={labelStyle}>Nombre</label>
-                        <input value={nuevoProducto.nombre} onChange={e => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })} style={inputStyle} />
-                        <label style={labelStyle}>SKU (codigo interno)</label>
-                        <input value={nuevoProducto.sku} onChange={e => setNuevoProducto({ ...nuevoProducto, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" style={inputStyle} />
-                        <label style={labelStyle}>Descripción</label>
-                        <input value={nuevoProducto.descripcion} onChange={e => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} style={inputStyle} />
+                        <label className={labelCls}>Nombre</label>
+                        <input value={nuevoProducto.nombre} onChange={e => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })} className={inputCls} />
+                        <label className={labelCls}>SKU (codigo interno)</label>
+                        <input value={nuevoProducto.sku} onChange={e => setNuevoProducto({ ...nuevoProducto, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" className={inputCls} />
+                        <label className={labelCls}>Descripción</label>
+                        <input value={nuevoProducto.descripcion} onChange={e => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} className={inputCls} />
 
                         {/* Campos especificos por tipo de seccion */}
                         {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_calidad_especie' && (
                             <>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                <div className="grid grid-cols-2 gap-x-3">
                                     <div>
-                                        <label style={labelStyle}>Calidad</label>
-                                        <select value={nuevoProducto.calidad} onChange={e => setNuevoProducto({ ...nuevoProducto, calidad: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Calidad</label>
+                                        <select value={nuevoProducto.calidad} onChange={e => setNuevoProducto({ ...nuevoProducto, calidad: e.target.value })} className={inputCls}>
                                             <option value="standard">Standard</option>
                                             <option value="premium">Premium</option>
                                             <option value="premium_special">Premium Special</option>
@@ -1166,8 +1163,8 @@ function colorVencimiento(diasParaVencer) {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Especie</label>
-                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Especie</label>
+                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} className={inputCls}>
                                             <option value="">Sin especificar</option>
                                             <option value="perro">Perro</option>
                                             <option value="gato">Gato</option>
@@ -1175,8 +1172,8 @@ function colorVencimiento(diasParaVencer) {
                                         </select>
                                     </div>
                                 </div>
-                                <label style={labelStyle}>Subcategoria (tamaño)</label>
-                                <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} style={inputStyle}>
+                                <label className={labelCls}>Subcategoria (tamaño)</label>
+                                <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} className={inputCls}>
                                     <option value="">Sin subcategoria</option>
                                     {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
                                 </select>
@@ -1185,15 +1182,15 @@ function colorVencimiento(diasParaVencer) {
 
                         {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_especie' && (
                             <>
-                                <label style={labelStyle}>Categoria</label>
-                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
+                                <label className={labelCls}>Categoria</label>
+                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} className={inputCls}>
                                     <option value="">Sin categoria</option>
                                     {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                <div className="grid grid-cols-2 gap-x-3">
                                     <div>
-                                        <label style={labelStyle}>Especie</label>
-                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Especie</label>
+                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} className={inputCls}>
                                             <option value="">Sin especificar</option>
                                             <option value="perro">Perro</option>
                                             <option value="gato">Gato</option>
@@ -1201,8 +1198,8 @@ function colorVencimiento(diasParaVencer) {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Tamaño</label>
-                                        <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Tamaño</label>
+                                        <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} className={inputCls}>
                                             <option value="">Sin tamaño</option>
                                             {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
                                         </select>
@@ -1213,56 +1210,56 @@ function colorVencimiento(diasParaVencer) {
 
                         {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'generico' && (nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) && (
                             <>
-                                <label style={labelStyle}>Categoría</label>
-                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} style={inputStyle}>
+                                <label className={labelCls}>Categoría</label>
+                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} className={inputCls}>
                                     <option value="">Sin categoría</option>
                                     {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
                             </>
                         )}
 
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalProducto(false)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleCrearProducto} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.6 : 1 }}>{guardando ? 'Creando...' : 'Crear producto'}</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setModalProducto(false)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleCrearProducto} disabled={guardando} className={btnPrimarioCls}>{guardando ? 'Creando...' : 'Crear producto'}</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {modalEditarProducto && (
-                <Modal s={s}>
-                    <div style={{ width: '420px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Editar producto</h3>
-                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '10px', background: editarForm.seccion_inventario ? '#1a1a2e' : '#dc2626', color: 'white', textTransform: 'uppercase' }}>{editarForm.seccion_inventario || 'Sin categoria'}</span>
+                <Modal>
+                    <div className="w-[420px]">
+                        <div className="mb-5 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Editar producto</h3>
+                            <span className={`rounded-[10px] px-2.5 py-0.5 text-[11px] font-bold uppercase text-white ${editarForm.seccion_inventario ? 'bg-slate-900 dark:bg-slate-700' : 'bg-red-600'}`}>{editarForm.seccion_inventario || 'Sin categoria'}</span>
                         </div>
                         {!editarForm.seccion_inventario && (
-                            <div style={{ marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', background: darkMode ? '#450a0a' : '#fef2f2', border: '1px solid #fca5a5' }}>
-                                <label style={{ ...labelStyle, color: '#dc2626', marginBottom: '8px' }}>Asignar categoria del producto</label>
-                                <select value={editarForm.seccion_inventario} onChange={e => setEditarForm({ ...editarForm, seccion_inventario: e.target.value })} style={{ ...inputStyle, marginBottom: 0, borderColor: '#fca5a5' }}>
+                            <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3.5 py-2.5 dark:bg-red-950/30">
+                                <label className={`${labelCls} mb-2 text-red-600`}>Asignar categoria del producto</label>
+                                <select value={editarForm.seccion_inventario} onChange={e => setEditarForm({ ...editarForm, seccion_inventario: e.target.value })} className={`${inputCls} mb-0 border-red-300`}>
                                     <option value="">-- Seleccionar --</option>
                                     {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                                 </select>
                             </div>
                         )}
-                        <label style={labelStyle}>Marca</label>
-                        <select value={editarForm.marca_id} onChange={e => setEditarForm({ ...editarForm, marca_id: e.target.value })} style={inputStyle}>
+                        <label className={labelCls}>Marca</label>
+                        <select value={editarForm.marca_id} onChange={e => setEditarForm({ ...editarForm, marca_id: e.target.value })} className={inputCls}>
                             <option value="">Sin marca</option>
                             {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                         </select>
-                        <label style={labelStyle}>Nombre</label>
-                        <input value={editarForm.nombre} onChange={e => setEditarForm({ ...editarForm, nombre: e.target.value })} style={inputStyle} />
-                        <label style={labelStyle}>SKU (codigo interno)</label>
-                        <input value={editarForm.sku} onChange={e => setEditarForm({ ...editarForm, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" style={inputStyle} />
-                        <label style={labelStyle}>Descripción</label>
-                        <input value={editarForm.descripcion} onChange={e => setEditarForm({ ...editarForm, descripcion: e.target.value })} style={inputStyle} />
+                        <label className={labelCls}>Nombre</label>
+                        <input value={editarForm.nombre} onChange={e => setEditarForm({ ...editarForm, nombre: e.target.value })} className={inputCls} />
+                        <label className={labelCls}>SKU (codigo interno)</label>
+                        <input value={editarForm.sku} onChange={e => setEditarForm({ ...editarForm, sku: e.target.value })} placeholder="Ej: CIBAU-ADU-15KG" className={inputCls} />
+                        <label className={labelCls}>Descripción</label>
+                        <input value={editarForm.descripcion} onChange={e => setEditarForm({ ...editarForm, descripcion: e.target.value })} className={inputCls} />
 
                         {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_calidad_especie' && (
                             <>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                <div className="grid grid-cols-2 gap-x-3">
                                     <div>
-                                        <label style={labelStyle}>Calidad</label>
-                                        <select value={editarForm.calidad} onChange={e => setEditarForm({ ...editarForm, calidad: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Calidad</label>
+                                        <select value={editarForm.calidad} onChange={e => setEditarForm({ ...editarForm, calidad: e.target.value })} className={inputCls}>
                                             <option value="standard">Standard</option>
                                             <option value="premium">Premium</option>
                                             <option value="premium_special">Premium Special</option>
@@ -1270,8 +1267,8 @@ function colorVencimiento(diasParaVencer) {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Especie</label>
-                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Especie</label>
+                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} className={inputCls}>
                                             <option value="">Sin especificar</option>
                                             <option value="perro">Perro</option>
                                             <option value="gato">Gato</option>
@@ -1279,8 +1276,8 @@ function colorVencimiento(diasParaVencer) {
                                         </select>
                                     </div>
                                 </div>
-                                <label style={labelStyle}>Subcategoria (tamaño)</label>
-                                <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} style={inputStyle}>
+                                <label className={labelCls}>Subcategoria (tamaño)</label>
+                                <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} className={inputCls}>
                                     <option value="">Sin subcategoria</option>
                                     {subcatsPara(editarForm.seccion_inventario).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
                                 </select>
@@ -1289,15 +1286,15 @@ function colorVencimiento(diasParaVencer) {
 
                         {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_especie' && (
                             <>
-                                <label style={labelStyle}>Categoria</label>
-                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
+                                <label className={labelCls}>Categoria</label>
+                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} className={inputCls}>
                                     <option value="">Sin categoria</option>
                                     {catsPara(editarForm.seccion_inventario).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                                <div className="grid grid-cols-2 gap-x-3">
                                     <div>
-                                        <label style={labelStyle}>Especie</label>
-                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Especie</label>
+                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} className={inputCls}>
                                             <option value="">Sin especificar</option>
                                             <option value="perro">Perro</option>
                                             <option value="gato">Gato</option>
@@ -1305,8 +1302,8 @@ function colorVencimiento(diasParaVencer) {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Tamaño</label>
-                                        <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} style={inputStyle}>
+                                        <label className={labelCls}>Tamaño</label>
+                                        <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} className={inputCls}>
                                             <option value="">Sin tamaño</option>
                                             {subcatsPara(editarForm.seccion_inventario).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
                                         </select>
@@ -1317,113 +1314,113 @@ function colorVencimiento(diasParaVencer) {
 
                         {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'generico' && (editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) && (
                             <>
-                                <label style={labelStyle}>Categoría</label>
-                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} style={inputStyle}>
+                                <label className={labelCls}>Categoría</label>
+                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} className={inputCls}>
                                     <option value="">Sin categoría</option>
                                     {catsPara(editarForm.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
                             </>
                         )}
 
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalEditarProducto(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleEditarProducto} style={btnPrimario}>Guardar cambios</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setModalEditarProducto(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleEditarProducto} className={btnPrimarioCls}>Guardar cambios</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {modalPresentacion && (
-                <Modal s={s}>
-                    <div style={{ width: '400px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: s.text }}>Nueva presentación</h3>
-                        <label style={labelStyle}>Nombre</label>
-                        <input placeholder="Ej: 3kg, 1KG, 15kg" value={nuevaPresentacion.nombre} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, nombre: e.target.value })} style={inputStyle} />
-                        <label style={labelStyle}>Precio de compra (Gs.)</label>
-                        <input type="text" inputMode="numeric" placeholder="Ej: 50.000" value={formatMiles(nuevaPresentacion.precio_compra)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_compra: parseMiles(e.target.value) })} style={inputStyle} />
-                        <label style={labelStyle}>Precio efectivo / transferencia (Gs.)</label>
-                        <input type="text" inputMode="numeric" placeholder="Ej: 75.000" value={formatMiles(nuevaPresentacion.precio_venta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_venta: parseMiles(e.target.value) })} style={inputStyle} />
-                        <label style={labelStyle}>Precio tarjeta (Gs.)</label>
-                        <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al efectivo" value={formatMiles(nuevaPresentacion.precio_tarjeta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_tarjeta: parseMiles(e.target.value) })} style={inputStyle} />
+                <Modal>
+                    <div className="w-[400px]">
+                        <h3 className="mb-5 text-base font-bold text-slate-900 dark:text-slate-100">Nueva presentación</h3>
+                        <label className={labelCls}>Nombre</label>
+                        <input placeholder="Ej: 3kg, 1KG, 15kg" value={nuevaPresentacion.nombre} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, nombre: e.target.value })} className={inputCls} />
+                        <label className={labelCls}>Precio de compra (Gs.)</label>
+                        <input type="text" inputMode="numeric" placeholder="Ej: 50.000" value={formatMiles(nuevaPresentacion.precio_compra)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_compra: parseMiles(e.target.value) })} className={inputCls} />
+                        <label className={labelCls}>Precio efectivo / transferencia (Gs.)</label>
+                        <input type="text" inputMode="numeric" placeholder="Ej: 75.000" value={formatMiles(nuevaPresentacion.precio_venta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_venta: parseMiles(e.target.value) })} className={inputCls} />
+                        <label className={labelCls}>Precio tarjeta (Gs.)</label>
+                        <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al efectivo" value={formatMiles(nuevaPresentacion.precio_tarjeta)} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, precio_tarjeta: parseMiles(e.target.value) })} className={inputCls} />
                         {nuevaPresentacion.precio_venta && nuevaPresentacion.precio_tarjeta && parseInt(nuevaPresentacion.precio_tarjeta) > parseInt(nuevaPresentacion.precio_venta) && (
-                            <div style={{ padding: '8px 12px', background: darkMode ? '#1e3a5f' : '#eff6ff', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#1d4ed8', fontWeight: '600' }}>
+                            <div className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                                 Recargo tarjeta: {((parseInt(nuevaPresentacion.precio_tarjeta) - parseInt(nuevaPresentacion.precio_venta)) / parseInt(nuevaPresentacion.precio_venta) * 100).toFixed(2)}%
                             </div>
                         )}
                         {nuevaPresentacion.precio_compra && nuevaPresentacion.precio_venta && (
-                            <div style={{ padding: '8px 12px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#166534', fontWeight: '600' }}>
+                            <div className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
                                 {(() => {
                                     const c = parseInt(nuevaPresentacion.precio_compra), v = parseInt(nuevaPresentacion.precio_venta)
                                     const t = nuevaPresentacion.precio_tarjeta ? parseInt(nuevaPresentacion.precio_tarjeta) : null
                                     return (
                                         <>
                                             <span>Ef. — M. ganancia: {Math.round(((v-c)/c)*100)}% · M. venta: {Math.round(((v-c)/v)*100)}%</span>
-                                            {t > 0 && <span style={{ display: 'block', marginTop: '2px' }}>Tarjeta — M. ganancia: {Math.round(((t-c)/c)*100)}% · M. venta: {Math.round(((t-c)/t)*100)}%</span>}
+                                            {t > 0 && <span className="mt-0.5 block">Tarjeta — M. ganancia: {Math.round(((t-c)/c)*100)}% · M. venta: {Math.round(((t-c)/t)*100)}%</span>}
                                         </>
                                     )
                                 })()}
                             </div>
                         )}
-                        <label style={labelStyle}>Stock inicial</label>
-                        <input type="number" value={nuevaPresentacion.stock} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, stock: e.target.value })} style={inputStyle} />
-                        <label style={labelStyle}>Codigo de barras (opcional)</label>
-                        <input value={nuevaPresentacion.codigo_barras} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, codigo_barras: e.target.value })} placeholder="Escanea o ingresa manualmente" style={inputStyle} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0 16px' }}>
-                            <input type="checkbox" id="nuevaPresPermiteFraccion" checked={nuevaPresentacion.permite_fraccion} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, permite_fraccion: e.target.checked })} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
-                            <label htmlFor="nuevaPresPermiteFraccion" style={{ fontSize: '13px', color: s.text, cursor: 'pointer' }}>Vendible por monto/fracción en Caja (ej. balanceado fraccionado en 1kg)</label>
+                        <label className={labelCls}>Stock inicial</label>
+                        <input type="number" value={nuevaPresentacion.stock} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, stock: e.target.value })} className={inputCls} />
+                        <label className={labelCls}>Codigo de barras (opcional)</label>
+                        <input value={nuevaPresentacion.codigo_barras} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, codigo_barras: e.target.value })} placeholder="Escanea o ingresa manualmente" className={inputCls} />
+                        <div className="my-1 mb-4 flex items-center gap-2">
+                            <input type="checkbox" id="nuevaPresPermiteFraccion" checked={nuevaPresentacion.permite_fraccion} onChange={e => setNuevaPresentacion({ ...nuevaPresentacion, permite_fraccion: e.target.checked })} className="h-[15px] w-[15px] cursor-pointer" />
+                            <label htmlFor="nuevaPresPermiteFraccion" className="cursor-pointer text-[13px] text-slate-900 dark:text-slate-100">Vendible por monto/fracción en Caja (ej. balanceado fraccionado en 1kg)</label>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalPresentacion(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={() => handleAgregarPresentacion(modalPresentacion)} disabled={guardando} style={{ ...btnPrimario, opacity: guardando ? 0.6 : 1 }}>{guardando ? 'Agregando...' : 'Agregar'}</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setModalPresentacion(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={() => handleAgregarPresentacion(modalPresentacion)} disabled={guardando} className={btnPrimarioCls}>{guardando ? 'Agregando...' : 'Agregar'}</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {modalCodigoBarras && (
-                <Modal s={s} zIndex={2000}>
-                    <div style={{ width: '380px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '6px', color: s.text }}>Codigo de barras</h3>
-                        <p style={{ fontSize: '13px', color: s.textMuted, marginBottom: '20px' }}>{modalCodigoBarras.nombre}</p>
-                        <label style={labelStyle}>Codigo de barras</label>
+                <Modal zIndex={2000}>
+                    <div className="w-[380px]">
+                        <h3 className="mb-1.5 text-base font-bold text-slate-900 dark:text-slate-100">Codigo de barras</h3>
+                        <p className="mb-5 text-[13px] text-slate-500 dark:text-slate-400">{modalCodigoBarras.nombre}</p>
+                        <label className={labelCls}>Codigo de barras</label>
                         <input
                             value={codigoBarrasValor}
                             onChange={e => setCodigoBarrasValor(e.target.value)}
                             placeholder="Escanea con lector o ingresa manualmente"
-                            style={inputStyle}
+                            className={inputCls}
                             autoFocus
                         />
-                        <p style={{ fontSize: '11px', color: s.textFaint, marginBottom: '16px' }}>
+                        <p className="mb-4 text-[11px] text-slate-400 dark:text-slate-500">
                             Si tenes un lector de codigo de barras, conectalo por USB y escanea el producto directamente en este campo.
                         </p>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalCodigoBarras(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleGuardarCodigoBarras} style={btnPrimario}>Guardar</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setModalCodigoBarras(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleGuardarCodigoBarras} className={btnPrimarioCls}>Guardar</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {modalPrecio && (
-                <Modal s={s}>
-                    <div style={{ width: '420px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px', color: s.text }}>Precio y descuento</h3>
-                        <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>{modalPrecio.nombre}</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                            <div><label style={labelStyle}>P. compra (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra)} onChange={e => setPrecioForm({ ...precioForm, precio_compra: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                            <div><label style={labelStyle}>P. efectivo / transferencia (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_venta)} onChange={e => setPrecioForm({ ...precioForm, precio_venta: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                <Modal>
+                    <div className="w-[420px]">
+                        <h3 className="mb-1 text-base font-bold text-slate-900 dark:text-slate-100">Precio y descuento</h3>
+                        <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">{modalPrecio.nombre}</p>
+                        <div className="mb-3 grid grid-cols-2 gap-3">
+                            <div><label className={labelCls}>P. compra (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra)} onChange={e => setPrecioForm({ ...precioForm, precio_compra: parseMiles(e.target.value) })} className={`${inputCls} mb-0`} /></div>
+                            <div><label className={labelCls}>P. efectivo / transferencia (Gs.)</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_venta)} onChange={e => setPrecioForm({ ...precioForm, precio_venta: parseMiles(e.target.value) })} className={`${inputCls} mb-0`} /></div>
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                            <label style={labelStyle}>P. tarjeta (Gs.)</label>
-                            <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al precio efectivo" value={formatMiles(precioForm.precio_tarjeta)} onChange={e => setPrecioForm({ ...precioForm, precio_tarjeta: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} />
+                        <div className="mb-3">
+                            <label className={labelCls}>P. tarjeta (Gs.)</label>
+                            <input type="text" inputMode="numeric" placeholder="Dejar vacío si es igual al precio efectivo" value={formatMiles(precioForm.precio_tarjeta)} onChange={e => setPrecioForm({ ...precioForm, precio_tarjeta: parseMiles(e.target.value) })} className={`${inputCls} mb-0`} />
                         </div>
                         {precioForm.precio_venta && precioForm.precio_tarjeta && parseInt(precioForm.precio_tarjeta) > parseInt(precioForm.precio_venta) && (
-                            <div style={{ padding: '10px 14px', background: darkMode ? '#1e3a5f' : '#eff6ff', borderRadius: '8px', marginBottom: '8px', fontSize: '12px', color: '#1d4ed8', fontWeight: '600' }}>
+                            <div className="mb-2 rounded-lg bg-blue-50 px-3.5 py-2.5 text-xs font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                                 Recargo tarjeta: {((parseInt(precioForm.precio_tarjeta) - parseInt(precioForm.precio_venta)) / parseInt(precioForm.precio_venta) * 100).toFixed(2)}% · Diferencia: Gs. {(parseInt(precioForm.precio_tarjeta) - parseInt(precioForm.precio_venta)).toLocaleString()}
                             </div>
                         )}
                         {precioForm.precio_compra && precioForm.precio_venta && (
-                            <div style={{ padding: '10px 14px', background: darkMode ? '#052e16' : '#f0fdf4', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#166534', fontWeight: '600' }}>
+                            <div className="mb-4 rounded-lg bg-emerald-50 px-3.5 py-2.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
                                 {(() => {
                                     const costo = parseInt(precioForm.precio_compra)
                                     const venta = parseInt(precioForm.precio_venta)
@@ -1435,7 +1432,7 @@ function colorVencimiento(diasParaVencer) {
                                         <>
                                             <span>Efectivo — Ganancia: Gs. {ganancia.toLocaleString()} · M. ganancia: {markupEf}% · M. venta: {margenEf}%</span>
                                             {tarjeta > 0 && (
-                                                <span style={{ display: 'block', marginTop: '4px', color: '#1d6b14' }}>
+                                                <span className="mt-1 block">
                                                     Tarjeta — Ganancia: Gs. {(tarjeta - costo).toLocaleString()} · M. ganancia: {Math.round(((tarjeta - costo) / costo) * 100)}% · M. venta: {Math.round(((tarjeta - costo) / tarjeta) * 100)}%
                                                 </span>
                                             )}
@@ -1444,56 +1441,56 @@ function colorVencimiento(diasParaVencer) {
                                 })()}
                             </div>
                         )}
-                        <div style={{ borderTop: `1px solid ${s.borderLight}`, paddingTop: '16px', marginBottom: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                        <div className="mb-3 border-t border-slate-100 pt-4 dark:border-slate-700">
+                            <div className="mb-3.5 flex items-center gap-2">
                                 <input type="checkbox" id="desc" checked={precioForm.descuento_activo} onChange={e => setPrecioForm({ ...precioForm, descuento_activo: e.target.checked })} />
-                                <label htmlFor="desc" style={{ fontSize: '13px', fontWeight: '600', cursor: 'pointer', color: s.text }}>Activar descuento temporal</label>
+                                <label htmlFor="desc" className="cursor-pointer text-[13px] font-semibold text-slate-900 dark:text-slate-100">Activar descuento temporal</label>
                             </div>
                             {precioForm.descuento_activo && (
                                 <>
-                                    <div style={{ background: darkMode ? '#1e3a5f' : '#f0f4ff', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
-                                        <p style={{ fontSize: '11px', fontWeight: '700', color: '#3730a3', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Precios con descuento</p>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                            <div><label style={labelStyle}>P. compra descuento</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra_descuento || '')} onChange={e => setPrecioForm({ ...precioForm, precio_compra_descuento: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                                            <div><label style={labelStyle}>P. venta descuento</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_descuento)} onChange={e => setPrecioForm({ ...precioForm, precio_descuento: parseMiles(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                                    <div className="mb-3 rounded-[10px] bg-blue-50 p-3.5 dark:bg-blue-950/30">
+                                        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-indigo-800 dark:text-indigo-300">Precios con descuento</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div><label className={labelCls}>P. compra descuento</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_compra_descuento || '')} onChange={e => setPrecioForm({ ...precioForm, precio_compra_descuento: parseMiles(e.target.value) })} className={`${inputCls} mb-0`} /></div>
+                                            <div><label className={labelCls}>P. venta descuento</label><input type="text" inputMode="numeric" value={formatMiles(precioForm.precio_descuento)} onChange={e => setPrecioForm({ ...precioForm, precio_descuento: parseMiles(e.target.value) })} className={`${inputCls} mb-0`} /></div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                                        <div><label style={labelStyle}>Desde</label><input type="datetime-local" value={precioForm.descuento_desde} onChange={e => setPrecioForm({ ...precioForm, descuento_desde: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                                        <div><label style={labelStyle}>Hasta</label><input type="datetime-local" value={precioForm.descuento_hasta} onChange={e => setPrecioForm({ ...precioForm, descuento_hasta: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                                    <div className="mb-2 grid grid-cols-2 gap-2">
+                                        <div><label className={labelCls}>Desde</label><input type="datetime-local" value={precioForm.descuento_desde} onChange={e => setPrecioForm({ ...precioForm, descuento_desde: e.target.value })} className={`${inputCls} mb-0`} /></div>
+                                        <div><label className={labelCls}>Hasta</label><input type="datetime-local" value={precioForm.descuento_hasta} onChange={e => setPrecioForm({ ...precioForm, descuento_hasta: e.target.value })} className={`${inputCls} mb-0`} /></div>
                                     </div>
-                                    <label style={labelStyle}>Límite de stock (opcional)</label>
-                                    <input type="number" placeholder="Sin límite" value={precioForm.descuento_stock} onChange={e => setPrecioForm({ ...precioForm, descuento_stock: e.target.value })} style={inputStyle} />
+                                    <label className={labelCls}>Límite de stock (opcional)</label>
+                                    <input type="number" placeholder="Sin límite" value={precioForm.descuento_stock} onChange={e => setPrecioForm({ ...precioForm, descuento_stock: e.target.value })} className={inputCls} />
                                 </>
                             )}
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalPrecio(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleGuardarPrecio} style={btnPrimario}>Guardar</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setModalPrecio(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleGuardarPrecio} className={btnPrimarioCls}>Guardar</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {modalSubcategorias && (
-                <Modal s={s}>
-                    <div style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <Modal>
+                    <div className="flex max-h-[80vh] w-[480px] flex-col">
+                        <div className="mb-4 flex items-center justify-between">
                             <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Subcategorias — {pestanaActiva}</h3>
-                                <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Subcategorias — {pestanaActiva}</h3>
+                                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                                     {tipoActivo === 'con_calidad_especie' ? 'Mini, Maxi, Cachorro, Senior...' : tipoActivo === 'con_especie' ? 'XS, S, M, L, XL...' : 'Tamaños o variantes'}
                                 </p>
                             </div>
-                            <button onClick={() => { setModalSubcategorias(false); setEditandoSubcategoria(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                            <button onClick={() => { setModalSubcategorias(false); setEditandoSubcategoria(null) }} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                         </div>
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                            <label style={labelStyle}>Nueva subcategoria</label>
-                            <input placeholder="Nombre *" value={nuevaSubcategoria.nombre} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, nombre: e.target.value })} style={inputStyle} />
-                            <input placeholder="Descripción (opcional)" value={nuevaSubcategoria.descripcion} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, descripcion: e.target.value })} style={inputStyle} />
-                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Vinculación Tienda Web</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                                <select value={nuevaSubcategoria.ecommerce_categoria} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_categoria: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px' }}>
+                        <div className="mb-4 rounded-[10px] bg-slate-50 p-4 dark:bg-slate-900">
+                            <label className={labelCls}>Nueva subcategoria</label>
+                            <input placeholder="Nombre *" value={nuevaSubcategoria.nombre} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, nombre: e.target.value })} className={inputCls} />
+                            <input placeholder="Descripción (opcional)" value={nuevaSubcategoria.descripcion} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, descripcion: e.target.value })} className={inputCls} />
+                            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Vinculación Tienda Web</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                <select value={nuevaSubcategoria.ecommerce_categoria} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_categoria: e.target.value })} className={`${inputCls} mb-0 text-xs`}>
                                     <option value="">Cat. web</option>
                                     <option value="perros">Perros</option>
                                     <option value="gatos">Gatos</option>
@@ -1502,21 +1499,21 @@ function colorVencimiento(diasParaVencer) {
                                     <option value="cuidado">Cuidado</option>
                                     <option value="ofertas">Ofertas</option>
                                 </select>
-                                <input placeholder="Filtro (ej: etapa_vida)" value={nuevaSubcategoria.ecommerce_campo} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_campo: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
-                                <input placeholder="Valor (ej: adulto)" value={nuevaSubcategoria.ecommerce_valor} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_valor: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
+                                <input placeholder="Filtro (ej: etapa_vida)" value={nuevaSubcategoria.ecommerce_campo} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_campo: e.target.value })} className={`${inputCls} mb-0 font-mono text-xs`} />
+                                <input placeholder="Valor (ej: adulto)" value={nuevaSubcategoria.ecommerce_valor} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_valor: e.target.value })} className={`${inputCls} mb-0 font-mono text-xs`} />
                             </div>
-                            <button onClick={handleCrearSubcategoria} style={{ ...btnPrimario, marginTop: '12px', width: '100%', justifyContent: 'center' }}>+ Agregar subcategoria</button>
+                            <button onClick={handleCrearSubcategoria} className={`${btnPrimarioCls} mt-3 w-full`}>+ Agregar subcategoria</button>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="flex-1 overflow-y-auto">
                             {subcategoriasPestana.map(sub => (
-                                <div key={sub.id} style={{ borderBottom: `1px solid ${s.borderLight}` }}>
+                                <div key={sub.id} className="border-b border-slate-100 dark:border-slate-700">
                                     {editandoSubcategoria?.id === sub.id ? (
-                                        <div style={{ padding: '12px' }}>
-                                            <input value={editandoSubcategoria.nombre} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, nombre: e.target.value })} placeholder="Nombre *" style={inputStyle} />
-                                            <input value={editandoSubcategoria.descripcion || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, descripcion: e.target.value })} placeholder="Descripción" style={inputStyle} />
-                                            <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Vinculación Tienda Web</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                                                <select value={editandoSubcategoria.ecommerce_categoria || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_categoria: e.target.value })} style={{ ...inputStyle, marginBottom: 0, fontSize: '12px' }}>
+                                        <div className="p-3">
+                                            <input value={editandoSubcategoria.nombre} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, nombre: e.target.value })} placeholder="Nombre *" className={inputCls} />
+                                            <input value={editandoSubcategoria.descripcion || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, descripcion: e.target.value })} placeholder="Descripción" className={inputCls} />
+                                            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Vinculación Tienda Web</p>
+                                            <div className="mb-2.5 grid grid-cols-3 gap-2">
+                                                <select value={editandoSubcategoria.ecommerce_categoria || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_categoria: e.target.value })} className={`${inputCls} mb-0 text-xs`}>
                                                     <option value="">Cat. web</option>
                                                     <option value="perros">Perros</option>
                                                     <option value="gatos">Gatos</option>
@@ -1525,37 +1522,37 @@ function colorVencimiento(diasParaVencer) {
                                                     <option value="cuidado">Cuidado</option>
                                                     <option value="ofertas">Ofertas</option>
                                                 </select>
-                                                <input value={editandoSubcategoria.ecommerce_campo || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_campo: e.target.value })} placeholder="Filtro" style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
-                                                <input value={editandoSubcategoria.ecommerce_valor || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_valor: e.target.value })} placeholder="Valor" style={{ ...inputStyle, marginBottom: 0, fontSize: '12px', fontFamily: 'monospace' }} />
+                                                <input value={editandoSubcategoria.ecommerce_campo || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_campo: e.target.value })} placeholder="Filtro" className={`${inputCls} mb-0 font-mono text-xs`} />
+                                                <input value={editandoSubcategoria.ecommerce_valor || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_valor: e.target.value })} placeholder="Valor" className={`${inputCls} mb-0 font-mono text-xs`} />
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button onClick={handleEditarSubcategoria} style={{ ...btnPrimario, padding: '6px 14px', fontSize: '12px' }}>Guardar</button>
-                                                <button onClick={() => setEditandoSubcategoria(null)} style={{ ...btnSecundario, padding: '6px 14px', fontSize: '12px' }}>Cancelar</button>
+                                            <div className="flex gap-2">
+                                                <button onClick={handleEditarSubcategoria} className={`${btnPrimarioCls} px-3.5 py-1.5 text-xs`}>Guardar</button>
+                                                <button onClick={() => setEditandoSubcategoria(null)} className={`${btnSecundarioCls} px-3.5 py-1.5 text-xs`}>Cancelar</button>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <p style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{sub.nombre}</p>
-                                                {sub.descripcion && <p style={{ fontSize: '11px', color: s.textMuted }}>{sub.descripcion}</p>}
+                                        <div className="flex items-center gap-2 px-3 py-2.5">
+                                            <div className="flex-1">
+                                                <p className="text-[13px] font-medium text-slate-900 dark:text-slate-100">{sub.nombre}</p>
+                                                {sub.descripcion && <p className="text-[11px] text-slate-500 dark:text-slate-400">{sub.descripcion}</p>}
                                                 {(sub.ecommerce_categoria || sub.ecommerce_campo) && (
-                                                    <p style={{ fontSize: '10px', color: '#6366f1', marginTop: '2px', fontFamily: 'monospace' }}>
+                                                    <p className="mt-0.5 font-mono text-[10px] text-indigo-500">
                                                         web: {sub.ecommerce_categoria || '—'} · {sub.ecommerce_campo || '—'}={sub.ecommerce_valor || '—'}
                                                     </p>
                                                 )}
                                             </div>
-                                            <button onClick={() => setEditandoSubcategoria({ id: sub.id, nombre: sub.nombre, descripcion: sub.descripcion || '', ecommerce_categoria: sub.ecommerce_categoria || '', ecommerce_campo: sub.ecommerce_campo || '', ecommerce_valor: sub.ecommerce_valor || '' })} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            <button onClick={() => setEditandoSubcategoria({ id: sub.id, nombre: sub.nombre, descripcion: sub.descripcion || '', ecommerce_categoria: sub.ecommerce_categoria || '', ecommerce_campo: sub.ecommerce_campo || '', ecommerce_valor: sub.ecommerce_valor || '' })} className={`${btnSecundarioCls} px-2.5 py-1 text-xs`}>
+                                                <IconLapiz />
                                             </button>
-                                            <button onClick={() => handleEliminarSubcategoria(sub)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}>
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                            <button onClick={() => handleEliminarSubcategoria(sub)} className={chipDeleteCls}>
+                                                <IconBasura />
                                             </button>
                                         </div>
                                     )}
                                 </div>
                             ))}
                             {subcategoriasPestana.length === 0 && (
-                                <p style={{ textAlign: 'center', padding: '24px', color: s.textMuted, fontSize: '13px' }}>No hay subcategorias para {pestanaActiva} aún.</p>
+                                <p className="p-6 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay subcategorias para {pestanaActiva} aún.</p>
                             )}
                         </div>
                     </div>
@@ -1563,54 +1560,54 @@ function colorVencimiento(diasParaVencer) {
             )}
 
             {modalCategorias && (
-                <Modal s={s}>
-                    <div style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Gestión de categorías</h3>
-                            <button onClick={() => setModalCategorias(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                <Modal>
+                    <div className="flex max-h-[80vh] w-[480px] flex-col">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Gestión de categorías</h3>
+                            <button onClick={() => setModalCategorias(false)} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                         </div>
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                            <label style={labelStyle}>Nueva categoría</label>
-                            <input placeholder="Nombre" value={nuevaCategoria.nombre} onChange={e => setNuevaCategoria({ ...nuevaCategoria, nombre: e.target.value })} style={inputStyle} />
-                            <input placeholder="Descripción (opcional)" value={nuevaCategoria.descripcion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, descripcion: e.target.value })} style={inputStyle} />
-                            <label style={labelStyle}>Sección</label>
-                            <select value={nuevaCategoria.seccion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, seccion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                        <div className="mb-4 rounded-[10px] bg-slate-50 p-4 dark:bg-slate-900">
+                            <label className={labelCls}>Nueva categoría</label>
+                            <input placeholder="Nombre" value={nuevaCategoria.nombre} onChange={e => setNuevaCategoria({ ...nuevaCategoria, nombre: e.target.value })} className={inputCls} />
+                            <input placeholder="Descripción (opcional)" value={nuevaCategoria.descripcion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, descripcion: e.target.value })} className={inputCls} />
+                            <label className={labelCls}>Sección</label>
+                            <select value={nuevaCategoria.seccion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, seccion: e.target.value })} className={`${inputCls} mb-0`}>
                                 <option value="">General (todas las secciones)</option>
                                 {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                             </select>
-                            <button onClick={handleCrearCategoria} style={{ ...btnPrimario, marginTop: '12px', width: '100%', justifyContent: 'center' }}>+ Agregar categoría</button>
+                            <button onClick={handleCrearCategoria} className={`${btnPrimarioCls} mt-3 w-full`}>+ Agregar categoría</button>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="flex-1 overflow-y-auto">
                             {categorias.map(cat => {
-                                const seccionColor = cat.seccion === 'balanceados' ? { bg: '#e0e7ff', color: '#3730a3' } : cat.seccion === 'accesorios' ? { bg: '#dcfce7', color: '#166534' } : cat.seccion === 'medicamentos' ? { bg: '#fce7f3', color: '#9d174d' } : { bg: s.border, color: s.textMuted }
+                                const seccionCls = cat.seccion === 'balanceados' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300' : cat.seccion === 'accesorios' ? 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300' : cat.seccion === 'medicamentos' ? 'bg-pink-100 text-pink-800 dark:bg-pink-500/15 dark:text-pink-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
                                 const seccionLabel = cat.seccion ? cat.seccion.charAt(0).toUpperCase() + cat.seccion.slice(1) : 'General'
                                 return (
-                                <div key={cat.id} style={{ padding: '10px 12px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div key={cat.id} className="flex items-center gap-2 border-b border-slate-100 py-2.5 px-3 dark:border-slate-700">
                                     {editandoCategoria === cat.id ? (
-                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <input defaultValue={cat.nombre} id={`cat-edit-${cat.id}`} style={{ ...inputStyle, marginBottom: 0 }} />
-                                            <select defaultValue={cat.seccion || ''} id={`cat-edit-seccion-${cat.id}`} style={{ ...inputStyle, marginBottom: 0 }}>
+                                        <div className="flex flex-1 flex-col gap-1.5">
+                                            <input defaultValue={cat.nombre} id={`cat-edit-${cat.id}`} className={`${inputCls} mb-0`} />
+                                            <select defaultValue={cat.seccion || ''} id={`cat-edit-seccion-${cat.id}`} className={`${inputCls} mb-0`}>
                                                 <option value="">General (todas las secciones)</option>
                                                 {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
                                             </select>
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                <button onClick={() => handleEditarCategoria(cat.id, { nombre: document.getElementById(`cat-edit-${cat.id}`).value, seccion: document.getElementById(`cat-edit-seccion-${cat.id}`).value || null })} style={{ ...btnPrimario, padding: '6px 12px', flex: 1, justifyContent: 'center' }}>Guardar</button>
-                                                <button onClick={() => setEditandoCategoria(null)} style={{ ...btnSecundario, padding: '6px 12px' }}>Cancelar</button>
+                                            <div className="flex gap-1.5">
+                                                <button onClick={() => handleEditarCategoria(cat.id, { nombre: document.getElementById(`cat-edit-${cat.id}`).value, seccion: document.getElementById(`cat-edit-seccion-${cat.id}`).value || null })} className={`${btnPrimarioCls} flex-1 px-3 py-1.5`}>Guardar</button>
+                                                <button onClick={() => setEditandoCategoria(null)} className={`${btnSecundarioCls} px-3 py-1.5`}>Cancelar</button>
                                             </div>
                                         </div>
                                     ) : (
                                         <>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <p style={{ fontSize: '13px', fontWeight: '500', color: s.text }}>{cat.nombre}</p>
-                                                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '10px', background: seccionColor.bg, color: seccionColor.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{seccionLabel}</span>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[13px] font-medium text-slate-900 dark:text-slate-100">{cat.nombre}</p>
+                                                    <span className={`rounded-[10px] px-1.75 py-px text-[10px] font-bold uppercase tracking-wide ${seccionCls}`}>{seccionLabel}</span>
                                                 </div>
-                                                {cat.descripcion && <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '2px' }}>{cat.descripcion}</p>}
+                                                {cat.descripcion && <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{cat.descripcion}</p>}
                                             </div>
-                                            <button onClick={() => setEditandoCategoria(cat.id)} style={{ ...btnSecundario, padding: '4px 10px', fontSize: '12px' }}>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            <button onClick={() => setEditandoCategoria(cat.id)} className={`${btnSecundarioCls} px-2.5 py-1 text-xs`}>
+                                                <IconLapiz />
                                             </button>
-                                            <button onClick={() => handleEliminarCategoria(cat)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '12px', cursor: 'pointer' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                                            <button onClick={() => handleEliminarCategoria(cat)} className={chipDeleteCls}><IconBasura /></button>
                                         </>
                                     )}
                                 </div>
@@ -1622,148 +1619,149 @@ function colorVencimiento(diasParaVencer) {
             )}
 
             {modalStock && (
-                <Modal s={s} zIndex={2000}>
-                    <div style={{ width: '360px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '6px', color: s.text }}>Actualizar stock</h3>
-                        <p style={{ fontSize: '13px', color: s.textMuted, marginBottom: '20px' }}>{modalStock.nombre}</p>
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: s.textMuted }}>Stock actual</span>
-                            <span style={{ fontSize: '20px', fontWeight: '800', color: modalStock.stockActual <= 3 ? '#ef4444' : s.text }}>{modalStock.stockActual}</span>
+                <Modal zIndex={2000}>
+                    <div className="w-[360px]">
+                        <h3 className="mb-1.5 text-base font-bold text-slate-900 dark:text-slate-100">Actualizar stock</h3>
+                        <p className="mb-5 text-[13px] text-slate-500 dark:text-slate-400">{modalStock.nombre}</p>
+                        <div className="mb-4 flex items-center justify-between rounded-[10px] bg-slate-50 p-4 dark:bg-slate-900">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Stock actual</span>
+                            <span className={`text-xl font-extrabold ${modalStock.stockActual <= 3 ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>{modalStock.stockActual}</span>
                         </div>
-                        <label style={labelStyle}>Nuevo stock</label>
-                        <input type="number" value={nuevoStockValor} onChange={e => setNuevoStockValor(e.target.value)} style={inputStyle} autoFocus />
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalStock(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleConfirmarStock} style={btnPrimario}>Guardar</button>
+                        <label className={labelCls}>Nuevo stock</label>
+                        <input type="number" value={nuevoStockValor} onChange={e => setNuevoStockValor(e.target.value)} className={inputCls} autoFocus />
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setModalStock(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleConfirmarStock} className={btnPrimarioCls}>Guardar</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {confirmEliminarMarca && (
-                <Modal s={s} zIndex={1100}>
-                    <div style={{ width: '400px' }}>
-                        <h3 style={{ marginBottom: '12px', color: confirmEliminarMarca.cantidad > 0 ? '#ef4444' : s.text }}>
-                            {confirmEliminarMarca.cantidad > 0 ? '⚠️ Atención' : 'Eliminar marca'}
+                <Modal zIndex={1100}>
+                    <div className="w-[400px]">
+                        <h3 className={`mb-3 text-base font-bold ${confirmEliminarMarca.cantidad > 0 ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>
+                            {confirmEliminarMarca.cantidad > 0 ? <span className="inline-flex items-center gap-1.5"><IconAdvertencia /> Atención</span> : 'Eliminar marca'}
                         </h3>
                         {confirmEliminarMarca.cantidad > 0 ? (
                             <>
-                                <p style={{ fontSize: '13px', marginBottom: '12px', color: s.text }}>La marca <strong>{confirmEliminarMarca.nombre}</strong> tiene <strong>{confirmEliminarMarca.cantidad}</strong> productos asociados.</p>
-                                <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#991b1b' }}>Eliminar esta marca desvinculará todos sus productos.</div>
+                                <p className="mb-3 text-[13px] text-slate-900 dark:text-slate-100">La marca <strong>{confirmEliminarMarca.nombre}</strong> tiene <strong>{confirmEliminarMarca.cantidad}</strong> productos asociados.</p>
+                                <div className="mb-4 rounded-lg bg-red-100 p-3 text-xs text-red-800 dark:bg-red-950/50 dark:text-red-300">Eliminar esta marca desvinculará todos sus productos.</div>
                             </>
                         ) : (
-                            <p style={{ fontSize: '13px', marginBottom: '16px', color: s.text }}>¿Eliminar la marca <strong>{confirmEliminarMarca.nombre}</strong>?</p>
+                            <p className="mb-4 text-[13px] text-slate-900 dark:text-slate-100">¿Eliminar la marca <strong>{confirmEliminarMarca.nombre}</strong>?</p>
                         )}
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setConfirmEliminarMarca(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleConfirmarEliminarMarca} style={{ ...btnPrimario, background: '#ef4444' }}>Eliminar igual</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setConfirmEliminarMarca(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleConfirmarEliminarMarca} className={`${btnPrimarioCls} bg-red-500 hover:bg-red-600 dark:bg-red-500 dark:hover:bg-red-600`}>Eliminar igual</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {confirmEliminarCategoria && (
-                <Modal s={s} zIndex={1100}>
-                    <div style={{ width: '400px' }}>
-                        <h3 style={{ marginBottom: '12px', color: confirmEliminarCategoria.cantidad > 0 ? '#ef4444' : s.text }}>
-                            {confirmEliminarCategoria.cantidad > 0 ? '⚠️ Atención' : 'Eliminar categoría'}
+                <Modal zIndex={1100}>
+                    <div className="w-[400px]">
+                        <h3 className={`mb-3 text-base font-bold ${confirmEliminarCategoria.cantidad > 0 ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>
+                            {confirmEliminarCategoria.cantidad > 0 ? <span className="inline-flex items-center gap-1.5"><IconAdvertencia /> Atención</span> : 'Eliminar categoría'}
                         </h3>
                         {confirmEliminarCategoria.cantidad > 0 ? (
                             <>
-                                <p style={{ fontSize: '13px', marginBottom: '12px', color: s.text }}>La categoría <strong>{confirmEliminarCategoria.nombre}</strong> tiene <strong>{confirmEliminarCategoria.cantidad}</strong> productos asociados.</p>
-                                <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#991b1b' }}>Eliminar esta categoría desvinculará todos sus productos.</div>
+                                <p className="mb-3 text-[13px] text-slate-900 dark:text-slate-100">La categoría <strong>{confirmEliminarCategoria.nombre}</strong> tiene <strong>{confirmEliminarCategoria.cantidad}</strong> productos asociados.</p>
+                                <div className="mb-4 rounded-lg bg-red-100 p-3 text-xs text-red-800 dark:bg-red-950/50 dark:text-red-300">Eliminar esta categoría desvinculará todos sus productos.</div>
                             </>
                         ) : (
-                            <p style={{ fontSize: '13px', marginBottom: '16px', color: s.text }}>¿Eliminar la categoría <strong>{confirmEliminarCategoria.nombre}</strong>?</p>
+                            <p className="mb-4 text-[13px] text-slate-900 dark:text-slate-100">¿Eliminar la categoría <strong>{confirmEliminarCategoria.nombre}</strong>?</p>
                         )}
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setConfirmEliminarCategoria(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleConfirmarEliminarCategoria} style={{ ...btnPrimario, background: '#ef4444' }}>Eliminar igual</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setConfirmEliminarCategoria(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleConfirmarEliminarCategoria} className={`${btnPrimarioCls} bg-red-500 hover:bg-red-600 dark:bg-red-500 dark:hover:bg-red-600`}>Eliminar igual</button>
                         </div>
                     </div>
                 </Modal>
             )}
 
             {modalLotes && (
-            <Modal s={s} zIndex={2000}>
-                <div style={{ width: '560px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Lotes — {modalLotes.nombre}</h3>
-                        <button onClick={() => setModalLotes(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+            <Modal zIndex={2000}>
+                <div className="flex max-h-[85vh] w-[560px] flex-col">
+                    <div className="mb-1.5 flex items-center justify-between">
+                        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Lotes — {modalLotes.nombre}</h3>
+                        <button onClick={() => setModalLotes(null)} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                     </div>
-                    <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
-                        Stock total: <strong style={{ color: s.text }}>{modalLotes.stock}</strong> unidades · FEFO activo (vence primero, sale primero)
+                    <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
+                        Stock total: <strong className="text-slate-900 dark:text-slate-100">{modalLotes.stock}</strong> unidades · FEFO activo (vence primero, sale primero)
                     </p>
-                    <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                        <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Agregar lote</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <div className="mb-4 rounded-[10px] bg-slate-50 p-4 dark:bg-slate-900">
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Agregar lote</p>
+                        <div className="mb-2.5 grid grid-cols-3 gap-2.5">
                             <div>
-                                <label style={labelStyle}>N° de lote</label>
+                                <label className={labelCls}>N° de lote</label>
                                 <input value={nuevoLote.numero_lote} onChange={e => setNuevoLote({ ...nuevoLote, numero_lote: e.target.value })}
-                                    placeholder="Opcional" style={{ ...inputStyle, marginBottom: 0 }} />
+                                    placeholder="Opcional" className={`${inputCls} mb-0`} />
                             </div>
                             <div>
-                                <label style={labelStyle}>Fecha de vencimiento *</label>
+                                <label className={labelCls}>Fecha de vencimiento *</label>
                                 <input type="date" value={nuevoLote.fecha_vencimiento} onChange={e => setNuevoLote({ ...nuevoLote, fecha_vencimiento: e.target.value })}
-                                    style={{ ...inputStyle, marginBottom: 0 }} />
+                                    className={`${inputCls} mb-0`} />
                             </div>
                             <div>
-                                <label style={labelStyle}>Stock inicial *</label>
+                                <label className={labelCls}>Stock inicial *</label>
                                 <input type="number" value={nuevoLote.stock_inicial} onChange={e => setNuevoLote({ ...nuevoLote, stock_inicial: e.target.value })}
-                                    placeholder="Unidades" style={{ ...inputStyle, marginBottom: 0 }} />
+                                    placeholder="Unidades" className={`${inputCls} mb-0`} />
                             </div>
                         </div>
                         <button onClick={handleCrearLote}
-                            style={{ ...btnPrimario, width: '100%', justifyContent: 'center', fontSize: '12px' }}>
+                            className={`${btnPrimarioCls} w-full text-xs`}>
                             + Agregar lote
                         </button>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <div className="flex-1 overflow-y-auto">
                         {cargandoLotes ? (
-                            <p style={{ textAlign: 'center', color: s.textMuted, padding: '20px' }}>Cargando lotes...</p>
+                            <p className="p-5 text-center text-slate-500 dark:text-slate-400">Cargando lotes...</p>
                         ) : lotes.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '32px', color: s.textMuted }}>
-                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.35 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V7a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7v10a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 17v-7"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
-                                <p style={{ fontSize: '13px' }}>No hay lotes cargados para esta presentación.</p>
-                                <p style={{ fontSize: '11px', marginTop: '4px', color: s.textFaint }}>El stock se gestiona de forma global hasta que cargues lotes.</p>
+                            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                                <span className="mb-2 flex justify-center opacity-35"><IconCaja3D /></span>
+                                <p className="text-[13px]">No hay lotes cargados para esta presentación.</p>
+                                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">El stock se gestiona de forma global hasta que cargues lotes.</p>
                             </div>
                         ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
                                 <thead>
-                                    <tr style={{ background: s.surfaceLow }}>
+                                    <tr className="bg-slate-50 dark:bg-slate-900">
                                         {['N° Lote', 'Vencimiento', 'Días', 'Stock inicial', 'Stock actual', ''].map(h => (
-                                            <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                            <th key={h} className="whitespace-nowrap px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {lotes.map(lote => {
                                         const dias = parseInt(lote.dias_para_vencer)
-                                        const color = colorVencimiento(dias)
                                         const vencido = dias < 0
+                                        const cls = vencido ? 'bg-red-500/10 text-red-500' : dias <= 30 ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
                                         return (
-                                            <tr key={lote.id} style={{ borderTop: `1px solid ${s.borderLight}` }}>
-                                                <td style={{ padding: '10px 12px', fontSize: '12px', fontFamily: 'monospace', color: s.text }}>
-                                                    {lote.numero_lote || <span style={{ color: s.textFaint }}>—</span>}
+                                            <tr key={lote.id} className="border-t border-slate-100 dark:border-slate-700">
+                                                <td className="px-3 py-2.5 font-mono text-xs text-slate-900 dark:text-slate-100">
+                                                    {lote.numero_lote || <span className="text-slate-400 dark:text-slate-500">—</span>}
                                                 </td>
-                                                <td style={{ padding: '10px 12px', fontSize: '12px', color: s.text }}>
+                                                <td className="px-3 py-2.5 text-xs text-slate-900 dark:text-slate-100">
                                                     {new Date(lote.fecha_vencimiento).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })}
                                                 </td>
-                                                <td style={{ padding: '10px 12px' }}>
-                                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: `${color}20`, color }}>
+                                                <td className="px-3 py-2.5">
+                                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${cls}`}>
                                                         {vencido ? `Vencido (${Math.abs(dias)}d)` : dias === 0 ? 'Vence hoy' : `${dias}d`}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '10px 12px', fontSize: '12px', color: s.textMuted }}>{lote.stock_inicial}</td>
-                                                <td style={{ padding: '10px 12px' }}>
-                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: lote.stock_actual === 0 ? s.textFaint : s.text }}>
+                                                <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">{lote.stock_inicial}</td>
+                                                <td className="px-3 py-2.5">
+                                                    <span className={`text-sm font-extrabold ${lote.stock_actual === 0 ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-100'}`}>
                                                         {lote.stock_actual}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '10px 12px' }}>
+                                                <td className="px-3 py-2.5">
                                                     <button onClick={() => handleEliminarLote(lote)}
-                                                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#991b1b', fontSize: '11px', cursor: 'pointer' }}>
-                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                        className={chipDeleteCls}>
+                                                        <IconBasura />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -1771,6 +1769,7 @@ function colorVencimiento(diasParaVencer) {
                                     })}
                                 </tbody>
                             </table>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -1788,44 +1787,44 @@ function colorVencimiento(diasParaVencer) {
                 const btnDisabled = fraccionando || cantOrigen > pr.stock || !cantOrigen || !cantDestino ||
                     (modoNueva ? !fraccionForm.nombre_nuevo.trim() : !fraccionForm.presentacion_destino_id)
                 return (
-                    <Modal s={s} zIndex={2000}>
-                        <div style={{ width: '500px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Fraccionar stock</h3>
-                                <button onClick={() => setModalFraccionar(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                    <Modal zIndex={2000}>
+                        <div className="w-[500px]">
+                            <div className="mb-1 flex items-center justify-between">
+                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Fraccionar stock</h3>
+                                <button onClick={() => setModalFraccionar(null)} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                             </div>
-                            <p style={{ fontSize: '13px', fontWeight: '600', color: '#6d28d9', marginBottom: '18px' }}>{producto.nombre}</p>
+                            <p className="mb-4.5 text-[13px] font-semibold text-violet-700 dark:text-violet-400">{producto.nombre}</p>
 
                             {/* Origen */}
-                            <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Origen — {pr.nombre}</p>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Stock disponible: <strong style={{ color: s.text }}>{pr.stock}</strong></span>
-                                    {cantOrigen > 0 && <span style={{ fontSize: '12px', color: s.textMuted }}>Quedará: <strong style={{ color: cantOrigen > pr.stock ? '#ef4444' : '#10b981' }}>{pr.stock - cantOrigen >= 0 ? pr.stock - cantOrigen : '—'}</strong></span>}
+                            <div className="mb-3 rounded-[10px] bg-slate-50 px-4 py-3.5 dark:bg-slate-900">
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Origen — {pr.nombre}</p>
+                                <div className="mb-2.5 flex items-center justify-between">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">Stock disponible: <strong className="text-slate-900 dark:text-slate-100">{pr.stock}</strong></span>
+                                    {cantOrigen > 0 && <span className="text-xs text-slate-500 dark:text-slate-400">Quedará: <strong className={cantOrigen > pr.stock ? 'text-red-500' : 'text-emerald-500'}>{pr.stock - cantOrigen >= 0 ? pr.stock - cantOrigen : '—'}</strong></span>}
                                 </div>
-                                <label style={labelStyle}>Cantidad a fraccionar</label>
+                                <label className={labelCls}>Cantidad a fraccionar</label>
                                 <input
                                     type="number" min="1" max={pr.stock}
                                     value={fraccionForm.cantidad_origen}
                                     onChange={e => setFraccionForm({ ...fraccionForm, cantidad_origen: e.target.value })}
                                     placeholder={`Máx. ${pr.stock}`}
-                                    style={{ ...inputStyle, marginBottom: 0, borderColor: cantOrigen > pr.stock ? '#ef4444' : s.border }}
+                                    className={`${inputCls} mb-0 ${cantOrigen > pr.stock ? 'border-red-500' : ''}`}
                                 />
-                                {cantOrigen > pr.stock && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>Stock insuficiente</p>}
+                                {cantOrigen > pr.stock && <p className="mt-1 text-[11px] text-red-500">Stock insuficiente</p>}
                             </div>
 
                             {/* Destino */}
-                            <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Producto fraccionado</p>
+                            <div className="mb-3 rounded-[10px] bg-slate-50 px-4 py-3.5 dark:bg-slate-900">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Producto fraccionado</p>
                                     {/* Toggle existente / nueva */}
-                                    <div style={{ display: 'flex', borderRadius: '8px', border: `1px solid ${s.border}`, overflow: 'hidden', fontSize: '11px', fontWeight: '600' }}>
+                                    <div className="flex overflow-hidden rounded-lg border border-slate-200 text-[11px] font-semibold dark:border-slate-700">
                                         <button onClick={() => setFraccionForm({ ...fraccionForm, modo_destino: 'existente', nombre_nuevo: '' })}
-                                            style={{ padding: '5px 12px', border: 'none', cursor: 'pointer', background: !modoNueva ? '#6d28d9' : s.surface, color: !modoNueva ? 'white' : s.textMuted }}>
+                                            className={`px-3 py-1.5 ${!modoNueva ? 'bg-violet-700 text-white' : 'bg-white text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
                                             Existente
                                         </button>
                                         <button onClick={() => setFraccionForm({ ...fraccionForm, modo_destino: 'nueva', presentacion_destino_id: '' })}
-                                            style={{ padding: '5px 12px', border: 'none', cursor: 'pointer', background: modoNueva ? '#6d28d9' : s.surface, color: modoNueva ? 'white' : s.textMuted }}>
+                                            className={`px-3 py-1.5 ${modoNueva ? 'bg-violet-700 text-white' : 'bg-white text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
                                             Nueva presentación
                                         </button>
                                     </div>
@@ -1833,25 +1832,25 @@ function colorVencimiento(diasParaVencer) {
 
                                 {modoNueva ? (
                                     <>
-                                        <label style={labelStyle}>Nombre de la presentación fraccionada</label>
+                                        <label className={labelCls}>Nombre de la presentación fraccionada</label>
                                         <input
                                             value={fraccionForm.nombre_nuevo}
                                             onChange={e => setFraccionForm({ ...fraccionForm, nombre_nuevo: e.target.value })}
                                             placeholder="Ej: Bolsa 1kg"
-                                            style={{ ...inputStyle }}
+                                            className={inputCls}
                                         />
                                     </>
                                 ) : otrasPresent.length === 0 ? (
-                                    <p style={{ fontSize: '12.5px', color: '#f59e0b', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px' }}>
+                                    <p className="mb-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12.5px] text-amber-500 dark:border-amber-500/30 dark:bg-amber-950/30">
                                         Este producto no tiene otras presentaciones. Usá "Nueva presentación" para crear una al fraccionar.
                                     </p>
                                 ) : (
                                     <>
-                                        <label style={labelStyle}>Presentación destino</label>
+                                        <label className={labelCls}>Presentación destino</label>
                                         <select
                                             value={fraccionForm.presentacion_destino_id}
                                             onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
-                                            style={{ ...inputStyle, marginBottom: '10px' }}
+                                            className={`${inputCls} mb-2.5`}
                                         >
                                             <option value="">Seleccionar...</option>
                                             {otrasPresent.map(p => (
@@ -1859,61 +1858,61 @@ function colorVencimiento(diasParaVencer) {
                                             ))}
                                         </select>
                                         {destino && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                                <span style={{ fontSize: '12px', color: s.textMuted }}>Stock después:</span>
-                                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>{destino.stock + cantDestino}</span>
+                                            <div className="mb-2.5 flex items-center justify-between">
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">Stock después:</span>
+                                                <span className="text-[13px] font-bold text-emerald-500">{destino.stock + cantDestino}</span>
                                             </div>
                                         )}
                                     </>
                                 )}
 
-                                <label style={labelStyle}>Cantidad resultante</label>
+                                <label className={labelCls}>Cantidad resultante</label>
                                 <input
                                     type="number" min="1"
                                     value={fraccionForm.cantidad_destino}
                                     onChange={e => setFraccionForm({ ...fraccionForm, cantidad_destino: e.target.value })}
                                     placeholder="Unidades que se generan"
-                                    style={{ ...inputStyle, marginBottom: '10px' }}
+                                    className={`${inputCls} mb-2.5`}
                                 />
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                                <div className="grid grid-cols-3 gap-2.5">
                                     <div>
-                                        <label style={labelStyle}>Precio compra {modoNueva ? '' : '(opcional)'}</label>
+                                        <label className={labelCls}>Precio compra {modoNueva ? '' : '(opcional)'}</label>
                                         <input
                                             type="number" min="0"
                                             value={fraccionForm.precio_compra}
                                             onChange={e => setFraccionForm({ ...fraccionForm, precio_compra: e.target.value })}
                                             placeholder="Gs. 0"
-                                            style={{ ...inputStyle, marginBottom: 0 }}
+                                            className={`${inputCls} mb-0`}
                                         />
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Precio efectivo {modoNueva ? '' : '(opcional)'}</label>
+                                        <label className={labelCls}>Precio efectivo {modoNueva ? '' : '(opcional)'}</label>
                                         <input
                                             type="number" min="0"
                                             value={fraccionForm.precio_venta}
                                             onChange={e => setFraccionForm({ ...fraccionForm, precio_venta: e.target.value })}
                                             placeholder="Gs. 0"
-                                            style={{ ...inputStyle, marginBottom: 0 }}
+                                            className={`${inputCls} mb-0`}
                                         />
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Precio tarjeta {modoNueva ? '' : '(opcional)'}</label>
+                                        <label className={labelCls}>Precio tarjeta {modoNueva ? '' : '(opcional)'}</label>
                                         <input
                                             type="number" min="0"
                                             value={fraccionForm.precio_tarjeta}
                                             onChange={e => setFraccionForm({ ...fraccionForm, precio_tarjeta: e.target.value })}
                                             placeholder="Gs. 0"
-                                            style={{ ...inputStyle, marginBottom: 0 }}
+                                            className={`${inputCls} mb-0`}
                                         />
                                     </div>
                                 </div>
                                 {fraccionForm.precio_venta && fraccionForm.precio_tarjeta && parseInt(fraccionForm.precio_tarjeta) > parseInt(fraccionForm.precio_venta) && (
-                                    <p style={{ fontSize: '11px', color: '#6d28d9', marginTop: '6px', fontWeight: '600' }}>
+                                    <p className="mt-1.5 text-[11px] font-semibold text-violet-700 dark:text-violet-400">
                                         Recargo tarjeta: {((parseInt(fraccionForm.precio_tarjeta) - parseInt(fraccionForm.precio_venta)) / parseInt(fraccionForm.precio_venta) * 100).toFixed(2)}%
                                     </p>
                                 )}
                                 {cantOrigen > 0 && cantDestino > 0 && fraccionForm.precio_venta && (
-                                    <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: '600' }}>
+                                    <p className="mt-1 text-[11px] font-semibold text-emerald-500">
                                         Total fraccionado: Gs. {(cantDestino * parseInt(fraccionForm.precio_venta || 0)).toLocaleString('es-PY')}
                                         {pr.precio_venta && ` (original: Gs. ${(cantOrigen * pr.precio_venta).toLocaleString('es-PY')})`}
                                     </p>
@@ -1921,20 +1920,20 @@ function colorVencimiento(diasParaVencer) {
                             </div>
 
                             {/* Nota */}
-                            <label style={labelStyle}>Nota (opcional)</label>
+                            <label className={labelCls}>Nota (opcional)</label>
                             <input
                                 value={fraccionForm.nota}
                                 onChange={e => setFraccionForm({ ...fraccionForm, nota: e.target.value })}
                                 placeholder="Ej: Bolsa 15kg → 15 bolsas 1kg"
-                                style={{ ...inputStyle }}
+                                className={inputCls}
                             />
 
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                                <button onClick={() => setModalFraccionar(null)} style={btnSecundario}>Cancelar</button>
+                            <div className="mt-1 flex justify-end gap-2">
+                                <button onClick={() => setModalFraccionar(null)} className={btnSecundarioCls}>Cancelar</button>
                                 <button
                                     onClick={handleConfirmarFraccion}
                                     disabled={btnDisabled}
-                                    style={{ ...btnPrimario, background: '#6d28d9', opacity: btnDisabled ? 0.6 : 1, cursor: btnDisabled ? 'not-allowed' : 'pointer' }}
+                                    className={`${btnPrimarioCls} bg-violet-700 hover:bg-violet-800 dark:bg-violet-700 dark:hover:bg-violet-800 dark:text-white`}
                                 >
                                     {fraccionando ? 'Fraccionando...' : 'Confirmar fraccionamiento'}
                                 </button>
@@ -1945,22 +1944,22 @@ function colorVencimiento(diasParaVencer) {
             })()}
 
             {confirmEliminarSubcategoria && (
-                <Modal s={s} zIndex={1100}>
-                    <div style={{ width: '400px' }}>
-                        <h3 style={{ marginBottom: '12px', color: confirmEliminarSubcategoria.cantidad > 0 ? '#ef4444' : s.text }}>
+                <Modal zIndex={1100}>
+                    <div className="w-[400px]">
+                        <h3 className={`mb-3 text-base font-bold ${confirmEliminarSubcategoria.cantidad > 0 ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>
                             {confirmEliminarSubcategoria.cantidad > 0 ? 'Atención' : 'Eliminar subcategoria'}
                         </h3>
                         {confirmEliminarSubcategoria.cantidad > 0 ? (
                             <>
-                                <p style={{ fontSize: '13px', marginBottom: '12px', color: s.text }}>La subcategoria <strong>{confirmEliminarSubcategoria.nombre}</strong> tiene <strong>{confirmEliminarSubcategoria.cantidad}</strong> productos asociados.</p>
-                                <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#991b1b' }}>Eliminar esta subcategoria desvinculará todos sus productos.</div>
+                                <p className="mb-3 text-[13px] text-slate-900 dark:text-slate-100">La subcategoria <strong>{confirmEliminarSubcategoria.nombre}</strong> tiene <strong>{confirmEliminarSubcategoria.cantidad}</strong> productos asociados.</p>
+                                <div className="mb-4 rounded-lg bg-red-100 p-3 text-xs text-red-800 dark:bg-red-950/50 dark:text-red-300">Eliminar esta subcategoria desvinculará todos sus productos.</div>
                             </>
                         ) : (
-                            <p style={{ fontSize: '13px', marginBottom: '16px', color: s.text }}>¿Eliminar la subcategoria <strong>{confirmEliminarSubcategoria.nombre}</strong>?</p>
+                            <p className="mb-4 text-[13px] text-slate-900 dark:text-slate-100">¿Eliminar la subcategoria <strong>{confirmEliminarSubcategoria.nombre}</strong>?</p>
                         )}
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setConfirmEliminarSubcategoria(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleConfirmarEliminarSubcategoria} style={{ ...btnPrimario, background: '#ef4444' }}>Eliminar igual</button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setConfirmEliminarSubcategoria(null)} className={btnSecundarioCls}>Cancelar</button>
+                            <button onClick={handleConfirmarEliminarSubcategoria} className={`${btnPrimarioCls} bg-red-500 hover:bg-red-600 dark:bg-red-500 dark:hover:bg-red-600`}>Eliminar igual</button>
                         </div>
                     </div>
                 </Modal>
@@ -1978,94 +1977,94 @@ function colorVencimiento(diasParaVencer) {
             )}
         {/* Modal importar Excel */}
         {modalImportar && (
-            <Modal s={s} zIndex={3000}>
-                <div style={{ width: '720px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <Modal zIndex={3000}>
+                <div className="flex max-h-[80vh] w-[720px] flex-col">
+                    <div className="mb-4 flex items-center justify-between">
                         <div>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text, marginBottom: '2px' }}>
+                            <h3 className="mb-0.5 text-base font-bold text-slate-900 dark:text-slate-100">
                                 {importResultado ? 'Importación completada' : 'Vista previa de importación'}
                             </h3>
-                            <p style={{ fontSize: '12px', color: s.textMuted }}>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                                 {importResultado
                                     ? `${importResultado.productosCreados ?? importResultado.creados ?? 0} productos nuevos · ${importResultado.presentacionesActualizadas ?? importResultado.actualizados ?? 0} precios actualizados · ${importResultado.presentacionesCreadas ?? 0} presentaciones nuevas · ${importResultado.errores.length} errores`
                                     : `${modalImportar.filas.length} filas detectadas`}
                             </p>
                         </div>
-                        <button onClick={() => { setModalImportar(null); setImportResultado(null) }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                        <button onClick={() => { setModalImportar(null); setImportResultado(null) }} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                     </div>
 
                     {importResultado ? (
-                        <div style={{ flex: 1 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: importResultado.modo === 'stock' ? '1fr 1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                        <div className="flex-1">
+                            <div className={`mb-4 grid gap-3 ${importResultado.modo === 'stock' ? 'grid-cols-3' : 'grid-cols-4'}`}>
                                 {(importResultado.modo === 'stock' ? [
-                                    { label: 'Presentaciones actualizadas', val: importResultado.actualizados, color: '#10b981' },
-                                    { label: 'Lotes creados', val: importResultado.lotesCreados, color: '#3b82f6' },
-                                    { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
+                                    { label: 'Presentaciones actualizadas', val: importResultado.actualizados, cls: 'text-emerald-500' },
+                                    { label: 'Lotes creados', val: importResultado.lotesCreados, cls: 'text-blue-500' },
+                                    { label: 'Errores', val: importResultado.errores.length, cls: importResultado.errores.length > 0 ? 'text-red-500' : 'text-slate-500 dark:text-slate-400' },
                                 ] : [
-                                    { label: 'Productos nuevos', val: importResultado.productosCreados ?? importResultado.creados ?? 0, color: '#10b981' },
-                                    { label: 'Precios actualizados', val: importResultado.presentacionesActualizadas ?? importResultado.actualizados ?? 0, color: '#3b82f6' },
-                                    { label: 'Presentaciones nuevas', val: importResultado.presentacionesCreadas ?? 0, color: '#8b5cf6' },
-                                    { label: 'Errores', val: importResultado.errores.length, color: importResultado.errores.length > 0 ? '#ef4444' : s.textMuted },
+                                    { label: 'Productos nuevos', val: importResultado.productosCreados ?? importResultado.creados ?? 0, cls: 'text-emerald-500' },
+                                    { label: 'Precios actualizados', val: importResultado.presentacionesActualizadas ?? importResultado.actualizados ?? 0, cls: 'text-blue-500' },
+                                    { label: 'Presentaciones nuevas', val: importResultado.presentacionesCreadas ?? 0, cls: 'text-violet-500' },
+                                    { label: 'Errores', val: importResultado.errores.length, cls: importResultado.errores.length > 0 ? 'text-red-500' : 'text-slate-500 dark:text-slate-400' },
                                 ]).map(k => (
-                                    <div key={k.label} style={{ padding: '14px', borderRadius: '10px', background: s.surfaceLow, textAlign: 'center', border: `1px solid ${s.border}` }}>
-                                        <p style={{ fontSize: '24px', fontWeight: '800', color: k.color }}>{k.val}</p>
-                                        <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '4px' }}>{k.label}</p>
+                                    <div key={k.label} className="rounded-[10px] border border-slate-200 bg-slate-50 p-3.5 text-center dark:border-slate-700 dark:bg-slate-900">
+                                        <p className={`text-2xl font-extrabold ${k.cls}`}>{k.val}</p>
+                                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{k.label}</p>
                                     </div>
                                 ))}
                             </div>
                             {importResultado.errores.length > 0 && (
-                                <div style={{ background: '#fee2e2', borderRadius: '8px', padding: '12px', maxHeight: '160px', overflowY: 'auto' }}>
+                                <div className="max-h-40 overflow-y-auto rounded-lg bg-red-100 p-3 dark:bg-red-950/40">
                                     {importResultado.errores.map((e, i) => (
-                                        <p key={i} style={{ fontSize: '12px', color: '#991b1b', marginBottom: '4px' }}>Fila {e.fila}: {e.mensaje}</p>
+                                        <p key={i} className="mb-1 text-xs text-red-800 dark:text-red-300">Fila {e.fila}: {e.mensaje}</p>
                                     ))}
                                 </div>
                             )}
-                            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button onClick={() => { setModalImportar(null); setImportResultado(null) }} style={btnPrimario}>Cerrar</button>
+                            <div className="mt-4 flex justify-end">
+                                <button onClick={() => { setModalImportar(null); setImportResultado(null) }} className={btnPrimarioCls}>Cerrar</button>
                             </div>
                         </div>
                     ) : (
                         <>
-                            <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${s.border}`, borderRadius: '8px', marginBottom: '16px' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                            <div className="mb-4 flex-1 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                                <table className="w-full border-collapse text-xs">
                                     <thead>
-                                        <tr style={{ background: s.surfaceLow }}>
+                                        <tr className="bg-slate-50 dark:bg-slate-900">
                                             {(modalImportar.modo === 'stock'
                                                 ? ['Producto', 'Presentación', 'Cód. Barras', '+Stock', 'Vencimiento', 'N° Lote']
                                                 : ['Producto', 'Marca', 'Subcategoría', 'SKU', 'Presentación', 'P. Compra', 'P. Venta', 'P. Tarjeta']
                                             ).map(h => (
-                                                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `1px solid ${s.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                                                <th key={h} className="whitespace-nowrap border-b border-slate-200 px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:border-slate-700 dark:text-slate-400">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {modalImportar.filas.map((f, i) => (
-                                            <tr key={i} style={{ borderBottom: `1px solid ${s.borderLight}` }}>
+                                            <tr key={i} className="border-b border-slate-100 dark:border-slate-700">
                                                 {modalImportar.modo === 'stock' ? <>
-                                                    <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.producto}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.text }}>{f.presentacion}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted, fontFamily: 'monospace' }}>{f.codigo_barras || '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>+{f.stock_a_agregar}</td>
-                                                    <td style={{ padding: '8px 12px', color: f.fecha_vencimiento ? '#f59e0b' : s.textFaint }}>{f.fecha_vencimiento || '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.numero_lote || '—'}</td>
+                                                    <td className="px-3 py-2 font-semibold text-slate-900 dark:text-slate-100">{f.producto}</td>
+                                                    <td className="px-3 py-2 text-slate-900 dark:text-slate-100">{f.presentacion}</td>
+                                                    <td className="px-3 py-2 font-mono text-slate-500 dark:text-slate-400">{f.codigo_barras || '—'}</td>
+                                                    <td className="px-3 py-2 font-bold text-emerald-500">+{f.stock_a_agregar}</td>
+                                                    <td className={`px-3 py-2 ${f.fecha_vencimiento ? 'text-amber-500' : 'text-slate-400 dark:text-slate-500'}`}>{f.fecha_vencimiento || '—'}</td>
+                                                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{f.numero_lote || '—'}</td>
                                                 </> : <>
-                                                    <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.nombre_producto}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.marca || '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.subcategoria || '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted, fontFamily: 'monospace' }}>{f.sku || '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.text, fontWeight: '600' }}>{f.presentacion}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
-                                                    <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: '700' }}>{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span style={{ color: '#ef4444' }}>Requerido</span>}</td>
-                                                    <td style={{ padding: '8px 12px', color: s.textMuted }}>{f.precio_tarjeta ? `Gs. ${parseInt(f.precio_tarjeta).toLocaleString()}` : '—'}</td>
+                                                    <td className="max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 font-semibold text-slate-900 dark:text-slate-100">{f.nombre_producto}</td>
+                                                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{f.marca || '—'}</td>
+                                                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{f.subcategoria || '—'}</td>
+                                                    <td className="px-3 py-2 font-mono text-slate-500 dark:text-slate-400">{f.sku || '—'}</td>
+                                                    <td className="px-3 py-2 font-semibold text-slate-900 dark:text-slate-100">{f.presentacion}</td>
+                                                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{f.precio_compra ? `Gs. ${parseInt(f.precio_compra).toLocaleString()}` : '—'}</td>
+                                                    <td className="px-3 py-2 font-bold text-emerald-500">{f.precio_venta ? `Gs. ${parseInt(f.precio_venta).toLocaleString()}` : <span className="text-red-500">Requerido</span>}</td>
+                                                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{f.precio_tarjeta ? `Gs. ${parseInt(f.precio_tarjeta).toLocaleString()}` : '—'}</td>
                                                 </>}
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setModalImportar(null)} style={btnSecundario}>Cancelar</button>
-                                <button onClick={handleConfirmarImport} disabled={importando} style={{ ...btnPrimario, opacity: importando ? 0.6 : 1 }}>
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setModalImportar(null)} className={btnSecundarioCls}>Cancelar</button>
+                                <button onClick={handleConfirmarImport} disabled={importando} className={btnPrimarioCls}>
                                     {importando ? 'Importando...' : `Confirmar importación (${modalImportar.filas.length} filas)`}
                                 </button>
                             </div>
