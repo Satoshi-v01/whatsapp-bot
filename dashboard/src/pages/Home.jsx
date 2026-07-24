@@ -6,8 +6,10 @@ import { getAlertasLotes } from '../services/lotes'
 import { useNavigate } from 'react-router-dom'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { formatearSoloFecha } from '../utils/fecha'
 import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 function Home() {
     const [resumen, setResumen] = useState(null)
@@ -22,14 +24,12 @@ function Home() {
     const { darkMode } = useApp()
     const usuario = (() => { try { return JSON.parse(localStorage.getItem('usuario') || '{}') } catch { return {} } })()
 
-    const s = {
-        bg: darkMode ? '#0f172a' : '#f6f6f8',
-        surface: darkMode ? '#1e293b' : 'white',
-        surfaceLow: darkMode ? '#1a2536' : '#f8fafc',
-        border: darkMode ? '#334155' : '#e2e8f0',
+    // Colores literales solo para el grafico SVG (no puede leer clases de Tailwind)
+    const colores = {
         text: darkMode ? '#f1f5f9' : '#0f172a',
         textMuted: darkMode ? '#94a3b8' : '#64748b',
-        textFaint: darkMode ? '#64748b' : '#94a3b8',
+        border: darkMode ? '#334155' : '#e2e8f0',
+        surface: darkMode ? '#1e293b' : 'white',
         barColor: darkMode ? '#4f46e5' : '#1a1a2e',
     }
 
@@ -73,9 +73,9 @@ function Home() {
     // Urgencia real, no solo el mismo amarillo para todo: vence hoy/mañana pesa
     // distinto que vence en 10 días, aunque las dos esten en la misma lista.
     function colorUrgencia(dias) {
-        if (dias <= 1) return { bg: darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2', text: '#ef4444' }
-        if (dias <= 4) return { bg: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7', text: '#b45309' }
-        return { bg: darkMode ? 'rgba(100,116,139,0.15)' : '#f1f5f9', text: s.textMuted }
+        if (dias <= 1) return 'bg-red-100 text-red-500 dark:bg-red-500/15'
+        if (dias <= 4) return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
+        return 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'
     }
     function etiquetaDias(dias) {
         if (dias <= 0) return 'Hoy'
@@ -84,75 +84,73 @@ function Home() {
     }
 
     const tarjetas = [
-        { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `Ganancia: ${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: '#10b981', accentBg: darkMode ? '#052e16' : '#f0fdf4', accentText: '#10b981', icono: 'trend', ruta: '/dashboard/ventas' },
-        { label: 'Pendientes de pago', valor: resumen?.pendientes || 0, sub: 'requieren confirmación', color: '#f59e0b', accentBg: darkMode ? '#451a03' : '#fffbeb', accentText: '#f59e0b', icono: 'clock', ruta: '/dashboard/ventas?estado=pendiente_pago' },
-        { label: 'Ordenes pendientes', valor: ordenesResumen?.pendientes ?? '—', sub: 'sin confirmar', color: ordenesResumen?.pendientes > 0 ? '#f59e0b' : '#10b981', accentBg: ordenesResumen?.pendientes > 0 ? (darkMode ? '#451a03' : '#fffbeb') : (darkMode ? '#052e16' : '#f0fdf4'), accentText: ordenesResumen?.pendientes > 0 ? '#f59e0b' : '#10b981', icono: 'bag', ruta: '/dashboard/ordenes' },
-        { label: 'Deliveries activos', valor: resumen?.deliveries || 0, sub: 'en proceso', color: '#3b82f6', accentBg: darkMode ? '#0c1a3a' : '#eff6ff', accentText: '#3b82f6', icono: 'truck', ruta: '/dashboard/delivery' },
-        { label: 'Chats esperando', valor: resumen?.esperando_agente || 0, sub: 'requieren atención', color: '#ef4444', accentBg: darkMode ? '#450a0a' : '#fef2f2', accentText: '#ef4444', icono: 'chat', ruta: '/dashboard/chat' },
+        { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `+${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: 'text-green-500', accentBg: 'bg-green-50 dark:bg-green-500/10', accentText: 'text-green-500', icono: 'trend', ruta: '/dashboard/ventas' },
+        { label: 'Pendientes de pago', valor: resumen?.pendientes || 0, sub: 'requieren confirmación', color: 'text-amber-500', accentBg: 'bg-amber-50 dark:bg-amber-500/10', accentText: 'text-amber-500', icono: 'clock', ruta: '/dashboard/ventas?estado=pendiente_pago' },
+        { label: 'Ordenes pendientes', valor: ordenesResumen?.pendientes ?? '—', sub: 'sin confirmar', color: ordenesResumen?.pendientes > 0 ? 'text-amber-500' : 'text-green-500', accentBg: ordenesResumen?.pendientes > 0 ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-green-50 dark:bg-green-500/10', accentText: ordenesResumen?.pendientes > 0 ? 'text-amber-500' : 'text-green-500', icono: 'bag', ruta: '/dashboard/ordenes' },
+        { label: 'Deliveries activos', valor: resumen?.deliveries || 0, sub: 'en proceso', color: 'text-blue-500', accentBg: 'bg-blue-50 dark:bg-blue-500/10', accentText: 'text-blue-500', icono: 'truck', ruta: '/dashboard/delivery' },
+        { label: 'Chats esperando', valor: resumen?.esperando_agente || 0, sub: 'requieren atención', color: 'text-red-500', accentBg: 'bg-red-50 dark:bg-red-500/10', accentText: 'text-red-500', icono: 'chat', ruta: '/dashboard/chat' },
     ]
 
     if (cargando) return (
-        <div style={{ padding: '32px', background: s.bg, color: s.text, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: s.textMuted }}>Cargando panel...</p>
+        <div className="flex h-full items-center justify-center bg-slate-50 p-8 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+            <p className="text-slate-500 dark:text-slate-400">Cargando panel...</p>
         </div>
     )
 
     return (
-        <div className="page-scroll" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll flex min-h-full flex-col gap-6 bg-slate-50 p-4 dark:bg-slate-900 sm:p-6 lg:p-8">
 
             {/* Header */}
-            <div className="home-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p style={{ fontSize: '12px', color: s.textFaint, marginBottom: '6px', textTransform: 'capitalize' }}>
+                    <p className="mb-1.5 text-xs capitalize text-slate-400 dark:text-slate-500">
                         {new Date().toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                     </p>
-                    <h2 style={{ fontSize: '26px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>
+                    <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-[26px]">
                         Bienvenido{usuario.nombre ? `, ${usuario.nombre.split(' ')[0]}` : ''}
                     </h2>
-                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px', fontWeight: '400' }}>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                         Este es el resumen de actividad de hoy.
                     </p>
                 </div>
                 <button onClick={cargarDatos}
-                    style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>
+                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/50">
                     ↻ Actualizar
                 </button>
             </div>
 
             {/* Alertas facturas proveedores */}
             {(facturasVencidas.length > 0 || proximasVencer.length > 0) && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
 
                     {/* Vencidas */}
                     {facturasVencidas.length > 0 && (
-                        <div style={{ background: darkMode ? 'rgba(239,68,68,0.1)' : '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '14px 18px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ color: '#ef4444', display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>
-                                    <p style={{ fontSize: '13px', fontWeight: '800', color: '#991b1b' }}>
+                        <div className="rounded-xl border border-red-300 bg-red-50 p-3.5 dark:border-red-500/40 dark:bg-red-500/10 sm:p-4">
+                            <div className="mb-2.5 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex text-red-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>
+                                    <p className="text-[13px] font-extrabold text-red-800 dark:text-red-400">
                                         {facturasVencidas.length} factura{facturasVencidas.length !== 1 ? 's' : ''} vencida{facturasVencidas.length !== 1 ? 's' : ''}
                                     </p>
                                 </div>
                                 <button onClick={() => navigate('/dashboard/proveedores')}
-                                    style={{ fontSize: '12px', fontWeight: '600', color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    className="shrink-0 text-xs font-semibold text-red-800 underline dark:text-red-400">
                                     Ver todas →
                                 </button>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div className="flex flex-col gap-1.5">
                                 {facturasVencidas.slice(0, 3).map(f => (
                                     <div key={f.id} onClick={() => navigate('/dashboard/proveedores')}
-                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(239,68,68,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fca5a5' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2'}
-                                        onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(239,68,68,0.08)' : 'white'}>
-                                        <div>
-                                            <p style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{f.proveedor_nombre} — {f.numero_factura}</p>
-                                            <p style={{ fontSize: '11px', color: '#ef4444' }}>Venció el {formatearSoloFecha(f.fecha_vencimiento)} · {f.dias_vencida} día{f.dias_vencida !== 1 ? 's' : ''} vencida</p>
+                                        className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-red-300 bg-white px-3 py-2 transition-colors hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/5 dark:hover:bg-red-500/15">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{f.proveedor_nombre} — {f.numero_factura}</p>
+                                            <p className="text-[11px] text-red-500">Venció el {formatearSoloFecha(f.fecha_vencimiento)} · {f.dias_vencida} día{f.dias_vencida !== 1 ? 's' : ''} vencida</p>
                                         </div>
-                                        <p style={{ fontSize: '13px', fontWeight: '800', color: '#ef4444', flexShrink: 0 }}>Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
+                                        <p className="shrink-0 text-[13px] font-extrabold text-red-500">Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
                                     </div>
                                 ))}
                                 {facturasVencidas.length > 3 && (
-                                    <p style={{ fontSize: '11px', color: '#ef4444', textAlign: 'center', fontWeight: '600' }}>
+                                    <p className="text-center text-[11px] font-semibold text-red-500">
                                         +{facturasVencidas.length - 3} más vencidas
                                     </p>
                                 )}
@@ -162,43 +160,40 @@ function Home() {
 
                     {/* Próximas a vencer */}
                     {proximasVencer.length > 0 && (
-                        <div style={{ background: darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 18px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ color: '#f59e0b', display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
-                                    <p style={{ fontSize: '13px', fontWeight: '800', color: '#92400e' }}>
+                        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 dark:border-amber-500/40 dark:bg-amber-500/10 sm:p-4">
+                            <div className="mb-2.5 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex text-amber-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                                    <p className="text-[13px] font-extrabold text-amber-800 dark:text-amber-400">
                                         {proximasVencer.length} factura{proximasVencer.length !== 1 ? 's' : ''} próxima{proximasVencer.length !== 1 ? 's' : ''} a vencer
                                     </p>
                                 </div>
                                 <button onClick={() => navigate('/dashboard/proveedores')}
-                                    style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    className="shrink-0 text-xs font-semibold text-amber-800 underline dark:text-amber-400">
                                     Ver todas →
                                 </button>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div className="flex flex-col gap-1.5">
                                 {proximasVencer.slice(0, 3).map(f => {
                                     const dias = diasParaVencer(f.fecha_vencimiento)
-                                    const urgencia = colorUrgencia(dias)
                                     return (
                                         <div key={f.id} onClick={() => navigate('/dashboard/proveedores')}
-                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(245,158,11,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fde68a' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7'}
-                                            onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.08)' : 'white'}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                                <span style={{ flexShrink: 0, fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '20px', background: urgencia.bg, color: urgencia.text, whiteSpace: 'nowrap' }}>
+                                            className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-amber-300 bg-white px-3 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/5 dark:hover:bg-amber-500/15">
+                                            <div className="flex min-w-0 items-center gap-2.5">
+                                                <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-extrabold ${colorUrgencia(dias)}`}>
                                                     {etiquetaDias(dias)}
                                                 </span>
-                                                <div style={{ minWidth: 0 }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.proveedor_nombre} — {f.numero_factura}</p>
-                                                    <p style={{ fontSize: '11px', color: '#f59e0b' }}>Vence el {formatearSoloFecha(f.fecha_vencimiento)}</p>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{f.proveedor_nombre} — {f.numero_factura}</p>
+                                                    <p className="text-[11px] text-amber-600 dark:text-amber-400">Vence el {formatearSoloFecha(f.fecha_vencimiento)}</p>
                                                 </div>
                                             </div>
-                                            <p style={{ fontSize: '13px', fontWeight: '800', color: '#f59e0b', flexShrink: 0, marginLeft: '10px' }}>Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
+                                            <p className="ml-2 shrink-0 text-[13px] font-extrabold text-amber-600 dark:text-amber-400">Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
                                         </div>
                                     )
                                 })}
                                 {proximasVencer.length > 3 && (
-                                    <p style={{ fontSize: '11px', color: '#f59e0b', textAlign: 'center', fontWeight: '600' }}>
+                                    <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                                         +{proximasVencer.length - 3} más próximas a vencer
                                     </p>
                                 )}
@@ -209,217 +204,210 @@ function Home() {
             )}
 
             {/* Tarjetas métricas */}
-            <div className="home-tarjetas" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
                 {tarjetas.map((t, i) => (
-                    <div key={i} onClick={() => navigate(t.ruta)}
-                        style={{ background: s.surface, borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: t.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.accentText }}>
-                                {t.icono === 'trend' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>}
-                                {t.icono === 'clock' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
-                                {t.icono === 'bag' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>}
-                                {t.icono === 'truck' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>}
-                                {t.icono === 'chat' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>}
+                    <Card key={i} onClick={() => navigate(t.ruta)}
+                        className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg">
+                        <CardContent>
+                            <div className="mb-3 flex items-start justify-between sm:mb-4">
+                                <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] ${t.accentBg} ${t.accentText}`}>
+                                    {t.icono === 'trend' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>}
+                                    {t.icono === 'clock' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+                                    {t.icono === 'bag' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>}
+                                    {t.icono === 'truck' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>}
+                                    {t.icono === 'chat' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>}
+                                </div>
+                                {t.extra && (
+                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.accentBg} ${t.accentText}`}>
+                                        {t.extra}
+                                    </span>
+                                )}
                             </div>
-                            {t.extra && (
-                                <span style={{ fontSize: '11px', fontWeight: '600', color: t.accentText, background: t.accentBg, padding: '2px 8px', borderRadius: '20px' }}>
-                                    {t.extra.replace('Ganancia: ', '+')}
-                                </span>
-                            )}
-                        </div>
-                        <p style={{ fontSize: '11px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{t.label}</p>
-                        <p style={{ fontSize: '26px', fontWeight: '800', color: t.color, letterSpacing: '-0.5px' }}>{t.valor}</p>
-                        <p style={{ fontSize: '12px', color: s.textFaint, marginTop: '4px' }}>{t.sub}</p>
-                    </div>
+                            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.label}</p>
+                            <p className={`text-xl font-extrabold tracking-tight sm:text-2xl ${t.color}`}>{t.valor}</p>
+                            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t.sub}</p>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
 
             {/* Gráfico + Alertas inventario */}
-            <div className="home-charts" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 
-                {/* Gráfico barras */}
-                <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>Ventas recientes</h3>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: s.barColor }} />
-                            <span style={{ fontSize: '11px', color: s.textMuted }}>Últimos 7 días</span>
+                {/* Gráfico tendencia */}
+                <Card className="lg:col-span-2">
+                    <CardContent>
+                        <div className="mb-6 flex items-center justify-between">
+                            <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Ventas recientes</h3>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-2.5 w-2.5 rounded-full" style={{ background: colores.barColor }} />
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400">Últimos 7 días</span>
+                            </div>
                         </div>
-                    </div>
-                    {ventasSemana.length === 0 ? (
-                        <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textMuted, fontSize: '13px' }}>Sin datos</div>
-                    ) : (
-                        <GraficoTendenciaVentas datos={ventasSemana} colorLinea={s.barColor} colorTexto={s.text} colorTextoMuted={s.textMuted} colorGrid={s.border} colorFondo={s.surface} maxEtiquetas={ventasSemana.length} resaltarHoy />
-                    )}
-                </div>
+                        {ventasSemana.length === 0 ? (
+                            <div className="flex h-[180px] items-center justify-center text-sm text-slate-500 dark:text-slate-400">Sin datos</div>
+                        ) : (
+                            <GraficoTendenciaVentas datos={ventasSemana} colorLinea={colores.barColor} colorTexto={colores.text} colorTextoMuted={colores.textMuted} colorGrid={colores.border} colorFondo={colores.surface} maxEtiquetas={ventasSemana.length} resaltarHoy />
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* Alertas de inventario */}
-                <div style={{ background: s.surface, borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>Alertas de inventario</h3>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                            {resumen?.stock_bajo?.length > 0 && (
-                                <span style={{ padding: '2px 10px', background: '#fee2e2', color: '#991b1b', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
-                                    {resumen.stock_bajo.length} sin stock
-                                </span>
-                            )}
-                            {alertasLotes.vencidos.length > 0 && (
-                                <span style={{ padding: '2px 10px', background: '#fee2e2', color: '#991b1b', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
-                                    {alertasLotes.vencidos.length} vencidos
-                                </span>
-                            )}
-                            {alertasLotes.proximos_vencer.length > 0 && (
-                                <span style={{ padding: '2px 10px', background: '#fffbeb', color: '#92400e', fontSize: '10px', fontWeight: '800', borderRadius: '20px', textTransform: 'uppercase' }}>
-                                    {alertasLotes.proximos_vencer.length} a vencer
-                                </span>
-                            )}
+                <Card className="flex flex-col">
+                    <CardContent className="flex flex-1 flex-col">
+                        <div className="mb-4 flex items-center justify-between gap-2">
+                            <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Alertas de inventario</h3>
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                                {resumen?.stock_bajo?.length > 0 && (
+                                    <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-red-800 dark:bg-red-500/15 dark:text-red-400">
+                                        {resumen.stock_bajo.length} sin stock
+                                    </span>
+                                )}
+                                {alertasLotes.vencidos.length > 0 && (
+                                    <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-red-800 dark:bg-red-500/15 dark:text-red-400">
+                                        {alertasLotes.vencidos.length} vencidos
+                                    </span>
+                                )}
+                                {alertasLotes.proximos_vencer.length > 0 && (
+                                    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
+                                        {alertasLotes.proximos_vencer.length} a vencer
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
 
-                    {!resumen?.stock_bajo?.length && !alertasLotes.proximos_vencer.length && !alertasLotes.vencidos.length ? (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textMuted, fontSize: '13px', flexDirection: 'column', gap: '8px' }}>
-                            <span style={{ fontSize: '24px' }}>✅</span>
-                            <p>Todo el inventario en orden</p>
-                        </div>
-                    ) : (
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '280px' }}>
-                            {/* Stock bajo */}
-                            {resumen?.stock_bajo?.length > 0 && (
-                                <>
-                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Stock bajo</p>
-                                    {resumen.stock_bajo.map((item, i) => (
-                                        <div key={i} onClick={() => navigate('/dashboard/inventario')}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
-                                            onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
-                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: item.stock === 0 ? '#fee2e2' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: item.stock === 0 ? '#ef4444' : '#f59e0b' }}>
-                                                {item.stock === 0
-                                                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                                                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                                }
-                                            </div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</p>
-                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{item.presentacion}</p>
-                                            </div>
-                                            <span style={{ fontSize: '11px', fontWeight: '700', color: item.stock === 0 ? '#ef4444' : '#f59e0b', flexShrink: 0 }}>
-                                                {item.stock === 0 ? 'Sin stock' : `${item.stock} ud.`}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
-
-                            {/* Lotes vencidos */}
-                            {alertasLotes.vencidos.length > 0 && (
-                                <>
-                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: resumen?.stock_bajo?.length ? '8px' : '0', marginBottom: '2px' }}>Lotes vencidos</p>
-                                    {alertasLotes.vencidos.map((lote, i) => (
-                                        <div key={i} onClick={() => navigate('/dashboard/inventario')}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
-                                            onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
-                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e220', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#ef4444' }}>
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                            </div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lote.producto_nombre}</p>
-                                                <p style={{ fontSize: '11px', color: s.textMuted }}>{lote.presentacion_nombre} · {lote.stock_actual} ud. · Vencido hace {lote.dias_vencido}d</p>
-                                            </div>
-                                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#ef4444', flexShrink: 0 }}>Vencido</span>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
-
-                            {/* Lotes próximos a vencer */}
-                            {alertasLotes.proximos_vencer.length > 0 && (
-                                <>
-                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: (resumen?.stock_bajo?.length || alertasLotes.vencidos.length) ? '8px' : '0', marginBottom: '2px' }}>Próximos a vencer</p>
-                                    {alertasLotes.proximos_vencer.map((lote, i) => {
-                                        const dias = parseInt(lote.dias_para_vencer)
-                                        const color = dias <= 7 ? '#ef4444' : dias <= 30 ? '#f59e0b' : '#6366f1'
-                                        return (
+                        {!resumen?.stock_bajo?.length && !alertasLotes.proximos_vencer.length && !alertasLotes.vencidos.length ? (
+                            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                <span className="flex text-green-500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+                                <p>Todo el inventario en orden</p>
+                            </div>
+                        ) : (
+                            <div className="flex max-h-[280px] flex-1 flex-col gap-1.5 overflow-y-auto">
+                                {/* Stock bajo */}
+                                {resumen?.stock_bajo?.length > 0 && (
+                                    <>
+                                        <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Stock bajo</p>
+                                        {resumen.stock_bajo.map((item, i) => (
                                             <div key={i} onClick={() => navigate('/dashboard/inventario')}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', border: `1px solid transparent`, transition: 'all 0.15s', background: s.surfaceLow }}
-                                                onMouseEnter={e => { e.currentTarget.style.borderColor = s.border; e.currentTarget.style.background = darkMode ? '#1e3a5f20' : '#f0f4ff' }}
-                                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = s.surfaceLow }}>
-                                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color }}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-transparent bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-indigo-50 dark:bg-slate-800/60 dark:hover:border-slate-700 dark:hover:bg-indigo-500/10">
+                                                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.stock === 0 ? 'bg-red-100 text-red-500 dark:bg-red-500/15' : 'bg-amber-50 text-amber-500 dark:bg-amber-500/15'}`}>
+                                                    {item.stock === 0
+                                                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                                    }
                                                 </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lote.producto_nombre}</p>
-                                                    <p style={{ fontSize: '11px', color: s.textMuted }}>{lote.presentacion_nombre} · {lote.stock_actual} ud.{lote.numero_lote ? ` · Lote ${lote.numero_lote}` : ''}</p>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{item.nombre}</p>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{item.presentacion}</p>
                                                 </div>
-                                                <span style={{ fontSize: '11px', fontWeight: '700', color, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                                    {dias === 0 ? 'Hoy' : `${dias}d`}
+                                                <span className={`shrink-0 text-[11px] font-bold ${item.stock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
+                                                    {item.stock === 0 ? 'Sin stock' : `${item.stock} ud.`}
                                                 </span>
                                             </div>
-                                        )
-                                    })}
-                                </>
-                            )}
-                        </div>
-                    )}
+                                        ))}
+                                    </>
+                                )}
 
-                    <button onClick={() => navigate('/dashboard/inventario')}
-                        style={{ marginTop: '16px', padding: '10px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'background 0.15s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        Ver inventario completo
-                    </button>
-                </div>
+                                {/* Lotes vencidos */}
+                                {alertasLotes.vencidos.length > 0 && (
+                                    <>
+                                        <p className={`text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 ${resumen?.stock_bajo?.length ? 'mt-2' : ''} mb-0.5`}>Lotes vencidos</p>
+                                        {alertasLotes.vencidos.map((lote, i) => (
+                                            <div key={i} onClick={() => navigate('/dashboard/inventario')}
+                                                className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-transparent bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-indigo-50 dark:bg-slate-800/60 dark:hover:border-slate-700 dark:hover:bg-indigo-500/10">
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-500 dark:bg-red-500/15">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{lote.producto_nombre}</p>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{lote.presentacion_nombre} · {lote.stock_actual} ud. · Vencido hace {lote.dias_vencido}d</p>
+                                                </div>
+                                                <span className="shrink-0 text-[11px] font-bold text-red-500">Vencido</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+
+                                {/* Lotes próximos a vencer */}
+                                {alertasLotes.proximos_vencer.length > 0 && (
+                                    <>
+                                        <p className={`text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 ${(resumen?.stock_bajo?.length || alertasLotes.vencidos.length) ? 'mt-2' : ''} mb-0.5`}>Próximos a vencer</p>
+                                        {alertasLotes.proximos_vencer.map((lote, i) => {
+                                            const dias = parseInt(lote.dias_para_vencer)
+                                            const color = dias <= 7 ? '#ef4444' : dias <= 30 ? '#f59e0b' : '#6366f1'
+                                            return (
+                                                <div key={i} onClick={() => navigate('/dashboard/inventario')}
+                                                    className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-transparent bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-indigo-50 dark:bg-slate-800/60 dark:hover:border-slate-700 dark:hover:bg-indigo-500/10">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${color}18`, color }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{lote.producto_nombre}</p>
+                                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{lote.presentacion_nombre} · {lote.stock_actual} ud.{lote.numero_lote ? ` · Lote ${lote.numero_lote}` : ''}</p>
+                                                    </div>
+                                                    <span className="shrink-0 whitespace-nowrap text-[11px] font-bold" style={{ color }}>
+                                                        {dias === 0 ? 'Hoy' : `${dias}d`}
+                                                    </span>
+                                                </div>
+                                            )
+                                        })}
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        <button onClick={() => navigate('/dashboard/inventario')}
+                            className="mt-4 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-slate-900 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
+                            Ver inventario completo
+                        </button>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Top productos */}
-            <div style={{ background: s.surface, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: `1px solid ${s.border}`, overflow: 'hidden' }}>
-                <div style={{ padding: '20px 24px', borderBottom: `1px solid ${s.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: s.text }}>Productos más vendidos del mes</h3>
+            <Card className="py-0 gap-0">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6">
+                    <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Productos más vendidos del mes</h3>
                     <button onClick={() => navigate('/dashboard/reportes')}
-                        style={{ fontSize: '13px', color: '#4f46e5', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer' }}>
+                        className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">
                         Ver reportes
                     </button>
                 </div>
 
                 {topProductos.length === 0 ? (
-                    <div style={{ padding: '32px', textAlign: 'center', color: s.textMuted, fontSize: '13px' }}>Sin datos para mostrar.</div>
+                    <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">Sin datos para mostrar.</div>
                 ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: s.surfaceLow }}>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/60">
                                 {['#', 'Producto', 'Vendidos', 'Total', 'Ganancia'].map((h, i) => (
-                                    <th key={i} style={{ padding: '12px 24px', textAlign: i >= 2 ? 'right' : 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                    <TableHead key={i} className={`text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-3 px-5 sm:px-6 ${i >= 2 ? 'text-right' : ''}`}>{h}</TableHead>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {topProductos.map((prod, i) => (
-                                <tr key={i} style={{ borderTop: `1px solid ${s.border}`, transition: 'background 0.1s' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '14px 24px' }}>
-                                        <span style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: i === 0 ? '#fef3c7' : i === 1 ? '#f1f5f9' : i === 2 ? '#fde8d8' : s.surfaceLow, color: i === 0 ? '#92400e' : i === 1 ? '#475569' : i === 2 ? '#9a3412' : s.textMuted, fontSize: '11px', fontWeight: '800' }}>
+                                <TableRow key={i} className="border-slate-100 dark:border-slate-700">
+                                    <TableCell className="py-3.5 px-5 sm:px-6">
+                                        <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-extrabold ${i === 0 ? 'bg-amber-100 text-amber-800' : i === 1 ? 'bg-slate-100 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                                             {i + 1}
                                         </span>
-                                    </td>
-                                    <td style={{ padding: '14px 16px' }}>
-                                        <p style={{ fontSize: '13px', fontWeight: '600', color: s.text }}>{prod.producto}</p>
-                                        <p style={{ fontSize: '11px', color: s.textMuted }}>{prod.presentacion}</p>
-                                    </td>
-                                    <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: '14px', fontWeight: '700', color: s.text }}>{prod.cantidad_vendida}</td>
-                                    <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: '13px', color: s.text }}>{formatearGs(prod.total_generado)}</td>
-                                    <td style={{ padding: '14px 24px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#10b981' }}>
+                                    </TableCell>
+                                    <TableCell className="py-3.5 px-4">
+                                        <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{prod.producto}</p>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{prod.presentacion}</p>
+                                    </TableCell>
+                                    <TableCell className="text-right text-sm font-bold text-slate-900 dark:text-slate-100 py-3.5 px-4">{prod.cantidad_vendida}</TableCell>
+                                    <TableCell className="text-right text-[13px] text-slate-900 dark:text-slate-100 py-3.5 px-4">{formatearGs(prod.total_generado)}</TableCell>
+                                    <TableCell className="text-right text-[13px] font-semibold text-green-600 dark:text-green-400 py-3.5 px-5 sm:px-6">
                                         {prod.ganancia_generada > 0 ? formatearGs(prod.ganancia_generada) : '—'}
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 )}
-            </div>
+            </Card>
 
             {modalConfirmar && (
                 <ModalConfirmar
