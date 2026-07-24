@@ -281,11 +281,11 @@ function Reportes() {
                 <CardTitle className={colorVentas ? '' : 'text-slate-900 dark:text-slate-100'} style={colorVentas ? { color: colorVentas } : undefined}>{titulo}</CardTitle>
             </CardHeader>
             <CardContent className="p-0 max-h-[400px] overflow-y-auto">
-                <Table>
+                <Table className="table-fixed">
                     <TableHeader>
                         <TableRow className="bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                            <TableHead className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-4">Producto</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-4">Ventas</TableHead>
+                            <TableHead className="w-[75%] text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-4">Producto</TableHead>
+                            <TableHead className="w-[25%] text-right text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-4">Ventas</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -728,16 +728,16 @@ function Reportes() {
                         ))}
 
                         {/* Tasa de retención */}
-                        <Card className="col-span-2 bg-slate-900 sm:col-span-4 lg:col-span-1">
+                        <Card className="col-span-2 sm:col-span-4 lg:col-span-1">
                             <CardContent className="flex flex-col items-center justify-center text-center">
-                                <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-slate-500">Tasa de retención</p>
+                                <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Tasa de retención</p>
                                 <p className="text-5xl font-extrabold leading-none" style={{ color: retencion.tasa_retencion >= 50 ? '#10b981' : retencion.tasa_retencion >= 25 ? '#f59e0b' : '#ef4444' }}>
                                     {retencion.tasa_retencion}%
                                 </p>
-                                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                                     <div className="h-full rounded-full transition-all" style={{ width: `${retencion.tasa_retencion}%`, background: retencion.tasa_retencion >= 50 ? '#10b981' : retencion.tasa_retencion >= 25 ? '#f59e0b' : '#ef4444' }} />
                                 </div>
-                                <p className="mt-2 text-[11px] text-slate-500">
+                                <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
                                     {retencion.tasa_retencion >= 50 ? 'Buena retención' : retencion.tasa_retencion >= 25 ? 'Retención moderada' : 'Retención baja'}
                                 </p>
                             </CardContent>
