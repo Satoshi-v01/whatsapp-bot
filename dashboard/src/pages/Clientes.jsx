@@ -1,64 +1,70 @@
 import { useState, useEffect, useRef } from 'react'
 import { getClientes, getCliente, crearCliente, editarCliente, eliminarCliente } from '../services/clientes'
 import ModalConfirmar from '../components/ModalConfirmar'
-import { useApp } from '../App'
 import api from '../services/api'
-import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import { formatearFecha } from '../utils/fecha'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 
-// ANTES del function Clientes() — componente separado
-function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, s, darkMode, guardando }) {
-    const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, marginBottom: '10px', fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text, outline: 'none' }
-    const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
-    const btnPrimario = { padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
-    const btnSecundario = { padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
+const inputCls = 'mb-2.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
-    function formatearRUC(valor) {
-        const partes = valor.split('-')
-        const cuerpo = partes[0].replace(/[^\d]/g, '')
-        const dv = partes.length > 1 ? partes[1].replace(/[^\d]/g, '').slice(0, 1) : ''
+const IconBuscar = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+const IconLapiz = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+const IconEstrella = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.9 6.6L22 9.3l-5 4.9 1.2 7-6.2-3.4L5.8 21.2 7 14.2 2 9.3l7.1-.7L12 2z" /></svg>
+const IconAdvertencia = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+const IconReloj = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+const IconCheckCirculo = () => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+const IconUsuarios = () => <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
 
-        const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+function formatearRUC(valor) {
+    const partes = valor.split('-')
+    const cuerpo = partes[0].replace(/[^\d]/g, '')
+    const dv = partes.length > 1 ? partes[1].replace(/[^\d]/g, '').slice(0, 1) : ''
 
-        if (partes.length > 1) return `${cuerpoFormateado}-${dv}`
-        if (valor.endsWith('-')) return `${cuerpoFormateado}-`
-        return cuerpoFormateado
-    }
+    const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 
+    if (partes.length > 1) return `${cuerpoFormateado}-${dv}`
+    if (valor.endsWith('-')) return `${cuerpoFormateado}-`
+    return cuerpoFormateado
+}
+
+function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, guardando }) {
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>{titulo}</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" onClick={onClose}>
+            <div className="max-h-[90vh] w-[480px] overflow-y-auto rounded-2xl bg-white p-7 shadow-2xl dark:bg-slate-800" onClick={e => e.stopPropagation()}>
+                <div className="mb-5 flex items-center justify-between">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{titulo}</h3>
+                    <button onClick={onClose} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                 </div>
-                <label style={labelStyle}>Tipo</label>
-                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={inputStyle}>
+                <label className={labelCls}>Tipo</label>
+                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className={inputCls}>
                     <option value="persona">Persona física</option>
                     <option value="empresa">Empresa</option>
                 </select>
-                <label style={labelStyle}>Nombre / Razón social *</label>
-                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
-                <label style={labelStyle}>RUC</label>
-                <input value={form.ruc} onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })} style={inputStyle} />
-                <label style={labelStyle}>Teléfono / WhatsApp</label>
-                <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
-                <label style={labelStyle}>Email</label>
-                <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div><label style={labelStyle}>Ciudad</label><input value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
-                    <div><label style={labelStyle}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} /></div>
+                <label className={labelCls}>Nombre / Razón social *</label>
+                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} className={inputCls} />
+                <label className={labelCls}>RUC</label>
+                <input value={form.ruc} onChange={e => setForm({ ...form, ruc: formatearRUC(e.target.value) })} className={inputCls} />
+                <label className={labelCls}>Teléfono / WhatsApp</label>
+                <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} className={inputCls} />
+                <label className={labelCls}>Email</label>
+                <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inputCls} />
+                <div className="grid grid-cols-2 gap-3">
+                    <div><label className={labelCls}>Ciudad</label><input value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} className={`${inputCls} mb-0`} /></div>
+                    <div><label className={labelCls}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} className={`${inputCls} mb-0`} /></div>
                 </div>
-                <label style={{ ...labelStyle, marginTop: '10px' }}>Notas internas</label>
-                <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'sans-serif' }} />
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <button onClick={onClose} style={btnSecundario}>Cancelar</button>
-                    <button onClick={onSubmit} disabled={guardando} style={{ ...btnPrimario, background: guardando ? '#9ca3af' : btnPrimario.background, cursor: guardando ? 'not-allowed' : 'pointer' }}>{guardando ? 'Guardando...' : submitLabel}</button>
+                <label className={`${labelCls} mt-2.5`}>Notas internas</label>
+                <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={3} className={`${inputCls} resize-none font-sans`} />
+                <div className="mt-1 flex justify-end gap-2">
+                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                    <Button onClick={onSubmit} disabled={guardando}>{guardando ? 'Guardando...' : submitLabel}</Button>
                 </div>
             </div>
         </div>
     )
 }
-
 
 function Clientes() {
     const [clientes, setClientes] = useState([])
@@ -77,30 +83,9 @@ function Clientes() {
     const [form, setForm] = useState({ tipo: 'persona', nombre: '', ruc: '', telefono: '', email: '', direccion: '', ciudad: '', notas: '' })
     const [guardandoCliente, setGuardandoCliente] = useState(false)
     const procesandoCliente = useRef(false)
-    const { darkMode } = useApp()
     const [pestanaHistorial, setPestanaHistorial] = useState('historial') // 'historial' | 'cuenta_corriente'
     const [paginaHistorial, setPaginaHistorial] = useState(1)
     const POR_PAGINA_HISTORIAL = 10
-
-    const s = {
-        bg: darkMode ? '#0f172a' : '#f6f6f8',
-        surface: darkMode ? '#1e293b' : 'white',
-        surfaceLow: darkMode ? '#1a2536' : '#f8fafc',
-        border: darkMode ? '#334155' : '#e2e8f0',
-        borderLight: darkMode ? '#2d3f55' : '#f1f5f9',
-        text: darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted: darkMode ? '#94a3b8' : '#64748b',
-        textFaint: darkMode ? '#64748b' : '#94a3b8',
-        inputBg: darkMode ? '#0f172a' : 'white',
-        rowHover: darkMode ? '#1a2536' : 'rgba(26,26,127,0.01)',
-        rowActive: darkMode ? '#1e3a5f' : 'rgba(99,102,241,0.06)',
-        tableTh: darkMode ? '#1a2536' : '#f8fafc',
-    }
-
-    const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${s.border}`, marginBottom: '10px', fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text, outline: 'none' }
-    const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
-    const btnPrimario = { padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
-    const btnSecundario = { padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 
     useEffect(() => { cargarClientes() }, [filtroActividad])
     useEffect(() => {
@@ -135,30 +120,30 @@ function Clientes() {
     }
 
     async function cargarCuentaCorriente(clienteId) {
-            try {
-                setCargandoCC(true)
-                const res = await api.get(`/clientes/${clienteId}/cuenta-corriente`)
-                setCuentaCorriente(res.data)
-            } catch (err) {
-                setCuentaCorriente(null)
-            } finally { setCargandoCC(false) }
-        }
+        try {
+            setCargandoCC(true)
+            const res = await api.get(`/clientes/${clienteId}/cuenta-corriente`)
+            setCuentaCorriente(res.data)
+        } catch (err) {
+            setCuentaCorriente(null)
+        } finally { setCargandoCC(false) }
+    }
 
-        async function handleRegistrarPago() {
-            if (!formPago.monto || !modalPagoCC) return
-            try {
-                await api.post(`/clientes/${clienteSeleccionado.id}/cuenta-corriente/pagos`, {
-                    venta_id: modalPagoCC.id,
-                    ...formPago,
-                    monto: parseInt(formPago.monto)
-                })
-                setModalPagoCC(null)
-                setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', tipo_pago: 'parcial', notas: '' })
-                await cargarCuentaCorriente(clienteSeleccionado.id)
-            } catch (err) {
-                setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar el pago.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
-            }
+    async function handleRegistrarPago() {
+        if (!formPago.monto || !modalPagoCC) return
+        try {
+            await api.post(`/clientes/${clienteSeleccionado.id}/cuenta-corriente/pagos`, {
+                venta_id: modalPagoCC.id,
+                ...formPago,
+                monto: parseInt(formPago.monto)
+            })
+            setModalPagoCC(null)
+            setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', tipo_pago: 'parcial', notas: '' })
+            await cargarCuentaCorriente(clienteSeleccionado.id)
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo registrar el pago.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         }
+    }
 
     async function handleCrearCliente() {
         if (!form.nombre.trim()) return
@@ -207,16 +192,22 @@ function Clientes() {
         return nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     }
 
-    function colorOrigen(origen) {
-        return { bot: '#10b981', presencial: '#3b82f6', manual: '#64748b', ecommerce: '#f59e0b' }[origen] || '#64748b'
+    function colorOrigenCls(origen) {
+        return {
+            bot: 'text-green-600 bg-green-100 dark:bg-green-500/15 dark:text-green-400',
+            presencial: 'text-blue-600 bg-blue-100 dark:bg-blue-500/15 dark:text-blue-400',
+            manual: 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-300',
+            ecommerce: 'text-amber-600 bg-amber-100 dark:bg-amber-500/15 dark:text-amber-400',
+        }[origen] || 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
     }
 
-    function bgOrigen(origen) {
-        return { bot: darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7', presencial: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe', manual: darkMode ? '#334155' : '#f1f5f9', ecommerce: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7' }[origen] || (darkMode ? '#334155' : '#f1f5f9')
-    }
-
-    function colorEstado(estado) {
-        return { pendiente_pago: '#f59e0b', pagado: '#10b981', entregado: '#3b82f6', cancelado: '#ef4444' }[estado] || '#888'
+    function colorEstadoCls(estado) {
+        return {
+            pendiente_pago: 'bg-amber-500',
+            pagado: 'bg-green-500',
+            entregado: 'bg-blue-500',
+            cancelado: 'bg-red-500',
+        }[estado] || 'bg-slate-400'
     }
 
     function diasDesde(fecha) {
@@ -244,21 +235,21 @@ function Clientes() {
         const diasProxima = diasHasta(proximaCompra)
 
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="flex flex-col gap-3">
 
                 {/* Estado activo/inactivo */}
-                <div style={{ background: s.surface, borderRadius: '14px', padding: '20px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                    <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Estado de actividad</p>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <p className="mb-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Estado de actividad</p>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: activo ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? '#334155' : '#f1f5f9'), display: 'flex', alignItems: 'center', justifyContent: 'center', color: activo ? '#10b981' : s.textFaint }}>
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{activo ? <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></> : <><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></>}</svg>
+                    <div className="mb-4 flex items-center gap-3">
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-full ${activo ? 'bg-green-100 text-green-500 dark:bg-green-500/15' : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{activo ? <><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></> : <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>}</svg>
                         </div>
                         <div>
-                            <p style={{ fontSize: '16px', fontWeight: '800', color: activo ? '#10b981' : s.textMuted }}>
+                            <p className={`text-base font-extrabold ${activo ? 'text-green-500' : 'text-slate-500 dark:text-slate-400'}`}>
                                 {activo ? 'Cliente activo' : 'Cliente inactivo'}
                             </p>
-                            <p style={{ fontSize: '12px', color: s.textFaint, marginTop: '2px' }}>
+                            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                                 {diasUltimaCompra !== null
                                     ? `Última compra hace ${diasUltimaCompra} días`
                                     : 'Sin compras registradas'}
@@ -269,14 +260,14 @@ function Clientes() {
                     {/* Barra de actividad */}
                     {diasUltimaCompra !== null && (
                         <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                <span style={{ fontSize: '10px', color: s.textFaint }}>Hoy</span>
-                                <span style={{ fontSize: '10px', color: s.textFaint }}>60 días</span>
+                            <div className="mb-1.5 flex justify-between">
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">Hoy</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">60 días</span>
                             </div>
-                            <div style={{ height: '6px', background: s.surfaceLow, borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${Math.min((diasUltimaCompra / 60) * 100, 100)}%`, background: activo ? '#10b981' : '#ef4444', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+                            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-900">
+                                <div className={`h-full rounded-full transition-[width] duration-500 ${activo ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min((diasUltimaCompra / 60) * 100, 100)}%` }} />
                             </div>
-                            <p style={{ fontSize: '10px', color: s.textFaint, marginTop: '4px', textAlign: 'right' }}>
+                            <p className="mt-1 text-right text-[10px] text-slate-400 dark:text-slate-500">
                                 {diasUltimaCompra} / 60 días
                             </p>
                         </div>
@@ -284,60 +275,60 @@ function Clientes() {
                 </div>
 
                 {/* Predicción próxima compra */}
-                <div style={{ background: s.surface, borderRadius: '14px', padding: '20px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                    <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Predicción de compra</p>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <p className="mb-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Predicción de compra</p>
 
                     {frecuencia ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ padding: '12px 16px', background: s.surfaceLow, borderRadius: '10px' }}>
-                                <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Frecuencia promedio</p>
-                                <p style={{ fontSize: '20px', fontWeight: '800', color: '#4f46e5' }}>cada {frecuencia} días</p>
+                        <div className="flex flex-col gap-3">
+                            <div className="rounded-[10px] bg-slate-50 px-4 py-3 dark:bg-slate-900">
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Frecuencia promedio</p>
+                                <p className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">cada {frecuencia} días</p>
                             </div>
 
                             {proximaCompra && (
-                                <div style={{ padding: '12px 16px', background: diasProxima !== null && diasProxima <= 7 ? (darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb') : s.surfaceLow, borderRadius: '10px', border: diasProxima !== null && diasProxima <= 7 ? '1px solid #fde68a' : `1px solid transparent` }}>
-                                    <p style={{ fontSize: '10px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Próxima compra estimada</p>
-                                    <p style={{ fontSize: '16px', fontWeight: '800', color: diasProxima !== null && diasProxima <= 0 ? '#ef4444' : diasProxima !== null && diasProxima <= 7 ? '#f59e0b' : '#10b981' }}>
+                                <div className={`rounded-[10px] px-4 py-3 ${diasProxima !== null && diasProxima <= 7 ? 'border border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border border-transparent bg-slate-50 dark:bg-slate-900'}`}>
+                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Próxima compra estimada</p>
+                                    <p className={`text-base font-extrabold ${diasProxima !== null && diasProxima <= 0 ? 'text-red-500' : diasProxima !== null && diasProxima <= 7 ? 'text-amber-500' : 'text-green-500'}`}>
                                         {formatearFecha(proximaCompra)}
                                     </p>
                                     {diasProxima !== null && (
-                                        <p style={{ fontSize: '11px', color: s.textFaint, marginTop: '3px' }}>
+                                        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
                                             {diasProxima <= 0
-                                                ? `⚠️ Debería haber comprado hace ${Math.abs(diasProxima)} días`
+                                                ? <><IconAdvertencia />{`Debería haber comprado hace ${Math.abs(diasProxima)} días`}</>
                                                 : diasProxima <= 7
-                                                ? `⏰ En ${diasProxima} días`
-                                                : `En ${diasProxima} días`}
+                                                    ? <><IconReloj />{`En ${diasProxima} días`}</>
+                                                    : `En ${diasProxima} días`}
                                         </p>
                                     )}
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <div style={{ padding: '20px', textAlign: 'center', color: s.textFaint }}>
-                            <span style={{ color: s.textFaint, display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-                            <p style={{ fontSize: '12px' }}>Se necesitan al menos 2 compras para calcular la frecuencia.</p>
+                        <div className="p-5 text-center text-slate-400 dark:text-slate-500">
+                            <span className="mb-2 flex justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg></span>
+                            <p className="text-xs">Se necesitan al menos 2 compras para calcular la frecuencia.</p>
                         </div>
                     )}
                 </div>
 
                 {/* Línea de tiempo */}
-                {clienteSeleccionado.ventas?.length > 0 && (
-                    <div style={{ background: s.surface, borderRadius: '14px', padding: '20px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                        <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Últimas actividades</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                            {clienteSeleccionado.ventas.slice(0, 5).map((v, i) => (
-                                <div key={v.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', paddingBottom: i < Math.min(clienteSeleccionado.ventas.length, 5) - 1 ? '12px' : '0' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: colorEstado(v.estado), flexShrink: 0, marginTop: '3px' }} />
-                                        {i < Math.min(clienteSeleccionado.ventas.length, 5) - 1 && (
-                                            <div style={{ width: '2px', flex: 1, background: s.borderLight, minHeight: '20px', marginTop: '4px' }} />
+                {cliente.ventas?.length > 0 && (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                        <p className="mb-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Últimas actividades</p>
+                        <div className="flex flex-col">
+                            {cliente.ventas.slice(0, 5).map((v, i) => (
+                                <div key={v.id} className={`flex items-start gap-3 ${i < Math.min(cliente.ventas.length, 5) - 1 ? 'pb-3' : ''}`}>
+                                    <div className="flex shrink-0 flex-col items-center">
+                                        <div className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${colorEstadoCls(v.estado)}`} />
+                                        {i < Math.min(cliente.ventas.length, 5) - 1 && (
+                                            <div className="mt-1 min-h-[20px] w-0.5 flex-1 bg-slate-100 dark:bg-slate-700" />
                                         )}
                                     </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
                                             {v.producto_nombre} {v.presentacion_nombre}
                                         </p>
-                                        <p style={{ fontSize: '11px', color: s.textFaint }}>{formatearFecha(v.created_at)} · {formatearGs(v.precio)}</p>
+                                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{formatearFecha(v.created_at)} · {formatearGs(v.precio)}</p>
                                     </div>
                                 </div>
                             ))}
@@ -348,39 +339,36 @@ function Clientes() {
         )
     }
 
-    
     return (
-        <div className="page-scroll" style={{ background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll min-h-full bg-slate-50 dark:bg-slate-950">
 
             {clienteSeleccionado ? (
-                <div className="split-content" style={{ display: 'flex', height: 'calc(100vh - 56px)' }}>
+                <div className="split-content flex h-[calc(100vh-56px)]">
 
                     {/* Lista lateral */}
-                    <div className="split-list has-detail" style={{ width: '320px', flexShrink: 0, borderRight: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', background: s.surface }}>
-                        <div style={{ padding: '12px', borderBottom: `1px solid ${s.border}` }}>
-                            <div style={{ position: 'relative' }}>
-                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                    <div className="split-list has-detail flex w-[320px] shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                        <div className="border-b border-slate-200 p-3 dark:border-slate-700">
+                            <div className="relative">
+                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"><IconBuscar /></span>
                                 <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)}
-                                    style={{ ...inputStyle, paddingLeft: '34px', marginBottom: 0 }} />
+                                    className={`${inputCls} mb-0 pl-[34px]`} />
                             </div>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="flex-1 overflow-y-auto">
                             {clientes.map(c => (
                                 <div key={c.id} onClick={() => verPerfil(c.id)}
-                                    style={{ padding: '12px 14px', borderBottom: `1px solid ${s.borderLight}`, cursor: 'pointer', background: clienteSeleccionado?.id === c.id ? s.rowActive : s.surface, borderLeft: `3px solid ${clienteSeleccionado?.id === c.id ? '#4f46e5' : 'transparent'}`, transition: 'all 0.1s' }}
-                                    onMouseEnter={e => { if (clienteSeleccionado?.id !== c.id) e.currentTarget.style.background = s.surfaceLow }}
-                                    onMouseLeave={e => { if (clienteSeleccionado?.id !== c.id) e.currentTarget.style.background = s.surface }}
+                                    className={`cursor-pointer border-b border-slate-100 px-3.5 py-3 transition-colors dark:border-slate-700 ${clienteSeleccionado?.id === c.id ? 'border-l-[3px] border-l-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'border-l-[3px] border-l-transparent hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                                            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: darkMode ? '#334155' : '#e0e7ff', color: darkMode ? '#a5b4fc' : '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800' }}>
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="relative shrink-0">
+                                            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-indigo-100 text-[11px] font-extrabold text-indigo-800 dark:bg-slate-700 dark:text-indigo-300">
                                                 {iniciales(c.nombre)}
                                             </div>
-                                            <div style={{ position: 'absolute', bottom: '0', right: '0', width: '8px', height: '8px', borderRadius: '50%', background: c.cliente_activo ? '#10b981' : '#94a3b8', border: `1px solid ${s.surface}` }} />
+                                            <div className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-white dark:border-slate-800 ${c.cliente_activo ? 'bg-green-500' : 'bg-slate-400'}`} />
                                         </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <span style={{ fontSize: '13px', fontWeight: '700', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{c.nombre}</span>
-                                            <span style={{ fontSize: '11px', color: s.textFaint }}>{c.total_compras} compras</span>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="block truncate text-[13px] font-bold text-slate-900 dark:text-slate-100">{c.nombre}</span>
+                                            <span className="text-[11px] text-slate-400 dark:text-slate-500">{c.total_compras} compras</span>
                                         </div>
                                     </div>
                                 </div>
@@ -389,39 +377,39 @@ function Clientes() {
                     </div>
 
                     {/* Perfil — layout de 2 columnas */}
-                    <div className="split-detail has-detail" style={{ flex: 1, background: s.bg, overflowY: 'auto' }}>
+                    <div className="split-detail has-detail flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">
                         {cargandoPerfil ? (
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textMuted }}>Cargando perfil...</div>
+                            <div className="flex h-full items-center justify-center text-slate-500 dark:text-slate-400">Cargando perfil...</div>
                         ) : (
-                            <div style={{ padding: '24px' }}>
+                            <div className="p-6">
 
                                 {/* Header */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                        <div style={{ position: 'relative' }}>
-                                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: darkMode ? '#334155' : '#e0e7ff', color: darkMode ? '#a5b4fc' : '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '800' }}>
+                                <div className="mb-5 flex items-start justify-between">
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="relative">
+                                            <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-indigo-100 text-base font-extrabold text-indigo-800 dark:bg-slate-700 dark:text-indigo-300">
                                                 {iniciales(clienteSeleccionado.nombre)}
                                             </div>
-                                            <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '12px', height: '12px', borderRadius: '50%', background: clienteSeleccionado.cliente_activo ? '#10b981' : '#94a3b8', border: `2px solid ${s.bg}` }} />
+                                            <div className={`absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-slate-50 dark:border-slate-950 ${clienteSeleccionado.cliente_activo ? 'bg-green-500' : 'bg-slate-400'}`} />
                                         </div>
                                         <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                                                <h2 style={{ fontSize: '18px', fontWeight: '800', color: s.text, letterSpacing: '-0.3px' }}>{clienteSeleccionado.nombre}</h2>
-                                                <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', color: colorOrigen(clienteSeleccionado.origen), background: bgOrigen(clienteSeleccionado.origen) }}>{clienteSeleccionado.origen}</span>
+                                            <div className="mb-0.5 flex items-center gap-2">
+                                                <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{clienteSeleccionado.nombre}</h2>
+                                                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${colorOrigenCls(clienteSeleccionado.origen)}`}>{clienteSeleccionado.origen}</span>
                                                 {clienteSeleccionado.origen === 'ecommerce' && (
-                                                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', color: '#7c3aed', background: darkMode ? 'rgba(124,58,237,0.15)' : '#ede9fe' }} title="Tiene cuenta en el ecommerce">Ecommerce</span>
+                                                    <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-400" title="Tiene cuenta en el ecommerce">Ecommerce</span>
                                                 )}
-                                                <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px', color: clienteSeleccionado.cliente_activo ? '#10b981' : s.textMuted, background: clienteSeleccionado.cliente_activo ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? '#334155' : '#f1f5f9') }}>
+                                                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${clienteSeleccionado.cliente_activo ? 'bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
                                                     {clienteSeleccionado.cliente_activo ? '● Activo' : '○ Inactivo'}
                                                 </span>
                                             </div>
-                                            <p style={{ fontSize: '11px', color: s.textFaint }}>Cliente desde {formatearFecha(clienteSeleccionado.created_at)}</p>
+                                            <p className="text-[11px] text-slate-400 dark:text-slate-500">Cliente desde {formatearFecha(clienteSeleccionado.created_at)}</p>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button onClick={() => setClienteSeleccionado(null)} style={{ ...btnSecundario, fontSize: '12px', padding: '8px 14px' }}>← Volver</button>
-                                        <button onClick={abrirModalEditar} style={{ ...btnSecundario, fontSize: '12px', padding: '8px 14px' }}>✏️ Editar</button>
-                                        <button onClick={() => {
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setClienteSeleccionado(null)}>← Volver</Button>
+                                        <Button variant="outline" size="sm" onClick={abrirModalEditar}><IconLapiz /> Editar</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => {
                                             setModalConfirmar({
                                                 titulo: 'Eliminar cliente',
                                                 mensaje: `¿Eliminar a "${clienteSeleccionado.nombre}"? El historial de ventas se conserva pero el cliente no aparecera en listados.`,
@@ -437,92 +425,92 @@ function Clientes() {
                                                     }
                                                 }
                                             })
-                                        }} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: darkMode ? '#450a0a' : '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Eliminar</button>
+                                        }}>Eliminar</Button>
                                     </div>
                                 </div>
 
                                 {/* Grid 2 columnas */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '16px', alignItems: 'start' }}>
+                                <div className="grid grid-cols-[1fr_300px] items-start gap-4">
 
                                     {/* Columna izquierda */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                    <div className="flex flex-col gap-3.5">
 
                                         {/* Datos contacto */}
-                                        <div style={{ background: s.surface, borderRadius: '14px', padding: '18px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                            <p style={{ fontSize: '10px', fontWeight: '800', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>Datos y contacto</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        <div className="rounded-2xl border border-slate-200 bg-white p-4.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                                            <p className="mb-3.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Datos y contacto</p>
+                                            <div className="grid grid-cols-2 gap-2.5">
                                                 {[
                                                     { label: 'RUC', val: clienteSeleccionado.ruc },
                                                     { label: 'Teléfono / WhatsApp', val: clienteSeleccionado.telefono },
                                                     { label: 'Email', val: clienteSeleccionado.email },
                                                     { label: 'Ciudad', val: clienteSeleccionado.ciudad },
                                                 ].map((item, i) => (
-                                                    <div key={i} style={{ padding: '9px 12px', background: s.surfaceLow, borderRadius: '8px' }}>
-                                                        <p style={{ fontSize: '9px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{item.label}</p>
-                                                        <p style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{item.val || '—'}</p>
+                                                    <div key={i} className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-slate-900">
+                                                        <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{item.label}</p>
+                                                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{item.val || '—'}</p>
                                                     </div>
                                                 ))}
                                                 {clienteSeleccionado.direccion && (
-                                                    <div style={{ gridColumn: '1 / -1', padding: '9px 12px', background: s.surfaceLow, borderRadius: '8px' }}>
-                                                        <p style={{ fontSize: '9px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Dirección</p>
-                                                        <p style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{clienteSeleccionado.direccion}</p>
+                                                    <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-slate-900">
+                                                        <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Dirección</p>
+                                                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{clienteSeleccionado.direccion}</p>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
 
                                         {/* Estadísticas */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                                        <div className="grid grid-cols-4 gap-2.5">
                                             {[
-                                                { label: 'Compras', val: clienteSeleccionado.estadisticas?.total_compras || 0, color: '#10b981', big: true },
-                                                { label: 'Monto total', val: formatearGs(clienteSeleccionado.estadisticas?.monto_total), color: '#3b82f6' },
-                                                { label: 'Ticket prom.', val: formatearGs(clienteSeleccionado.estadisticas?.ticket_promedio), color: '#f59e0b' },
-                                                { label: 'Última compra', val: formatearFecha(clienteSeleccionado.estadisticas?.ultima_compra), color: '#8b5cf6' },
+                                                { label: 'Compras', val: clienteSeleccionado.estadisticas?.total_compras || 0, cls: 'border-l-green-500 text-green-500', big: true },
+                                                { label: 'Monto total', val: formatearGs(clienteSeleccionado.estadisticas?.monto_total), cls: 'border-l-blue-500 text-blue-500' },
+                                                { label: 'Ticket prom.', val: formatearGs(clienteSeleccionado.estadisticas?.ticket_promedio), cls: 'border-l-amber-500 text-amber-500' },
+                                                { label: 'Última compra', val: formatearFecha(clienteSeleccionado.estadisticas?.ultima_compra), cls: 'border-l-violet-500 text-violet-500' },
                                             ].map((stat, i) => (
-                                                <div key={i} style={{ background: s.surface, borderRadius: '10px', padding: '12px', border: `1px solid ${s.border}`, borderLeft: `3px solid ${stat.color}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                                    <p style={{ fontSize: '9px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{stat.label}</p>
-                                                    <p style={{ fontSize: stat.big ? '20px' : '13px', fontWeight: '800', color: stat.color }}>{stat.val}</p>
+                                                <div key={i} className={`rounded-xl border border-slate-200 border-l-[3px] bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 ${stat.cls.split(' ')[0]}`}>
+                                                    <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{stat.label}</p>
+                                                    <p className={`font-extrabold ${stat.big ? 'text-xl' : 'text-[13px]'} ${stat.cls.split(' ')[1]}`}>{stat.val}</p>
                                                 </div>
                                             ))}
                                         </div>
 
                                         {/* Producto favorito */}
                                         {clienteSeleccionado.producto_favorito && (
-                                            <div style={{ background: s.surface, borderRadius: '12px', padding: '14px', border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: darkMode ? '#451a03' : '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>⭐</div>
+                                            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-amber-100 text-amber-500 dark:bg-amber-500/15 dark:text-amber-400"><IconEstrella /></div>
                                                 <div>
-                                                    <p style={{ fontSize: '9px', fontWeight: '700', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Producto favorito</p>
-                                                    <p style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>
-                                                        {clienteSeleccionado.producto_favorito.marca && <span style={{ color: s.textMuted }}>{clienteSeleccionado.producto_favorito.marca} — </span>}
+                                                    <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Producto favorito</p>
+                                                    <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
+                                                        {clienteSeleccionado.producto_favorito.marca && <span className="text-slate-500 dark:text-slate-400">{clienteSeleccionado.producto_favorito.marca} — </span>}
                                                         {clienteSeleccionado.producto_favorito.producto}
                                                     </p>
-                                                    <p style={{ fontSize: '11px', color: s.textFaint }}>{clienteSeleccionado.producto_favorito.cantidad} veces comprado</p>
+                                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">{clienteSeleccionado.producto_favorito.cantidad} veces comprado</p>
                                                 </div>
                                             </div>
                                         )}
 
                                         {/* Notas */}
                                         {clienteSeleccionado.notas && (
-                                            <div style={{ background: darkMode ? '#451a03' : '#fffbeb', borderRadius: '12px', padding: '14px', border: '1px solid #fde68a' }}>
-                                                <p style={{ fontSize: '9px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>⚠️ Notas internas</p>
-                                                <p style={{ fontSize: '12px', color: darkMode ? '#fde68a' : '#78350f' }}>{clienteSeleccionado.notas}</p>
+                                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-500/30 dark:bg-amber-500/10">
+                                                <p className="mb-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-400"><IconAdvertencia /> Notas internas</p>
+                                                <p className="text-xs text-amber-900 dark:text-amber-200">{clienteSeleccionado.notas}</p>
                                             </div>
                                         )}
 
                                         {/* Historial + Cuenta corriente */}
-                                        <div style={{ background: s.surface, borderRadius: '14px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                            
+                                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+
                                             {/* Pestañas */}
-                                            <div style={{ display: 'flex', borderBottom: `1px solid ${s.borderLight}`, background: s.surfaceLow }}>
+                                            <div className="flex border-b border-slate-100 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
                                                 <button onClick={() => setPestanaHistorial('historial')}
-                                                    style={{ padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: pestanaHistorial === 'historial' ? '700' : '500', color: pestanaHistorial === 'historial' ? s.text : s.textMuted, borderBottom: `2px solid ${pestanaHistorial === 'historial' ? '#1a1a2e' : 'transparent'}`, transition: 'all 0.15s' }}>
+                                                    className={`border-b-2 px-5 py-3 text-xs transition-colors ${pestanaHistorial === 'historial' ? 'border-slate-900 font-bold text-slate-900 dark:border-slate-100 dark:text-slate-100' : 'border-transparent font-medium text-slate-500 dark:text-slate-400'}`}>
                                                     Historial de compras
                                                 </button>
                                                 <button onClick={() => setPestanaHistorial('cuenta_corriente')}
-                                                    style={{ padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: pestanaHistorial === 'cuenta_corriente' ? '700' : '500', color: pestanaHistorial === 'cuenta_corriente' ? s.text : s.textMuted, borderBottom: `2px solid ${pestanaHistorial === 'cuenta_corriente' ? '#f59e0b' : 'transparent'}`, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    className={`flex items-center gap-1.5 border-b-2 px-5 py-3 text-xs transition-colors ${pestanaHistorial === 'cuenta_corriente' ? 'border-amber-500 font-bold text-slate-900 dark:text-slate-100' : 'border-transparent font-medium text-slate-500 dark:text-slate-400'}`}>
                                                     Cuenta corriente
                                                     {cuentaCorriente?.resumen?.deuda_total > 0 && (
-                                                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '20px', background: '#fef3c7', color: '#92400e' }}>
+                                                        <span className="rounded-full bg-amber-100 px-1.75 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
                                                             {formatearGs(cuentaCorriente.resumen.deuda_total)}
                                                         </span>
                                                     )}
@@ -533,49 +521,47 @@ function Clientes() {
                                             {pestanaHistorial === 'historial' && (
                                                 <>
                                                     {!clienteSeleccionado.ventas?.length ? (
-                                                        <p style={{ padding: '20px', textAlign: 'center', color: s.textMuted, fontSize: '13px' }}>Sin compras registradas.</p>
+                                                        <p className="p-5 text-center text-[13px] text-slate-500 dark:text-slate-400">Sin compras registradas.</p>
                                                     ) : (
                                                         <>
-                                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                                <thead>
-                                                                    <tr style={{ background: s.tableTh }}>
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow className="bg-slate-50 dark:bg-slate-900">
                                                                         {['Fecha', 'Producto', 'Precio', 'Canal', 'Estado'].map((h, i) => (
-                                                                            <th key={i} style={{ padding: '9px 14px', textAlign: 'left', fontSize: '9px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                                                            <TableHead key={i}>{h}</TableHead>
                                                                         ))}
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
                                                                     {clienteSeleccionado.ventas
                                                                         .slice((paginaHistorial - 1) * POR_PAGINA_HISTORIAL, paginaHistorial * POR_PAGINA_HISTORIAL)
                                                                         .map(v => (
-                                                                        <tr key={v.id} style={{ borderTop: `1px solid ${s.borderLight}` }}
-                                                                            onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{formatearFecha(v.created_at)}</td>
-                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{v.marca_nombre && `${v.marca_nombre} — `}{v.producto_nombre} {v.presentacion_nombre}</td>
-                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', fontWeight: '600', color: s.text }}>Gs. {parseInt(v.precio).toLocaleString()}</td>
-                                                                            <td style={{ padding: '10px 14px', fontSize: '11px', color: s.textMuted }}>{v.canal}</td>
-                                                                            <td style={{ padding: '10px 14px' }}>
-                                                                                <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '9px', fontWeight: '700', color: 'white', background: colorEstado(v.estado) }}>{v.estado}</span>
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
+                                                                            <TableRow key={v.id}>
+                                                                                <TableCell className="text-slate-700 dark:text-slate-300">{formatearFecha(v.created_at)}</TableCell>
+                                                                                <TableCell className="text-slate-700 dark:text-slate-300">{v.marca_nombre && `${v.marca_nombre} — `}{v.producto_nombre} {v.presentacion_nombre}</TableCell>
+                                                                                <TableCell className="font-semibold text-slate-900 dark:text-slate-100">Gs. {parseInt(v.precio).toLocaleString()}</TableCell>
+                                                                                <TableCell className="text-slate-500 dark:text-slate-400">{v.canal}</TableCell>
+                                                                                <TableCell>
+                                                                                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold text-white ${colorEstadoCls(v.estado)}`}>{v.estado}</span>
+                                                                                </TableCell>
+                                                                            </TableRow>
+                                                                        ))}
+                                                                </TableBody>
+                                                            </Table>
                                                             {/* Paginación historial */}
                                                             {clienteSeleccionado.ventas.length > POR_PAGINA_HISTORIAL && (
-                                                                <div style={{ padding: '12px 16px', borderTop: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: s.surfaceLow }}>
-                                                                    <p style={{ fontSize: '11px', color: s.textFaint }}>
+                                                                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
                                                                         {(paginaHistorial - 1) * POR_PAGINA_HISTORIAL + 1}–{Math.min(paginaHistorial * POR_PAGINA_HISTORIAL, clienteSeleccionado.ventas.length)} de {clienteSeleccionado.ventas.length}
                                                                     </p>
-                                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                                    <div className="flex gap-1.5">
                                                                         <button onClick={() => setPaginaHistorial(p => Math.max(1, p - 1))} disabled={paginaHistorial === 1}
-                                                                            style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${s.border}`, background: 'transparent', color: paginaHistorial === 1 ? s.textFaint : s.text, cursor: paginaHistorial === 1 ? 'not-allowed' : 'pointer', fontSize: '12px' }}>
+                                                                            className={`rounded-md border border-slate-200 px-2.5 py-1 text-xs dark:border-slate-700 ${paginaHistorial === 1 ? 'cursor-not-allowed text-slate-300 dark:text-slate-600' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'}`}>
                                                                             ← Ant
                                                                         </button>
                                                                         <button onClick={() => setPaginaHistorial(p => Math.min(Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL), p + 1))}
                                                                             disabled={paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL)}
-                                                                            style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${s.border}`, background: 'transparent', color: paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL) ? s.textFaint : s.text, cursor: paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL) ? 'not-allowed' : 'pointer', fontSize: '12px' }}>
+                                                                            className={`rounded-md border border-slate-200 px-2.5 py-1 text-xs dark:border-slate-700 ${paginaHistorial >= Math.ceil(clienteSeleccionado.ventas.length / POR_PAGINA_HISTORIAL) ? 'cursor-not-allowed text-slate-300 dark:text-slate-600' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'}`}>
                                                                             Sig →
                                                                         </button>
                                                                     </div>
@@ -590,54 +576,49 @@ function Clientes() {
                                             {pestanaHistorial === 'cuenta_corriente' && (
                                                 <>
                                                     {cargandoCC ? (
-                                                        <p style={{ padding: '20px', textAlign: 'center', color: s.textMuted }}>Cargando...</p>
+                                                        <p className="p-5 text-center text-slate-500 dark:text-slate-400">Cargando...</p>
                                                     ) : !cuentaCorriente?.ventas?.filter(v => v.saldo > 0).length ? (
-                                                        <div style={{ padding: '32px', textAlign: 'center', color: s.textMuted }}>
-                                                            <p style={{ fontSize: '24px', marginBottom: '8px' }}>✅</p>
-                                                            <p style={{ fontSize: '13px' }}>No hay deudas pendientes.</p>
+                                                        <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                                                            <p className="mb-2 flex justify-center text-green-500"><IconCheckCirculo /></p>
+                                                            <p className="text-[13px]">No hay deudas pendientes.</p>
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <div style={{ padding: '12px 16px', background: darkMode ? 'rgba(245,158,11,0.08)' : '#fffbeb', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <span style={{ fontSize: '11px', color: '#92400e', fontWeight: '600' }}>{cuentaCorriente.ventas.filter(v => v.saldo > 0).length} créditos pendientes</span>
-                                                                <span style={{ fontSize: '14px', fontWeight: '800', color: '#f59e0b' }}>Deuda total: {formatearGs(cuentaCorriente.resumen?.deuda_total)}</span>
+                                                            <div className="flex items-center justify-between border-b border-slate-100 bg-amber-50 px-4 py-3 dark:border-slate-700 dark:bg-amber-500/10">
+                                                                <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-400">{cuentaCorriente.ventas.filter(v => v.saldo > 0).length} créditos pendientes</span>
+                                                                <span className="text-sm font-extrabold text-amber-500">Deuda total: {formatearGs(cuentaCorriente.resumen?.deuda_total)}</span>
                                                             </div>
-                                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                                <thead>
-                                                                    <tr style={{ background: s.surfaceLow }}>
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow className="bg-slate-50 dark:bg-slate-900">
                                                                         {['Fecha', 'Producto', 'Total', 'Saldo', 'Vence', ''].map(h => (
-                                                                            <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: '9px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                                                            <TableHead key={h}>{h}</TableHead>
                                                                         ))}
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
                                                                     {cuentaCorriente.ventas.filter(v => v.saldo > 0).map(v => {
                                                                         const vencido = v.fecha_vencimiento_credito && new Date(v.fecha_vencimiento_credito) < new Date()
                                                                         return (
-                                                                            <tr key={v.id} style={{ borderTop: `1px solid ${s.borderLight}` }}
-                                                                                onMouseEnter={e => e.currentTarget.style.background = s.surfaceLow}
-                                                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.textMuted }}>{formatearFecha(v.created_at)}</td>
-                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{v.producto_nombre} {v.presentacion_nombre}</td>
-                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: s.text }}>{formatearGs(v.precio)}</td>
-                                                                                <td style={{ padding: '10px 14px' }}>
-                                                                                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#f59e0b' }}>{formatearGs(v.saldo)}</span>
-                                                                                </td>
-                                                                                <td style={{ padding: '10px 14px', fontSize: '11px', color: vencido ? '#ef4444' : s.textMuted }}>
+                                                                            <TableRow key={v.id}>
+                                                                                <TableCell className="text-slate-500 dark:text-slate-400">{formatearFecha(v.created_at)}</TableCell>
+                                                                                <TableCell className="text-slate-700 dark:text-slate-300">{v.producto_nombre} {v.presentacion_nombre}</TableCell>
+                                                                                <TableCell className="text-slate-700 dark:text-slate-300">{formatearGs(v.precio)}</TableCell>
+                                                                                <TableCell>
+                                                                                    <span className="text-xs font-extrabold text-amber-500">{formatearGs(v.saldo)}</span>
+                                                                                </TableCell>
+                                                                                <TableCell className={`flex items-center gap-1 ${vencido ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                                                                                     {v.fecha_vencimiento_credito ? new Date(v.fecha_vencimiento_credito).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' }) : '—'}
-                                                                                    {vencido && <span style={{ marginLeft: '4px' }}>⚠️</span>}
-                                                                                </td>
-                                                                                <td style={{ padding: '10px 14px' }}>
-                                                                                    <button onClick={() => setModalPagoCC(v)}
-                                                                                        style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#1a1a2e', color: 'white', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>
-                                                                                        Pagar
-                                                                                    </button>
-                                                                                </td>
-                                                                            </tr>
+                                                                                    {vencido && <IconAdvertencia />}
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    <Button size="sm" onClick={() => setModalPagoCC(v)}>Pagar</Button>
+                                                                                </TableCell>
+                                                                            </TableRow>
                                                                         )
                                                                     })}
-                                                                </tbody>
-                                                            </table>
+                                                                </TableBody>
+                                                            </Table>
                                                         </>
                                                     )}
                                                 </>
@@ -646,7 +627,7 @@ function Clientes() {
                                     </div>
 
                                     {/* Columna derecha — Panel de actividad */}
-                                    <div style={{ position: 'sticky', top: '24px' }}>
+                                    <div className="sticky top-6">
                                         <PanelActividad cliente={clienteSeleccionado} />
                                     </div>
                                 </div>
@@ -656,165 +637,158 @@ function Clientes() {
                 </div>
             ) : (
                 // Vista tabla
-                <div className="page-scroll" style={{ padding: '32px' }}>
+                <div className="page-scroll p-8">
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
+                    <div className="mb-7 flex items-end justify-between">
                         <div>
-                            <h1 style={{ fontSize: '32px', fontWeight: '900', color: s.text, letterSpacing: '-0.8px' }}>Gestión de Clientes</h1>
-                            <p style={{ fontSize: '14px', color: s.textMuted, marginTop: '6px' }}>Visualizá, editá y fidelizá tu base de clientes registrados.</p>
+                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Gestión de Clientes</h1>
+                            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Visualizá, editá y fidelizá tu base de clientes registrados.</p>
                         </div>
-                        <button onClick={() => setModalNuevo(true)} style={{ ...btnPrimario, padding: '12px 22px', fontSize: '14px', boxShadow: '0 4px 12px rgba(26,26,46,0.3)' }}>
-                            + Añadir nuevo cliente
-                        </button>
+                        <Button onClick={() => setModalNuevo(true)}>+ Añadir nuevo cliente</Button>
                     </div>
 
                     {/* Métricas */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
+                    <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {[
-                            { label: 'Total clientes', val: totalClientes, color: s.text },
-                            { label: 'Clientes activos', val: clientesActivos, color: '#10b981' },
-                            { label: 'Monto total acumulado', val: formatearGs(totalMonto), color: '#1a1a2e' },
-                            { label: 'Ticket promedio', val: formatearGs(ticketPromedio), color: s.text },
+                            { label: 'Total clientes', val: totalClientes, cls: 'text-slate-900 dark:text-slate-100' },
+                            { label: 'Clientes activos', val: clientesActivos, cls: 'text-green-500' },
+                            { label: 'Monto total acumulado', val: formatearGs(totalMonto), cls: 'text-slate-900 dark:text-slate-100' },
+                            { label: 'Ticket promedio', val: formatearGs(ticketPromedio), cls: 'text-slate-900 dark:text-slate-100' },
                         ].map((m, i) => (
-                            <div key={i} style={{ background: s.surface, borderRadius: '12px', padding: '20px', border: `1px solid ${s.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                <p style={{ fontSize: '12px', fontWeight: '500', color: s.textMuted, marginBottom: '8px' }}>{m.label}</p>
-                                <p style={{ fontSize: '24px', fontWeight: '800', color: m.color, letterSpacing: '-0.5px' }}>{m.val}</p>
-                            </div>
+                            <Card key={i} className="transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                                <CardContent>
+                                    <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">{m.label}</p>
+                                    <p className={`text-2xl font-extrabold tracking-tight ${m.cls}`}>{m.val}</p>
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
 
                     {/* Tabla */}
-                    <div style={{ background: s.surface, borderRadius: '14px', border: `1px solid ${s.border}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-
+                    <Card className="overflow-hidden py-0">
                         {/* Buscador + filtros */}
-                        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.borderLight}`, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+                            <div className="relative min-w-[200px] flex-1">
+                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"><IconBuscar /></span>
                                 <input placeholder="Buscar por nombre, RUC o teléfono..." value={buscar} onChange={e => setBuscar(e.target.value)}
-                                    style={{ ...inputStyle, paddingLeft: '34px', marginBottom: 0, background: s.surfaceLow }} />
+                                    className={`${inputCls} mb-0 bg-slate-50 pl-[34px] dark:bg-slate-900`} />
                             </div>
 
                             {/* Filtro activo/inactivo */}
-                            <div style={{ display: 'flex', gap: '4px' }}>
+                            <div className="flex gap-1">
                                 {[
                                     { val: 'todos', label: 'Todos' },
                                     { val: 'activo', label: '● Activos' },
                                     { val: 'inactivo', label: '○ Inactivos' },
                                 ].map(f => (
                                     <button key={f.val} onClick={() => setFiltroActividad(f.val)}
-                                        style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${filtroActividad === f.val ? '#1a1a2e' : s.border}`, background: filtroActividad === f.val ? '#1a1a2e' : 'transparent', color: filtroActividad === f.val ? 'white' : s.textMuted, cursor: 'pointer', fontSize: '12px', fontWeight: '600', transition: 'all 0.15s' }}>
+                                        className={`rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors ${filtroActividad === f.val ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-transparent text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/40'}`}>
                                         {f.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(248,250,252,0.8)' }}>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-slate-50/80 dark:bg-slate-900/50">
                                         {['Nombre del cliente', 'Teléfono', 'RUC', 'Compras', 'Monto total', 'Estado', 'Origen', ''].map((h, i) => (
-                                            <th key={i} style={{ padding: '14px 20px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                                            <TableHead key={i} className="whitespace-nowrap">{h}</TableHead>
                                         ))}
-                                    </tr>
-                                </thead>
-                                <tbody style={{ borderTop: `1px solid ${s.borderLight}` }}>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
                                     {cargando ? (
-                                        <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: s.textMuted }}>Cargando...</td></tr>
+                                        <TableRow><TableCell colSpan={8} className="p-10 text-center text-slate-500 dark:text-slate-400">Cargando...</TableCell></TableRow>
                                     ) : clientes.length === 0 ? (
-                                        <tr><td colSpan={8} style={{ padding: '48px', textAlign: 'center', color: s.textMuted }}>
-                                            <p style={{ fontSize: '32px', marginBottom: '8px' }}>👥</p>
+                                        <TableRow><TableCell colSpan={8} className="p-12 text-center text-slate-500 dark:text-slate-400">
+                                            <p className="mb-2 flex justify-center text-slate-300 dark:text-slate-600"><IconUsuarios /></p>
                                             <p>No hay clientes registrados.</p>
-                                        </td></tr>
+                                        </TableCell></TableRow>
                                     ) : (
                                         clientes.map(c => (
-                                            <tr key={c.id} style={{ borderTop: `1px solid ${s.borderLight}`, cursor: 'pointer', transition: 'background 0.1s' }}
-                                                onClick={() => verPerfil(c.id)}
-                                                onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                            >
-                                                <td style={{ padding: '14px 20px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: darkMode ? '#334155' : '#e0e7ff', color: darkMode ? '#a5b4fc' : '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
+                                            <TableRow key={c.id} className="cursor-pointer" onClick={() => verPerfil(c.id)}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="relative shrink-0">
+                                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-extrabold text-indigo-800 dark:bg-slate-700 dark:text-indigo-300">
                                                                 {iniciales(c.nombre)}
                                                             </div>
-                                                            <div style={{ position: 'absolute', bottom: '0', right: '0', width: '8px', height: '8px', borderRadius: '50%', background: c.cliente_activo ? '#10b981' : '#94a3b8', border: `1px solid ${s.surface}` }} />
+                                                            <div className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-white dark:border-slate-800 ${c.cliente_activo ? 'bg-green-500' : 'bg-slate-400'}`} />
                                                         </div>
-                                                        <span style={{ fontSize: '13px', fontWeight: '700', color: s.text }}>{c.nombre}</span>
+                                                        <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{c.nombre}</span>
                                                     </div>
-                                                </td>
-                                                <td style={{ padding: '14px 20px', fontSize: '12px', color: s.textMuted }}>{c.telefono || '—'}</td>
-                                                <td style={{ padding: '14px 20px', fontSize: '12px', color: s.textMuted }}>{c.ruc || '—'}</td>
-                                                <td style={{ padding: '14px 20px', fontSize: '13px', fontWeight: '600', color: s.text }}>{c.total_compras}</td>
-                                                <td style={{ padding: '14px 20px', fontSize: '13px', fontWeight: '600', color: s.text }}>{formatearGs(c.monto_total)}</td>
-                                                <td style={{ padding: '14px 20px' }}>
-                                                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', color: c.cliente_activo ? '#10b981' : s.textMuted, background: c.cliente_activo ? (darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7') : (darkMode ? '#334155' : '#f1f5f9') }}>
+                                                </TableCell>
+                                                <TableCell className="text-slate-500 dark:text-slate-400">{c.telefono || '—'}</TableCell>
+                                                <TableCell className="text-slate-500 dark:text-slate-400">{c.ruc || '—'}</TableCell>
+                                                <TableCell className="font-semibold text-slate-900 dark:text-slate-100">{c.total_compras}</TableCell>
+                                                <TableCell className="font-semibold text-slate-900 dark:text-slate-100">{formatearGs(c.monto_total)}</TableCell>
+                                                <TableCell>
+                                                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${c.cliente_activo ? 'bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
                                                         {c.cliente_activo ? '● Activo' : '○ Inactivo'}
                                                     </span>
-                                                </td>
-                                                <td style={{ padding: '14px 20px' }}>
-                                                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', color: colorOrigen(c.origen), background: bgOrigen(c.origen) }}>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${colorOrigenCls(c.origen)}`}>
                                                         {c.origen}
                                                     </span>
-                                                </td>
-                                                <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                                                    <span style={{ color: s.textFaint, fontSize: '16px' }}>→</span>
-                                                </td>
-                                            </tr>
+                                                </TableCell>
+                                                <TableCell className="text-right text-slate-300 dark:text-slate-600">→</TableCell>
+                                            </TableRow>
                                         ))
                                     )}
-                                </tbody>
-                            </table>
+                                </TableBody>
+                            </Table>
                         </div>
 
-                        <div style={{ padding: '12px 20px', background: darkMode ? 'rgba(26,37,54,0.5)' : 'rgba(248,250,252,0.8)', borderTop: `1px solid ${s.borderLight}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={{ fontSize: '12px', color: s.textFaint }}>
-                                <strong style={{ color: s.text }}>{clientes.length}</strong> clientes
+                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/80 px-5 py-3 dark:border-slate-700 dark:bg-slate-900/50">
+                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                                <strong className="text-slate-900 dark:text-slate-100">{clientes.length}</strong> clientes
                                 {filtroActividad !== 'todos' && ` · filtro: ${filtroActividad}`}
                                 {buscar && ` · búsqueda: "${buscar}"`}
                             </p>
                         </div>
-                    </div>
+                    </Card>
                 </div>
             )}
 
             {modalPagoCC && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Registrar pago</h3>
-                            <button onClick={() => setModalPagoCC(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" onClick={() => setModalPagoCC(null)}>
+                    <div className="w-[440px] rounded-2xl bg-white p-7 shadow-2xl dark:bg-slate-800" onClick={e => e.stopPropagation()}>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Registrar pago</h3>
+                            <button onClick={() => setModalPagoCC(null)} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                         </div>
-                        <div style={{ background: s.surfaceLow, borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
-                            <p style={{ fontSize: '12px', color: s.textMuted }}>Venta #{modalPagoCC.id} — {modalPagoCC.producto_nombre}</p>
-                            <p style={{ fontSize: '14px', fontWeight: '800', color: '#f59e0b', marginTop: '4px' }}>Saldo: {formatearGs(modalPagoCC.saldo)}</p>
+                        <div className="mb-4 rounded-[10px] bg-slate-50 p-3.5 dark:bg-slate-900">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Venta #{modalPagoCC.id} — {modalPagoCC.producto_nombre}</p>
+                            <p className="mt-1 text-sm font-extrabold text-amber-500">Saldo: {formatearGs(modalPagoCC.saldo)}</p>
                         </div>
-                        <label style={labelStyle}>N° de recibo</label>
-                        <input value={formPago.numero_recibo} onChange={e => setFormPago({ ...formPago, numero_recibo: e.target.value })} placeholder="Opcional" style={inputStyle} />
-                        <label style={labelStyle}>Monto *</label>
-                        <input type="number" value={formPago.monto} onChange={e => setFormPago({ ...formPago, monto: e.target.value })} placeholder="Gs." style={inputStyle} />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <label className={labelCls}>N° de recibo</label>
+                        <input value={formPago.numero_recibo} onChange={e => setFormPago({ ...formPago, numero_recibo: e.target.value })} placeholder="Opcional" className={inputCls} />
+                        <label className={labelCls}>Monto *</label>
+                        <input type="number" value={formPago.monto} onChange={e => setFormPago({ ...formPago, monto: e.target.value })} placeholder="Gs." className={inputCls} />
+                        <div className="mb-3 grid grid-cols-2 gap-3">
                             <div>
-                                <label style={labelStyle}>Método de pago</label>
-                                <select value={formPago.metodo_pago} onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                <label className={labelCls}>Método de pago</label>
+                                <select value={formPago.metodo_pago} onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })} className={`${inputCls} mb-0`}>
                                     <option value="efectivo">Efectivo</option>
                                     <option value="transferencia">Transferencia</option>
                                 </select>
                             </div>
                             <div>
-                                <label style={labelStyle}>Tipo de pago</label>
-                                <select value={formPago.tipo_pago} onChange={e => setFormPago({ ...formPago, tipo_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                                <label className={labelCls}>Tipo de pago</label>
+                                <select value={formPago.tipo_pago} onChange={e => setFormPago({ ...formPago, tipo_pago: e.target.value })} className={`${inputCls} mb-0`}>
                                     <option value="parcial">Parcial</option>
                                     <option value="total">Total</option>
                                 </select>
                             </div>
                         </div>
-                        <label style={labelStyle}>Notas</label>
-                        <input value={formPago.notas} onChange={e => setFormPago({ ...formPago, notas: e.target.value })} placeholder="Opcional" style={inputStyle} />
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalPagoCC(null)} style={btnSecundario}>Cancelar</button>
-                            <button onClick={handleRegistrarPago} style={btnPrimario}>Registrar pago</button>
+                        <label className={labelCls}>Notas</label>
+                        <input value={formPago.notas} onChange={e => setFormPago({ ...formPago, notas: e.target.value })} placeholder="Opcional" className={inputCls} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setModalPagoCC(null)}>Cancelar</Button>
+                            <Button onClick={handleRegistrarPago}>Registrar pago</Button>
                         </div>
                     </div>
                 </div>
@@ -828,8 +802,6 @@ function Clientes() {
                     submitLabel="Crear cliente"
                     form={form}
                     setForm={setForm}
-                    s={s}
-                    darkMode={darkMode}
                     guardando={guardandoCliente}
                 />
             )}
@@ -841,8 +813,6 @@ function Clientes() {
                     submitLabel="Guardar cambios"
                     form={form}
                     setForm={setForm}
-                    s={s}
-                    darkMode={darkMode}
                     guardando={guardandoCliente}
                 />
             )}
