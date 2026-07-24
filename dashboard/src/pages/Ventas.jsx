@@ -2,10 +2,32 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getHistorial, actualizarEstadoVenta, anularVenta, actualizarMetodoPago } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
-import { useApp } from '../App'
 import * as XLSX from 'xlsx'
 import { getLibroVentas } from '../services/ventas'
-import { formatearFecha, formatearSoloFecha, fechaHoyPY, fechaInicioMesPY } from '../utils/fecha'
+import { formatearFecha, fechaHoyPY, fechaInicioMesPY } from '../utils/fecha'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+
+const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
+const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+
+function colorMetodoPago(metodo) {
+    return {
+        efectivo: 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400',
+        tarjeta: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-400',
+        transferencia: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400',
+    }[metodo] || 'bg-slate-100 text-slate-500 dark:bg-slate-700'
+}
+
+function colorEstado(estado) {
+    return {
+        pendiente_pago: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400',
+        pagado: 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400',
+        entregado: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-400',
+        cancelado: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-400',
+    }[estado] || 'bg-slate-100 text-slate-500 dark:bg-slate-700'
+}
 
 function Ventas() {
     const [datos, setDatos] = useState(null)
@@ -14,23 +36,10 @@ function Ventas() {
     const navigate = useNavigate()
     const [modalConfirmar, setModalConfirmar] = useState(null)
     const [ventaDetalle, setVentaDetalle] = useState(null)
-    const { darkMode } = useApp()
     const [modalLibro, setModalLibro] = useState(false)
     const [libroFechaDesde, setLibroFechaDesde] = useState(fechaInicioMesPY())
     const [libroFechaHasta, setLibroFechaHasta] = useState(fechaHoyPY())
     const [exportandoLibro, setExportandoLibro] = useState(false)
-
-    const s = {
-        bg: darkMode ? '#0f172a' : '#f6f6f8',
-        surface: darkMode ? '#1e293b' : 'white',
-        surfaceLow: darkMode ? '#1a2536' : '#f8fafc',
-        border: darkMode ? '#334155' : '#e2e8f0',
-        borderLight: darkMode ? '#334155' : '#f1f5f9',
-        text: darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted: darkMode ? '#94a3b8' : '#64748b',
-        inputBg: darkMode ? '#0f172a' : 'white',
-        rowHover: darkMode ? '#1a2536' : '#f8fafc',
-    }
 
     const [periodo, setPeriodo] = useState('recientes')
     const [buscar, setBuscar] = useState('')
@@ -52,7 +61,7 @@ function Ventas() {
         setExportandoLibro(true)
         try {
             const datos = await getLibroVentas(libroFechaDesde, libroFechaHasta)
-            
+
             const filas = datos.map((v, idx) => {
                 const anulada = v.estado === 'cancelado'
                 const total = anulada ? 0 : parseInt(v.total || 0)
@@ -148,7 +157,7 @@ function Ventas() {
         try {
             setCargando(true)
             const params = { periodo, pagina }
-            if (estadoFiltro) params.estado = estadoFiltro 
+            if (estadoFiltro) params.estado = estadoFiltro
             if (buscar) params.buscar = buscar
             if (metodoPago) params.metodo_pago = metodoPago
             if (canal) params.canal = canal
@@ -235,25 +244,6 @@ function Ventas() {
         return nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     }
 
-    function colorMetodoPago(metodo) {
-        const colores = {
-            efectivo: { bg: '#d1fae5', color: '#065f46' },
-            tarjeta: { bg: '#e0e7ff', color: '#3730a3' },
-            transferencia: { bg: '#fef3c7', color: '#92400e' }
-        }
-        return colores[metodo] || { bg: '#f0f0f0', color: '#555' }
-    }
-
-    function colorEstado(estado) {
-        const colores = {
-            pendiente_pago: { bg: '#fef3c7', color: '#92400e' },
-            pagado: { bg: '#d1fae5', color: '#065f46' },
-            entregado: { bg: '#e0e7ff', color: '#3730a3' },
-            cancelado: { bg: '#fee2e2', color: '#991b1b' }
-        }
-        return colores[estado] || { bg: '#f0f0f0', color: '#555' }
-    }
-
     function labelCanal(canal) {
         const labels = {
             en_tienda: 'En tienda', whatsapp_bot: 'Bot',
@@ -270,60 +260,47 @@ function Ventas() {
         { valor: 'anual', label: 'Anual' },
     ]
 
-    const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, fontSize: '13px', boxSizing: 'border-box', background: s.inputBg, color: s.text }
-    const labelStyle = { fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }
-
     return (
-        <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', background: s.bg, minHeight: '100%' }}>
+        <div className="page-scroll min-h-full bg-slate-50 p-4 dark:bg-slate-900 sm:p-6 lg:mx-auto lg:max-w-[1400px] lg:p-8">
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
+            <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h1 style={{ fontSize: '28px', fontWeight: '800', color: s.text, letterSpacing: '-0.5px' }}>Historial de Ventas</h1>
-                    <p style={{ fontSize: '13px', color: s.textMuted, marginTop: '4px' }}>Gestioná y supervisá todas las transacciones realizadas.</p>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Historial de Ventas</h1>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Gestioná y supervisá todas las transacciones realizadas.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setModalLibro(true)}
-                        style={{ padding: '10px 18px', borderRadius: '10px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                        Libro de Ventas
-                    </button>
-                    <button onClick={() => navigate('/dashboard/caja')} style={{ background: '#1a1a2e', color: 'white', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                        + Nueva venta
-                    </button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setModalLibro(true)}>Libro de Ventas</Button>
+                    <Button onClick={() => navigate('/dashboard/caja')}>+ Nueva venta</Button>
                 </div>
             </div>
 
             {/* Tarjetas resumen */}
             {datos?.resumen && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '28px' }}>
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {[
-                        { label: 'Total del Día', valor: formatearGs(datos.resumen.dia.total), sub: `${datos.resumen.dia.cantidad} transacciones hoy`, accent: '#1a1a2e' },
-                        { label: 'Total de la Semana', valor: formatearGs(datos.resumen.semana.total), sub: `${datos.resumen.semana.cantidad} transacciones esta semana`, accent: '#4f46e5' },
-                        { label: 'Ventas del Mes', valor: formatearGs(datos.resumen.mes.total), sub: `${datos.resumen.mes.cantidad} transacciones este mes`, accent: '#94a3b8' },
+                        { label: 'Total del Día', valor: formatearGs(datos.resumen.dia.total), sub: `${datos.resumen.dia.cantidad} transacciones hoy`, accent: 'border-b-slate-900 dark:border-b-indigo-500' },
+                        { label: 'Total de la Semana', valor: formatearGs(datos.resumen.semana.total), sub: `${datos.resumen.semana.cantidad} transacciones esta semana`, accent: 'border-b-indigo-500' },
+                        { label: 'Ventas del Mes', valor: formatearGs(datos.resumen.mes.total), sub: `${datos.resumen.mes.cantidad} transacciones este mes`, accent: 'border-b-slate-400' },
                     ].map((t, i) => (
-                        <div key={i} style={{ background: s.surface, padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderBottom: `4px solid ${t.accent}` }}>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.label}</span>
-                            <p style={{ fontSize: '28px', fontWeight: '800', color: s.text, marginTop: '12px' }}>{t.valor}</p>
-                            <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '4px' }}>{t.sub}</p>
-                        </div>
+                        <Card key={i} className={`border-b-4 ${t.accent}`}>
+                            <CardContent>
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.label}</span>
+                                <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-slate-100">{t.valor}</p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.sub}</p>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             )}
 
             {/* Tabla */}
-            <div style={{ background: s.surface, borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+            <Card className="py-0 gap-0">
 
                 {/* Tabs */}
-                <div style={{ padding: '0 24px', display: 'flex', gap: '4px', borderBottom: `1px solid ${s.borderLight}` }}>
+                <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-4 dark:border-slate-700 sm:px-6">
                     {tabs.map(tab => (
                         <button key={tab.valor} onClick={() => { setPeriodo(tab.valor); setPagina(1) }}
-                            style={{
-                                padding: '14px 20px', fontSize: '13px',
-                                fontWeight: periodo === tab.valor ? '700' : '500',
-                                color: periodo === tab.valor ? s.text : s.textMuted,
-                                borderBottom: periodo === tab.valor ? `2px solid ${s.text}` : '2px solid transparent',
-                                background: 'none', border: 'none',
-                                cursor: 'pointer', transition: 'all 0.15s'
-                            }}
+                            className={`whitespace-nowrap border-b-2 px-4 py-3.5 text-[13px] transition-colors ${periodo === tab.valor ? 'border-slate-900 font-bold text-slate-900 dark:border-indigo-500 dark:text-slate-100' : 'border-transparent font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                         >
                             {tab.label}
                         </button>
@@ -331,14 +308,14 @@ function Ventas() {
                 </div>
 
                 {/* Filtros */}
-                <div style={{ padding: '20px 24px', background: s.surfaceLow, display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '12px', alignItems: 'end', borderBottom: `1px solid ${s.borderLight}` }}>
+                <div className="grid grid-cols-1 items-end gap-3 border-b border-slate-100 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40 sm:grid-cols-2 lg:grid-cols-5">
                     <div>
-                        <label style={labelStyle}>Buscar transacción / cliente</label>
-                        <input placeholder="ID, nombre o número..." value={buscar} onChange={e => { setBuscar(e.target.value); setPagina(1) }} style={inputStyle} />
+                        <label className={labelCls}>Buscar transacción / cliente</label>
+                        <input placeholder="ID, nombre o número..." value={buscar} onChange={e => { setBuscar(e.target.value); setPagina(1) }} className={inputCls} />
                     </div>
                     <div>
-                        <label style={labelStyle}>Método de pago</label>
-                        <select value={metodoPago} onChange={e => { setMetodoPago(e.target.value); setPagina(1) }} style={inputStyle}>
+                        <label className={labelCls}>Método de pago</label>
+                        <select value={metodoPago} onChange={e => { setMetodoPago(e.target.value); setPagina(1) }} className={inputCls}>
                             <option value="">Todos</option>
                             <option value="efectivo">Efectivo</option>
                             <option value="tarjeta">Tarjeta</option>
@@ -346,8 +323,8 @@ function Ventas() {
                         </select>
                     </div>
                     <div>
-                        <label style={labelStyle}>Canal</label>
-                        <select value={canal} onChange={e => { setCanal(e.target.value); setPagina(1) }} style={inputStyle}>
+                        <label className={labelCls}>Canal</label>
+                        <select value={canal} onChange={e => { setCanal(e.target.value); setPagina(1) }} className={inputCls}>
                             <option value="">Todos</option>
                             <option value="en_tienda">En tienda</option>
                             <option value="whatsapp_bot">WhatsApp Bot</option>
@@ -356,8 +333,8 @@ function Ventas() {
                         </select>
                     </div>
                     <div>
-                        <label style={labelStyle}>Estado</label>
-                        <select value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPagina(1) }} style={inputStyle}>
+                        <label className={labelCls}>Estado</label>
+                        <select value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPagina(1) }} className={inputCls}>
                             <option value="">Todos</option>
                             <option value="pendiente_pago">Pendiente de pago</option>
                             <option value="pagado">Pagado</option>
@@ -366,203 +343,186 @@ function Ventas() {
                         </select>
                     </div>
                     <div>
-                        <button onClick={() => { setBuscar(''); setMetodoPago(''); setCanal(''); setEstadoFiltro(''); setPagina(1) }}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, fontSize: '13px', cursor: 'pointer', color: s.textMuted, fontWeight: '500' }}>
+                        <Button variant="outline" onClick={() => { setBuscar(''); setMetodoPago(''); setCanal(''); setEstadoFiltro(''); setPagina(1) }} className="w-full">
                             Limpiar filtros
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {cargando ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: s.textMuted }}>Cargando...</div>
+                    <div className="p-10 text-center text-slate-500 dark:text-slate-400">Cargando...</div>
                 ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ background: s.surfaceLow, borderBottom: `1px solid ${s.borderLight}` }}>
-                                    {['ID', 'Cliente', 'Producto', 'Fecha y hora', 'Método', 'Canal', 'Estado', 'Total', 'Acción'].map((h, i) => (
-                                        <th key={i} style={{ padding: '12px 16px', textAlign: i >= 4 && i <= 6 ? 'center' : i === 7 ? 'right' : 'left', fontSize: '10px', fontWeight: '700', color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {datos?.ventas?.length === 0 ? (
-                                    <tr><td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: s.textMuted, fontSize: '13px' }}>No hay ventas en este período.</td></tr>
-                                ) : (
-                                    datos?.ventas?.map(venta => {
-                                        const colMetodo = colorMetodoPago(venta.metodo_pago)
-                                        const colEstado = colorEstado(venta.estado)
-                                        const nombreCliente = venta.cliente_nombre || venta.razon_social || venta.cliente_numero || 'Consumidor final'
-                                        return (
-                                            <tr key={venta.id}
-                                                style={{ borderBottom: `1px solid ${s.borderLight}`, transition: 'background 0.1s' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = s.rowHover}
-                                                onMouseLeave={e => e.currentTarget.style.background = s.surface}
-                                            >
-                                                <td style={{ padding: '16px 24px' }}>
-                                                    <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: '600', color: s.text }}>#{String(venta.id).padStart(4, '0')}</span>
-                                                    {venta.numero_factura && (
-                                                        <p style={{ fontSize: '10px', color: s.textMuted, marginTop: '3px', fontFamily: 'monospace' }}>
-                                                            {venta.numero_factura.startsWith('TICKET-') ? 'Ticket' : venta.numero_factura}
-                                                        </p>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '16px', fontSize: '13px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e0e7ff', color: '#3730a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
-                                                            {iniciales(nombreCliente)}
-                                                        </div>
-                                                        <span style={{ fontWeight: '500', color: s.text }}>{nombreCliente}</span>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                {['ID', 'Cliente', 'Producto', 'Fecha y hora', 'Método', 'Canal', 'Estado', 'Total', 'Acción'].map((h, i) => (
+                                    <TableHead key={i} className={`text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-3 px-4 ${i >= 4 && i <= 6 ? 'text-center' : i === 7 ? 'text-right' : ''}`}>{h}</TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {datos?.ventas?.length === 0 ? (
+                                <TableRow><TableCell colSpan={9} className="p-10 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay ventas en este período.</TableCell></TableRow>
+                            ) : (
+                                datos?.ventas?.map(venta => {
+                                    const nombreCliente = venta.cliente_nombre || venta.razon_social || venta.cliente_numero || 'Consumidor final'
+                                    return (
+                                        <TableRow key={venta.id} className="border-slate-100 dark:border-slate-700">
+                                            <TableCell className="px-6 py-4">
+                                                <span className="font-mono text-[13px] font-semibold text-slate-900 dark:text-slate-100">#{String(venta.id).padStart(4, '0')}</span>
+                                                {venta.numero_factura && (
+                                                    <p className="mt-0.5 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                                                        {venta.numero_factura.startsWith('TICKET-') ? 'Ticket' : venta.numero_factura}
+                                                    </p>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-4 text-[13px]">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">
+                                                        {iniciales(nombreCliente)}
                                                     </div>
-                                                </td>
-                                                <td style={{ padding: '16px', fontSize: '12px', color: s.textMuted }}>
-                                                    {Array.isArray(venta.items) && venta.items.length > 1
-                                                        ? <span style={{ fontWeight: '600', color: s.text }}>{venta.items.length} productos</span>
-                                                        : <>{venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}</>
-                                                    }
-                                                </td>
-                                                <td style={{ padding: '16px', fontSize: '13px', color: s.textMuted }}>{formatearFecha(venta.created_at)}</td>
-                                                <td style={{ padding: '16px', textAlign: 'center' }}>
-                                                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colMetodo.bg, color: colMetodo.color, textTransform: 'uppercase' }}>
-                                                        {venta.metodo_pago || '—'}
+                                                    <span className="font-medium text-slate-900 dark:text-slate-100">{nombreCliente}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-4 text-xs text-slate-500 dark:text-slate-400">
+                                                {Array.isArray(venta.items) && venta.items.length > 1
+                                                    ? <span className="font-semibold text-slate-900 dark:text-slate-100">{venta.items.length} productos</span>
+                                                    : <>{venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}</>
+                                                }
+                                            </TableCell>
+                                            <TableCell className="px-4 py-4 text-[13px] text-slate-500 dark:text-slate-400">{formatearFecha(venta.created_at)}</TableCell>
+                                            <TableCell className="px-4 py-4 text-center">
+                                                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${colorMetodoPago(venta.metodo_pago)}`}>
+                                                    {venta.metodo_pago || '—'}
+                                                </span>
+                                                {venta.tipo_venta === 'credito' && (
+                                                    <span className="mt-1 block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
+                                                        Crédito
                                                     </span>
-                                                    {venta.tipo_venta === 'credito' && (
-                                                        <span style={{ display: 'block', marginTop: '4px', padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: '#fef3c7', color: '#92400e' }}>
-                                                            Crédito
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: s.textMuted }}>{labelCanal(venta.canal)}</td>
-                                                <td style={{ padding: '16px', textAlign: 'center' }}>
-                                                    {venta.estado === 'cancelado' ? (
-                                                        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colEstado.bg, color: colEstado.color, textTransform: 'uppercase' }}>ANULADA</span>
-                                                    ) : (
-                                                        <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
-                                                            style={{ padding: '3px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: colEstado.bg, color: colEstado.color, border: 'none', cursor: 'pointer', textTransform: 'uppercase' }}>
-                                                            <option value="pendiente_pago">PENDIENTE</option>
-                                                            <option value="pagado">PAGADO</option>
-                                                            <option value="entregado">ENTREGADO</option>
-                                                        </select>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '16px', textAlign: 'right', fontWeight: '700', color: s.text, fontSize: '14px' }}>{formatearGs(venta.precio)}</td>
-                                                <td style={{ padding: '16px 24px', textAlign: 'center', display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-4 text-center text-xs text-slate-500 dark:text-slate-400">{labelCanal(venta.canal)}</TableCell>
+                                            <TableCell className="px-4 py-4 text-center">
+                                                {venta.estado === 'cancelado' ? (
+                                                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${colorEstado(venta.estado)}`}>ANULADA</span>
+                                                ) : (
+                                                    <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
+                                                        className={`cursor-pointer rounded-full border-none px-2 py-1 text-[10px] font-bold uppercase outline-none ${colorEstado(venta.estado)}`}>
+                                                        <option value="pendiente_pago">PENDIENTE</option>
+                                                        <option value="pagado">PAGADO</option>
+                                                        <option value="entregado">ENTREGADO</option>
+                                                    </select>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-4 text-right text-sm font-bold text-slate-900 dark:text-slate-100">{formatearGs(venta.precio)}</TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <div className="flex items-center justify-center gap-1.5">
                                                     <button onClick={() => setVentaDetalle(venta)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                                                        onMouseEnter={e => e.currentTarget.style.color = s.text}
-                                                        onMouseLeave={e => e.currentTarget.style.color = s.textMuted}>
+                                                        className="flex items-center rounded-md p-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                                     </button>
                                                     {venta.estado !== 'cancelado' && (
                                                         <button onClick={() => confirmarAnular(venta)}
                                                             title="Anular venta"
-                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', opacity: 0.7 }}
-                                                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                                                            onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}>
+                                                            className="flex items-center rounded-md p-1 text-red-500 opacity-70 hover:opacity-100">
                                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                                         </button>
                                                     )}
-                                                </td>
-                                            </tr>
-                                        )
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
                 )}
 
                 {/* Paginación */}
                 {datos?.paginacion && datos.paginacion.total > 0 && (
-                    <div style={{ padding: '16px 24px', background: s.surfaceLow, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${s.borderLight}` }}>
-                        <p style={{ fontSize: '12px', color: s.textMuted }}>
+                    <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/40 sm:flex-row">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                             Mostrando <strong>{((pagina - 1) * 20) + 1}–{Math.min(pagina * 20, datos.paginacion.total)}</strong> de <strong>{datos.paginacion.total}</strong> ventas
                         </p>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <button onClick={() => setPagina(Math.max(1, pagina - 1))} disabled={pagina === 1}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, cursor: pagina === 1 ? 'not-allowed' : 'pointer', opacity: pagina === 1 ? 0.4 : 1, fontSize: '13px' }}>
-                                ‹
-                            </button>
+                        <div className="flex items-center gap-1.5">
+                            <Button variant="outline" size="icon-sm" onClick={() => setPagina(Math.max(1, pagina - 1))} disabled={pagina === 1}>‹</Button>
                             {Array.from({ length: Math.min(5, datos.paginacion.total_paginas) }, (_, i) => {
                                 const num = i + 1
                                 return (
                                     <button key={num} onClick={() => setPagina(num)}
-                                        style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid', fontSize: '12px', fontWeight: '600', cursor: 'pointer', background: pagina === num ? '#1a1a2e' : s.inputBg, color: pagina === num ? 'white' : s.textMuted, borderColor: pagina === num ? '#1a1a2e' : s.border }}>
+                                        className={`h-8 w-8 rounded-lg border text-xs font-semibold ${pagina === num ? 'border-slate-900 bg-slate-900 text-white dark:border-indigo-500 dark:bg-indigo-500' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
                                         {num}
                                     </button>
                                 )
                             })}
-                            <button onClick={() => setPagina(Math.min(datos.paginacion.total_paginas, pagina + 1))} disabled={pagina === datos.paginacion.total_paginas}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: `1px solid ${s.border}`, background: s.inputBg, color: s.text, cursor: pagina === datos.paginacion.total_paginas ? 'not-allowed' : 'pointer', opacity: pagina === datos.paginacion.total_paginas ? 0.4 : 1, fontSize: '13px' }}>
-                                ›
-                            </button>
+                            <Button variant="outline" size="icon-sm" onClick={() => setPagina(Math.min(datos.paginacion.total_paginas, pagina + 1))} disabled={pagina === datos.paginacion.total_paginas}>›</Button>
                         </div>
                     </div>
                 )}
-            </div>
+            </Card>
 
             {/* Panel detalle */}
             {ventaDetalle && (
-                <div onClick={() => setVentaDetalle(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-                <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', background: '#fff', borderRadius: '16px', boxShadow: '0 24px 60px -12px rgba(15,23,42,.28), 0 0 0 1px rgba(15,23,42,.04)', overflowY: 'auto' }}>
+                <div onClick={() => setVentaDetalle(null)} className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 p-4 sm:p-10">
+                <div onClick={e => e.stopPropagation()} className="max-h-[90vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
 
                     {/* Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid rgb(241,245,249)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgb(224,231,255)', color: 'rgb(55,48,163)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', flexShrink: 0 }}>
+                    <div className="flex items-center justify-between border-b border-slate-100 px-5.5 py-4.5 dark:border-slate-700">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">
                                 {iniciales(ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'CF')}
                             </div>
                             <div>
-                                <p style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: 'rgb(15,23,42)' }}>{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Cliente'}</p>
-                                {ventaDetalle.cliente_ruc && <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgb(100,116,139)' }}>RUC {ventaDetalle.cliente_ruc}</p>}
+                                <p className="m-0 text-[15px] font-semibold text-slate-900 dark:text-slate-100">{ventaDetalle.cliente_nombre || ventaDetalle.razon_social || 'Cliente'}</p>
+                                {ventaDetalle.cliente_ruc && <p className="m-0 mt-0.5 text-xs text-slate-500 dark:text-slate-400">RUC {ventaDetalle.cliente_ruc}</p>}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', flexDirection: 'column', gap: '5px' }}>
-                            {ventaDetalle.numero_factura && <p style={{ margin: 0, fontSize: '11px', color: 'rgb(148,163,184)', fontFamily: 'ui-monospace,monospace' }}>{ventaDetalle.numero_factura.startsWith('TICKET-') ? 'Ticket' : ventaDetalle.numero_factura}</p>}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '600', color: ventaDetalle.tipo_venta === 'credito' ? 'rgb(161,98,7)' : 'rgb(5,150,105)', background: ventaDetalle.tipo_venta === 'credito' ? 'rgb(254,243,199)' : 'rgb(209,250,229)', padding: '2px 9px', borderRadius: '999px' }}>
+                        <div className="flex flex-col items-end gap-1">
+                            {ventaDetalle.numero_factura && <p className="m-0 font-mono text-[11px] text-slate-400 dark:text-slate-500">{ventaDetalle.numero_factura.startsWith('TICKET-') ? 'Ticket' : ventaDetalle.numero_factura}</p>}
+                            <div className="flex items-center gap-2">
+                                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${ventaDetalle.tipo_venta === 'credito' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400'}`}>
                                     {ventaDetalle.tipo_venta === 'credito' ? `Crédito ${ventaDetalle.plazo_dias}d` : 'Contado'}
                                 </span>
-                                <button onClick={() => setVentaDetalle(null)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: 'rgb(148,163,184)', padding: '2px 4px', lineHeight: 1 }}>✕</button>
+                                <button onClick={() => setVentaDetalle(null)} className="px-1 text-base leading-none text-slate-400 hover:text-slate-600">✕</button>
                             </div>
                         </div>
                     </div>
 
                     {/* Productos */}
-                    <div style={{ padding: '16px 22px 6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '700', color: 'rgb(100,116,139)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Productos</p>
+                    <div className="px-5.5 pb-1.5 pt-4">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Productos</p>
                             {Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 0 && (
-                                <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgb(148,163,184)' }}>{ventaDetalle.items.length} {ventaDetalle.items.length === 1 ? 'ítem' : 'ítems'}</span>
+                                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">{ventaDetalle.items.length} {ventaDetalle.items.length === 1 ? 'ítem' : 'ítems'}</span>
                             )}
                         </div>
                         {/* Cabecera de tabla */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '34px 1fr 92px 92px', gap: '8px', padding: '0 4px 6px', borderBottom: '1px solid rgb(241,245,249)' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'center' }}>Cant</span>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Producto</span>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'right' }}>P. unit.</span>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'right' }}>Total</span>
+                        <div className="grid grid-cols-[34px_1fr_92px_92px] gap-2 border-b border-slate-100 px-1 pb-1.5 dark:border-slate-700">
+                            <span className="text-center text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Cant</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Producto</span>
+                            <span className="text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">P. unit.</span>
+                            <span className="text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Total</span>
                         </div>
                         {/* Filas */}
                         {(Array.isArray(ventaDetalle.items) && ventaDetalle.items.length > 0
                             ? ventaDetalle.items
                             : [{ producto_nombre: ventaDetalle.producto_nombre, presentacion_nombre: ventaDetalle.presentacion_nombre, cantidad: ventaDetalle.cantidad, precio_unitario: ventaDetalle.precio, precio_total: ventaDetalle.precio }]
                         ).map((item, idx) => (
-                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '34px 1fr 92px 92px', gap: '8px', alignItems: 'center', padding: '9px 4px', borderBottom: '1px solid rgb(248,250,252)' }}>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'rgb(55,48,163)', background: 'rgb(238,242,255)', borderRadius: '7px', textAlign: 'center', padding: '3px 0' }}>{item.cantidad}</span>
-                                <div style={{ minWidth: 0 }}>
-                                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', lineHeight: 1.25 }}>{item.producto_nombre}</p>
-                                    <p style={{ margin: '1px 0 0', fontSize: '11px', color: 'rgb(148,163,184)' }}>{item.presentacion_nombre}</p>
+                            <div key={idx} className="grid grid-cols-[34px_1fr_92px_92px] items-center gap-2 border-b border-slate-50 px-1 py-2.5 dark:border-slate-700/60">
+                                <span className="rounded-md bg-indigo-100 py-0.5 text-center text-[13px] font-bold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">{item.cantidad}</span>
+                                <div className="min-w-0">
+                                    <p className="m-0 text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">{item.producto_nombre}</p>
+                                    <p className="m-0 mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{item.presentacion_nombre}</p>
                                     {item.es_precio_especial && (
-                                        <span style={{ display: 'inline-block', marginTop: '3px', fontSize: '10px', fontWeight: '700', color: 'rgb(220,38,38)', background: 'rgb(254,242,242)', border: '1px solid rgb(252,165,165)', borderRadius: '5px', padding: '1px 6px' }}>
+                                        <span className="mt-0.5 inline-block rounded-[5px] border border-red-300 bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-400">
                                             Precio especial {item.diferencial_precio > 0 ? '(-' : '(+'}{formatearGs(Math.abs(item.diferencial_precio))})
                                         </span>
                                     )}
                                 </div>
-                                <span style={{ fontSize: '12px', color: 'rgb(100,116,139)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                <span className="text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">
                                     {item.precio_unitario ? formatearGs(item.precio_unitario) : '—'}
                                 </span>
-                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                <span className="text-right text-[13px] font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                                     {formatearGs(item.precio_total || item.precio_unitario)}
                                 </span>
                             </div>
@@ -570,30 +530,30 @@ function Ventas() {
                     </div>
 
                     {/* Totales */}
-                    <div style={{ margin: '8px 22px 0', padding: '14px 16px', background: 'rgb(248,250,252)', borderRadius: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '13px', color: 'rgb(100,116,139)' }}>Total</span>
-                            <span style={{ fontSize: '20px', fontWeight: '700', color: 'rgb(15,23,42)', fontVariantNumeric: 'tabular-nums' }}>{formatearGs(ventaDetalle.precio)}</span>
+                    <div className="mx-5.5 mt-2 rounded-xl bg-slate-50 px-4 py-3.5 dark:bg-slate-900">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[13px] text-slate-500 dark:text-slate-400">Total</span>
+                            <span className="text-xl font-bold tabular-nums text-slate-900 dark:text-slate-100">{formatearGs(ventaDetalle.precio)}</span>
                         </div>
                         {ventaDetalle.ganancia > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                                <span style={{ fontSize: '12px', color: 'rgb(100,116,139)' }}>Ganancia</span>
-                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'rgb(16,185,129)', fontVariantNumeric: 'tabular-nums' }}>{formatearGs(ventaDetalle.ganancia)}</span>
+                            <div className="mt-1.5 flex items-center justify-between">
+                                <span className="text-xs text-slate-500 dark:text-slate-400">Ganancia</span>
+                                <span className="text-[13px] font-semibold tabular-nums text-green-600 dark:text-green-400">{formatearGs(ventaDetalle.ganancia)}</span>
                             </div>
                         )}
                     </div>
 
                     {/* Meta row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 22px', padding: '16px 22px 4px' }}>
+                    <div className="grid grid-cols-2 gap-x-5.5 gap-y-2.5 px-5.5 pb-1 pt-4">
                         <div>
-                            <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Método de pago</p>
+                            <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Método de pago</p>
                             {ventaDetalle.estado === 'cancelado' ? (
-                                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)', textTransform: 'capitalize' }}>{ventaDetalle.metodo_pago || '—'}</p>
+                                <p className="m-0 text-[13px] font-semibold capitalize text-slate-900 dark:text-slate-100">{ventaDetalle.metodo_pago || '—'}</p>
                             ) : (
                                 <select
                                     value={ventaDetalle.metodo_pago || ''}
                                     onChange={e => cambiarMetodoPago(ventaDetalle.id, e.target.value)}
-                                    style={{ padding: '4px 8px', borderRadius: '7px', border: '1px solid rgb(226,232,240)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', background: '#fff', color: 'rgb(15,23,42)', fontFamily: 'inherit' }}
+                                    className="cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1 text-[13px] font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                                 >
                                     <option value="">— Sin definir —</option>
                                     <option value="efectivo">Efectivo</option>
@@ -603,42 +563,41 @@ function Ventas() {
                             )}
                         </div>
                         <div>
-                            <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Canal</p>
-                            <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)' }}>{labelCanal(ventaDetalle.canal)}</p>
+                            <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Canal</p>
+                            <p className="m-0 text-[13px] font-semibold text-slate-900 dark:text-slate-100">{labelCanal(ventaDetalle.canal)}</p>
                         </div>
                         {ventaDetalle.tipo_venta === 'credito' && ventaDetalle.fecha_vencimiento_credito && (
                             <div>
-                                <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Vencimiento</p>
-                                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: new Date(ventaDetalle.fecha_vencimiento_credito) < new Date() ? 'rgb(220,38,38)' : 'rgb(161,98,7)' }}>
+                                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Vencimiento</p>
+                                <p className={`m-0 text-[13px] font-semibold ${new Date(ventaDetalle.fecha_vencimiento_credito) < new Date() ? 'text-red-600' : 'text-amber-700'}`}>
                                     {new Date(ventaDetalle.fecha_vencimiento_credito).toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })}
                                 </p>
                             </div>
                         )}
                         {ventaDetalle.quiere_factura && ventaDetalle.ruc_factura && (
                             <div>
-                                <p style={{ margin: '0 0 2px', fontSize: '10px', fontWeight: '700', color: 'rgb(148,163,184)', textTransform: 'uppercase', letterSpacing: '.05em' }}>RUC factura</p>
-                                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'rgb(15,23,42)' }}>{ventaDetalle.ruc_factura}</p>
+                                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">RUC factura</p>
+                                <p className="m-0 text-[13px] font-semibold text-slate-900 dark:text-slate-100">{ventaDetalle.ruc_factura}</p>
                             </div>
                         )}
                     </div>
 
                     {/* Footer actions */}
                     {ventaDetalle.estado === 'cancelado' ? (
-                        <div style={{ margin: '12px 22px 20px', padding: '11px 16px', borderRadius: '9px', background: 'rgb(254,242,242)', color: 'rgb(153,27,27)', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
+                        <div className="mx-5.5 mb-5 mt-3 rounded-lg bg-red-50 px-4 py-2.5 text-center text-[13px] font-bold text-red-800 dark:bg-red-500/10 dark:text-red-400">
                             VENTA ANULADA
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '16px 22px 20px' }}>
+                        <div className="flex items-center gap-2.5 px-5.5 pb-5 pt-4">
                             <select value={ventaDetalle.estado} onChange={e => cambiarEstado(ventaDetalle.id, e.target.value)}
-                                style={{ flex: 1, padding: '11px 12px', borderRadius: '9px', border: '1px solid rgb(226,232,240)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', background: '#fff', color: 'rgb(15,23,42)', fontFamily: 'inherit' }}>
+                                className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                                 <option value="pendiente_pago">Pendiente de pago</option>
                                 <option value="pagado">Pagado</option>
                                 <option value="entregado">Entregado</option>
                             </select>
-                            <button onClick={() => confirmarAnular(ventaDetalle)}
-                                style={{ padding: '11px 16px', borderRadius: '9px', border: '1px solid rgb(254,202,202)', background: 'rgb(254,242,242)', color: 'rgb(220,38,38)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                            <Button variant="outline" onClick={() => confirmarAnular(ventaDetalle)} className="whitespace-nowrap border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">
                                 Anular
-                            </button>
+                            </Button>
                         </div>
                     )}
 
@@ -647,30 +606,26 @@ function Ventas() {
             )}
 
             {modalLibro && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: s.surface, borderRadius: '14px', padding: '28px', width: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: s.text }}>Libro de Ventas</h3>
-                            <button onClick={() => setModalLibro(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: s.textMuted }}>✕</button>
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50">
+                    <div className="w-[420px] rounded-2xl bg-white p-7 shadow-2xl dark:bg-slate-800">
+                        <div className="mb-5 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Libro de Ventas</h3>
+                            <button onClick={() => setModalLibro(false)} className="text-lg text-slate-400 hover:text-slate-600">✕</button>
                         </div>
-                        <p style={{ fontSize: '12px', color: s.textMuted, marginBottom: '20px' }}>
+                        <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
                             Exportá el libro de ventas en formato DNIT con IVA discriminado.
                         </p>
-                        <label style={labelStyle}>Fecha desde</label>
+                        <label className={labelCls}>Fecha desde</label>
                         <input type="date" value={libroFechaDesde} onChange={e => setLibroFechaDesde(e.target.value)}
-                            style={{ ...inputStyle, marginBottom: '12px' }} />
-                        <label style={labelStyle}>Fecha hasta</label>
+                            className={`${inputCls} mb-3`} />
+                        <label className={labelCls}>Fecha hasta</label>
                         <input type="date" value={libroFechaHasta} onChange={e => setLibroFechaHasta(e.target.value)}
-                            style={{ ...inputStyle, marginBottom: '20px' }} />
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setModalLibro(false)}
-                                style={{ padding: '10px 18px', borderRadius: '8px', border: `1px solid ${s.border}`, background: 'transparent', color: s.textMuted, cursor: 'pointer', fontSize: '13px' }}>
-                                Cancelar
-                            </button>
-                            <button onClick={handleExportarLibroVentas} disabled={exportandoLibro}
-                                style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', cursor: exportandoLibro ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '700' }}>
+                            className={`${inputCls} mb-5`} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setModalLibro(false)}>Cancelar</Button>
+                            <Button onClick={handleExportarLibroVentas} disabled={exportandoLibro} className={exportandoLibro ? '' : 'bg-green-600 hover:bg-green-700'}>
                                 {exportandoLibro ? 'Exportando...' : '⬇ Descargar Excel'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

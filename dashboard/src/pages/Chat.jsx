@@ -3,8 +3,14 @@ import { useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import { getSesiones, tomarSesion, responderSesion, devolverBot, cerrarConversacion } from '../services/sesiones'
 import ModalConfirmar from '../components/ModalConfirmar'
-import { useApp } from '../App'
 import { formatearFecha, formatearHora } from '../utils/fecha'
+import { Button } from '@/components/ui/button'
+
+const modoConfig = {
+    bot: { label: 'Bot', cls: 'text-green-800 bg-green-100 dark:bg-green-500/15 dark:text-green-400' },
+    esperando_agente: { label: 'Esperando', cls: 'text-amber-800 bg-amber-100 dark:bg-amber-500/15 dark:text-amber-400' },
+    humano: { label: 'Con agente', cls: 'text-blue-700 bg-blue-100 dark:bg-blue-500/15 dark:text-blue-400' },
+}
 
 function Chat() {
     const [sesiones, setSesiones] = useState([])
@@ -19,29 +25,8 @@ function Chat() {
     const inputRef = useRef(null)
     const mensajesRef = useRef(null)
     const prevSesionesRef = useRef(null)
-    const { darkMode } = useApp()
     const [searchParams] = useSearchParams()
     const numeroParam = searchParams.get('numero')
-
-    const s = {
-        bg: darkMode ? '#0b141a' : '#f8fafc',
-        surface: darkMode ? '#1e293b' : 'white',
-        surfaceLow: darkMode ? '#1a2536' : '#f8fafc',
-        border: darkMode ? '#334155' : '#e2e8f0',
-        borderLight: darkMode ? '#2d3f55' : '#f1f5f9',
-        text: darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted: darkMode ? '#94a3b8' : '#64748b',
-        textFaint: darkMode ? '#64748b' : '#94a3b8',
-        inputBg: darkMode ? '#0f172a' : '#f1f5f9',
-        rowActive: darkMode ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.06)',
-        rowBorder: darkMode ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)',
-        msgCliente: darkMode ? '#1e293b' : 'white',
-        msgClienteText: darkMode ? '#f1f5f9' : '#1e293b',
-        msgBot: darkMode ? 'rgba(99,102,241,0.25)' : '#e7e7ff',
-        msgBotText: darkMode ? '#a5b4fc' : '#3730a3',
-        headerBg: darkMode ? '#1e293b' : 'white',
-        chatBg: darkMode ? '#0b141a' : '#f8fafc',
-    }
 
     useEffect(() => {
         cargarSesiones()
@@ -184,12 +169,6 @@ function Chat() {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEnviar() }
     }
 
-    const modoConfig = {
-        bot: { label: 'Bot', color: '#10b981', bg: darkMode ? 'rgba(16,185,129,0.15)' : '#dcfce7', textColor: '#065f46' },
-        esperando_agente: { label: 'Esperando', color: '#f59e0b', bg: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7', textColor: '#92400e' },
-        humano: { label: 'Con agente', color: '#3b82f6', bg: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe', textColor: '#1d4ed8' },
-    }
-
     // Pasos del bot
     const pasosOrden = ['inicio', 'buscando_producto', 'eligiendo_producto', 'eligiendo_presentacion', 'confirmando', 'factura', 'eligiendo_envio', 'datos_delivery', 'venta_registrada']
     function indexPaso(paso) { return pasosOrden.findIndex(p => paso?.includes(p.replace('_', ''))) }
@@ -199,46 +178,46 @@ function Chat() {
     )
 
     if (cargando) return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: s.bg, color: s.textMuted, fontSize: '14px' }}>
+        <div className="flex h-full items-center justify-center bg-slate-50 text-sm text-slate-500 dark:bg-[#0b141a] dark:text-slate-400">
             Cargando conversaciones...
         </div>
     )
 
     return (
-        <div className="chat-wrap" style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+        <div className="chat-wrap flex h-[calc(100vh-56px)] overflow-hidden">
 
             {/* Lista conversaciones */}
-            <aside className={`chat-sessions${sesionActiva ? ' has-active' : ''}`} style={{ width: '340px', flexShrink: 0, borderRight: `1px solid ${s.border}`, background: s.surface, display: 'flex', flexDirection: 'column' }}>
+            <aside className={`chat-sessions${sesionActiva ? ' has-active' : ''} flex w-[340px] shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800`}>
                 {/* Buscador */}
-                <div style={{ padding: '14px 16px', borderBottom: `1px solid ${s.border}` }}>
-                    <div style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: s.textFaint, display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                <div className="border-b border-slate-200 p-3.5 dark:border-slate-700">
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 flex -translate-y-1/2 text-slate-400 dark:text-slate-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                         <input
                             placeholder="Buscar conversaciones..."
                             value={buscar}
                             onChange={e => setBuscar(e.target.value)}
-                            style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: '12px', border: 'none', background: s.inputBg, color: s.text, fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                            className="w-full rounded-xl border-none bg-slate-100 py-2.5 pl-9 pr-3 text-[13px] text-slate-900 outline-none dark:bg-slate-900 dark:text-slate-100"
                         />
                     </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    <div style={{ padding: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingLeft: '8px', paddingRight: '4px' }}>
-                            <p style={{ fontSize: '10px', fontWeight: '800', color: s.textFaint, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
+                <div className="flex-1 overflow-y-auto">
+                    <div className="p-3">
+                        <div className="mb-2.5 flex items-center justify-between pl-2 pr-1">
+                            <p className="m-0 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                                 Conversaciones activas ({sesionesFiltradas.length})
                             </p>
                             {sinLeer.size > 0 && (
-                                <span style={{ fontSize: '11px', fontWeight: '800', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '999px', lineHeight: 1.4 }}>
+                                <span className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-extrabold leading-tight text-white">
                                     {sinLeer.size} sin leer
                                 </span>
                             )}
                         </div>
 
                         {sesionesFiltradas.length === 0 ? (
-                            <div style={{ padding: '32px 16px', textAlign: 'center', color: s.textMuted }}>
-                                <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px', opacity: 0.4 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-                                <p style={{ fontSize: '13px' }}>No hay conversaciones activas.</p>
+                            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                                <span className="mb-2 flex justify-center opacity-40"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                                <p className="text-[13px]">No hay conversaciones activas.</p>
                             </div>
                         ) : (
                             sesionesFiltradas.map(sesion => {
@@ -247,28 +226,30 @@ function Chat() {
                                 const cfg = modoConfig[sesion.modo] || modoConfig.bot
                                 return (
                                     <div key={sesion.cliente_numero} onClick={() => marcarLeido(sesion.cliente_numero, sesion)}
-                                        style={{ padding: '14px', borderRadius: '16px', marginBottom: '4px', cursor: 'pointer', background: activa ? s.rowActive : esSinLeer ? (darkMode ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)') : 'transparent', border: `1px solid ${activa ? s.rowBorder : esSinLeer ? 'rgba(239,68,68,0.25)' : 'transparent'}`, transition: 'all 0.15s' }}
-                                        onMouseEnter={e => { if (!activa) e.currentTarget.style.background = s.surfaceLow }}
-                                        onMouseLeave={e => { if (!activa) e.currentTarget.style.background = esSinLeer ? (darkMode ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)') : 'transparent' }}
+                                        className={`mb-1 cursor-pointer rounded-2xl border p-3.5 transition-colors ${
+                                            activa ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-500/40 dark:bg-indigo-500/15'
+                                            : esSinLeer ? 'border-red-200 bg-red-50/70 hover:bg-red-50 dark:border-red-500/30 dark:bg-red-500/10'
+                                            : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/40'
+                                        }`}
                                     >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ position: 'relative', flexShrink: 0 }}>
-                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: s.textMuted }}>
+                                        <div className="mb-1.5 flex items-start justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="relative shrink-0">
+                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
                                                         {sesion.cliente_numero.slice(-2)}
                                                     </div>
                                                     {esSinLeer && (
-                                                        <span style={{ position: 'absolute', top: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', border: `2px solid ${s.surface}` }} />
+                                                        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 dark:border-slate-800" />
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p style={{ fontSize: '13px', fontWeight: esSinLeer ? '800' : '700', color: esSinLeer ? (darkMode ? '#fca5a5' : '#dc2626') : s.text }}>{sesion.cliente_numero}</p>
-                                                    <p style={{ fontSize: '11px', color: s.textMuted, marginTop: '1px' }}>Paso: {sesion.paso}</p>
+                                                    <p className={`text-[13px] ${esSinLeer ? 'font-extrabold text-red-600 dark:text-red-400' : 'font-bold text-slate-900 dark:text-slate-100'}`}>{sesion.cliente_numero}</p>
+                                                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Paso: {sesion.paso}</p>
                                                 </div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <p style={{ fontSize: '10px', color: s.textFaint, marginBottom: '4px' }}>{formatearFecha(sesion.ultimo_mensaje)}</p>
-                                                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: cfg.bg, color: cfg.textColor }}>
+                                            <div className="text-right">
+                                                <p className="mb-1 text-[10px] text-slate-400 dark:text-slate-500">{formatearFecha(sesion.ultimo_mensaje)}</p>
+                                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cfg.cls}`}>
                                                     {cfg.label}
                                                 </span>
                                             </div>
@@ -282,69 +263,63 @@ function Chat() {
             </aside>
 
             {/* Panel chat */}
-            <section className={`chat-messages${sesionActiva ? ' has-active' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', background: s.chatBg, minWidth: 0 }}>
+            <section className={`chat-messages${sesionActiva ? ' has-active' : ''} flex min-w-0 flex-1 flex-col bg-slate-50 dark:bg-[#0b141a]`}>
                 {!sesionActiva ? (
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: s.textMuted }}>
-                        <span style={{ opacity: 0.3 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-                        <p style={{ fontSize: '15px', fontWeight: '500' }}>Seleccioná una conversación</p>
-                        <p style={{ fontSize: '13px', color: s.textFaint }}>para ver los mensajes y gestionar la atención</p>
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
+                        <span className="opacity-30"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                        <p className="text-[15px] font-medium">Seleccioná una conversación</p>
+                        <p className="text-[13px] text-slate-400 dark:text-slate-500">para ver los mensajes y gestionar la atención</p>
                     </div>
                 ) : (
                     <>
                         {/* Header chat */}
-                        <div style={{ height: '72px', background: s.headerBg, borderBottom: `1px solid ${s.border}`, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <button className="chat-back-btn" onClick={() => setSesionActiva(null)} title="Volver a chats" style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.textMuted, display: 'none', alignItems: 'center', padding: '4px' }}>
+                        <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                            <div className="flex items-center gap-3">
+                                <button className="chat-back-btn hidden items-center p-1 text-slate-500 dark:text-slate-400" onClick={() => setSesionActiva(null)} title="Volver a chats">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                                 </button>
-                                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: darkMode ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: '700', color: s.textMuted }}>
+                                <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-slate-200 text-[15px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
                                     {sesionActiva.cliente_numero.slice(-2)}
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '15px', fontWeight: '700', color: s.text, lineHeight: 1 }}>{sesionActiva.cliente_numero}</p>
-                                    <p style={{ fontSize: '12px', color: s.textMuted, marginTop: '3px' }}>
-                                        Estado: <span style={{ color: '#4f46e5', fontWeight: '600' }}>{sesionActiva.paso}</span> · Modo: <span style={{ fontStyle: 'italic' }}>{modoConfig[sesionActiva.modo]?.label || sesionActiva.modo}</span>
+                                    <p className="text-[15px] font-bold leading-none text-slate-900 dark:text-slate-100">{sesionActiva.cliente_numero}</p>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        Estado: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{sesionActiva.paso}</span> · Modo: <span className="italic">{modoConfig[sesionActiva.modo]?.label || sesionActiva.modo}</span>
                                     </p>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div className="flex gap-2">
                                 {sesionActiva.modo !== 'humano' ? (
-                                    <button onClick={() => handleTomarControl(sesionActiva.cliente_numero)}
-                                        style={{ padding: '9px 16px', borderRadius: '10px', border: 'none', background: '#1a1a2e', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Button onClick={() => handleTomarControl(sesionActiva.cliente_numero)} size="sm">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Tomar control
-                                    </button>
+                                    </Button>
                                 ) : (
-                                    <button onClick={() => handleDevolverBot(sesionActiva.cliente_numero)}
-                                        style={{ padding: '9px 16px', borderRadius: '10px', border: `1px solid ${s.border}`, background: s.surface, color: s.text, fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Button variant="outline" onClick={() => handleDevolverBot(sesionActiva.cliente_numero)} size="sm">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/></svg> Devolver al bot
-                                    </button>
+                                    </Button>
                                 )}
-                                <button onClick={() => handleCerrarConversacion(sesionActiva.cliente_numero)}
-                                    style={{ padding: '9px 16px', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.3)', background: 'transparent', color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                <Button variant="outline" onClick={() => handleCerrarConversacion(sesionActiva.cliente_numero)} size="sm" className="border-red-300 text-red-500 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">
                                     Cerrar conversación
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
                         {/* Mensajes */}
-                        <div ref={mensajesRef} style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div ref={mensajesRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-6">
                             {mensajes.length === 0 ? (
-                                <p style={{ color: s.textMuted, fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>No hay mensajes aún.</p>
+                                <p className="mt-10 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay mensajes aún.</p>
                             ) : (
-                                mensajes.map((msg, i) => {
+                                mensajes.map((msg) => {
                                     const esCliente = msg.origen === 'cliente'
                                     const esBot = msg.origen === 'bot'
                                     const esAgente = msg.origen === 'agente'
                                     return (
-                                        <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: esCliente ? 'flex-start' : 'flex-end', maxWidth: '80%', alignSelf: esCliente ? 'flex-start' : 'flex-end' }}>
-                                            <div style={{
-                                                padding: '10px 14px', borderRadius: esCliente ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
-                                                fontSize: '13px', lineHeight: '1.5',
-                                                background: esCliente ? s.msgCliente : esBot ? s.msgBot : '#1a1a2e',
-                                                color: esAgente ? 'white' : esBot ? s.msgBotText : s.msgClienteText,
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                                                border: esCliente ? `1px solid ${s.borderLight}` : esBot ? `1px solid rgba(99,102,241,0.2)` : 'none'
-                                            }}>
+                                        <div key={msg.id} className={`flex max-w-[80%] flex-col ${esCliente ? 'items-start self-start' : 'items-end self-end'}`}>
+                                            <div className={`px-3.5 py-2.5 text-[13px] leading-relaxed shadow-sm ${
+                                                esCliente ? 'rounded-2xl rounded-bl-[4px] border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                                                : esBot ? 'rounded-2xl rounded-br-[4px] border border-indigo-200 bg-indigo-100 text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/25 dark:text-indigo-300'
+                                                : 'rounded-2xl rounded-br-[4px] bg-slate-900 text-white'
+                                            }`}>
                                                 {(() => {
                                                     const texto = msg.texto || ''
                                                     const imgMatch = texto.match(/^\[imagen:\s*(.+)\]$/)
@@ -361,16 +336,16 @@ function Chat() {
                                                                 <img
                                                                     src={imgSrc}
                                                                     alt="imagen del cliente"
-                                                                    style={{ maxWidth: '240px', maxHeight: '280px', borderRadius: '10px', display: 'block', cursor: 'pointer' }}
+                                                                    className="block max-h-[280px] max-w-[240px] cursor-pointer rounded-[10px]"
                                                                     onClick={() => window.open(imgSrc, '_blank')}
                                                                     onError={e => {
                                                                         e.target.style.display = 'none'
                                                                         e.target.nextSibling.style.display = 'flex'
                                                                     }}
                                                                 />
-                                                                <div style={{ display: 'none', padding: '8px', background: s.surfaceLow, borderRadius: '8px', alignItems: 'center', gap: '8px' }}>
-                                                                    <span style={{ color: s.textMuted, display: 'flex' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-                                                                    <span style={{ fontSize: '12px', color: s.textMuted }}>Imagen (no disponible)</span>
+                                                                <div className="hidden items-center gap-2 rounded-lg bg-slate-100 p-2 dark:bg-slate-900">
+                                                                    <span className="flex text-slate-500 dark:text-slate-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+                                                                    <span className="text-xs text-slate-500 dark:text-slate-400">Imagen (no disponible)</span>
                                                                 </div>
                                                             </div>
                                                         )
@@ -386,13 +361,13 @@ function Chat() {
                                                             : audioSrc.endsWith('.aac') ? 'audio/aac'
                                                             : 'audio/ogg; codecs=opus'
                                                         return (
-                                                            <div style={{ minWidth: '220px' }}>
-                                                                <audio controls style={{ width: '100%', height: '36px' }}>
+                                                            <div className="min-w-[220px]">
+                                                                <audio controls className="h-9 w-full">
                                                                     <source src={audioSrc} type={audioType} />
                                                                 </audio>
-                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                                                                    <span style={{ fontSize: '11px', color: s.textMuted }}>Nota de voz</span>
-                                                                    <a href={audioSrc} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#6366f1', textDecoration: 'none', fontWeight: '600' }}>
+                                                                <div className="mt-1 flex items-center justify-between">
+                                                                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Nota de voz</span>
+                                                                    <a href={audioSrc} target="_blank" rel="noreferrer" className="text-[11px] font-semibold text-indigo-500 no-underline">
                                                                         Abrir
                                                                     </a>
                                                                 </div>
@@ -402,21 +377,21 @@ function Chat() {
 
                                                     if (texto === '[audio]') {
                                                         return (
-                                                            <div style={{ padding: '6px 8px', background: s.surfaceLow, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <span style={{ color: s.textMuted, display: 'flex' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>
-                                                                <span style={{ fontSize: '12px', color: s.textMuted }}>Nota de voz (sin ID)</span>
+                                                            <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-2 py-1.5 dark:bg-slate-900">
+                                                                <span className="flex text-slate-500 dark:text-slate-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>
+                                                                <span className="text-xs text-slate-500 dark:text-slate-400">Nota de voz (sin ID)</span>
                                                             </div>
                                                         )
                                                     }
 
-                                                    return <p style={{ whiteSpace: 'pre-wrap' }}>{texto}</p>
+                                                    return <p className="whitespace-pre-wrap">{texto}</p>
                                                 })()}
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '4px' }}>
-                                                    <span style={{ fontSize: '10px', opacity: 0.5 }}>{formatearHora(msg.created_at)}</span>
-                                                    {!esCliente && <span style={{ fontSize: '10px', opacity: 0.6 }}>✓✓</span>}
+                                                <div className="mt-1 flex items-center justify-end gap-1">
+                                                    <span className="text-[10px] opacity-50">{formatearHora(msg.created_at)}</span>
+                                                    {!esCliente && <span className="text-[10px] opacity-60">✓✓</span>}
                                                 </div>
                                             </div>
-                                            <span style={{ fontSize: '10px', color: s.textFaint, marginTop: '4px', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em', padding: '0 4px' }}>
+                                            <span className="mt-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                                                 {msg.origen}
                                             </span>
                                         </div>
@@ -426,27 +401,27 @@ function Chat() {
                         </div>
 
                         {/* Barra de contexto/stepper */}
-                        <div style={{ padding: '10px 20px', background: darkMode ? 'rgba(245,158,11,0.08)' : '#fffbeb', borderTop: `1px solid ${darkMode ? 'rgba(245,158,11,0.2)' : '#fde68a'}` }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flexShrink: 0 }}>
+                        <div className="border-t border-amber-200 bg-amber-50 px-5 py-2.5 dark:border-amber-500/20 dark:bg-amber-500/10">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto">
                                     {['inicio', 'eligiendo', 'confirmando', 'envio', 'completado'].map((paso, i) => {
                                         const pasoActual = sesionActiva.paso || ''
                                         const completado = i < 2
                                         const activo = pasoActual.includes(paso) || (i === 1 && pasoActual.includes('presentac'))
                                         return (
-                                            <div key={paso} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: activo ? '4px 10px' : '4px 8px', borderRadius: '20px', background: activo ? (darkMode ? 'rgba(99,102,241,0.2)' : '#e0e7ff') : 'transparent', border: activo ? `1px solid rgba(99,102,241,0.3)` : '1px solid transparent' }}>
-                                                    <span style={{ fontSize: '10px', color: activo ? (darkMode ? '#a5b4fc' : '#4338ca') : s.textFaint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            <div key={paso} className="flex items-center gap-1.5">
+                                                <div className={`flex items-center gap-1.5 rounded-full border ${activo ? 'border-indigo-300 bg-indigo-100 px-2.5 py-1 dark:border-indigo-500/30 dark:bg-indigo-500/20' : 'border-transparent px-2 py-1'}`}>
+                                                    <span className={`text-[10px] font-bold uppercase tracking-wide ${activo ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500'}`}>
                                                         {activo ? '●' : completado ? '✓'  : '○'} {paso}
                                                     </span>
                                                 </div>
-                                                {i < 4 && <div style={{ width: '12px', height: '1px', background: s.border, flexShrink: 0 }} />}
+                                                {i < 4 && <div className="h-px w-3 shrink-0 bg-slate-200 dark:bg-slate-700" />}
                                             </div>
                                         )
                                     })}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', padding: '4px 10px', borderRadius: '8px', border: `1px solid ${s.border}`, flexShrink: 0 }}>
-                                    <span style={{ fontSize: '10px', fontFamily: 'monospace', color: s.textMuted, maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-black/5 px-2.5 py-1 dark:border-slate-700 dark:bg-white/5">
+                                    <span className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[10px] text-slate-500 dark:text-slate-400">
                                         {JSON.stringify(sesionActiva.datos)}
                                     </span>
                                 </div>
@@ -454,9 +429,9 @@ function Chat() {
                         </div>
 
                         {/* Input */}
-                        <div style={{ padding: '16px 20px', background: s.headerBg, borderTop: `1px solid ${s.border}` }}>
+                        <div className="border-t border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
                             {sesionActiva.modo === 'humano' ? (
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                                <div className="flex items-end gap-2.5">
                                     <textarea
                                         ref={inputRef}
                                         value={mensaje}
@@ -464,17 +439,16 @@ function Chat() {
                                         onKeyDown={handleKeyDown}
                                         placeholder="Escribí tu mensaje... (Enter para enviar)"
                                         rows={3}
-                                        style={{ flex: 1, padding: '12px 16px', borderRadius: '12px', border: `1px solid ${s.border}`, fontSize: '13px', resize: 'none', fontFamily: 'sans-serif', background: s.inputBg, color: s.text, outline: 'none' }}
+                                        className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 font-sans text-[13px] text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                                     />
-                                    <button onClick={handleEnviar} disabled={enviando || !mensaje.trim()}
-                                        style={{ padding: '12px 20px', borderRadius: '12px', border: 'none', background: enviando || !mensaje.trim() ? '#94a3b8' : '#1a1a2e', color: 'white', fontSize: '13px', fontWeight: '700', cursor: enviando || !mensaje.trim() ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                                    <Button onClick={handleEnviar} disabled={enviando || !mensaje.trim()} className="shrink-0 py-6">
                                         {enviando ? '...' : '↑ Enviar'}
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: s.textMuted, fontSize: '13px', padding: '8px 0' }}>
-                                    <span style={{ color: s.textFaint, display: 'flex' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/></svg></span>
-                                    <span>El bot está manejando esta conversación. Hacé clic en <strong style={{ color: '#4f46e5', cursor: 'pointer' }} onClick={() => handleTomarControl(sesionActiva.cliente_numero)}>Tomar control</strong> para intervenir.</span>
+                                <div className="flex items-center justify-center gap-2 py-2 text-[13px] text-slate-500 dark:text-slate-400">
+                                    <span className="flex text-slate-400 dark:text-slate-500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/></svg></span>
+                                    <span>El bot está manejando esta conversación. Hacé clic en <strong className="cursor-pointer text-indigo-600 dark:text-indigo-400" onClick={() => handleTomarControl(sesionActiva.cliente_numero)}>Tomar control</strong> para intervenir.</span>
                                 </div>
                             )}
                         </div>
