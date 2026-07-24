@@ -10,6 +10,7 @@ import { formatearSoloFecha } from '../utils/fecha'
 import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 
 function Home() {
     const [resumen, setResumen] = useState(null)
@@ -113,10 +114,9 @@ function Home() {
                         Este es el resumen de actividad de hoy.
                     </p>
                 </div>
-                <button onClick={cargarDatos}
-                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/50">
+                <Button variant="outline" onClick={cargarDatos}>
                     ↻ Actualizar
-                </button>
+                </Button>
             </div>
 
             {/* Alertas facturas proveedores */}
@@ -356,10 +356,9 @@ function Home() {
                             </div>
                         )}
 
-                        <button onClick={() => navigate('/dashboard/inventario')}
-                            className="mt-4 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-slate-900 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
+                        <Button variant="outline" onClick={() => navigate('/dashboard/inventario')} className="mt-4 w-full py-5 text-[13px] font-semibold">
                             Ver inventario completo
-                        </button>
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
@@ -368,10 +367,9 @@ function Home() {
             <Card className="py-0 gap-0">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6">
                     <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Productos más vendidos del mes</h3>
-                    <button onClick={() => navigate('/dashboard/reportes')}
-                        className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">
-                        Ver reportes
-                    </button>
+                    <Button variant="link" onClick={() => navigate('/dashboard/reportes')} className="h-auto p-0 text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">
+                        Ver reportes →
+                    </Button>
                 </div>
 
                 {topProductos.length === 0 ? (

@@ -8,6 +8,7 @@ import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, g
 import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 
 const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
@@ -347,7 +348,7 @@ function Reportes() {
                         { label: 'Ticket promedio', valor: formatearGs(metricas.ticket_promedio), sub: 'por transacción', color: undefined },
                         { label: 'Ventas', valor: metricas.cantidad, sub: 'transacciones totales', color: undefined },
                     ].map((m, i) => (
-                        <Card key={i} className={m.primero ? 'border-l-4 border-l-slate-900 dark:border-l-indigo-500' : ''}>
+                        <Card key={i} className={`transition-all hover:-translate-y-0.5 hover:shadow-md ${m.primero ? 'border-l-4 border-l-slate-900 dark:border-l-indigo-500' : ''}`}>
                             <CardContent>
                                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{m.label}</p>
                                 <p className="text-xl font-extrabold sm:text-[22px]" style={{ color: m.color }}>
@@ -775,10 +776,10 @@ function Reportes() {
                                 </select>
                             </div>
                         </div>
-                        <button onClick={handleExportarExcel} disabled={exportando}
-                            className={`w-full rounded-lg py-2.5 text-[13px] font-semibold text-white transition-colors ${exportando ? 'cursor-not-allowed bg-slate-400' : 'bg-green-500 hover:bg-green-600'}`}>
+                        <Button onClick={handleExportarExcel} disabled={exportando}
+                            className={`w-full py-5 text-[13px] font-semibold ${exportando ? '' : 'bg-green-600 hover:bg-green-700'}`}>
                             {exportando ? 'Generando...' : 'Exportar Excel contable'}
-                        </button>
+                        </Button>
                         <p className="mt-2.5 text-[11px] text-slate-400 dark:text-slate-500">
                             Incluye: fecha, cliente, RUC, producto, cantidad, monto, IVA 10%, canal y método de pago.
                         </p>
@@ -794,10 +795,10 @@ function Reportes() {
                             <div><label className={labelCls}>Desde</label><input type="date" value={statsDesde} onChange={e => setStatsDesde(e.target.value)} className={inputCls} /></div>
                             <div><label className={labelCls}>Hasta</label><input type="date" value={statsHasta} onChange={e => setStatsHasta(e.target.value)} className={inputCls} /></div>
                         </div>
-                        <button onClick={handleExportarEstadisticas} disabled={exportandoStats}
-                            className={`w-full rounded-lg py-2.5 text-[13px] font-semibold text-white transition-colors ${exportandoStats ? 'cursor-not-allowed bg-slate-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                        <Button onClick={handleExportarEstadisticas} disabled={exportandoStats}
+                            className={`w-full py-5 text-[13px] font-semibold ${exportandoStats ? '' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
                             {exportandoStats ? 'Generando...' : 'Exportar estadísticas'}
-                        </button>
+                        </Button>
                         <p className="mt-2.5 text-[11px] text-slate-400 dark:text-slate-500">
                             Incluye: resumen general, comparativas, top productos, ventas por canal y delivery por zonas.
                         </p>
