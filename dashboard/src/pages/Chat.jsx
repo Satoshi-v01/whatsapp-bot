@@ -274,7 +274,12 @@ function Chat() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className={`text-[13px] ${esSinLeer ? 'font-extrabold text-red-600 dark:text-red-400' : 'font-normal text-slate-600 dark:text-slate-400'}`}>{sesion.cliente_numero}</p>
+                                                    <p className={`text-[13px] ${esSinLeer ? 'font-extrabold text-red-600 dark:text-red-400' : 'font-normal text-slate-600 dark:text-slate-400'}`}>
+                                                        {sesion.nombre_whatsapp || sesion.cliente_numero}
+                                                    </p>
+                                                    {sesion.nombre_whatsapp && (
+                                                        <p className="text-[10px] text-slate-400 dark:text-slate-500">{sesion.cliente_numero}</p>
+                                                    )}
                                                     <p className={`mt-0.5 text-[11px] ${esSinLeer ? 'font-semibold text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'}`}>Paso: {sesion.paso}</p>
                                                 </div>
                                             </div>
@@ -313,8 +318,11 @@ function Chat() {
                                     {sesionActiva.cliente_numero.slice(-2)}
                                 </div>
                                 <div>
-                                    <p className="text-[15px] font-bold leading-none text-slate-900 dark:text-slate-100">{sesionActiva.cliente_numero}</p>
+                                    <p className="text-[15px] font-bold leading-none text-slate-900 dark:text-slate-100">
+                                        {sesionActiva.nombre_whatsapp || sesionActiva.cliente_numero}
+                                    </p>
                                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {sesionActiva.nombre_whatsapp && <>{sesionActiva.cliente_numero} · </>}
                                         Estado: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{sesionActiva.paso}</span> · Modo: <span className="italic">{modoConfig[sesionActiva.modo]?.label || sesionActiva.modo}</span>
                                     </p>
                                 </div>

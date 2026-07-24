@@ -1,6 +1,6 @@
 const db = require('../db/index')
 
-async function obtenerSesion(numero) {
+async function obtenerSesion(numero, nombreWhatsapp) {
     const resultado = await db.query(
         'SELECT * FROM sesiones WHERE cliente_numero = $1',
         [numero]
@@ -8,20 +8,25 @@ async function obtenerSesion(numero) {
 
     if (resultado.rows.length === 0) {
         const nueva = await db.query(
-            `INSERT INTO sesiones (cliente_numero, paso, modo, datos)
-             VALUES ($1, 'inicio', 'bot', '{}')
+            `INSERT INTO sesiones (cliente_numero, paso, modo, datos, nombre_whatsapp)
+             VALUES ($1, 'inicio', 'bot', '{}', $2)
              RETURNING *`,
-            [numero]
+            [numero, nombreWhatsapp || null]
         )
         return nueva.rows[0]
     }
 
     const sesion = resultado.rows[0]
 
+    if (nombreWhatsapp && nombreWhatsapp !== sesion.nombre_whatsapp) {
+        await db.query('UPDATE sesiones SET nombre_whatsapp = $1 WHERE cliente_numero = $2', [nombreWhatsapp, numero])
+        sesion.nombre_whatsapp = nombreWhatsapp
+    }
+
     const expirada = verificarExpiracion(sesion.ultimo_mensaje)
     if (expirada) {
         await reiniciarSesion(numero)
-        return await obtenerSesion(numero)
+        return await obtenerSesion(numero, nombreWhatsapp)
     }
 
     return sesion

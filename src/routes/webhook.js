@@ -36,11 +36,12 @@ router.post('/', async (req, res) => {
 
         const numero = mensaje.from
         const tipo = mensaje.type
+        const nombreWhatsapp = change?.value?.contacts?.[0]?.profile?.name
 
         logger.info(`[webhook] mensaje de ${numero} tipo=${tipo}${tipo === 'text' ? ` texto="${mensaje.text?.body}"` : ''}`)
 
         // Garantiza que la sesión exista antes de guardar el mensaje
-        await obtenerSesion(numero)
+        await obtenerSesion(numero, nombreWhatsapp)
 
         if (tipo === 'location') {
             const { latitude, longitude } = mensaje.location

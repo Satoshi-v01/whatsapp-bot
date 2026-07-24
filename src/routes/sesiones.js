@@ -12,7 +12,7 @@ router.get('/', autenticar, verificarPermiso('chat', 'ver'), async (req, res) =>
     try {
         const resultado = await db.query(
             `SELECT s.id, s.cliente_numero, s.paso, s.modo, s.datos, s.agente_id,
-                    s.carrito, s.carrito_expires_at,
+                    s.carrito, s.carrito_expires_at, s.nombre_whatsapp,
                     s.ultimo_mensaje AT TIME ZONE 'UTC' AS ultimo_mensaje,
                     u.nombre as agente_nombre
              FROM sesiones s
@@ -30,7 +30,7 @@ router.get('/:numero', autenticar, verificarPermiso('chat', 'ver'), async (req, 
     try {
         const { numero } = req.params
         const resultado = await db.query(
-            `SELECT id, cliente_numero, paso, modo, datos, agente_id, carrito, carrito_expires_at,
+            `SELECT id, cliente_numero, paso, modo, datos, agente_id, carrito, carrito_expires_at, nombre_whatsapp,
                     ultimo_mensaje AT TIME ZONE 'UTC' AS ultimo_mensaje
              FROM sesiones WHERE cliente_numero = $1`,
             [numero]
