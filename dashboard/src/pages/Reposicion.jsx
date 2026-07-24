@@ -3,6 +3,7 @@ import { getAlertasReposicion } from '../services/reposicion'
 import { getCliente } from '../services/clientes'
 import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 function estadoAlertaCls(diasRestantes) {
     if (diasRestantes < 0) return 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400'
@@ -67,13 +68,15 @@ function Reposicion() {
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Avisar con</label>
-                    <select value={diasUmbral} onChange={e => setDiasUmbral(parseInt(e.target.value))}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                        <option value={5}>5 días de anticipación</option>
-                        <option value={7}>7 días de anticipación</option>
-                        <option value={10}>10 días de anticipación</option>
-                        <option value={15}>15 días de anticipación</option>
-                    </select>
+                    <Select value={String(diasUmbral)} onValueChange={v => setDiasUmbral(parseInt(v))}>
+                        <SelectTrigger className="w-auto text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="5">5 días de anticipación</SelectItem>
+                            <SelectItem value="7">7 días de anticipación</SelectItem>
+                            <SelectItem value="10">10 días de anticipación</SelectItem>
+                            <SelectItem value="15">15 días de anticipación</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 

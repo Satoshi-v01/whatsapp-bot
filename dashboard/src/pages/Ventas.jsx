@@ -9,8 +9,9 @@ import { formatearFecha, fechaHoyPY, fechaInicioMesPY } from '../utils/fecha'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none transition-shadow focus:border-slate-300 dark:focus:border-slate-600 focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 function colorMetodoPago(metodo) {
@@ -329,32 +330,41 @@ function Ventas() {
                     </div>
                     <div>
                         <label className={labelCls}>Método de pago</label>
-                        <select value={metodoPago} onChange={e => { setMetodoPago(e.target.value); setPagina(1) }} className={inputCls}>
-                            <option value="">Todos</option>
-                            <option value="efectivo">Efectivo</option>
-                            <option value="tarjeta">Tarjeta</option>
-                            <option value="transferencia">Transferencia</option>
-                        </select>
+                        <Select value={metodoPago} onValueChange={v => { setMetodoPago(v); setPagina(1) }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todos</SelectItem>
+                                <SelectItem value="efectivo">Efectivo</SelectItem>
+                                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                                <SelectItem value="transferencia">Transferencia</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <label className={labelCls}>Canal</label>
-                        <select value={canal} onChange={e => { setCanal(e.target.value); setPagina(1) }} className={inputCls}>
-                            <option value="">Todos</option>
-                            <option value="en_tienda">En tienda</option>
-                            <option value="whatsapp_bot">WhatsApp Bot</option>
-                            <option value="whatsapp">WhatsApp</option>
-                            <option value="presencial">Presencial</option>
-                        </select>
+                        <Select value={canal} onValueChange={v => { setCanal(v); setPagina(1) }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todos</SelectItem>
+                                <SelectItem value="en_tienda">En tienda</SelectItem>
+                                <SelectItem value="whatsapp_bot">WhatsApp Bot</SelectItem>
+                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                <SelectItem value="presencial">Presencial</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <label className={labelCls}>Estado</label>
-                        <select value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPagina(1) }} className={inputCls}>
-                            <option value="">Todos</option>
-                            <option value="pendiente_pago">Pendiente de pago</option>
-                            <option value="pagado">Pagado</option>
-                            <option value="entregado">Entregado</option>
-                            <option value="cancelado">Cancelado</option>
-                        </select>
+                        <Select value={estadoFiltro} onValueChange={v => { setEstadoFiltro(v); setPagina(1) }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todos</SelectItem>
+                                <SelectItem value="pendiente_pago">Pendiente de pago</SelectItem>
+                                <SelectItem value="pagado">Pagado</SelectItem>
+                                <SelectItem value="entregado">Entregado</SelectItem>
+                                <SelectItem value="cancelado">Cancelado</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <Button variant="outline" onClick={() => { setBuscar(''); setMetodoPago(''); setCanal(''); setEstadoFiltro(''); setPagina(1) }} className="w-full">
@@ -423,12 +433,14 @@ function Ventas() {
                                                 {venta.estado === 'cancelado' ? (
                                                     <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${colorEstado(venta.estado)}`}>ANULADA</span>
                                                 ) : (
-                                                    <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
-                                                        className={`cursor-pointer rounded-full border-none px-1.5 py-1 text-[9px] font-bold uppercase outline-none ${colorEstado(venta.estado)}`}>
-                                                        <option value="pendiente_pago">PENDIENTE</option>
-                                                        <option value="pagado">PAGADO</option>
-                                                        <option value="entregado">ENTREGADO</option>
-                                                    </select>
+                                                    <Select value={venta.estado} onValueChange={v => cambiarEstado(venta.id, v)}>
+                                                        <SelectTrigger className={`h-auto w-auto gap-1 px-1.5 py-1 text-[9px] font-bold uppercase ${colorEstado(venta.estado)}`}><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="pendiente_pago">PENDIENTE</SelectItem>
+                                                            <SelectItem value="pagado">PAGADO</SelectItem>
+                                                            <SelectItem value="entregado">ENTREGADO</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 )}
                                             </TableCell>
                                             <TableCell className="px-3 py-3 text-right text-[13px] font-bold text-slate-900 dark:text-slate-100">{formatearGs(venta.precio)}</TableCell>
@@ -567,16 +579,18 @@ function Ventas() {
                             {ventaDetalle.estado === 'cancelado' ? (
                                 <p className="m-0 text-[13px] font-semibold capitalize text-slate-900 dark:text-slate-100">{ventaDetalle.metodo_pago || '—'}</p>
                             ) : (
-                                <select
+                                <Select
                                     value={ventaDetalle.metodo_pago || ''}
-                                    onChange={e => cambiarMetodoPago(ventaDetalle.id, e.target.value, e.target.value === 'transferencia' ? ventaDetalle.cuenta_transferencia_id : null)}
-                                    className="cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1 text-[13px] font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                                    onValueChange={v => cambiarMetodoPago(ventaDetalle.id, v, v === 'transferencia' ? ventaDetalle.cuenta_transferencia_id : null)}
                                 >
-                                    <option value="">— Sin definir —</option>
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="tarjeta">Tarjeta</option>
-                                    <option value="transferencia">Transferencia</option>
-                                </select>
+                                    <SelectTrigger className="w-auto"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">— Sin definir —</SelectItem>
+                                        <SelectItem value="efectivo">Efectivo</SelectItem>
+                                        <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                                        <SelectItem value="transferencia">Transferencia</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             )}
                         </div>
                         <div>
@@ -591,16 +605,18 @@ function Ventas() {
                                         {ventaDetalle.cuenta_transferencia_banco ? `${ventaDetalle.cuenta_transferencia_banco} — ${ventaDetalle.cuenta_transferencia_titular}` : '— Sin definir —'}
                                     </p>
                                 ) : (
-                                    <select
-                                        value={ventaDetalle.cuenta_transferencia_id || ''}
-                                        onChange={e => cambiarMetodoPago(ventaDetalle.id, 'transferencia', e.target.value || null)}
-                                        className="w-full cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[13px] font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                                    <Select
+                                        value={String(ventaDetalle.cuenta_transferencia_id || '')}
+                                        onValueChange={v => cambiarMetodoPago(ventaDetalle.id, 'transferencia', v || null)}
                                     >
-                                        <option value="">¿A qué cuenta se transfirió?</option>
-                                        {cuentasTransferencia.map(c => (
-                                            <option key={c.id} value={c.id}>{c.banco} — {c.titular}{c.alias ? ` (${c.alias})` : ''}</option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">¿A qué cuenta se transfirió?</SelectItem>
+                                            {cuentasTransferencia.map(c => (
+                                                <SelectItem key={c.id} value={String(c.id)}>{c.banco} — {c.titular}{c.alias ? ` (${c.alias})` : ''}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 )}
                             </div>
                         )}
@@ -627,12 +643,14 @@ function Ventas() {
                         </div>
                     ) : (
                         <div className="flex items-center gap-2.5 px-5.5 pb-5 pt-4">
-                            <select value={ventaDetalle.estado} onChange={e => cambiarEstado(ventaDetalle.id, e.target.value)}
-                                className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                                <option value="pendiente_pago">Pendiente de pago</option>
-                                <option value="pagado">Pagado</option>
-                                <option value="entregado">Entregado</option>
-                            </select>
+                            <Select value={ventaDetalle.estado} onValueChange={v => cambiarEstado(ventaDetalle.id, v)}>
+                                <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pendiente_pago">Pendiente de pago</SelectItem>
+                                    <SelectItem value="pagado">Pagado</SelectItem>
+                                    <SelectItem value="entregado">Entregado</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <Button variant="outline" onClick={() => confirmarAnular(ventaDetalle)} className="whitespace-nowrap border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">
                                 Anular
                             </Button>
