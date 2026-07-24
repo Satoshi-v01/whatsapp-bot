@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none transition-all focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-900/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-400'
@@ -713,7 +714,7 @@ function Caja() {
                                 </div>
 
                                 {resultadosCliente.length > 0 && (
-                                    <div className="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                                    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                                         {resultadosCliente.map(c => (
                                             <div key={c.id} onClick={() => { setClienteSeleccionado(c); setBusquedaCliente(c.nombre); setResultadosCliente([]) }}
                                                 className="cursor-pointer border-b border-slate-100 px-3.5 py-2.5 last:border-b-0 hover:bg-slate-50">
@@ -727,11 +728,13 @@ function Caja() {
                                 {creandoCliente && (
                                     <div className="mt-3 border-t border-slate-100 pt-3">
                                         <div className="grid grid-cols-2 gap-2">
-                                            <select value={formCliente.tipo} onChange={e => setFormCliente({ ...formCliente, tipo: e.target.value })}
-                                                className={`${inputCls} col-span-2`}>
-                                                <option value="persona">Persona fisica</option>
-                                                <option value="empresa">Empresa</option>
-                                            </select>
+                                            <Select value={formCliente.tipo} onValueChange={v => setFormCliente({ ...formCliente, tipo: v })}>
+                                                <SelectTrigger className="col-span-2"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="persona">Persona fisica</SelectItem>
+                                                    <SelectItem value="empresa">Empresa</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <input placeholder="Nombre *" value={formCliente.nombre} onChange={e => setFormCliente({ ...formCliente, nombre: e.target.value })}
                                                 className={`${inputCls} col-span-2`} />
                                             <input placeholder="RUC" value={formCliente.ruc} onChange={e => setFormCliente({ ...formCliente, ruc: e.target.value })} className={inputCls} />
@@ -897,7 +900,7 @@ function Caja() {
                                                 )}
                                             </div>
                                             {linea.productosFiltrados.length > 0 && (
-                                                <div className="mt-2 max-h-[180px] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                                                <div className="mt-2 max-h-[180px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
                                                     {linea.productosFiltrados.map(p => (
                                                         <div key={p.id} onClick={() => seleccionarProducto(linea.id, p)}
                                                             className="cursor-pointer border-b border-slate-100 px-3.5 py-2.5 last:border-b-0 hover:bg-slate-50">
@@ -1015,12 +1018,15 @@ function Caja() {
                                         </div>
                                         <div className="col-span-2">
                                             <label className={labelCls}>Zona de delivery</label>
-                                            <select value={formDelivery.zona_id} onChange={e => handleZonaChange(e.target.value)} className={inputCls}>
-                                                <option value="">Seleccionar zona...</option>
-                                                {zonas.filter(z => z.activa).map(z => (
-                                                    <option key={z.id} value={z.id}>{z.nombre} — Gs. {z.costo.toLocaleString()}</option>
-                                                ))}
-                                            </select>
+                                            <Select value={String(formDelivery.zona_id)} onValueChange={handleZonaChange}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="">Seleccionar zona...</SelectItem>
+                                                    {zonas.filter(z => z.activa).map(z => (
+                                                        <SelectItem key={z.id} value={String(z.id)}>{z.nombre} — Gs. {z.costo.toLocaleString()}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     </div>
                                 </CardContent>
