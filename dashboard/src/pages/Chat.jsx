@@ -34,6 +34,35 @@ function Chat() {
         return () => clearInterval(intervalo)
     }, [])
 
+    // Título de pestaña: contador de sin leer + parpadeo mientras la pestaña no está enfocada
+    useEffect(() => {
+        const tituloBase = 'Sosa BULLS · Dashboard'
+        if (sinLeer.size === 0) {
+            document.title = tituloBase
+            return
+        }
+        document.title = `(${sinLeer.size}) ${tituloBase}`
+        if (document.hidden) {
+            let visible = true
+            const parpadeo = setInterval(() => {
+                document.title = visible ? '💬 Nuevo mensaje' : `(${sinLeer.size}) ${tituloBase}`
+                visible = !visible
+            }, 1000)
+            return () => { clearInterval(parpadeo); document.title = `(${sinLeer.size}) ${tituloBase}` }
+        }
+    }, [sinLeer.size])
+
+    useEffect(() => {
+        function alVolverAEnfocar() {
+            if (!document.hidden && sinLeer.size > 0) document.title = `(${sinLeer.size}) Sosa BULLS · Dashboard`
+        }
+        document.addEventListener('visibilitychange', alVolverAEnfocar)
+        return () => {
+            document.removeEventListener('visibilitychange', alVolverAEnfocar)
+            document.title = 'Sosa BULLS · Dashboard'
+        }
+    }, [sinLeer.size])
+
     useEffect(() => {
         if (numeroParam && sesiones.length > 0) {
             const target = sesiones.find(s => s.cliente_numero === numeroParam)
@@ -229,13 +258,15 @@ function Chat() {
                                         className={`mb-1 cursor-pointer rounded-2xl border p-3.5 transition-colors ${
                                             activa ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-500/40 dark:bg-indigo-500/15'
                                             : esSinLeer ? 'border-red-200 bg-red-50/70 hover:bg-red-50 dark:border-red-500/30 dark:bg-red-500/10'
-                                            : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/40'
+                                            : 'border-transparent opacity-70 hover:bg-slate-50 hover:opacity-100 dark:hover:bg-slate-700/40'
                                         }`}
                                     >
                                         <div className="mb-1.5 flex items-start justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className="relative shrink-0">
-                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+                                                    <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                                                        esSinLeer ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                                                    }`}>
                                                         {sesion.cliente_numero.slice(-2)}
                                                     </div>
                                                     {esSinLeer && (
@@ -243,12 +274,12 @@ function Chat() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className={`text-[13px] ${esSinLeer ? 'font-extrabold text-red-600 dark:text-red-400' : 'font-bold text-slate-900 dark:text-slate-100'}`}>{sesion.cliente_numero}</p>
-                                                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Paso: {sesion.paso}</p>
+                                                    <p className={`text-[13px] ${esSinLeer ? 'font-extrabold text-red-600 dark:text-red-400' : 'font-normal text-slate-600 dark:text-slate-400'}`}>{sesion.cliente_numero}</p>
+                                                    <p className={`mt-0.5 text-[11px] ${esSinLeer ? 'font-semibold text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'}`}>Paso: {sesion.paso}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="mb-1 text-[10px] text-slate-400 dark:text-slate-500">{formatearFecha(sesion.ultimo_mensaje)}</p>
+                                                <p className={`mb-1 text-[10px] ${esSinLeer ? 'font-bold text-red-500 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>{formatearFecha(sesion.ultimo_mensaje)}</p>
                                                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cfg.cls}`}>
                                                     {cfg.label}
                                                 </span>
