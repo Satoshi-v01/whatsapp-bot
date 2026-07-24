@@ -284,8 +284,8 @@ export default function HistorialPedidos() {
 
                 {/* Encabezado */}
                 <div className="mb-6">
-                    <h1 className="mb-1 text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Historial de Pedidos</h1>
-                    <p className="text-[13px] text-slate-500 dark:text-slate-400">Pedidos recibidos por pagina web y WhatsApp bot</p>
+                    <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Historial de Pedidos</h1>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Pedidos recibidos por pagina web y WhatsApp bot</p>
                 </div>
 
                 {/* KPIs */}

@@ -343,7 +343,7 @@ function Clientes() {
     }
 
     return (
-        <div className="page-scroll min-h-full bg-slate-50 dark:bg-slate-950">
+        <div className="page-scroll min-h-full bg-slate-50 dark:bg-slate-900">
 
             {clienteSeleccionado ? (
                 <div className="split-content flex h-[calc(100vh-56px)]">
@@ -379,7 +379,7 @@ function Clientes() {
                     </div>
 
                     {/* Perfil — layout de 2 columnas */}
-                    <div className="split-detail has-detail flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+                    <div className="split-detail has-detail flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900">
                         {cargandoPerfil ? (
                             <div className="flex h-full items-center justify-center text-slate-500 dark:text-slate-400">Cargando perfil...</div>
                         ) : (
@@ -639,12 +639,12 @@ function Clientes() {
                 </div>
             ) : (
                 // Vista tabla
-                <div className="page-scroll p-8">
+                <div className="page-scroll p-4 sm:p-6 lg:p-8">
 
                     <div className="mb-7 flex items-end justify-between">
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Gestión de Clientes</h1>
-                            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Visualizá, editá y fidelizá tu base de clientes registrados.</p>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Gestión de Clientes</h1>
+                            <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Visualizá, editá y fidelizá tu base de clientes registrados.</p>
                         </div>
                         <Button onClick={() => setModalNuevo(true)}>+ Añadir nuevo cliente</Button>
                     </div>

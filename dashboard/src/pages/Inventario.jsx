@@ -21,9 +21,11 @@ import { registrarTransformacion } from '../services/transformaciones'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 const inputCls = 'mb-2.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
-const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 const btnPrimarioCls = 'inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4.5 py-2.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
 const btnSecundarioCls = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4.5 py-2.5 text-[13px] font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700/60'
+const btnToolbarPrimarioCls = 'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
+const btnToolbarSecundarioCls = 'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700/60'
 const chipBtnCls = 'rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/60'
 const chipDeleteCls = 'inline-flex items-center rounded-md border border-red-300 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-800 hover:bg-red-200 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25'
 
@@ -651,31 +653,31 @@ function colorVencimiento(diasParaVencer) {
 
 
     if (cargando) return (
-        <div className="flex h-full items-center justify-center bg-slate-50 p-8 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+        <div className="flex h-full items-center justify-center bg-slate-50 p-8 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
             Cargando inventario...
         </div>
     )
 
     return (
-        <div className="page-scroll min-h-full bg-slate-50 p-8 dark:bg-slate-950">
+        <div className="page-scroll min-h-full bg-slate-50 p-4 dark:bg-slate-900 sm:p-6 lg:p-8">
 
             {/* Header */}
             <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Inventario</h1>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Inventario</h1>
                     <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Gestioná productos, precios y stock.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <button onClick={() => setModalSecciones(true)} className={btnSecundarioCls}>Secciones</button>
-                    <button onClick={() => setModalMarca(true)} className={btnSecundarioCls}>Marcas</button>
-                    {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} className={btnSecundarioCls}>Subcategorías</button>}
-                    <button onClick={() => descargarTemplatePrecios().catch(() => {})} className={btnSecundarioCls}><IconDescargar /> Template precios</button>
-                    <button onClick={() => inputImportRef.current?.click()} className={btnSecundarioCls}><IconSubir /> Importar precios</button>
+                    <button onClick={() => setModalSecciones(true)} className={btnToolbarSecundarioCls}>Secciones</button>
+                    <button onClick={() => setModalMarca(true)} className={btnToolbarSecundarioCls}>Marcas</button>
+                    {pestanaActiva !== 'sin_categoria' && <button onClick={() => setModalSubcategorias(true)} className={btnToolbarSecundarioCls}>Subcategorías</button>}
+                    <button onClick={() => descargarTemplatePrecios().catch(() => {})} className={btnToolbarSecundarioCls}><IconDescargar /> Template precios</button>
+                    <button onClick={() => inputImportRef.current?.click()} className={btnToolbarSecundarioCls}><IconSubir /> Importar precios</button>
                     <input ref={inputImportRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcel} className="hidden" />
-                    <button onClick={() => descargarTemplateStock().catch(() => {})} className={btnSecundarioCls}><IconDescargar /> Template stock</button>
-                    <button onClick={() => inputImportStockRef.current?.click()} className={btnSecundarioCls}><IconSubir /> Importar stock</button>
+                    <button onClick={() => descargarTemplateStock().catch(() => {})} className={btnToolbarSecundarioCls}><IconDescargar /> Template stock</button>
+                    <button onClick={() => inputImportStockRef.current?.click()} className={btnToolbarSecundarioCls}><IconSubir /> Importar stock</button>
                     <input ref={inputImportStockRef} type="file" accept=".xlsx,.xls" onChange={handleSeleccionarExcelStock} className="hidden" />
-                    <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} className={btnPrimarioCls}>+ Producto</button>
+                    <button onClick={() => { setNuevoProducto({ nombre: '', descripcion: '', calidad: 'standard', categoria_id: '', marca_id: '', sku: '', especie: '', seccion_inventario: pestanaActiva !== 'sin_categoria' ? pestanaActiva : '', subcategoria_id: '' }); setModalProducto(true) }} className={btnToolbarPrimarioCls}>+ Producto</button>
                 </div>
             </div>
 
@@ -731,7 +733,7 @@ function colorVencimiento(diasParaVencer) {
                         className={`${inputCls} mb-0`}
                     />
                 </div>
-                <button onClick={cargarDatos} className={`${btnSecundarioCls} px-3.5 py-2.5 text-xs`}><IconRefrescar /> Actualizar</button>
+                <button onClick={cargarDatos} className={`${btnToolbarSecundarioCls} text-xs`}><IconRefrescar /> Actualizar</button>
             </div>
 
             {/* Vista agrupada: Marca → Categoría → Productos */}

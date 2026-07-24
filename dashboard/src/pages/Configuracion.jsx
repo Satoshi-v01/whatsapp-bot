@@ -379,14 +379,14 @@ function Configuracion() {
             </div>
 
             {/* Contenido */}
-            <div className="page-scroll flex-1 overflow-y-auto p-8">
+            <div className="page-scroll flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
 
                 {/* ===== USUARIOS Y ROLES ===== */}
                 {pestana === 'usuarios' && (
                     <div>
                         <div className="mb-7 flex items-end justify-between">
                             <div>
-                                <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Usuarios y Roles</h1>
+                                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Usuarios y Roles</h1>
                                 <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Administrá los permisos y perfiles de usuario del sistema.</p>
                             </div>
                             <Button onClick={() => setModalUsuario(true)}>+ Nuevo usuario</Button>
@@ -436,7 +436,7 @@ function Configuracion() {
                             <div className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:border dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
                                 <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-900">
                                     <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Gestionar roles</h2>
-                                    <button onClick={() => setModalRol(true)} className="border-none bg-transparent text-xs font-bold text-slate-900 dark:text-slate-100">+ Crear nuevo</button>
+                                    <Button size="sm" onClick={() => setModalRol(true)}>+ Crear nuevo</Button>
                                 </div>
                                 <div className="flex-1 p-6">
                                     <label className={labelCls}>Rol seleccionado</label>
@@ -487,7 +487,7 @@ function Configuracion() {
                 {pestana === 'notificaciones' && (
                     <div>
                         <div className="mb-7">
-                            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Notificaciones</h1>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Notificaciones</h1>
                             <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Gestioná cómo y cuándo recibir alertas críticas del sistema.</p>
                         </div>
                         <div className="mb-4 grid grid-cols-2 gap-4">
@@ -547,7 +547,7 @@ function Configuracion() {
                 {pestana === 'tienda' && (
                     <div>
                         <div className="mb-7">
-                            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Configuración de la Tienda</h1>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Configuración de la Tienda</h1>
                             <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Administrá la identidad, horarios y zonas de delivery.</p>
                         </div>
 
@@ -745,7 +745,7 @@ function Configuracion() {
                     <div>
                         <div className="mb-7 flex items-end justify-between">
                             <div>
-                                <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Configuración del Bot</h1>
+                                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Configuración del Bot</h1>
                                 <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Gestioná la automatización y el comportamiento de tu asistente virtual.</p>
                             </div>
                             <div className="flex items-center gap-3 rounded-[10px] bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:border dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
@@ -823,7 +823,7 @@ function Configuracion() {
                     <div>
                         <div className="mb-7 flex items-end justify-between">
                             <div>
-                                <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Facturación</h1>
+                                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Facturación</h1>
                                 <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Configurá los datos del timbrado y formato de factura.</p>
                             </div>
                             <div className="flex gap-2">
@@ -918,7 +918,7 @@ function Configuracion() {
                 {pestana === 'mi_cuenta' && (
                     <div className="max-w-[480px]">
                         <div className="mb-7">
-                            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Mi cuenta</h1>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Mi cuenta</h1>
                             <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Cambiá tu contraseña de acceso al sistema.</p>
                         </div>
 

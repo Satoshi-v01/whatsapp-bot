@@ -227,13 +227,13 @@ function Proveedores() {
     )
 
     if (cargando) return (
-        <div className="flex h-full items-center justify-center bg-slate-50 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+        <div className="flex h-full items-center justify-center bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
             Cargando proveedores...
         </div>
     )
 
     return (
-        <div className="proveedores-wrap flex h-[calc(100vh-56px)] flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <div className="proveedores-wrap flex h-[calc(100vh-56px)] flex-col overflow-hidden bg-slate-50 dark:bg-slate-900">
 
             {/* Pestañas */}
             <div className="flex flex-shrink-0 gap-0 border-b border-slate-200 bg-white px-8 dark:border-slate-700 dark:bg-slate-800">
@@ -251,11 +251,11 @@ function Proveedores() {
 
             {/* ── PROVEEDORES ── */}
             {pestana === 'proveedores' && (
-                <div className="page-scroll flex-1 overflow-y-auto p-8">
+                <div className="page-scroll flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h1 className="text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Proveedores</h1>
-                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{proveedores.length} proveedores registrados</p>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Proveedores</h1>
+                            <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">{proveedores.length} proveedores registrados</p>
                         </div>
                         <Button onClick={() => { setFormProveedor({ nombre: '', ruc: '', telefono: '', email: '', banco: '', numero_cuenta: '', direccion: '', notas: '' }); setModalProveedor('nuevo') }}>
                             + Nuevo proveedor
@@ -339,10 +339,10 @@ function Proveedores() {
 
             {/* ── FACTURAS ── */}
             {pestana === 'facturas' && (
-                <div className="page-scroll flex-1 overflow-y-auto p-8">
+                <div className="page-scroll flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                     <div className="mb-5 flex items-center justify-between">
                         <div>
-                            <h1 className="text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Facturas de Compra</h1>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Facturas de Compra</h1>
                             {filtroProveedor && (
                                 <button onClick={() => setFiltroProveedor(null)}
                                     className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400">
@@ -490,10 +490,10 @@ function Proveedores() {
 
             {/* ── REPORTES ── */}
             {pestana === 'reportes' && (
-                <div className="page-scroll flex-1 overflow-y-auto p-8">
+                <div className="page-scroll flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                     <div className="mx-auto max-w-[900px]">
                         <div className="mb-6 flex items-center justify-between">
-                            <h1 className="text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Reportes de Compras</h1>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Reportes de Compras</h1>
                             <div className="flex items-center gap-1.5">
                                 {['semana', 'mes', 'anual', 'personalizado'].map(p => (
                                     <button key={p} onClick={() => setFiltroPeriodo(p)}

@@ -266,20 +266,20 @@ function Delivery() {
     }
 
     if (cargando) return (
-        <div className="flex h-full items-center justify-center bg-slate-50 p-8 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div className="flex h-full items-center justify-center bg-slate-50 p-8 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
             <p className="text-slate-500 dark:text-slate-400">Cargando deliveries...</p>
         </div>
     )
 
     return (
-        <div className="delivery-wrap flex h-[calc(100vh-56px)] flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <div className="delivery-wrap flex h-[calc(100vh-56px)] flex-col overflow-hidden bg-slate-50 dark:bg-slate-900">
 
             {/* Header */}
             <div className="border-b border-slate-200 bg-white px-7 py-5 dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-4 flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Gestión de Entregas</h1>
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Panel de control de deliveries en tiempo real</p>
+                        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Gestión de Entregas</h1>
+                        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Panel de control de deliveries en tiempo real</p>
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={cargarDeliveries}>
@@ -381,7 +381,7 @@ function Delivery() {
                 </div>
 
                 {/* Area vacia cuando no hay detalle */}
-                <div className="flex flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
+                <div className="flex flex-1 items-center justify-center bg-slate-50 dark:bg-slate-900">
                     {!detalle && (
                         <div className="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400">
                             <span className="opacity-30"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
@@ -408,7 +408,7 @@ function Delivery() {
                     <div onClick={() => setDetalle(null)}
                         className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 p-4 py-8">
                         <div onClick={e => e.stopPropagation()}
-                            className="flex max-h-[90vh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl bg-slate-50 shadow-2xl dark:bg-slate-950">
+                            className="flex max-h-[90vh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl bg-slate-50 shadow-2xl dark:bg-slate-900">
 
                             {/* Header modal */}
                             <div className="flex shrink-0 items-start justify-between rounded-t-2xl border-b border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">

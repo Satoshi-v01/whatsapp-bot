@@ -112,8 +112,8 @@ function Ordenes() {
             <div className="border-b border-slate-200 bg-white px-7 py-5 dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-4 flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Ordenes de Pedido</h1>
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Gestion de ordenes pendientes de confirmacion</p>
+                        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Ordenes de Pedido</h1>
+                        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Gestion de ordenes pendientes de confirmacion</p>
                     </div>
                     <Button variant="outline" onClick={cargarOrdenes}>Actualizar</Button>
                 </div>

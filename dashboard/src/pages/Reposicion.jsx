@@ -58,13 +58,13 @@ function Reposicion() {
     }
 
     return (
-        <div className="page-scroll min-h-full bg-slate-50 p-8 dark:bg-slate-950">
+        <div className="page-scroll min-h-full bg-slate-50 p-4 dark:bg-slate-900 sm:p-6 lg:p-8">
 
             {/* Header */}
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Reposiciones</h1>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Clientes que probablemente necesiten reponer balanceados pronto, según su historial de compra</p>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Reposiciones</h1>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Clientes que probablemente necesiten reponer balanceados pronto, según su historial de compra</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Avisar con</label>

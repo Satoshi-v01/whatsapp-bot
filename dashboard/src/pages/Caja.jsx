@@ -18,13 +18,13 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none transition-all focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-900/5'
-const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-400'
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-all focus:border-slate-300 dark:focus:border-slate-600 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-slate-900/5'
+const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 function segCls(active, accent) {
     const accents = {
-        default: active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50',
-        blue: active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50',
+        default: active ? 'border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-indigo-500 text-white' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/40',
+        blue: active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/40',
     }
     return `flex-1 rounded-lg border px-2 py-2.5 text-xs font-semibold text-center transition-colors ${accents[accent || 'default']}`
 }
@@ -624,26 +624,26 @@ function Caja() {
     }
 
     if (cargando) return (
-        <div className="flex h-full items-center justify-center bg-slate-100 text-sm text-slate-400">
+        <div className="flex h-full items-center justify-center bg-slate-100 dark:bg-slate-800 text-sm text-slate-400 dark:text-slate-500">
             Cargando caja...
         </div>
     )
 
     return (
-        <div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden bg-slate-100">
+        <div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden bg-slate-100 dark:bg-slate-800">
 
             {/* Top bar */}
-            <div className="flex h-[52px] flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6">
+            <div className="flex h-[52px] flex-shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6">
                 <div className="flex">
                     {[{ id: 'venta', label: 'Nueva Venta' }, { id: 'cierre', label: 'Cierre de Caja' }].map(tab => (
                         <button key={tab.id} onClick={() => setPestana(tab.id)}
-                            className={`h-[52px] border-b-2 px-4.5 text-[13px] transition-colors ${pestana === tab.id ? 'border-slate-900 font-bold text-slate-900' : 'border-transparent font-medium text-slate-500 hover:text-slate-700'}`}>
+                            className={`h-[52px] border-b-2 px-4.5 text-[13px] transition-colors ${pestana === tab.id ? 'border-slate-900 dark:border-slate-100 font-bold text-slate-900 dark:text-slate-100' : 'border-transparent font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
                             {tab.label}
                         </button>
                     ))}
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-xs capitalize text-slate-400">
+                    <span className="text-xs capitalize text-slate-400 dark:text-slate-500">
                         {new Date().toLocaleDateString('es-PY', { timeZone: 'America/Asuncion', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                     </span>
                     <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/ventas')}>
@@ -669,9 +669,9 @@ function Caja() {
                                             {opOrigen.modalidad === 'delivery' ? 'Delivery' : 'Retiro en tienda'}
                                         </span>
                                     </p>
-                                    <p className="mt-0.5 text-[11px] text-slate-500">Al confirmar, la orden quedara como confirmada.</p>
+                                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Al confirmar, la orden quedara como confirmada.</p>
                                 </div>
-                                <button onClick={() => setOpOrigen(null)} className="text-base text-slate-400 hover:text-slate-600">x</button>
+                                <button onClick={() => setOpOrigen(null)} className="text-base text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">x</button>
                             </div>
                         )}
 
@@ -680,9 +680,9 @@ function Caja() {
                             <CardContent className="p-4">
                                 <div className="flex items-center gap-3">
                                     {/* Avatar */}
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-slate-100">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-slate-100 dark:bg-slate-800">
                                         {clienteSeleccionado
-                                            ? <span className="text-[15px] font-bold text-slate-600">{clienteSeleccionado.nombre[0].toUpperCase()}</span>
+                                            ? <span className="text-[15px] font-bold text-slate-600 dark:text-slate-300">{clienteSeleccionado.nombre[0].toUpperCase()}</span>
                                             : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9d9b96" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                         }
                                     </div>
@@ -690,12 +690,12 @@ function Caja() {
                                         {clienteSeleccionado ? (
                                             <div className="flex items-center gap-2">
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-[13px] font-bold text-slate-900">{clienteSeleccionado.nombre}</p>
-                                                    {clienteSeleccionado.ruc && <p className="text-[11px] text-slate-400">RUC: {clienteSeleccionado.ruc}</p>}
-                                                    {clienteSeleccionado.telefono && <p className="text-[11px] text-slate-400">Tel: {clienteSeleccionado.telefono}</p>}
+                                                    <p className="truncate text-[13px] font-bold text-slate-900 dark:text-slate-100">{clienteSeleccionado.nombre}</p>
+                                                    {clienteSeleccionado.ruc && <p className="text-[11px] text-slate-400 dark:text-slate-500">RUC: {clienteSeleccionado.ruc}</p>}
+                                                    {clienteSeleccionado.telefono && <p className="text-[11px] text-slate-400 dark:text-slate-500">Tel: {clienteSeleccionado.telefono}</p>}
                                                 </div>
                                                 <button onClick={() => { setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial('') }}
-                                                    className="shrink-0 text-lg text-slate-400 hover:text-slate-600">x</button>
+                                                    className="shrink-0 text-lg text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">x</button>
                                             </div>
                                         ) : (
                                             <input
@@ -703,7 +703,7 @@ function Caja() {
                                                 value={busquedaCliente}
                                                 onChange={e => handleBuscarCliente(e.target.value)}
                                                 autoComplete="off"
-                                                className="w-full rounded-lg border-none bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+                                                className="w-full rounded-lg border-none bg-transparent text-[13px] text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                             />
                                         )}
                                     </div>
@@ -720,19 +720,19 @@ function Caja() {
                                 </div>
 
                                 {resultadosCliente.length > 0 && (
-                                    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                                    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
                                         {resultadosCliente.map(c => (
                                             <div key={c.id} onClick={() => { setClienteSeleccionado(c); setBusquedaCliente(c.nombre); setResultadosCliente([]) }}
-                                                className="cursor-pointer border-b border-slate-100 px-3.5 py-2.5 last:border-b-0 hover:bg-slate-50">
-                                                <p className="text-[13px] font-semibold text-slate-900">{c.nombre}</p>
-                                                <p className="text-[11px] text-slate-400">{c.ruc && `RUC: ${c.ruc} · `}{c.telefono}</p>
+                                                className="cursor-pointer border-b border-slate-100 dark:border-slate-700 px-3.5 py-2.5 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                                                <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{c.nombre}</p>
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500">{c.ruc && `RUC: ${c.ruc} · `}{c.telefono}</p>
                                             </div>
                                         ))}
                                     </div>
                                 )}
 
                                 {creandoCliente && (
-                                    <div className="mt-3 border-t border-slate-100 pt-3">
+                                    <div className="mt-3 border-t border-slate-100 dark:border-slate-700 pt-3">
                                         <div className="grid grid-cols-2 gap-2">
                                             <Select value={formCliente.tipo} onValueChange={v => setFormCliente({ ...formCliente, tipo: v })}>
                                                 <SelectTrigger className="col-span-2"><SelectValue /></SelectTrigger>
@@ -756,13 +756,13 @@ function Caja() {
 
                         {/* Productos */}
                         <Card className="mb-3 py-0 gap-0">
-                            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-                                <span className="text-xs font-bold text-slate-900">Productos</span>
+                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5">
+                                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Productos</span>
                                 <div className="flex items-center gap-3">
                                     {puedo('caja', 'precio_especial') && (
                                         <div className="flex items-center gap-1.5">
                                             <input type="checkbox" id="precioEspecial" checked={precioEspecialActivo} onChange={e => setPrecioEspecialActivo(e.target.checked)} className="h-3.5 w-3.5 cursor-pointer" />
-                                            <label htmlFor="precioEspecial" className={`cursor-pointer text-[11px] font-semibold ${precioEspecialActivo ? 'text-red-500' : 'text-slate-500'}`}>
+                                            <label htmlFor="precioEspecial" className={`cursor-pointer text-[11px] font-semibold ${precioEspecialActivo ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                                                 Precio especial
                                             </label>
                                         </div>
@@ -776,11 +776,11 @@ function Caja() {
 
                             {/* Header de tabla */}
                             {lineasValidas.length > 0 && (
-                                <div className="grid grid-cols-[96px_1fr_100px_108px_28px] border-b border-slate-100 bg-slate-50/70 px-4 py-1.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cant.</span>
-                                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Producto</span>
-                                    <span className="pr-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">P.Unit</span>
-                                    <span className="pr-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">Total</span>
+                                <div className="grid grid-cols-[96px_1fr_100px_108px_28px] border-b border-slate-100 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/70 px-4 py-1.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Cant.</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Producto</span>
+                                    <span className="pr-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">P.Unit</span>
+                                    <span className="pr-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Total</span>
                                     <span></span>
                                 </div>
                             )}
@@ -791,7 +791,7 @@ function Caja() {
                                 const precioBase = calcularPrecioCaja(pr)
                                 const { precio, conDescuento, diferencial } = calcularPrecioLinea(linea, precioBase)
                                 return (
-                                    <div key={linea.id} className="grid grid-cols-[96px_1fr_100px_108px_28px] items-center border-b border-slate-100 px-4 py-2.5">
+                                    <div key={linea.id} className="grid grid-cols-[96px_1fr_100px_108px_28px] items-center border-b border-slate-100 dark:border-slate-700 px-4 py-2.5">
                                         {/* Stepper / Monto */}
                                         {linea.modoMonto ? (
                                             <input type="number" min="0" value={linea.montoTexto}
@@ -801,22 +801,22 @@ function Caja() {
                                         ) : (
                                             <div className="flex items-center gap-1">
                                                 <button onClick={() => cambiarCantidad(linea.id, -1)}
-                                                    className="flex h-[26px] w-[26px] items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[15px] font-bold text-slate-500 transition-colors hover:bg-slate-100">
+                                                    className="flex h-[26px] w-[26px] items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-[15px] font-bold text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700">
                                                     -
                                                 </button>
-                                                <span className="w-[22px] text-center text-[13px] font-bold text-slate-900">{linea.cantidad}</span>
+                                                <span className="w-[22px] text-center text-[13px] font-bold text-slate-900 dark:text-slate-100">{linea.cantidad}</span>
                                                 <button onClick={() => cambiarCantidad(linea.id, 1)}
-                                                    className="flex h-[26px] w-[26px] items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[15px] font-bold text-slate-500 transition-colors hover:bg-slate-100">
+                                                    className="flex h-[26px] w-[26px] items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-[15px] font-bold text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700">
                                                     +
                                                 </button>
                                             </div>
                                         )}
                                         {/* Nombre */}
                                         <div className="pr-2">
-                                            <p className="text-xs font-semibold leading-tight text-slate-900">
+                                            <p className="text-xs font-semibold leading-tight text-slate-900 dark:text-slate-100">
                                                 {linea.productoSeleccionado?.marca_nombre ? `${linea.productoSeleccionado.marca_nombre} ` : ''}{linea.productoSeleccionado?.nombre}
                                             </p>
-                                            <p className="mt-0.5 text-[11px] text-slate-400">
+                                            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
                                                 {pr.nombre}{pr.stock <= 3 ? ` · Stock: ${pr.stock}` : ''}
                                             </p>
                                             {linea.modoMonto && linea.montoTexto !== '' && (
@@ -832,7 +832,7 @@ function Caja() {
                                             )}
                                             <div className="flex gap-2">
                                                 <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null, precioEspecial: '' } : l))}
-                                                    className="mt-0.5 text-[10px] text-slate-400 hover:text-slate-600">
+                                                    className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
                                                     cambiar
                                                 </button>
                                                 {pr.permite_fraccion && (
@@ -857,18 +857,18 @@ function Caja() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <p className={`pr-2 text-right text-xs ${conDescuento ? 'text-green-600' : 'text-slate-500'}`}>
+                                            <p className={`pr-2 text-right text-xs ${conDescuento ? 'text-green-600' : 'text-slate-500 dark:text-slate-400'}`}>
                                                 {precio.toLocaleString('es-PY')}
                                             </p>
                                         )}
                                         {/* Total */}
-                                        <p className="pr-2 text-right text-[13px] font-bold text-slate-900">
+                                        <p className="pr-2 text-right text-[13px] font-bold text-slate-900 dark:text-slate-100">
                                             {(precio * linea.cantidad).toLocaleString('es-PY')}
                                         </p>
                                         {/* Quitar */}
                                         {lineas.length > 1 && (
                                             <button onClick={() => eliminarLinea(linea.id)}
-                                                className="flex h-[22px] w-[22px] items-center justify-center rounded text-base text-slate-400 hover:bg-red-50 hover:text-red-500">
+                                                className="flex h-[22px] w-[22px] items-center justify-center rounded text-base text-slate-400 dark:text-slate-500 hover:bg-red-50 hover:text-red-500">
                                                 x
                                             </button>
                                         )}
@@ -878,18 +878,18 @@ function Caja() {
 
                             {/* Fila de delivery */}
                             {canal === 'delivery' && formDelivery.costo_delivery > 0 && (
-                                <div className="grid grid-cols-[96px_1fr_100px_108px_28px] items-center border-b border-slate-100 bg-slate-50/70 px-4 py-2">
+                                <div className="grid grid-cols-[96px_1fr_100px_108px_28px] items-center border-b border-slate-100 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/70 px-4 py-2">
                                     <span></span>
-                                    <span className="text-xs text-slate-500">Delivery — {formDelivery.zona_nombre || 'Zona'}</span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">Delivery — {formDelivery.zona_nombre || 'Zona'}</span>
                                     <span></span>
-                                    <span className="pr-2 text-right text-xs font-semibold text-slate-500">+{formDelivery.costo_delivery.toLocaleString()}</span>
+                                    <span className="pr-2 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">+{formDelivery.costo_delivery.toLocaleString()}</span>
                                     <span></span>
                                 </div>
                             )}
 
                             {/* Filas de busqueda (lineas sin presentacion) */}
                             {lineas.filter(l => !l.presentacionSeleccionada).map((linea, idx) => (
-                                <div key={linea.id} className="border-b border-slate-100 px-4 py-3 last:border-b-0">
+                                <div key={linea.id} className="border-b border-slate-100 dark:border-slate-700 px-4 py-3 last:border-b-0">
                                     {!linea.productoSeleccionado ? (
                                         <>
                                             <div className="flex items-center gap-2">
@@ -900,26 +900,26 @@ function Caja() {
                                                         value={linea.busqueda}
                                                         onChange={e => handleBuscarProducto(linea.id, e.target.value)}
                                                         autoComplete="off"
-                                                        className="w-full rounded-lg border-none bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+                                                        className="w-full rounded-lg border-none bg-transparent text-[13px] text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                                         autoFocus={idx === 0 && lineasValidas.length === 0}
                                                     />
                                                 </div>
                                                 {lineas.length > 1 && (
-                                                    <button onClick={() => eliminarLinea(linea.id)} className="text-base text-slate-400 hover:text-slate-600">x</button>
+                                                    <button onClick={() => eliminarLinea(linea.id)} className="text-base text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">x</button>
                                                 )}
                                             </div>
                                             {linea.productosFiltrados.length > 0 && (
-                                                <div className="mt-2 max-h-[180px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                                                <div className="mt-2 max-h-[180px] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
                                                     {linea.productosFiltrados.map(p => (
                                                         <div key={p.id} onClick={() => seleccionarProducto(linea.id, p)}
-                                                            className="cursor-pointer border-b border-slate-100 px-3.5 py-2.5 last:border-b-0 hover:bg-slate-50">
+                                                            className="cursor-pointer border-b border-slate-100 dark:border-slate-700 px-3.5 py-2.5 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/40">
                                                             {(() => {
                                                                 const stockTotal = p.presentaciones?.reduce((s, pr) => s + (pr.stock || 0), 0) || 0
                                                                 const sinStock = stockTotal === 0
                                                                 return (
                                                                     <>
-                                                                        <p className={`text-[13px] font-semibold ${sinStock ? 'text-slate-400' : 'text-slate-900'}`}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
-                                                                        <p className="mt-0.5 text-[11px] text-slate-400">{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
+                                                                        <p className={`text-[13px] font-semibold ${sinStock ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-100'}`}>{p.marca_nombre && `${p.marca_nombre} — `}{p.nombre}</p>
+                                                                        <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{formatearCalidad(p.calidad)} · {p.categoria_nombre}</p>
                                                                         <span className={`mt-1 inline-block rounded-[5px] border px-1.5 py-0.5 text-[11px] font-bold ${sinStock ? 'border-red-300 bg-red-50 text-red-500' : stockTotal <= 5 ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-green-300 bg-green-50 text-green-600'}`}>
                                                                             {sinStock ? 'Sin stock' : `Stock: ${stockTotal}`}
                                                                         </span>
@@ -934,24 +934,24 @@ function Caja() {
                                     ) : (
                                         <>
                                             <div className="mb-2 flex items-center justify-between">
-                                                <p className="text-xs font-bold text-slate-900">
+                                                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
                                                     {linea.productoSeleccionado.marca_nombre && `${linea.productoSeleccionado.marca_nombre} — `}{linea.productoSeleccionado.nombre}
                                                 </p>
                                                 <button onClick={() => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, busqueda: '', productoSeleccionado: null, presentacionSeleccionada: null, precioEspecial: '' } : l))}
-                                                    className="text-[11px] text-slate-400 hover:text-slate-600">
+                                                    className="text-[11px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
                                                     cambiar
                                                 </button>
                                             </div>
-                                            <p className="mb-2 text-[11px] text-slate-400">Selecciona la presentacion:</p>
+                                            <p className="mb-2 text-[11px] text-slate-400 dark:text-slate-500">Selecciona la presentacion:</p>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {linea.productoSeleccionado.presentaciones.filter(pr => pr.disponible && pr.stock > 0).map(pr => {
                                                     const { precio, conDescuento } = calcularPrecioCaja(pr)
                                                     return (
                                                         <button key={pr.id} onClick={() => seleccionarPresentacion(linea.id, pr)}
-                                                            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:border-slate-900 hover:bg-slate-100">
-                                                            <p className="mb-0.5 text-[11px] font-bold text-slate-900">{pr.nombre}</p>
-                                                            <p className={`text-xs font-extrabold ${conDescuento ? 'text-green-600' : 'text-slate-900'}`}>Gs. {precio.toLocaleString()}</p>
-                                                            <p className={`mt-0.5 text-[10px] ${pr.stock <= 3 ? 'text-red-500' : 'text-slate-400'}`}>Stock: {pr.stock}</p>
+                                                            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-left transition-colors hover:border-slate-900 dark:hover:border-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                                            <p className="mb-0.5 text-[11px] font-bold text-slate-900 dark:text-slate-100">{pr.nombre}</p>
+                                                            <p className={`text-xs font-extrabold ${conDescuento ? 'text-green-600' : 'text-slate-900 dark:text-slate-100'}`}>Gs. {precio.toLocaleString()}</p>
+                                                            <p className={`mt-0.5 text-[10px] ${pr.stock <= 3 ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>Stock: {pr.stock}</p>
                                                         </button>
                                                     )
                                                 })}
@@ -966,10 +966,10 @@ function Caja() {
                         {tipoComprobante === 'factura' && (
                             <Card className="mb-3">
                                 <CardContent className="p-3.5">
-                                    <p className="mb-2.5 text-xs font-bold text-slate-900">Factura</p>
+                                    <p className="mb-2.5 text-xs font-bold text-slate-900 dark:text-slate-100">Factura</p>
                                     <div className="mb-2.5 flex items-center gap-2">
                                         <input type="checkbox" id="factManual" checked={facturaManual} onChange={e => { setFacturaManual(e.target.checked); setNumeroFacturaManual('') }} className="h-3.5 w-3.5 cursor-pointer" />
-                                        <label htmlFor="factManual" className={`cursor-pointer text-xs font-semibold ${facturaManual ? 'text-red-500' : 'text-slate-500'}`}>
+                                        <label htmlFor="factManual" className={`cursor-pointer text-xs font-semibold ${facturaManual ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                                             Factura manual (talonario fisico)
                                         </label>
                                     </div>
@@ -1002,9 +1002,9 @@ function Caja() {
                             <Card className="mb-3">
                                 <CardContent className="p-3.5">
                                     <div className="mb-2.5 flex items-center justify-between">
-                                        <p className="text-xs font-bold text-slate-900">Datos de entrega</p>
+                                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Datos de entrega</p>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-[11px] font-semibold text-slate-500">Facturar delivery</span>
+                                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Facturar delivery</span>
                                             <Switch checked={facturarDelivery} onCheckedChange={v => setFacturarDelivery(!!v)} />
                                         </div>
                                     </div>
@@ -1044,11 +1044,11 @@ function Caja() {
                     </div>
 
                     {/* Panel derecho */}
-                    <div className="flex w-[340px] shrink-0 flex-col gap-4.5 overflow-y-auto border-l border-slate-200 bg-white p-5">
+                    <div className="flex w-[340px] shrink-0 flex-col gap-4.5 overflow-y-auto border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
 
                         {/* Modalidad */}
                         <div>
-                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Modalidad</p>
+                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Modalidad</p>
                             <div className="flex gap-1.5">
                                 {[{ val: 'presencial', label: 'Retiro en tienda' }, { val: 'delivery', label: 'Delivery' }].map(c => (
                                     <button key={c.val} onClick={() => setCanal(c.val)} className={segCls(canal === c.val)}>{c.label}</button>
@@ -1058,20 +1058,20 @@ function Caja() {
 
                         {/* Comprobante */}
                         <div>
-                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Comprobante</p>
+                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Comprobante</p>
                             <div className="flex gap-1.5">
                                 {[{ val: 'ticket', label: 'Ticket' }, { val: 'factura', label: 'Factura' }].map(c => (
                                     <button key={c.val} onClick={() => handleTipoComprobante(c.val)} className={segCls(tipoComprobante === c.val)}>{c.label}</button>
                                 ))}
                             </div>
                             {tipoComprobante === 'ticket' && (
-                                <p className="mt-1.5 text-[11px] text-slate-500">No consume numero de factura. Si cargaste un cliente arriba, igual queda guardado para su historial.</p>
+                                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">No consume numero de factura. Si cargaste un cliente arriba, igual queda guardado para su historial.</p>
                             )}
                         </div>
 
                         {/* Metodo de pago */}
                         <div>
-                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Metodo de pago</p>
+                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Metodo de pago</p>
                             <div className={`flex gap-1.5 ${metodoPago === 'tarjeta' || metodoPago === 'transferencia' ? 'mb-2' : ''}`}>
                                 {[{ val: 'efectivo', label: 'Efectivo' }, { val: 'transferencia', label: 'Transferencia' }, { val: 'tarjeta', label: 'Tarjeta' }].map(m => (
                                     <button key={m.val} onClick={() => { setMetodoPago(m.val); setSubtipoPago(''); setCuentaTransferenciaId('') }} className={segCls(metodoPago === m.val)}>{m.label}</button>
@@ -1086,7 +1086,7 @@ function Caja() {
                             )}
                             {metodoPago === 'transferencia' && (
                                 cuentasTransferencia.length === 0 ? (
-                                    <p className="text-[11px] text-slate-400">Sin cuentas configuradas — Configuración → Tienda</p>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Sin cuentas configuradas — Configuración → Tienda</p>
                                 ) : (
                                     <div className="flex flex-col gap-1.5">
                                         {cuentasTransferencia.map(c => {
@@ -1094,10 +1094,10 @@ function Caja() {
                                             return (
                                                 <button key={c.id} type="button"
                                                     onClick={() => setCuentaTransferenciaId(seleccionada ? '' : c.id)}
-                                                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors ${seleccionada ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                                                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors ${seleccionada ? 'border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-indigo-500 text-white' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
                                                     <span>
                                                         <span className="block text-xs font-semibold">{c.banco}</span>
-                                                        <span className={`block text-[11px] ${seleccionada ? 'text-slate-300' : 'text-slate-400'}`}>{c.titular}{c.alias ? ` · ${c.alias}` : ''}</span>
+                                                        <span className={`block text-[11px] ${seleccionada ? 'text-slate-300 dark:text-slate-600' : 'text-slate-400 dark:text-slate-500'}`}>{c.titular}{c.alias ? ` · ${c.alias}` : ''}</span>
                                                     </span>
                                                     {seleccionada && (
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -1112,7 +1112,7 @@ function Caja() {
 
                         {/* Condicion */}
                         <div>
-                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Condicion de venta</p>
+                            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Condicion de venta</p>
                             <div className={`flex gap-1.5 ${tipoVenta === 'credito' ? 'mb-2' : ''}`}>
                                 {[{ val: 'contado', label: 'Contado' }, { val: 'credito', label: 'Credito' }].map(t => (
                                     <button key={t.val} onClick={() => setTipoVenta(t.val)} className={segCls(tipoVenta === t.val)}>{t.label}</button>
@@ -1129,7 +1129,7 @@ function Caja() {
                                         onChange={e => setPlazoDias(parseInt(e.target.value) || 0)}
                                         className={`${inputCls} mb-1.5`} />
                                     {clienteSeleccionado
-                                        ? <p className="text-[11px] text-slate-500">Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}</p>
+                                        ? <p className="text-[11px] text-slate-500 dark:text-slate-400">Vencimiento: {new Date(Date.now() + plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString('es-PY')}</p>
                                         : <p className="text-[11px] text-red-500">Debes seleccionar un cliente para venta a credito</p>
                                     }
                                 </div>
@@ -1139,7 +1139,7 @@ function Caja() {
                         {/* Monto recibido */}
                         {metodoPago === 'efectivo' && (
                             <div>
-                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Monto recibido (Gs.)</p>
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Monto recibido (Gs.)</p>
                                 <input
                                     type="text"
                                     value={montoEfectivo ? parseInt(montoEfectivo).toLocaleString('es-PY') : ''}
@@ -1149,7 +1149,7 @@ function Caja() {
                                 />
                                 {montoEfectivo && parseInt(montoEfectivo) >= total && total > 0 && (
                                     <div className="mt-2 flex justify-between text-[13px]">
-                                        <span className="text-slate-400">Vuelto:</span>
+                                        <span className="text-slate-400 dark:text-slate-500">Vuelto:</span>
                                         <span className="font-extrabold text-green-600">Gs. {(parseInt(montoEfectivo) - total).toLocaleString()}</span>
                                     </div>
                                 )}
@@ -1162,10 +1162,10 @@ function Caja() {
                         {/* Resumen y boton */}
                         <div className="mt-auto">
                             {tipoComprobante === 'factura' && (razonSocial || rucFactura) && (
-                                <div className="mb-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
-                                    <p className="mb-0.5 text-[10px] uppercase tracking-wide text-slate-400">Factura a</p>
-                                    <p className="text-xs font-semibold text-slate-900">{razonSocial || 'Cliente'}</p>
-                                    {rucFactura && <p className="mt-0.5 text-[11px] text-slate-400">RUC: {rucFactura}</p>}
+                                <div className="mb-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5">
+                                    <p className="mb-0.5 text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Factura a</p>
+                                    <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{razonSocial || 'Cliente'}</p>
+                                    {rucFactura && <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">RUC: {rucFactura}</p>}
                                 </div>
                             )}
                             {metodoPago === 'tarjeta' && subtipoPago && (
@@ -1179,20 +1179,20 @@ function Caja() {
                                 </div>
                             )}
                             {lineasValidas.length > 0 && (
-                                <div className="mb-3 rounded-[10px] border border-slate-200 bg-slate-50 p-3.5">
-                                    <div className="mb-1 flex justify-between text-xs text-slate-400">
+                                <div className="mb-3 rounded-[10px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3.5">
+                                    <div className="mb-1 flex justify-between text-xs text-slate-400 dark:text-slate-500">
                                         <span>IVA 10% incluido</span>
                                         <span>Gs. {iva.toLocaleString()}</span>
                                     </div>
                                     {canal === 'delivery' && costoDelivery > 0 && (
-                                        <div className="mb-1 flex justify-between text-xs text-slate-400">
+                                        <div className="mb-1 flex justify-between text-xs text-slate-400 dark:text-slate-500">
                                             <span>Delivery {formDelivery.zona_nombre && `— ${formDelivery.zona_nombre}`}</span>
                                             <span>Gs. {costoDelivery.toLocaleString()}</span>
                                         </div>
                                     )}
-                                    <div className="flex items-baseline justify-between border-t border-slate-200 pt-2.5">
-                                        <span className="text-sm font-bold text-slate-900">Total</span>
-                                        <span className="text-[22px] font-extrabold text-slate-900">Gs. {total.toLocaleString()}</span>
+                                    <div className="flex items-baseline justify-between border-t border-slate-200 dark:border-slate-700 pt-2.5">
+                                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Total</span>
+                                        <span className="text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Gs. {total.toLocaleString()}</span>
                                     </div>
                                 </div>
                             )}
@@ -1213,12 +1213,12 @@ function Caja() {
                         {/* Header */}
                         <div className="mb-5 flex items-center justify-between">
                             <div>
-                                <h1 className="text-xl font-extrabold tracking-tight text-slate-900">Cierre de Caja</h1>
-                                <p className="mt-0.5 text-xs text-slate-400">Resumen de ventas y egresos del dia</p>
+                                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Cierre de Caja</h1>
+                                <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Resumen de ventas y egresos del dia</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input type="date" value={fechaCierre} onChange={e => setFechaCierre(e.target.value)}
-                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none transition-all focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5" />
+                                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none transition-all focus:border-slate-300 dark:focus:border-slate-600 focus:ring-4 focus:ring-slate-900/5" />
                                 <Button onClick={handleImprimirCierre} disabled={!cierreDatos} variant={cierreDatos ? 'default' : 'secondary'}>
                                     Imprimir cierre
                                 </Button>
@@ -1226,9 +1226,9 @@ function Caja() {
                         </div>
 
                         {cargandoCierre ? (
-                            <div className="p-16 text-center text-slate-400">Cargando datos...</div>
+                            <div className="p-16 text-center text-slate-400 dark:text-slate-500">Cargando datos...</div>
                         ) : !cierreDatos ? (
-                            <div className="p-16 text-center text-slate-400">No hay datos para esta fecha.</div>
+                            <div className="p-16 text-center text-slate-400 dark:text-slate-500">No hay datos para esta fecha.</div>
                         ) : (
                             <div className="flex flex-col gap-3">
 
@@ -1241,7 +1241,7 @@ function Caja() {
                                     ].map((m, i) => (
                                         <Card key={i}>
                                             <CardContent className="p-4">
-                                                <p className="mb-1.5 text-[11px] uppercase tracking-wide text-slate-400">{m.label}</p>
+                                                <p className="mb-1.5 text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.label}</p>
                                                 <p className={`text-xl font-extrabold ${m.color}`}>{m.val}</p>
                                             </CardContent>
                                         </Card>
@@ -1250,8 +1250,8 @@ function Caja() {
 
                                 {/* Por metodo */}
                                 <Card className="py-0 gap-0">
-                                    <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-                                        <p className="text-xs font-bold text-slate-900">Ventas por metodo de pago</p>
+                                    <div className="border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Ventas por metodo de pago</p>
                                     </div>
                                     {Object.entries(cierreDatos.resumen).map(([k, v]) => {
                                         const label = v.metodo === 'tarjeta'
@@ -1260,15 +1260,15 @@ function Caja() {
                                         const porcentaje = cierreDatos.totalGeneral > 0 ? Math.round((v.total / cierreDatos.totalGeneral) * 100) : 0
                                         const barColor = v.metodo === 'efectivo' ? 'bg-green-600' : v.metodo === 'transferencia' ? 'bg-blue-600' : 'bg-amber-500'
                                         return (
-                                            <div key={k} className="border-b border-slate-100 px-4 py-3 last:border-b-0">
+                                            <div key={k} className="border-b border-slate-100 dark:border-slate-700 px-4 py-3 last:border-b-0">
                                                 <div className="mb-1.5 flex items-center justify-between">
-                                                    <span className="text-[13px] font-semibold text-slate-900">{label}</span>
+                                                    <span className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{label}</span>
                                                     <div className="text-right">
-                                                        <p className="text-[13px] font-extrabold text-slate-900">Gs. {v.total.toLocaleString('es-PY')}</p>
-                                                        <p className="text-[11px] text-slate-400">{v.cantidad} venta{v.cantidad !== 1 ? 's' : ''} · {porcentaje}%</p>
+                                                        <p className="text-[13px] font-extrabold text-slate-900 dark:text-slate-100">Gs. {v.total.toLocaleString('es-PY')}</p>
+                                                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{v.cantidad} venta{v.cantidad !== 1 ? 's' : ''} · {porcentaje}%</p>
                                                     </div>
                                                 </div>
-                                                <div className="h-[3px] rounded-full bg-slate-100">
+                                                <div className="h-[3px] rounded-full bg-slate-100 dark:bg-slate-800">
                                                     <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${porcentaje}%` }} />
                                                 </div>
                                             </div>
@@ -1278,15 +1278,15 @@ function Caja() {
 
                                 {/* Por canal */}
                                 <Card className="py-0 gap-0">
-                                    <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-                                        <p className="text-xs font-bold text-slate-900">Ventas por canal</p>
+                                    <div className="border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Ventas por canal</p>
                                     </div>
                                     {Object.entries(cierreDatos.canales).map(([canalKey, v]) => (
-                                        <div key={canalKey} className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 last:border-b-0">
-                                            <span className="text-[13px] text-slate-900">{canalKey}</span>
+                                        <div key={canalKey} className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-4 py-2.5 last:border-b-0">
+                                            <span className="text-[13px] text-slate-900 dark:text-slate-100">{canalKey}</span>
                                             <div className="text-right">
-                                                <p className="text-[13px] font-bold text-slate-900">Gs. {v.total.toLocaleString('es-PY')}</p>
-                                                <p className="text-[11px] text-slate-400">{v.cantidad} venta{v.cantidad !== 1 ? 's' : ''}</p>
+                                                <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">Gs. {v.total.toLocaleString('es-PY')}</p>
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500">{v.cantidad} venta{v.cantidad !== 1 ? 's' : ''}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -1294,8 +1294,8 @@ function Caja() {
 
                                 {/* Gastos */}
                                 <Card className="py-0 gap-0">
-                                    <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-                                        <p className="text-xs font-bold text-slate-900">Gastos y egresos</p>
+                                    <div className="border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Gastos y egresos</p>
                                     </div>
                                     <div className="p-4">
                                         <div className="mb-3 grid grid-cols-[1fr_auto_auto] gap-2">
@@ -1309,15 +1309,15 @@ function Caja() {
                                             </Button>
                                         </div>
                                         {gastos.length === 0 ? (
-                                            <p className="py-2.5 text-center text-xs text-slate-400">No hay gastos registrados para esta sesion.</p>
+                                            <p className="py-2.5 text-center text-xs text-slate-400 dark:text-slate-500">No hay gastos registrados para esta sesion.</p>
                                         ) : (
                                             <div className="flex flex-col gap-1.5">
                                                 {gastos.map(g => (
-                                                    <div key={g.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                                                        <span className="text-[13px] text-slate-900">{g.descripcion}</span>
+                                                    <div key={g.id} className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-900 px-3 py-2">
+                                                        <span className="text-[13px] text-slate-900 dark:text-slate-100">{g.descripcion}</span>
                                                         <div className="flex items-center gap-2.5">
                                                             <span className="text-[13px] font-bold text-red-500">- Gs. {g.monto.toLocaleString('es-PY')}</span>
-                                                            <button onClick={() => eliminarGasto(g.id)} className="text-sm text-slate-400 hover:text-slate-600">x</button>
+                                                            <button onClick={() => eliminarGasto(g.id)} className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">x</button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1327,16 +1327,16 @@ function Caja() {
                                 </Card>
 
                                 {/* Resumen final */}
-                                <div className="rounded-xl bg-slate-900 p-5 text-white">
-                                    <p className="mb-3.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Resumen del dia</p>
+                                <div className="rounded-xl bg-slate-900 dark:bg-indigo-500 p-5 text-white">
+                                    <p className="mb-3.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Resumen del dia</p>
                                     <div className="flex flex-col gap-2.5">
                                         <div className="flex justify-between">
-                                            <span className="text-[13px] text-slate-400">Total ventas</span>
+                                            <span className="text-[13px] text-slate-400 dark:text-slate-500">Total ventas</span>
                                             <span className="text-[13px] font-bold text-green-500">Gs. {cierreDatos.totalGeneral.toLocaleString('es-PY')}</span>
                                         </div>
                                         {gastos.length > 0 && (
                                             <div className="flex justify-between">
-                                                <span className="text-[13px] text-slate-400">Total gastos</span>
+                                                <span className="text-[13px] text-slate-400 dark:text-slate-500">Total gastos</span>
                                                 <span className="text-[13px] font-bold text-red-400">- Gs. {gastos.reduce((sum, g) => sum + g.monto, 0).toLocaleString('es-PY')}</span>
                                             </div>
                                         )}

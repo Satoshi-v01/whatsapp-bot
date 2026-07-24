@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-shadow focus:border-slate-300 dark:focus:border-slate-600 focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-slate-100/5'
-const labelCls = 'mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 function Auditoria() {
     const [logs, setLogs] = useState([])
@@ -125,8 +125,8 @@ function Auditoria() {
             {/* Header */}
             <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Log de Auditoría</h1>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Registro completo de acciones del sistema</p>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Log de Auditoría</h1>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Registro completo de acciones del sistema</p>
                 </div>
                 <Button onClick={handleExportar} disabled={exportando} className={exportando ? '' : 'bg-green-600 hover:bg-green-700'}>
                     {exportando ? 'Exportando...' : '⬇ Exportar Excel'}

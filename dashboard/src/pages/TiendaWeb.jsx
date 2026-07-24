@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 
 const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none box-border transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
-const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 const IconMas = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
 const IconBasura = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></svg>
@@ -1807,10 +1807,10 @@ function TiendaWeb() {
     const [tab, setTab] = useState('productos')
 
     return (
-        <div className="page-scroll min-h-full bg-slate-50 p-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div className="page-scroll min-h-full bg-slate-50 p-4 text-slate-900 dark:bg-slate-900 dark:text-slate-100 sm:p-6 lg:p-8">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="m-0 text-[22px] font-bold text-slate-900 dark:text-slate-100">Tienda Web</h1>
+                <h1 className="m-0 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">Tienda Web</h1>
                 <p className="mt-1 mb-0 text-[13px] text-slate-500 dark:text-slate-400">Gestioná productos, banners y configuración de tu tienda online.</p>
             </div>
 
