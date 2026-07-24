@@ -7,6 +7,116 @@ import { useApp } from '../App'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas, getClientesRetencion, getRentabilidad } from '../services/estadisticas'
 
+// Curva Catmull-Rom -> Bezier: suaviza la linea entre puntos sin librerias externas
+function construirPathSuave(pts) {
+    if (pts.length < 2) return `M ${pts[0].x} ${pts[0].y}`
+    let d = `M ${pts[0].x} ${pts[0].y}`
+    for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i]
+        const p1 = pts[i]
+        const p2 = pts[i + 1]
+        const p3 = pts[i + 2] || p2
+        const cp1x = p1.x + (p2.x - p0.x) / 6
+        const cp1y = p1.y + (p2.y - p0.y) / 6
+        const cp2x = p2.x - (p3.x - p1.x) / 6
+        const cp2y = p2.y - (p3.y - p1.y) / 6
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
+    }
+    return d
+}
+
+// Grafico de tendencia (area + linea suave) para ventas por dia. Reemplaza el
+// bar chart anterior: con muchos dias, barras de ancho fijo o se apretaban o
+// estiraban el layout (min-content de un grid item nunca se achica solo).
+// Una linea no necesita ancho minimo por punto, asi que escala a cualquier
+// cantidad de dias sin verse comprimida ni romper el layout.
+function GraficoTendenciaVentas({ datos, colorLinea, colorTexto, colorTextoMuted, colorGrid, colorFondo }) {
+    const [hoverIndex, setHoverIndex] = useState(null)
+
+    const W = 1000, H = 220
+    const PADDING_TOP = 20, PADDING_BOTTOM = 30
+    const alturaUtil = H - PADDING_TOP - PADDING_BOTTOM
+    const maxVal = Math.max(...datos.map(d => parseInt(d.total)), 1)
+    const n = datos.length
+
+    const puntos = datos.map((d, i) => ({
+        x: n === 1 ? W / 2 : (i / (n - 1)) * W,
+        y: PADDING_TOP + alturaUtil - (parseInt(d.total) / maxVal) * alturaUtil,
+        dia: d
+    }))
+
+    const pathLinea = construirPathSuave(puntos)
+    const pathArea = `${pathLinea} L ${puntos[n - 1].x} ${H - PADDING_BOTTOM} L ${puntos[0].x} ${H - PADDING_BOTTOM} Z`
+
+    // Como mucho ~6 fechas en el eje X, distribuidas parejo (siempre incluye la ultima)
+    const maxLabels = 6
+    const step = Math.max(1, Math.ceil(n / maxLabels))
+    const indicesLabels = puntos.map((_, i) => i).filter(i => i % step === 0 || i === n - 1)
+
+    const gradId = `grad-tendencia-${colorLinea.replace('#', '')}`
+    const activo = hoverIndex !== null ? puntos[hoverIndex] : null
+
+    return (
+        <div style={{ position: 'relative' }}>
+            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: '200px', display: 'block', overflow: 'visible' }}
+                onMouseLeave={() => setHoverIndex(null)}>
+                <defs>
+                    <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={colorLinea} stopOpacity="0.35" />
+                        <stop offset="100%" stopColor={colorLinea} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+
+                <line x1="0" y1={H - PADDING_BOTTOM} x2={W} y2={H - PADDING_BOTTOM} stroke={colorGrid} strokeWidth="1" />
+
+                <path d={pathArea} fill={`url(#${gradId})`} stroke="none" />
+                <path d={pathLinea} fill="none" stroke={colorLinea} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                {puntos.map((p, i) => (
+                    <rect key={i} x={n === 1 ? 0 : (i / n) * W} y="0" width={n === 1 ? W : W / n} height={H}
+                        fill="transparent" onMouseEnter={() => setHoverIndex(i)} style={{ cursor: 'pointer' }} />
+                ))}
+
+                {activo && (
+                    <>
+                        <line x1={activo.x} y1={PADDING_TOP} x2={activo.x} y2={H - PADDING_BOTTOM}
+                            stroke={colorGrid} strokeWidth="1" strokeDasharray="3,3" />
+                        <circle cx={activo.x} cy={activo.y} r="4.5" fill={colorLinea} stroke={colorFondo} strokeWidth="2" />
+                    </>
+                )}
+
+                {indicesLabels.map(i => (
+                    <text key={i} x={puntos[i].x} y={H - 8} textAnchor="middle" fontSize="10" fill={colorTextoMuted}>
+                        {formatearSoloFecha(puntos[i].dia.fecha).slice(0, 5)}
+                    </text>
+                ))}
+            </svg>
+
+            {activo && (
+                <div style={{
+                    position: 'absolute',
+                    left: `${(activo.x / W) * 100}%`,
+                    top: `${(activo.y / H) * 100}%`,
+                    transform: 'translate(-50%, -130%)',
+                    background: colorFondo,
+                    border: `1px solid ${colorGrid}`,
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    color: colorTexto,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 5
+                }}>
+                    <div style={{ fontWeight: 700 }}>Gs. {parseInt(activo.dia.total).toLocaleString('es-PY')}</div>
+                    <div style={{ color: colorTextoMuted, marginTop: '2px' }}>{formatearSoloFecha(activo.dia.fecha)} · {activo.dia.cantidad} ventas</div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 function Reportes() {
     const [cargando, setCargando] = useState(true)
     const [modalConfirmar, setModalConfirmar] = useState(null)
@@ -242,7 +352,6 @@ function Reportes() {
         }[c] || c
     }
     const coloresCanal = ['#1a1a2e', '#4f46e5', '#818cf8', '#c7d2fe', '#e0e7ff', '#94a3b8']
-    const maxVenta = Math.max(...ventasPorDia.map(v => parseInt(v.total)), 1)
     const totalCanal = ventasPorCanal.reduce((sum, c) => sum + parseInt(c.total), 0)
     const periodos = [{ valor: 'hoy', label: 'Hoy' }, { valor: 'semana', label: 'Semana' }, { valor: 'mes', label: 'Mes' }, { valor: 'anual', label: 'Año' }]
 
@@ -479,18 +588,7 @@ function Reportes() {
                     {ventasPorDia.length === 0 ? (
                         <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textFaint, fontSize: '13px' }}>Sin datos en este período</div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '200px', overflowX: 'auto' }}>
-                            {ventasPorDia.map((dia, i) => {
-                                const altura = Math.max((parseInt(dia.total) / maxVenta) * 100, 2)
-                                return (
-                                    <div key={i} style={{ flex: '1 1 0', minWidth: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', height: '100%', justifyContent: 'flex-end' }}>
-                                        <div style={{ fontSize: '9px', color: s.textFaint, textAlign: 'center', whiteSpace: 'nowrap' }}>{formatearGs(dia.total).replace('Gs. ', '')}</div>
-                                        <div style={{ width: '100%', height: `${altura}%`, background: s.barColor, borderRadius: '4px 4px 0 0', minHeight: '4px', transition: 'height 0.3s ease' }} title={`${formatearGs(dia.total)} — ${dia.cantidad} ventas`} />
-                                        <p style={{ fontSize: '9px', color: s.textMuted, textAlign: 'center', whiteSpace: 'nowrap' }}>{formatearSoloFecha(dia.fecha)}</p>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                        <GraficoTendenciaVentas datos={ventasPorDia} colorLinea={s.barColor} colorTexto={s.text} colorTextoMuted={s.textMuted} colorGrid={s.borderLight} colorFondo={s.surface} />
                     )}
                 </div>
 
