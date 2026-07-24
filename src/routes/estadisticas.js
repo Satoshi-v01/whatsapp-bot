@@ -54,6 +54,55 @@ const ITEMS_VENTA_CTE = `WITH items_venta AS (
 )
 `
 
+// Rango [desde, hasta) para un periodo, en hora de Paraguay (el proceso corre
+// con TZ=America/Asuncion, ver src/db/index.js). "mes"/"anual" antes usaban
+// una ventana corrediza de 30/365 dias en vez del mes/año calendario -- esto
+// calcula el rango calendario real, y permite pedir un mes/anio especifico
+// (en vez del actual) via los parametros opcionales `mes` (1-12) y `anio`.
+// Tambien devuelve el rango anterior equivalente, para comparativas/retencion.
+function rangoPeriodo(periodo, mes, anio, fechaDesde, fechaHasta) {
+    if (periodo === 'personalizado' && fechaDesde && fechaHasta) {
+        const [ad, md, dd] = fechaDesde.split('-').map(Number)
+        const [ah, mh, dh] = fechaHasta.split('-').map(Number)
+        const desde = new Date(ad, md - 1, dd)
+        const hasta = new Date(ah, mh - 1, dh + 1) // exclusivo: dia siguiente al "hasta" para incluirlo entero
+        const duracionMs = hasta.getTime() - desde.getTime()
+        return { desde, hasta, desdeAnterior: new Date(desde.getTime() - duracionMs), hastaAnterior: desde }
+    }
+
+    const ahora = new Date()
+    let desde, hasta, desdeAnterior, hastaAnterior
+
+    if (periodo === 'hoy') {
+        desde = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+        hasta = new Date(desde.getTime() + 86400000)
+        desdeAnterior = new Date(desde.getTime() - 86400000)
+        hastaAnterior = desde
+    } else if (periodo === 'semana') {
+        const dia = ahora.getDay()
+        const offsetLunes = dia === 0 ? 6 : dia - 1
+        desde = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - offsetLunes)
+        hasta = new Date(desde.getTime() + 7 * 86400000)
+        desdeAnterior = new Date(desde.getTime() - 7 * 86400000)
+        hastaAnterior = desde
+    } else if (periodo === 'anual') {
+        const anioSel = anio ? parseInt(anio) : ahora.getFullYear()
+        desde = new Date(anioSel, 0, 1)
+        hasta = new Date(anioSel + 1, 0, 1)
+        desdeAnterior = new Date(anioSel - 1, 0, 1)
+        hastaAnterior = desde
+    } else {
+        const mesSel = mes ? parseInt(mes) - 1 : ahora.getMonth()
+        const anioSel = anio ? parseInt(anio) : ahora.getFullYear()
+        desde = new Date(anioSel, mesSel, 1)
+        hasta = new Date(anioSel, mesSel + 1, 1)
+        desdeAnterior = new Date(anioSel, mesSel - 1, 1)
+        hastaAnterior = desde
+    }
+
+    return { desde, hasta, desdeAnterior, hastaAnterior }
+}
+
 // Resumen del día
 router.get('/resumen', async (req, res) => {
     try {
@@ -252,14 +301,12 @@ router.get('/notificaciones', async (req, res) => {
 // Ventas por día para gráfico
 router.get('/ventas-por-dia', async (req, res) => {
     try {
-        const { periodo = 'semana', canal } = req.query
+        const { periodo = 'semana', canal, mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '7 days'
-
-        let condiciones = [`v.created_at >= NOW() - ($1::interval)`, `v.estado != 'cancelado'`]
-        let valores = [intervalo]
-        let i = 2
+        let condiciones = [`v.created_at >= $1`, `v.created_at < $2`, `v.estado != 'cancelado'`]
+        let valores = [desde, hasta]
+        let i = 3
 
         if (canal) {
             const mapCanal = {
@@ -293,9 +340,8 @@ router.get('/ventas-por-dia', async (req, res) => {
 // Ventas por canal para gráfico torta
 router.get('/ventas-por-canal', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         const resultado = await db.query(
             `SELECT
@@ -309,11 +355,11 @@ router.get('/ventas-por-canal', async (req, res) => {
                 COUNT(*) as cantidad,
                 COALESCE(SUM(v.precio), 0) as total
              FROM ventas v
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'
              GROUP BY 1
              ORDER BY total DESC`,
-            [intervalo]
+            [desde, hasta]
         )
         res.json(resultado.rows)
     } catch (error) {
@@ -324,9 +370,8 @@ router.get('/ventas-por-canal', async (req, res) => {
 // Transferencias recibidas por cuenta bancaria
 router.get('/transferencias-por-cuenta', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         const resultado = await db.query(
             `SELECT
@@ -338,12 +383,12 @@ router.get('/transferencias-por-cuenta', async (req, res) => {
                 COALESCE(SUM(v.precio), 0) as total
              FROM ventas v
              LEFT JOIN cuentas_transferencia ct ON v.cuenta_transferencia_id = ct.id
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'
              AND v.metodo_pago = 'transferencia'
              GROUP BY ct.id, ct.banco, ct.titular, ct.alias
              ORDER BY total DESC`,
-            [intervalo]
+            [desde, hasta]
         )
         res.json(resultado.rows)
     } catch (error) {
@@ -354,9 +399,8 @@ router.get('/transferencias-por-cuenta', async (req, res) => {
 // Fuente: items_venta (ver ITEMS_VENTA_CTE, mismo motivo que /top-productos).
 router.get('/ranking-productos', async (req, res) => {
     try {
-        const { periodo = 'mes', limite = 10 } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', limite = 10, mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         const top = await db.query(
             `${ITEMS_VENTA_CTE}
@@ -370,12 +414,12 @@ router.get('/ranking-productos', async (req, res) => {
              JOIN presentaciones pr ON iv.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'
              GROUP BY p.nombre, pr.nombre, m.nombre
              ORDER BY cantidad_vendida DESC
-             LIMIT $2`,
-            [intervalo, parseInt(limite)]
+             LIMIT $3`,
+            [desde, hasta, parseInt(limite)]
         )
 
         const bottom = await db.query(
@@ -389,12 +433,12 @@ router.get('/ranking-productos', async (req, res) => {
              JOIN presentaciones pr ON iv.presentacion_id = pr.id
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'
              GROUP BY p.nombre, pr.nombre, m.nombre
              ORDER BY cantidad_vendida ASC
-             LIMIT $2`,
-            [intervalo, parseInt(limite)]
+             LIMIT $3`,
+            [desde, hasta, parseInt(limite)]
         )
 
         res.json({ top: top.rows, bottom: bottom.rows })
@@ -405,9 +449,8 @@ router.get('/ranking-productos', async (req, res) => {
 
 router.get('/top-clientes', async (req, res) => {
     try {
-        const { periodo = 'mes', limite = 10 } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', limite = 10, mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         const resultado = await db.query(
             `SELECT
@@ -418,12 +461,12 @@ router.get('/top-clientes', async (req, res) => {
                 COALESCE(AVG(v.precio), 0) as ticket_promedio
              FROM ventas v
              LEFT JOIN clientes c ON v.cliente_id = c.id
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'
              GROUP BY c.nombre, v.razon_social, c.ruc, c.id
              ORDER BY total_comprado DESC
-             LIMIT $2`,
-            [intervalo, parseInt(limite)]
+             LIMIT $3`,
+            [desde, hasta, parseInt(limite)]
         )
         res.json(resultado.rows)
     } catch (error) {
@@ -434,9 +477,8 @@ router.get('/top-clientes', async (req, res) => {
 // Fuente: items_venta (ver ITEMS_VENTA_CTE, mismo motivo que /top-productos).
 router.get('/rentabilidad', async (req, res) => {
     try {
-        const { periodo = 'mes', agrupar = 'producto' } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', agrupar = 'producto', mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         let selectGroup, groupBy
 
@@ -475,11 +517,11 @@ router.get('/rentabilidad', async (req, res) => {
              JOIN productos p ON pr.producto_id = p.id
              LEFT JOIN marcas m ON p.marca_id = m.id
              LEFT JOIN categorias cat ON p.categoria_id = cat.id
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'
              GROUP BY ${groupBy}
              ORDER BY ganancia DESC`,
-            [intervalo]
+            [desde, hasta]
         )
 
         // Resumen total
@@ -502,9 +544,9 @@ router.get('/rentabilidad', async (req, res) => {
              FROM items_venta iv
              JOIN ventas v ON iv.venta_id = v.id
              JOIN presentaciones pr ON iv.presentacion_id = pr.id
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.estado != 'cancelado'`,
-            [intervalo]
+            [desde, hasta]
         )
 
         res.json({
@@ -518,14 +560,12 @@ router.get('/rentabilidad', async (req, res) => {
 
 router.get('/metricas', async (req, res) => {
     try {
-        const { periodo = 'mes', canal, marca_id, categoria_id } = req.query
+        const { periodo = 'mes', canal, marca_id, categoria_id, mes, anio, fecha_desde, fecha_hasta } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio, fecha_desde, fecha_hasta)
 
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '30 days'
-
-        let condiciones = [`v.created_at >= NOW() - ($1::interval)`, `v.estado != 'cancelado'`]
-        let valores = [intervalo]
-        let i = 2
+        let condiciones = [`v.created_at >= $1`, `v.created_at < $2`, `v.estado != 'cancelado'`]
+        let valores = [desde, hasta]
+        let i = 3
 
         if (canal) {
             const mapCanal = {
@@ -562,72 +602,64 @@ router.get('/metricas', async (req, res) => {
 
 router.get('/comparativas', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-
-        const PY = `NOW() AT TIME ZONE 'America/Asuncion'`
-        let intervaloActual, intervaloAnterior
-        if (periodo === 'semana') {
-            intervaloActual = `DATE_TRUNC('week', ${PY}) AT TIME ZONE 'America/Asuncion'`
-            intervaloAnterior = `DATE_TRUNC('week', ${PY}) AT TIME ZONE 'America/Asuncion' - INTERVAL '7 days'`
-        } else if (periodo === 'anual') {
-            intervaloActual = `DATE_TRUNC('year', ${PY}) AT TIME ZONE 'America/Asuncion'`
-            intervaloAnterior = `DATE_TRUNC('year', ${PY}) AT TIME ZONE 'America/Asuncion' - INTERVAL '1 year'`
-        } else {
-            intervaloActual = `DATE_TRUNC('month', ${PY}) AT TIME ZONE 'America/Asuncion'`
-            intervaloAnterior = `DATE_TRUNC('month', ${PY}) AT TIME ZONE 'America/Asuncion' - INTERVAL '1 month'`
-        }
+        const { periodo = 'mes', mes, anio } = req.query
+        const { desde, hasta, desdeAnterior, hastaAnterior } = rangoPeriodo(periodo, mes, anio)
 
         // Ventas período actual vs anterior
         const ventasActual = await db.query(
             `SELECT COUNT(*) as cantidad, COALESCE(SUM(precio), 0) as total
              FROM ventas
-             WHERE created_at >= ${intervaloActual}
-             AND estado != 'cancelado'`
+             WHERE created_at >= $1 AND created_at < $2
+             AND estado != 'cancelado'`,
+            [desde, hasta]
         )
         const ventasAnterior = await db.query(
             `SELECT COUNT(*) as cantidad, COALESCE(SUM(precio), 0) as total
              FROM ventas
-             WHERE created_at >= ${intervaloAnterior}
-             AND created_at < ${intervaloActual}
-             AND estado != 'cancelado'`
+             WHERE created_at >= $1 AND created_at < $2
+             AND estado != 'cancelado'`,
+            [desdeAnterior, hastaAnterior]
         )
 
         // Nuevos clientes — primera compra en período actual vs anterior
         const nuevosActual = await db.query(
             `SELECT COUNT(DISTINCT v.cliente_id) as cantidad
              FROM ventas v
-             WHERE v.created_at >= ${intervaloActual}
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.cliente_id IS NOT NULL
              AND v.estado != 'cancelado'
              AND NOT EXISTS (
                  SELECT 1 FROM ventas v2
                  WHERE v2.cliente_id = v.cliente_id
-                 AND v2.created_at < ${intervaloActual}
+                 AND v2.created_at < $1
                  AND v2.estado != 'cancelado'
-             )`
+             )`,
+            [desde, hasta]
         )
         const nuevosAnterior = await db.query(
             `SELECT COUNT(DISTINCT v.cliente_id) as cantidad
              FROM ventas v
-             WHERE v.created_at >= ${intervaloAnterior}
-             AND v.created_at < ${intervaloActual}
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.cliente_id IS NOT NULL
              AND v.estado != 'cancelado'
              AND NOT EXISTS (
                  SELECT 1 FROM ventas v2
                  WHERE v2.cliente_id = v.cliente_id
-                 AND v2.created_at < ${intervaloAnterior}
+                 AND v2.created_at < $1
                  AND v2.estado != 'cancelado'
-             )`
+             )`,
+            [desdeAnterior, hastaAnterior]
         )
 
-        // Promedio diario del período anterior para comparar con hoy
+        // Ventas de hoy vs el promedio diario del período anterior
+        const hoyInicio = new Date(); hoyInicio.setHours(0, 0, 0, 0)
+        const hoyFin = new Date(hoyInicio.getTime() + 86400000)
         const hoy = await db.query(
             `SELECT COALESCE(SUM(precio), 0) as total, COUNT(*) as cantidad
              FROM ventas
-             WHERE created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'
-             AND created_at < DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion' + INTERVAL '1 day'
-             AND estado != 'cancelado'`
+             WHERE created_at >= $1 AND created_at < $2
+             AND estado != 'cancelado'`,
+            [hoyInicio, hoyFin]
         )
         const promedioDiario = await db.query(
             `SELECT COALESCE(AVG(total_dia), 0) as promedio, COALESCE(AVG(cantidad_dia), 0) as promedio_cantidad
@@ -636,11 +668,11 @@ router.get('/comparativas', async (req, res) => {
                         SUM(precio) as total_dia,
                         COUNT(*) as cantidad_dia
                  FROM ventas
-                 WHERE created_at >= ${intervaloAnterior}
-                 AND created_at < ${intervaloActual}
+                 WHERE created_at >= $1 AND created_at < $2
                  AND estado != 'cancelado'
                  GROUP BY DATE(created_at)
-             ) dias`
+             ) dias`,
+            [desdeAnterior, hastaAnterior]
         )
 
         // Calcular % de cambio
@@ -686,9 +718,8 @@ router.get('/comparativas', async (req, res) => {
 // Estadísticas de delivery por zona
 router.get('/delivery-zonas', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query 
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', mes, anio, fecha_desde, fecha_hasta } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio, fecha_desde, fecha_hasta)
 
         // Pedidos y recaudación por zona
         const porZona = await db.query(
@@ -699,11 +730,11 @@ router.get('/delivery-zonas', async (req, res) => {
                 COALESCE(SUM(v.precio), 0) as total_ventas
             FROM deliveries d
             JOIN ventas v ON d.venta_id = v.id
-            WHERE d.created_at >= NOW() - ($1::interval)
+            WHERE d.created_at >= $1 AND d.created_at < $2
             AND d.estado != 'cancelado'
             GROUP BY v.zona_delivery
             ORDER BY cantidad_pedidos DESC`,
-            [intervalo]
+            [desde, hasta]
         )
 
         // Clientes por zona (ciudad)
@@ -733,9 +764,9 @@ router.get('/delivery-zonas', async (req, res) => {
             `SELECT COALESCE(SUM(v.costo_delivery), 0) as total
             FROM ventas v
             JOIN deliveries d ON v.id = d.venta_id
-            WHERE d.created_at >= NOW() - ($1::interval)
+            WHERE d.created_at >= $1 AND d.created_at < $2
             AND d.estado != 'cancelado'`,
-            [intervalo]
+            [desde, hasta]
         )
 
         res.json({
@@ -867,57 +898,53 @@ router.get('/delivery-ganancias', async (req, res) => {
 
 router.get('/clientes-retencion', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
-        const intervalo = intervalos[periodo] || '30 days'
-        const intervaloAnterior = intervalo === '7 days' ? '14 days' : intervalo === '30 days' ? '60 days' : '730 days'
+        const { periodo = 'mes', mes, anio } = req.query
+        const { desde, hasta, desdeAnterior, hastaAnterior } = rangoPeriodo(periodo, mes, anio)
 
         const activos = await db.query(
             `SELECT COUNT(DISTINCT cliente_id) as cantidad FROM ventas
-             WHERE created_at >= NOW() - ($1::interval)
+             WHERE created_at >= $1 AND created_at < $2
              AND cliente_id IS NOT NULL AND estado != 'cancelado'`,
-            [intervalo]
+            [desde, hasta]
         )
 
         const retenidos = await db.query(
             `SELECT COUNT(DISTINCT v1.cliente_id) as cantidad FROM ventas v1
-             WHERE v1.created_at >= NOW() - ($1::interval)
+             WHERE v1.created_at >= $1 AND v1.created_at < $2
              AND v1.cliente_id IS NOT NULL AND v1.estado != 'cancelado'
              AND EXISTS (
                  SELECT 1 FROM ventas v2
                  WHERE v2.cliente_id = v1.cliente_id
-                 AND v2.created_at >= NOW() - ($2::interval)
-                 AND v2.created_at < NOW() - ($1::interval)
+                 AND v2.created_at >= $3 AND v2.created_at < $4
                  AND v2.estado != 'cancelado'
              )`,
-            [intervalo, intervaloAnterior]
+            [desde, hasta, desdeAnterior, hastaAnterior]
         )
 
         const nuevos = await db.query(
             `SELECT COUNT(DISTINCT v.cliente_id) as cantidad FROM ventas v
-             WHERE v.created_at >= NOW() - ($1::interval)
+             WHERE v.created_at >= $1 AND v.created_at < $2
              AND v.cliente_id IS NOT NULL AND v.estado != 'cancelado'
              AND NOT EXISTS (
                  SELECT 1 FROM ventas v2
                  WHERE v2.cliente_id = v.cliente_id
-                 AND v2.created_at < NOW() - ($1::interval)
+                 AND v2.created_at < $1
                  AND v2.estado != 'cancelado'
              )`,
-            [intervalo]
+            [desde, hasta]
         )
 
         const perdidos = await db.query(
             `SELECT COUNT(DISTINCT v.cliente_id) as cantidad FROM ventas v
-             WHERE v.created_at >= NOW() - ($2::interval)
-             AND v.created_at < NOW() - ($1::interval)
+             WHERE v.created_at >= $3 AND v.created_at < $4
              AND v.cliente_id IS NOT NULL AND v.estado != 'cancelado'
              AND NOT EXISTS (
                  SELECT 1 FROM ventas v2
                  WHERE v2.cliente_id = v.cliente_id
-                 AND v2.created_at >= NOW() - ($1::interval)
+                 AND v2.created_at >= $1 AND v2.created_at < $2
                  AND v2.estado != 'cancelado'
              )`,
-            [intervalo, intervaloAnterior]
+            [desde, hasta, desdeAnterior, hastaAnterior]
         )
 
         const totalActivos = parseInt(activos.rows[0].cantidad)
@@ -1052,9 +1079,8 @@ router.get('/stock-muerto', async (req, res) => {
 // Rotacion de inventario: cuantas veces "roto" el stock actual segun ventas del periodo
 router.get('/rotacion-inventario', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         const resultado = await db.query(
             `WITH periodo_ventas AS (
@@ -1068,7 +1094,7 @@ router.get('/rotacion-inventario', async (req, res) => {
                     WHERE v.estado != 'cancelado' AND v.presentacion_id IS NOT NULL
                       AND NOT EXISTS (SELECT 1 FROM ventas_items vi2 WHERE vi2.venta_id = v.id)
                 ) u
-                WHERE fecha >= NOW() - ($1::interval)
+                WHERE fecha >= $1 AND fecha < $2
             ),
             agregado AS (
                 SELECT presentacion_id, SUM(cantidad) as cantidad_vendida
@@ -1084,7 +1110,7 @@ router.get('/rotacion-inventario', async (req, res) => {
             LEFT JOIN marcas m ON p.marca_id = m.id
             WHERE pr.stock > 0
             ORDER BY veces_rotado DESC`,
-            [intervalo]
+            [desde, hasta]
         )
 
         res.json({
@@ -1099,9 +1125,8 @@ router.get('/rotacion-inventario', async (req, res) => {
 // Efectividad de precio especial (descuentos aplicados en Caja)
 router.get('/precio-especial', async (req, res) => {
     try {
-        const { periodo = 'mes' } = req.query
-        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
-        const intervalo = intervalos[periodo] || '30 days'
+        const { periodo = 'mes', mes, anio } = req.query
+        const { desde, hasta } = rangoPeriodo(periodo, mes, anio)
 
         const resumen = await db.query(
             `SELECT
@@ -1111,8 +1136,8 @@ router.get('/precio-especial', async (req, res) => {
                 COALESCE(SUM(vi.precio_total) FILTER (WHERE vi.es_precio_especial), 0) as monto_vendido_con_descuento
              FROM ventas_items vi
              JOIN ventas v ON vi.venta_id = v.id
-             WHERE v.estado != 'cancelado' AND v.created_at >= NOW() - ($1::interval)`,
-            [intervalo]
+             WHERE v.estado != 'cancelado' AND v.created_at >= $1 AND v.created_at < $2`,
+            [desde, hasta]
         )
 
         const porAgente = await db.query(
@@ -1122,11 +1147,11 @@ router.get('/precio-especial', async (req, res) => {
              JOIN ventas v ON vi.venta_id = v.id
              LEFT JOIN usuarios u ON u.id = v.agente_id
              WHERE vi.es_precio_especial AND vi.diferencial_precio > 0
-               AND v.estado != 'cancelado' AND v.created_at >= NOW() - ($1::interval)
+               AND v.estado != 'cancelado' AND v.created_at >= $1 AND v.created_at < $2
              GROUP BY v.agente_id, u.nombre
              ORDER BY total_descontado DESC
              LIMIT 10`,
-            [intervalo]
+            [desde, hasta]
         )
 
         res.json({ resumen: resumen.rows[0], por_agente: porAgente.rows })

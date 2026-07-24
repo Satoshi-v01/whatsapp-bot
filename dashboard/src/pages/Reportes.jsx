@@ -33,6 +33,10 @@ function Reportes() {
     }
 
     const [periodo, setPeriodo] = useState('mes')
+    const ahora = new Date()
+    const [mesSel, setMesSel] = useState(ahora.getMonth() + 1)
+    const [anioSel, setAnioSel] = useState(ahora.getFullYear())
+    const paramsPeriodo = () => periodo === 'mes' ? { periodo, mes: mesSel, anio: anioSel } : { periodo }
     const [canal, setCanal] = useState('')
     const [marcaId, setMarcaId] = useState('')
     const [categoriaId, setCategoriaId] = useState('')
@@ -66,20 +70,20 @@ function Reportes() {
     useEffect(() => {
         getRfm().then(setRfm).catch(() => {})
         getHistorialPrecios().then(setHistorialPrecios).catch(() => {})
-        getRotacionInventario({ periodo }).then(setRotacionInventario).catch(() => {})
-        getPrecioEspecialEfectividad({ periodo }).then(setPrecioEspecial).catch(() => {})
+        getRotacionInventario(paramsPeriodo()).then(setRotacionInventario).catch(() => {})
+        getPrecioEspecialEfectividad(paramsPeriodo()).then(setPrecioEspecial).catch(() => {})
         getCarritosAbandonados().then(setCarritosAbandonados).catch(() => {})
-    }, [periodo])
+    }, [periodo, mesSel, anioSel])
 
     useEffect(() => {
         getStockMuerto({ dias: diasStockMuerto }).then(setStockMuerto).catch(() => {})
     }, [diasStockMuerto])
 
     useEffect(() => { cargarFiltros() }, [])
-    useEffect(() => { cargarDatos() }, [periodo, canal, marcaId, categoriaId])
+    useEffect(() => { cargarDatos() }, [periodo, mesSel, anioSel, canal, marcaId, categoriaId])
     useEffect(() => {
         if (rentabilidad) {
-            getRentabilidad({ periodo, agrupar: agruparRentabilidad }).then(setRentabilidad).catch(() => {})
+            getRentabilidad({ ...paramsPeriodo(), agrupar: agruparRentabilidad }).then(setRentabilidad).catch(() => {})
         }
     }, [agruparRentabilidad])
 
@@ -93,17 +97,17 @@ function Reportes() {
     async function cargarDatos() {
         try {
             setCargando(true)
-            const params = { periodo }
+            const params = { ...paramsPeriodo() }
             if (canal) params.canal = canal
             if (marcaId) params.marca_id = marcaId
             if (categoriaId) params.categoria_id = categoriaId
             const [met, dias, canales, ranking, clientes, delZonas, comp, ret, rent, transfCuentas] = await Promise.all([
-                getMetricas(params), getVentasPorDia({ periodo, canal }),
-                getVentasPorCanal({ periodo }), getRankingProductos({ periodo }),
-                getTopClientes({ periodo }), getDeliveryZonas({ periodo }),
-                getComparativas({ periodo }), getClientesRetencion({ periodo }),
-                getRentabilidad({ periodo, agrupar: agruparRentabilidad }),
-                getTransferenciasPorCuenta({ periodo })
+                getMetricas(params), getVentasPorDia({ ...paramsPeriodo(), canal }),
+                getVentasPorCanal(paramsPeriodo()), getRankingProductos(paramsPeriodo()),
+                getTopClientes(paramsPeriodo()), getDeliveryZonas(paramsPeriodo()),
+                getComparativas(paramsPeriodo()), getClientesRetencion(paramsPeriodo()),
+                getRentabilidad({ ...paramsPeriodo(), agrupar: agruparRentabilidad }),
+                getTransferenciasPorCuenta(paramsPeriodo())
             ])
             setMetricas(met); setVentasPorDia(dias); setVentasPorCanal(canales)
             setRankingProductos(ranking); setTopClientes(clientes); setDeliveryZonas(delZonas)
@@ -334,6 +338,20 @@ function Reportes() {
                                     </button>
                                 ))}
                             </div>
+                            {periodo === 'mes' && (
+                                <div className="mt-2 flex gap-1.5">
+                                    <select value={mesSel} onChange={e => setMesSel(parseInt(e.target.value))} className={`${inputCls} py-1.5`}>
+                                        {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+                                            <option key={i} value={i + 1}>{m}</option>
+                                        ))}
+                                    </select>
+                                    <select value={anioSel} onChange={e => setAnioSel(parseInt(e.target.value))} className={`${inputCls} py-1.5`}>
+                                        {Array.from({ length: 5 }, (_, i) => ahora.getFullYear() - i).map(a => (
+                                            <option key={a} value={a}>{a}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className={labelCls}>Canal</label>
