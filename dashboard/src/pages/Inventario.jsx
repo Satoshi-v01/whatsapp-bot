@@ -18,8 +18,9 @@ import { formatearFecha } from '../utils/fecha'
 import { getLotesPresentacion, crearLote, eliminarLote } from '../services/lotes'
 import { formatearCalidad, formatMiles, parseMiles } from '../utils/formato'
 import { registrarTransformacion } from '../services/transformaciones'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'mb-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const inputCls = 'mb-2.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 const btnPrimarioCls = 'inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4.5 py-2.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
 const btnSecundarioCls = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4.5 py-2.5 text-[13px] font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700/60'
@@ -1030,11 +1031,14 @@ function colorVencimiento(diasParaVencer) {
                                 />
                             </div>
                             <label className={labelCls}>Comportamiento</label>
-                            <select value={nuevaSeccion.tipo} onChange={e => setNuevaSeccion({ ...nuevaSeccion, tipo: e.target.value })} className={`${inputCls} mb-2`}>
-                                <option value="generico">Genérico — solo categoría (como Medicamentos)</option>
-                                <option value="con_especie">Con especie — categoría + especie (como Accesorios)</option>
-                                <option value="con_calidad_especie">Con calidad y especie — subcategoría + calidad + especie (como Balanceados)</option>
-                            </select>
+                            <Select value={nuevaSeccion.tipo} onValueChange={v => setNuevaSeccion({ ...nuevaSeccion, tipo: v })}>
+                                <SelectTrigger className="mb-2"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="generico">Genérico — solo categoría (como Medicamentos)</SelectItem>
+                                    <SelectItem value="con_especie">Con especie — categoría + especie (como Accesorios)</SelectItem>
+                                    <SelectItem value="con_calidad_especie">Con calidad y especie — subcategoría + calidad + especie (como Balanceados)</SelectItem>
+                                </SelectContent>
+                            </Select>
                             {nuevaSeccion.nombre && (
                                 <p className="mb-2 text-[11px] text-slate-400 dark:text-slate-500">
                                     Slug: <strong className="font-mono text-slate-900 dark:text-slate-100">{toSlug(nuevaSeccion.nombre)}</strong>
@@ -1064,11 +1068,14 @@ function colorVencimiento(diasParaVencer) {
                                                     className="h-[38px] w-[38px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-transparent p-0.5 dark:border-slate-700"
                                                 />
                                             </div>
-                                            <select value={editandoSeccion.tipo} onChange={e => setEditandoSeccion({ ...editandoSeccion, tipo: e.target.value })} className={`${inputCls} mb-0`}>
-                                                <option value="generico">Genérico (como Medicamentos)</option>
-                                                <option value="con_especie">Con especie (como Accesorios)</option>
-                                                <option value="con_calidad_especie">Con calidad y especie (como Balanceados)</option>
-                                            </select>
+                                            <Select value={editandoSeccion.tipo} onValueChange={v => setEditandoSeccion({ ...editandoSeccion, tipo: v })}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="generico">Genérico (como Medicamentos)</SelectItem>
+                                                    <SelectItem value="con_especie">Con especie (como Accesorios)</SelectItem>
+                                                    <SelectItem value="con_calidad_especie">Con calidad y especie (como Balanceados)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <div className="flex gap-1.5">
                                                 <button onClick={() => handleEditarSeccion(editandoSeccion)} className={`${btnPrimarioCls} flex-1 px-3 py-2 text-xs`}>Guardar</button>
                                                 <button onClick={() => setEditandoSeccion(null)} className={`${btnSecundarioCls} px-2.5 py-2 text-xs`}>✕</button>
@@ -1131,17 +1138,23 @@ function colorVencimiento(diasParaVencer) {
                         {!nuevoProducto.seccion_inventario && (
                             <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3.5 py-2.5 dark:bg-red-950/30">
                                 <label className={`${labelCls} mb-2 text-red-600`}>Categoria del producto</label>
-                                <select value={nuevoProducto.seccion_inventario} onChange={e => setNuevoProducto({ ...nuevoProducto, seccion_inventario: e.target.value })} className={`${inputCls} mb-0 border-red-300`}>
-                                    <option value="">-- Seleccionar --</option>
-                                    {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
-                                </select>
+                                <Select value={nuevoProducto.seccion_inventario} onValueChange={v => setNuevoProducto({ ...nuevoProducto, seccion_inventario: v })}>
+                                    <SelectTrigger className="mb-0 border-red-300"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">-- Seleccionar --</SelectItem>
+                                        {secciones.map(s => <SelectItem key={s.slug} value={s.slug}>{s.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         )}
                         <label className={labelCls}>Marca</label>
-                        <select value={nuevoProducto.marca_id} onChange={e => setNuevoProducto({ ...nuevoProducto, marca_id: e.target.value })} className={inputCls}>
-                            <option value="">Sin marca</option>
-                            {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                        </select>
+                        <Select value={String(nuevoProducto.marca_id)} onValueChange={v => setNuevoProducto({ ...nuevoProducto, marca_id: v })}>
+                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Sin marca</SelectItem>
+                                {marcas.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         <label className={labelCls}>Nombre</label>
                         <input value={nuevoProducto.nombre} onChange={e => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })} className={inputCls} />
                         <label className={labelCls}>SKU (codigo interno)</label>
@@ -1155,54 +1168,72 @@ function colorVencimiento(diasParaVencer) {
                                 <div className="grid grid-cols-2 gap-x-3">
                                     <div>
                                         <label className={labelCls}>Calidad</label>
-                                        <select value={nuevoProducto.calidad} onChange={e => setNuevoProducto({ ...nuevoProducto, calidad: e.target.value })} className={inputCls}>
-                                            <option value="standard">Standard</option>
-                                            <option value="premium">Premium</option>
-                                            <option value="premium_special">Premium Special</option>
-                                            <option value="super_premium">Super Premium</option>
-                                        </select>
+                                        <Select value={nuevoProducto.calidad} onValueChange={v => setNuevoProducto({ ...nuevoProducto, calidad: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="standard">Standard</SelectItem>
+                                                <SelectItem value="premium">Premium</SelectItem>
+                                                <SelectItem value="premium_special">Premium Special</SelectItem>
+                                                <SelectItem value="super_premium">Super Premium</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className={labelCls}>Especie</label>
-                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} className={inputCls}>
-                                            <option value="">Sin especificar</option>
-                                            <option value="perro">Perro</option>
-                                            <option value="gato">Gato</option>
-                                            <option value="ambos">Perro y Gato</option>
-                                        </select>
+                                        <Select value={nuevoProducto.especie} onValueChange={v => setNuevoProducto({ ...nuevoProducto, especie: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Sin especificar</SelectItem>
+                                                <SelectItem value="perro">Perro</SelectItem>
+                                                <SelectItem value="gato">Gato</SelectItem>
+                                                <SelectItem value="ambos">Perro y Gato</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                                 <label className={labelCls}>Subcategoria (tamaño)</label>
-                                <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} className={inputCls}>
-                                    <option value="">Sin subcategoria</option>
-                                    {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
-                                </select>
+                                <Select value={String(nuevoProducto.subcategoria_id)} onValueChange={v => setNuevoProducto({ ...nuevoProducto, subcategoria_id: v })}>
+                                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Sin subcategoria</SelectItem>
+                                        {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </>
                         )}
 
                         {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_especie' && (
                             <>
                                 <label className={labelCls}>Categoria</label>
-                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} className={inputCls}>
-                                    <option value="">Sin categoria</option>
-                                    {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                                </select>
+                                <Select value={String(nuevoProducto.categoria_id)} onValueChange={v => setNuevoProducto({ ...nuevoProducto, categoria_id: v })}>
+                                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Sin categoria</SelectItem>
+                                        {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                                 <div className="grid grid-cols-2 gap-x-3">
                                     <div>
                                         <label className={labelCls}>Especie</label>
-                                        <select value={nuevoProducto.especie} onChange={e => setNuevoProducto({ ...nuevoProducto, especie: e.target.value })} className={inputCls}>
-                                            <option value="">Sin especificar</option>
-                                            <option value="perro">Perro</option>
-                                            <option value="gato">Gato</option>
-                                            <option value="ambos">Perro y Gato</option>
-                                        </select>
+                                        <Select value={nuevoProducto.especie} onValueChange={v => setNuevoProducto({ ...nuevoProducto, especie: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Sin especificar</SelectItem>
+                                                <SelectItem value="perro">Perro</SelectItem>
+                                                <SelectItem value="gato">Gato</SelectItem>
+                                                <SelectItem value="ambos">Perro y Gato</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className={labelCls}>Tamaño</label>
-                                        <select value={nuevoProducto.subcategoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, subcategoria_id: e.target.value })} className={inputCls}>
-                                            <option value="">Sin tamaño</option>
-                                            {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
-                                        </select>
+                                        <Select value={String(nuevoProducto.subcategoria_id)} onValueChange={v => setNuevoProducto({ ...nuevoProducto, subcategoria_id: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Sin tamaño</SelectItem>
+                                                {subcatsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nombre}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </>
@@ -1211,10 +1242,13 @@ function colorVencimiento(diasParaVencer) {
                         {getTipoSeccion(nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'generico' && (nuevoProducto.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) && (
                             <>
                                 <label className={labelCls}>Categoría</label>
-                                <select value={nuevoProducto.categoria_id} onChange={e => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })} className={inputCls}>
-                                    <option value="">Sin categoría</option>
-                                    {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                                </select>
+                                <Select value={String(nuevoProducto.categoria_id)} onValueChange={v => setNuevoProducto({ ...nuevoProducto, categoria_id: v })}>
+                                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Sin categoría</SelectItem>
+                                        {catsPara(nuevoProducto.seccion_inventario || pestanaActiva).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </>
                         )}
 
@@ -1236,17 +1270,23 @@ function colorVencimiento(diasParaVencer) {
                         {!editarForm.seccion_inventario && (
                             <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3.5 py-2.5 dark:bg-red-950/30">
                                 <label className={`${labelCls} mb-2 text-red-600`}>Asignar categoria del producto</label>
-                                <select value={editarForm.seccion_inventario} onChange={e => setEditarForm({ ...editarForm, seccion_inventario: e.target.value })} className={`${inputCls} mb-0 border-red-300`}>
-                                    <option value="">-- Seleccionar --</option>
-                                    {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
-                                </select>
+                                <Select value={editarForm.seccion_inventario} onValueChange={v => setEditarForm({ ...editarForm, seccion_inventario: v })}>
+                                    <SelectTrigger className="mb-0 border-red-300"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">-- Seleccionar --</SelectItem>
+                                        {secciones.map(s => <SelectItem key={s.slug} value={s.slug}>{s.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         )}
                         <label className={labelCls}>Marca</label>
-                        <select value={editarForm.marca_id} onChange={e => setEditarForm({ ...editarForm, marca_id: e.target.value })} className={inputCls}>
-                            <option value="">Sin marca</option>
-                            {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                        </select>
+                        <Select value={String(editarForm.marca_id)} onValueChange={v => setEditarForm({ ...editarForm, marca_id: v })}>
+                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Sin marca</SelectItem>
+                                {marcas.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         <label className={labelCls}>Nombre</label>
                         <input value={editarForm.nombre} onChange={e => setEditarForm({ ...editarForm, nombre: e.target.value })} className={inputCls} />
                         <label className={labelCls}>SKU (codigo interno)</label>
@@ -1259,54 +1299,72 @@ function colorVencimiento(diasParaVencer) {
                                 <div className="grid grid-cols-2 gap-x-3">
                                     <div>
                                         <label className={labelCls}>Calidad</label>
-                                        <select value={editarForm.calidad} onChange={e => setEditarForm({ ...editarForm, calidad: e.target.value })} className={inputCls}>
-                                            <option value="standard">Standard</option>
-                                            <option value="premium">Premium</option>
-                                            <option value="premium_special">Premium Special</option>
-                                            <option value="super_premium">Super Premium</option>
-                                        </select>
+                                        <Select value={editarForm.calidad} onValueChange={v => setEditarForm({ ...editarForm, calidad: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="standard">Standard</SelectItem>
+                                                <SelectItem value="premium">Premium</SelectItem>
+                                                <SelectItem value="premium_special">Premium Special</SelectItem>
+                                                <SelectItem value="super_premium">Super Premium</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className={labelCls}>Especie</label>
-                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} className={inputCls}>
-                                            <option value="">Sin especificar</option>
-                                            <option value="perro">Perro</option>
-                                            <option value="gato">Gato</option>
-                                            <option value="ambos">Perro y Gato</option>
-                                        </select>
+                                        <Select value={editarForm.especie} onValueChange={v => setEditarForm({ ...editarForm, especie: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Sin especificar</SelectItem>
+                                                <SelectItem value="perro">Perro</SelectItem>
+                                                <SelectItem value="gato">Gato</SelectItem>
+                                                <SelectItem value="ambos">Perro y Gato</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                                 <label className={labelCls}>Subcategoria (tamaño)</label>
-                                <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} className={inputCls}>
-                                    <option value="">Sin subcategoria</option>
-                                    {subcatsPara(editarForm.seccion_inventario).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
-                                </select>
+                                <Select value={String(editarForm.subcategoria_id)} onValueChange={v => setEditarForm({ ...editarForm, subcategoria_id: v })}>
+                                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Sin subcategoria</SelectItem>
+                                        {subcatsPara(editarForm.seccion_inventario).map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </>
                         )}
 
                         {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'con_especie' && (
                             <>
                                 <label className={labelCls}>Categoria</label>
-                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} className={inputCls}>
-                                    <option value="">Sin categoria</option>
-                                    {catsPara(editarForm.seccion_inventario).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                                </select>
+                                <Select value={String(editarForm.categoria_id)} onValueChange={v => setEditarForm({ ...editarForm, categoria_id: v })}>
+                                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Sin categoria</SelectItem>
+                                        {catsPara(editarForm.seccion_inventario).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                                 <div className="grid grid-cols-2 gap-x-3">
                                     <div>
                                         <label className={labelCls}>Especie</label>
-                                        <select value={editarForm.especie} onChange={e => setEditarForm({ ...editarForm, especie: e.target.value })} className={inputCls}>
-                                            <option value="">Sin especificar</option>
-                                            <option value="perro">Perro</option>
-                                            <option value="gato">Gato</option>
-                                            <option value="ambos">Perro y Gato</option>
-                                        </select>
+                                        <Select value={editarForm.especie} onValueChange={v => setEditarForm({ ...editarForm, especie: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Sin especificar</SelectItem>
+                                                <SelectItem value="perro">Perro</SelectItem>
+                                                <SelectItem value="gato">Gato</SelectItem>
+                                                <SelectItem value="ambos">Perro y Gato</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className={labelCls}>Tamaño</label>
-                                        <select value={editarForm.subcategoria_id} onChange={e => setEditarForm({ ...editarForm, subcategoria_id: e.target.value })} className={inputCls}>
-                                            <option value="">Sin tamaño</option>
-                                            {subcatsPara(editarForm.seccion_inventario).map(sub => <option key={sub.id} value={sub.id}>{sub.nombre}</option>)}
-                                        </select>
+                                        <Select value={String(editarForm.subcategoria_id)} onValueChange={v => setEditarForm({ ...editarForm, subcategoria_id: v })}>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Sin tamaño</SelectItem>
+                                                {subcatsPara(editarForm.seccion_inventario).map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nombre}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </>
@@ -1315,10 +1373,13 @@ function colorVencimiento(diasParaVencer) {
                         {getTipoSeccion(editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) === 'generico' && (editarForm.seccion_inventario || (pestanaActiva !== 'sin_categoria' ? pestanaActiva : '')) && (
                             <>
                                 <label className={labelCls}>Categoría</label>
-                                <select value={editarForm.categoria_id} onChange={e => setEditarForm({ ...editarForm, categoria_id: e.target.value })} className={inputCls}>
-                                    <option value="">Sin categoría</option>
-                                    {catsPara(editarForm.seccion_inventario || pestanaActiva).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                                </select>
+                                <Select value={String(editarForm.categoria_id)} onValueChange={v => setEditarForm({ ...editarForm, categoria_id: v })}>
+                                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Sin categoría</SelectItem>
+                                        {catsPara(editarForm.seccion_inventario || pestanaActiva).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </>
                         )}
 
@@ -1490,15 +1551,18 @@ function colorVencimiento(diasParaVencer) {
                             <input placeholder="Descripción (opcional)" value={nuevaSubcategoria.descripcion} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, descripcion: e.target.value })} className={inputCls} />
                             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Vinculación Tienda Web</p>
                             <div className="grid grid-cols-3 gap-2">
-                                <select value={nuevaSubcategoria.ecommerce_categoria} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_categoria: e.target.value })} className={`${inputCls} mb-0 text-xs`}>
-                                    <option value="">Cat. web</option>
-                                    <option value="perros">Perros</option>
-                                    <option value="gatos">Gatos</option>
-                                    <option value="medicamentos">Medicamentos</option>
-                                    <option value="accesorios">Accesorios</option>
-                                    <option value="cuidado">Cuidado</option>
-                                    <option value="ofertas">Ofertas</option>
-                                </select>
+                                <Select value={nuevaSubcategoria.ecommerce_categoria} onValueChange={v => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_categoria: v })}>
+                                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Cat. web</SelectItem>
+                                        <SelectItem value="perros">Perros</SelectItem>
+                                        <SelectItem value="gatos">Gatos</SelectItem>
+                                        <SelectItem value="medicamentos">Medicamentos</SelectItem>
+                                        <SelectItem value="accesorios">Accesorios</SelectItem>
+                                        <SelectItem value="cuidado">Cuidado</SelectItem>
+                                        <SelectItem value="ofertas">Ofertas</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <input placeholder="Filtro (ej: etapa_vida)" value={nuevaSubcategoria.ecommerce_campo} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_campo: e.target.value })} className={`${inputCls} mb-0 font-mono text-xs`} />
                                 <input placeholder="Valor (ej: adulto)" value={nuevaSubcategoria.ecommerce_valor} onChange={e => setNuevaSubcategoria({ ...nuevaSubcategoria, ecommerce_valor: e.target.value })} className={`${inputCls} mb-0 font-mono text-xs`} />
                             </div>
@@ -1513,15 +1577,18 @@ function colorVencimiento(diasParaVencer) {
                                             <input value={editandoSubcategoria.descripcion || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, descripcion: e.target.value })} placeholder="Descripción" className={inputCls} />
                                             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Vinculación Tienda Web</p>
                                             <div className="mb-2.5 grid grid-cols-3 gap-2">
-                                                <select value={editandoSubcategoria.ecommerce_categoria || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_categoria: e.target.value })} className={`${inputCls} mb-0 text-xs`}>
-                                                    <option value="">Cat. web</option>
-                                                    <option value="perros">Perros</option>
-                                                    <option value="gatos">Gatos</option>
-                                                    <option value="medicamentos">Medicamentos</option>
-                                                    <option value="accesorios">Accesorios</option>
-                                                    <option value="cuidado">Cuidado</option>
-                                                    <option value="ofertas">Ofertas</option>
-                                                </select>
+                                                <Select value={editandoSubcategoria.ecommerce_categoria || ''} onValueChange={v => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_categoria: v })}>
+                                                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="">Cat. web</SelectItem>
+                                                        <SelectItem value="perros">Perros</SelectItem>
+                                                        <SelectItem value="gatos">Gatos</SelectItem>
+                                                        <SelectItem value="medicamentos">Medicamentos</SelectItem>
+                                                        <SelectItem value="accesorios">Accesorios</SelectItem>
+                                                        <SelectItem value="cuidado">Cuidado</SelectItem>
+                                                        <SelectItem value="ofertas">Ofertas</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                                 <input value={editandoSubcategoria.ecommerce_campo || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_campo: e.target.value })} placeholder="Filtro" className={`${inputCls} mb-0 font-mono text-xs`} />
                                                 <input value={editandoSubcategoria.ecommerce_valor || ''} onChange={e => setEditandoSubcategoria({ ...editandoSubcategoria, ecommerce_valor: e.target.value })} placeholder="Valor" className={`${inputCls} mb-0 font-mono text-xs`} />
                                             </div>
@@ -1571,10 +1638,13 @@ function colorVencimiento(diasParaVencer) {
                             <input placeholder="Nombre" value={nuevaCategoria.nombre} onChange={e => setNuevaCategoria({ ...nuevaCategoria, nombre: e.target.value })} className={inputCls} />
                             <input placeholder="Descripción (opcional)" value={nuevaCategoria.descripcion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, descripcion: e.target.value })} className={inputCls} />
                             <label className={labelCls}>Sección</label>
-                            <select value={nuevaCategoria.seccion} onChange={e => setNuevaCategoria({ ...nuevaCategoria, seccion: e.target.value })} className={`${inputCls} mb-0`}>
-                                <option value="">General (todas las secciones)</option>
-                                {secciones.map(s => <option key={s.slug} value={s.slug}>{s.nombre}</option>)}
-                            </select>
+                            <Select value={nuevaCategoria.seccion} onValueChange={v => setNuevaCategoria({ ...nuevaCategoria, seccion: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">General (todas las secciones)</SelectItem>
+                                    {secciones.map(s => <SelectItem key={s.slug} value={s.slug}>{s.nombre}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             <button onClick={handleCrearCategoria} className={`${btnPrimarioCls} mt-3 w-full`}>+ Agregar categoría</button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -1847,16 +1917,18 @@ function colorVencimiento(diasParaVencer) {
                                 ) : (
                                     <>
                                         <label className={labelCls}>Presentación destino</label>
-                                        <select
-                                            value={fraccionForm.presentacion_destino_id}
-                                            onChange={e => setFraccionForm({ ...fraccionForm, presentacion_destino_id: e.target.value })}
-                                            className={`${inputCls} mb-2.5`}
+                                        <Select
+                                            value={String(fraccionForm.presentacion_destino_id)}
+                                            onValueChange={v => setFraccionForm({ ...fraccionForm, presentacion_destino_id: v })}
                                         >
-                                            <option value="">Seleccionar...</option>
-                                            {otrasPresent.map(p => (
-                                                <option key={p.id} value={p.id}>{p.nombre} (stock: {p.stock})</option>
-                                            ))}
-                                        </select>
+                                            <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="">Seleccionar...</SelectItem>
+                                                {otrasPresent.map(p => (
+                                                    <SelectItem key={p.id} value={String(p.id)}>{p.nombre} (stock: {p.stock})</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         {destino && (
                                             <div className="mb-2.5 flex items-center justify-between">
                                                 <span className="text-xs text-slate-500 dark:text-slate-400">Stock después:</span>

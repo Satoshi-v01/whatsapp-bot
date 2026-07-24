@@ -60,7 +60,7 @@ function SelectTrigger({ className, children, ...props }) {
 function SelectContent({ className, children, sideOffset = 6, ...props }) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Positioner sideOffset={sideOffset} className="z-50 outline-none">
+      <SelectPrimitive.Positioner sideOffset={sideOffset} className="z-[2100] outline-none">
         <SelectPrimitive.Popup
           data-slot="select-content"
           className={cn(
