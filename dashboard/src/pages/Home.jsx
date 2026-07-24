@@ -70,6 +70,19 @@ function Home() {
         return Math.ceil((new Date(fecha) - new Date()) / (1000 * 60 * 60 * 24))
     }
 
+    // Urgencia real, no solo el mismo amarillo para todo: vence hoy/mañana pesa
+    // distinto que vence en 10 días, aunque las dos esten en la misma lista.
+    function colorUrgencia(dias) {
+        if (dias <= 1) return { bg: darkMode ? 'rgba(239,68,68,0.15)' : '#fee2e2', text: '#ef4444' }
+        if (dias <= 4) return { bg: darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7', text: '#b45309' }
+        return { bg: darkMode ? 'rgba(100,116,139,0.15)' : '#f1f5f9', text: s.textMuted }
+    }
+    function etiquetaDias(dias) {
+        if (dias <= 0) return 'Hoy'
+        if (dias === 1) return 'Mañana'
+        return `En ${dias}d`
+    }
+
     const tarjetas = [
         { label: 'Ventas del día', valor: formatearGs(resumen?.ventas_hoy?.total || 0), sub: `${resumen?.ventas_hoy?.cantidad || 0} transacciones`, extra: resumen?.ventas_hoy?.ganancia > 0 ? `Ganancia: ${formatearGs(resumen.ventas_hoy.ganancia)}` : null, color: '#10b981', accentBg: darkMode ? '#052e16' : '#f0fdf4', accentText: '#10b981', icono: 'trend', ruta: '/dashboard/ventas' },
         { label: 'Pendientes de pago', valor: resumen?.pendientes || 0, sub: 'requieren confirmación', color: '#f59e0b', accentBg: darkMode ? '#451a03' : '#fffbeb', accentText: '#f59e0b', icono: 'clock', ruta: '/dashboard/ventas?estado=pendiente_pago' },
@@ -152,7 +165,7 @@ function Home() {
                         <div style={{ background: darkMode ? 'rgba(245,158,11,0.1)' : '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 18px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '16px' }}>⏰</span>
+                                    <span style={{ color: '#f59e0b', display: 'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
                                     <p style={{ fontSize: '13px', fontWeight: '800', color: '#92400e' }}>
                                         {proximasVencer.length} factura{proximasVencer.length !== 1 ? 's' : ''} próxima{proximasVencer.length !== 1 ? 's' : ''} a vencer
                                     </p>
@@ -165,16 +178,22 @@ function Home() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {proximasVencer.slice(0, 3).map(f => {
                                     const dias = diasParaVencer(f.fecha_vencimiento)
+                                    const urgencia = colorUrgencia(dias)
                                     return (
                                         <div key={f.id} onClick={() => navigate('/dashboard/proveedores')}
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: darkMode ? 'rgba(245,158,11,0.08)' : 'white', borderRadius: '8px', cursor: 'pointer', border: '1px solid #fde68a' }}
                                             onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.15)' : '#fef3c7'}
                                             onMouseLeave={e => e.currentTarget.style.background = darkMode ? 'rgba(245,158,11,0.08)' : 'white'}>
-                                            <div>
-                                                <p style={{ fontSize: '12px', fontWeight: '600', color: s.text }}>{f.proveedor_nombre} — {f.numero_factura}</p>
-                                                <p style={{ fontSize: '11px', color: '#f59e0b' }}>Vence el {formatearSoloFecha(f.fecha_vencimiento)} · en {dias} día{dias !== 1 ? 's' : ''}</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                                <span style={{ flexShrink: 0, fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '20px', background: urgencia.bg, color: urgencia.text, whiteSpace: 'nowrap' }}>
+                                                    {etiquetaDias(dias)}
+                                                </span>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <p style={{ fontSize: '12px', fontWeight: '600', color: s.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.proveedor_nombre} — {f.numero_factura}</p>
+                                                    <p style={{ fontSize: '11px', color: '#f59e0b' }}>Vence el {formatearSoloFecha(f.fecha_vencimiento)}</p>
+                                                </div>
                                             </div>
-                                            <p style={{ fontSize: '13px', fontWeight: '800', color: '#f59e0b', flexShrink: 0 }}>Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
+                                            <p style={{ fontSize: '13px', fontWeight: '800', color: '#f59e0b', flexShrink: 0, marginLeft: '10px' }}>Gs. {parseInt(f.saldo).toLocaleString('es-PY')}</p>
                                         </div>
                                     )
                                 })}
