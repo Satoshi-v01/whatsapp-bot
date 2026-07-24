@@ -1073,12 +1073,24 @@ function Caja() {
                                 cuentasTransferencia.length === 0 ? (
                                     <p className="text-[11px] text-slate-400">Sin cuentas configuradas — Configuración → Tienda</p>
                                 ) : (
-                                    <select value={cuentaTransferenciaId} onChange={e => setCuentaTransferenciaId(e.target.value)} className={inputCls}>
-                                        <option value="">¿A qué cuenta se transfirió?</option>
-                                        {cuentasTransferencia.map(c => (
-                                            <option key={c.id} value={c.id}>{c.banco} — {c.titular}{c.alias ? ` (${c.alias})` : ''}</option>
-                                        ))}
-                                    </select>
+                                    <div className="flex flex-col gap-1.5">
+                                        {cuentasTransferencia.map(c => {
+                                            const seleccionada = String(cuentaTransferenciaId) === String(c.id)
+                                            return (
+                                                <button key={c.id} type="button"
+                                                    onClick={() => setCuentaTransferenciaId(seleccionada ? '' : c.id)}
+                                                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors ${seleccionada ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                                                    <span>
+                                                        <span className="block text-xs font-semibold">{c.banco}</span>
+                                                        <span className={`block text-[11px] ${seleccionada ? 'text-slate-300' : 'text-slate-400'}`}>{c.titular}{c.alias ? ` · ${c.alias}` : ''}</span>
+                                                    </span>
+                                                    {seleccionada && (
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
                                 )
                             )}
                         </div>
