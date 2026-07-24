@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 
-const inputCls = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10'
+const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none transition-all focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-900/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-400'
 
 function segCls(active, accent) {
@@ -785,7 +785,7 @@ function Caja() {
                                             <input type="number" min="0" value={linea.montoTexto}
                                                 onChange={e => cambiarMontoFraccion(linea.id, e.target.value)}
                                                 placeholder="Gs."
-                                                className="w-[84px] rounded-md border border-amber-400 px-1 py-1.5 text-center text-xs outline-none" />
+                                                className="w-[84px] rounded-lg border border-amber-400 px-1 py-1.5 text-center text-xs outline-none transition-all focus:ring-4 focus:ring-amber-400/15" />
                                         ) : (
                                             <div className="flex items-center gap-1">
                                                 <button onClick={() => cambiarCantidad(linea.id, -1)}
@@ -837,7 +837,7 @@ function Caja() {
                                                 <input type="number" min="0" value={linea.precioEspecial ?? ''}
                                                     placeholder={precioBase.precio.toString()}
                                                     onChange={e => setLineas(prev => prev.map(l => l.id === linea.id ? { ...l, precioEspecial: e.target.value } : l))}
-                                                    className="w-full rounded-md border border-red-300 px-1.5 py-1 text-right text-xs text-red-500 outline-none" />
+                                                    className="w-full rounded-lg border border-red-300 px-1.5 py-1 text-right text-xs text-red-500 outline-none transition-all focus:ring-4 focus:ring-red-400/15" />
                                                 {!!diferencial && (
                                                     <p className={`mt-0.5 text-right text-[10px] font-bold ${diferencial > 0 ? 'text-green-600' : 'text-red-500'}`}>
                                                         {diferencial > 0 ? '-' : '+'}{Math.abs(diferencial).toLocaleString('es-PY')} vs. Gs. {precioBase.precio.toLocaleString('es-PY')}
@@ -1203,7 +1203,7 @@ function Caja() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <input type="date" value={fechaCierre} onChange={e => setFechaCierre(e.target.value)}
-                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none" />
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none transition-all focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5" />
                                 <Button onClick={handleImprimirCierre} disabled={!cierreDatos} variant={cierreDatos ? 'default' : 'secondary'}>
                                     Imprimir cierre
                                 </Button>
