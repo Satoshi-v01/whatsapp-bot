@@ -321,6 +321,36 @@ router.get('/ventas-por-canal', async (req, res) => {
     }
 })
 
+// Transferencias recibidas por cuenta bancaria
+router.get('/transferencias-por-cuenta', async (req, res) => {
+    try {
+        const { periodo = 'mes' } = req.query
+        const intervalos = { semana: '7 days', mes: '30 days', anual: '365 days', hoy: '1 day' }
+        const intervalo = intervalos[periodo] || '30 days'
+
+        const resultado = await db.query(
+            `SELECT
+                ct.id as cuenta_id,
+                ct.banco,
+                ct.titular,
+                ct.alias,
+                COUNT(*) as cantidad,
+                COALESCE(SUM(v.precio), 0) as total
+             FROM ventas v
+             LEFT JOIN cuentas_transferencia ct ON v.cuenta_transferencia_id = ct.id
+             WHERE v.created_at >= NOW() - ($1::interval)
+             AND v.estado != 'cancelado'
+             AND v.metodo_pago = 'transferencia'
+             GROUP BY ct.id, ct.banco, ct.titular, ct.alias
+             ORDER BY total DESC`,
+            [intervalo]
+        )
+        res.json(resultado.rows)
+    } catch (error) {
+        manejarError(res, error)
+    }
+})
+
 // Fuente: items_venta (ver ITEMS_VENTA_CTE, mismo motivo que /top-productos).
 router.get('/ranking-productos', async (req, res) => {
     try {

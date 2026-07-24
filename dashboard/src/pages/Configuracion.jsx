@@ -3,6 +3,7 @@ import { useApp } from '../App'
 import { getUsuarios, getRoles, crearRol, actualizarRol, eliminarRol, crearUsuario, eliminarUsuario, cambiarPassword } from '../services/usuarios'
 import { getConfiguracion, guardarConfiguracionBulk } from '../services/configuracion'
 import { getZonas, crearZona, editarZona, eliminarZona } from '../services/zonas'
+import { getCuentasTransferenciaTodas, crearCuentaTransferencia, editarCuentaTransferencia, eliminarCuentaTransferencia } from '../services/cuentasTransferencia'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { imprimirFactura } from '../utils/factura'
 import api from '../services/api'
@@ -135,16 +136,23 @@ function Configuracion() {
     const [editandoZona, setEditandoZona] = useState(null) // null = nueva, objeto = editar
     const [formZona, setFormZona] = useState({ nombre: '', costo: '', activa: true })
 
+    // Cuentas de transferencia
+    const [cuentasTransferencia, setCuentasTransferencia] = useState([])
+    const [modalCuenta, setModalCuenta] = useState(false)
+    const [editandoCuenta, setEditandoCuenta] = useState(null) // null = nueva, objeto = editar
+    const [formCuenta, setFormCuenta] = useState({ banco: '', titular: '', numero_cuenta: '', alias: '', activa: true })
+
     useEffect(() => { cargarDatos() }, [])
 
     async function cargarDatos() {
         try {
-            const [u, r, c, z] = await Promise.all([getUsuarios(), getRoles(), getConfiguracion(), getZonas()])
+            const [u, r, c, z, ct] = await Promise.all([getUsuarios(), getRoles(), getConfiguracion(), getZonas(), getCuentasTransferenciaTodas()])
             const resFactura = await api.get('/configuracion/factura')
             setUsuarios(u)
             setRoles(r)
             setConfig(c)
             setZonas(z)
+            setCuentasTransferencia(ct)
             setConfigFactura(resFactura.data)
             if (r.length > 0) setRolSeleccionado(r[0])
             if (c.tienda_horario) {
@@ -297,6 +305,45 @@ function Configuracion() {
             onConfirmar: async () => {
                 try { await eliminarZona(zona.id); setModalConfirmar(null); await cargarDatos() }
                 catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la zona.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
+            }
+        })
+    }
+
+    // Cuentas de transferencia handlers
+    function abrirModalCuenta(cuenta = null) {
+        if (cuenta) {
+            setEditandoCuenta(cuenta)
+            setFormCuenta({ banco: cuenta.banco, titular: cuenta.titular, numero_cuenta: cuenta.numero_cuenta || '', alias: cuenta.alias || '', activa: cuenta.activa })
+        } else {
+            setEditandoCuenta(null)
+            setFormCuenta({ banco: '', titular: '', numero_cuenta: '', alias: '', activa: true })
+        }
+        setModalCuenta(true)
+    }
+
+    async function handleGuardarCuenta() {
+        if (!formCuenta.banco || !formCuenta.titular) return
+        try {
+            if (editandoCuenta) {
+                await editarCuentaTransferencia(editandoCuenta.id, formCuenta)
+            } else {
+                await crearCuentaTransferencia(formCuenta)
+            }
+            setModalCuenta(false)
+            await cargarDatos()
+        } catch (err) {
+            setModalConfirmar({ titulo: 'Error', mensaje: err.response?.data?.error || 'No se pudo guardar la cuenta.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
+        }
+    }
+
+    function handleEliminarCuenta(cuenta) {
+        setModalConfirmar({
+            titulo: 'Eliminar cuenta',
+            mensaje: `¿Eliminar la cuenta "${cuenta.banco} — ${cuenta.titular}"? Esta acción no se puede deshacer.`,
+            textoBoton: 'Eliminar', colorBoton: '#ef4444',
+            onConfirmar: async () => {
+                try { await eliminarCuentaTransferencia(cuenta.id); setModalConfirmar(null); await cargarDatos() }
+                catch (err) { setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudo eliminar la cuenta.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) }) }
             }
         })
     }
@@ -596,6 +643,58 @@ function Configuracion() {
                                                         <button onClick={() => abrirModalZona(zona)}
                                                             className="rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"><IconLapiz /></button>
                                                         <button onClick={() => handleEliminarZona(zona)}
+                                                            className="flex items-center rounded-md border border-red-300 bg-red-100 px-2 py-1 text-red-800 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-400"><IconTacho /></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Cuentas de transferencia */}
+                                <div className={cardCls}>
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Cuentas de transferencia</h3>
+                                            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">En Caja se podrá elegir a qué cuenta se transfirió cada venta.</p>
+                                        </div>
+                                        <Button size="sm" onClick={() => abrirModalCuenta()}>+ Agregar cuenta</Button>
+                                    </div>
+
+                                    {cuentasTransferencia.length === 0 ? (
+                                        <div className="mt-3 rounded-lg bg-slate-50 p-6 text-center text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+                                            <p className="text-[13px]">No hay cuentas configuradas.</p>
+                                            <p className="mt-1 text-[11px]">Agregá tus cuentas bancarias para registrar las transferencias.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-3">
+                                            <div className="grid grid-cols-[10px_1fr_1fr_1fr_auto_auto] items-center gap-0 rounded-t-lg border-b border-slate-200 bg-slate-50 px-3.5 py-2 dark:border-slate-700 dark:bg-slate-900">
+                                                <span />
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Banco</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Titular</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nro / Alias</span>
+                                                <span className="min-w-[70px] text-center text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Estado</span>
+                                                <span className="min-w-[70px]" />
+                                            </div>
+                                            {cuentasTransferencia.map((cuenta, i) => (
+                                                <div key={cuenta.id} className={`grid grid-cols-[10px_1fr_1fr_1fr_auto_auto] items-center gap-0 bg-white px-3.5 py-3 dark:bg-slate-800 ${i < cuentasTransferencia.length - 1 ? 'border-b border-slate-100 dark:border-slate-700' : ''}`}>
+                                                    <div className={`h-2 w-2 rounded-full ${cuenta.activa ? 'bg-green-500' : 'bg-slate-400'}`} />
+                                                    <span className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">{cuenta.banco}</span>
+                                                    <span className="text-[13px] text-slate-700 dark:text-slate-300">{cuenta.titular}</span>
+                                                    <span className="text-[12px] text-slate-500 dark:text-slate-400">
+                                                        {cuenta.numero_cuenta && <>N° {cuenta.numero_cuenta}</>}
+                                                        {cuenta.numero_cuenta && cuenta.alias && <> · </>}
+                                                        {cuenta.alias && <>Alias {cuenta.alias}</>}
+                                                    </span>
+                                                    <div className="min-w-[70px] text-center">
+                                                        <Toggle checked={cuenta.activa} onChange={async val => {
+                                                            try { await editarCuentaTransferencia(cuenta.id, { activa: val }); await cargarDatos() } catch (e) {}
+                                                        }} />
+                                                    </div>
+                                                    <div className="flex min-w-[70px] justify-end gap-1">
+                                                        <button onClick={() => abrirModalCuenta(cuenta)}
+                                                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"><IconLapiz /></button>
+                                                        <button onClick={() => handleEliminarCuenta(cuenta)}
                                                             className="flex items-center rounded-md border border-red-300 bg-red-100 px-2 py-1 text-red-800 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-400"><IconTacho /></button>
                                                     </div>
                                                 </div>
@@ -953,6 +1052,41 @@ function Configuracion() {
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={() => setModalZona(false)}>Cancelar</Button>
                             <Button onClick={handleGuardarZona}>{editandoZona ? 'Guardar cambios' : 'Agregar zona'}</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal cuenta de transferencia */}
+            {modalCuenta && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50">
+                    <div className="w-[420px] rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
+                        <div className="mb-5 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{editandoCuenta ? 'Editar cuenta' : 'Nueva cuenta de transferencia'}</h3>
+                            <button onClick={() => setModalCuenta(false)} className="border-none bg-transparent text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+                        </div>
+                        <label className={labelCls}>Banco</label>
+                        <input value={formCuenta.banco} onChange={e => setFormCuenta({ ...formCuenta, banco: e.target.value })} className={`${inputCls} mb-3`} placeholder="Ej: Banco Itaú" />
+                        <label className={labelCls}>Titular de la cuenta</label>
+                        <input value={formCuenta.titular} onChange={e => setFormCuenta({ ...formCuenta, titular: e.target.value })} className={`${inputCls} mb-3`} placeholder="Ej: Osvaldo Sosa" />
+                        <label className={labelCls}>Número de cuenta</label>
+                        <input value={formCuenta.numero_cuenta} onChange={e => setFormCuenta({ ...formCuenta, numero_cuenta: e.target.value })} className={`${inputCls} mb-3`} placeholder="Ej: 1237120" />
+                        <label className={labelCls}>Alias</label>
+                        <input value={formCuenta.alias} onChange={e => setFormCuenta({ ...formCuenta, alias: e.target.value })} className={inputCls} placeholder="Ej: 1283U190" />
+                        {editandoCuenta && (
+                            <div className="mb-2 mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3.5 py-3 dark:bg-slate-900">
+                                <span className="text-[13px] font-medium text-slate-900 dark:text-slate-100">Cuenta activa</span>
+                                <Toggle checked={formCuenta.activa} onChange={val => setFormCuenta({ ...formCuenta, activa: val })} />
+                            </div>
+                        )}
+                        {formCuenta.banco && formCuenta.titular && (
+                            <div className="mb-4 mt-3 rounded-lg bg-green-50 px-3.5 py-2.5 text-xs text-green-800 dark:bg-green-500/10 dark:text-green-400">
+                                Vista previa: "{formCuenta.banco} — {formCuenta.titular}{formCuenta.alias ? ` (${formCuenta.alias})` : ''}"
+                            </div>
+                        )}
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setModalCuenta(false)}>Cancelar</Button>
+                            <Button onClick={handleGuardarCuenta}>{editandoCuenta ? 'Guardar cambios' : 'Agregar cuenta'}</Button>
                         </div>
                     </div>
                 </div>

@@ -186,6 +186,10 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                     END as estado,
                     MIN(v.metodo_pago) as metodo_pago,
                     MIN(v.subtipo_pago) as subtipo_pago,
+                    MIN(v.cuenta_transferencia_id) as cuenta_transferencia_id,
+                    MIN(ct.banco) as cuenta_transferencia_banco,
+                    MIN(ct.titular) as cuenta_transferencia_titular,
+                    MIN(ct.alias) as cuenta_transferencia_alias,
                     MIN(v.canal) as canal,
                     MIN(v.agente_id) as agente_id,
                     BOOL_OR(v.quiere_factura) as quiere_factura,
@@ -220,6 +224,7 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
                 LEFT JOIN productos p ON pr.producto_id = p.id
                 LEFT JOIN marcas m ON p.marca_id = m.id
                 LEFT JOIN clientes c ON v.cliente_id = c.id
+                LEFT JOIN cuentas_transferencia ct ON v.cuenta_transferencia_id = ct.id
                 WHERE ${where}
                 GROUP BY COALESCE(v.numero_factura, v.id::text)
                 ORDER BY MIN(v.created_at) DESC
@@ -228,7 +233,8 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
 
         const selectConItems = cteGrupos + `
             SELECT g.id, g.numero_factura, g.created_at, g.cliente_id, g.precio, g.estado,
-                   g.metodo_pago, g.subtipo_pago, g.canal, g.agente_id, g.quiere_factura,
+                   g.metodo_pago, g.subtipo_pago, g.cuenta_transferencia_id, g.cuenta_transferencia_banco,
+                   g.cuenta_transferencia_titular, g.cuenta_transferencia_alias, g.canal, g.agente_id, g.quiere_factura,
                    g.ruc_factura, g.razon_social, g.tipo_venta, g.costo_delivery, g.zona_delivery,
                    g.cliente_numero, g.tipo_iva, g.presentacion_nombre, g.producto_nombre,
                    g.marca_nombre, g.cliente_nombre, g.cliente_ruc, g.ganancia,
@@ -258,7 +264,8 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
 
         const selectSinItems = cteGrupos + `
             SELECT g.id, g.numero_factura, g.created_at, g.cliente_id, g.precio, g.estado,
-                   g.metodo_pago, g.subtipo_pago, g.canal, g.agente_id, g.quiere_factura,
+                   g.metodo_pago, g.subtipo_pago, g.cuenta_transferencia_id, g.cuenta_transferencia_banco,
+                   g.cuenta_transferencia_titular, g.cuenta_transferencia_alias, g.canal, g.agente_id, g.quiere_factura,
                    g.ruc_factura, g.razon_social, g.tipo_venta, g.costo_delivery, g.zona_delivery,
                    g.cliente_numero, g.tipo_iva, g.presentacion_nombre, g.producto_nombre,
                    g.marca_nombre, g.cliente_nombre, g.cliente_ruc, g.ganancia,
@@ -490,12 +497,15 @@ router.patch('/:id/metodo-pago', autenticar, verificarPermiso('ventas', 'editar'
     const client = await db.pool.connect()
     try {
         const { id } = req.params
-        const { metodo_pago } = req.body
+        const { metodo_pago, cuenta_transferencia_id } = req.body
 
         const metodos = ['efectivo', 'tarjeta', 'transferencia']
         if (!metodo_pago || !metodos.includes(metodo_pago)) {
             return res.status(400).json({ error: 'Método de pago inválido' })
         }
+
+        // La cuenta solo tiene sentido si el metodo es transferencia
+        const cuentaId = metodo_pago === 'transferencia' && cuenta_transferencia_id ? parseInt(cuenta_transferencia_id) : null
 
         await client.query('BEGIN')
 
@@ -513,12 +523,12 @@ router.patch('/:id/metodo-pago', autenticar, verificarPermiso('ventas', 'editar'
 
         const resultado = numero_factura
             ? await client.query(
-                `UPDATE ventas SET metodo_pago = $1 WHERE numero_factura = $2 RETURNING *`,
-                [metodo_pago, numero_factura]
+                `UPDATE ventas SET metodo_pago = $1, cuenta_transferencia_id = $2 WHERE numero_factura = $3 RETURNING *`,
+                [metodo_pago, cuentaId, numero_factura]
               )
             : await client.query(
-                `UPDATE ventas SET metodo_pago = $1 WHERE id = $2 RETURNING *`,
-                [metodo_pago, parseInt(id)]
+                `UPDATE ventas SET metodo_pago = $1, cuenta_transferencia_id = $2 WHERE id = $3 RETURNING *`,
+                [metodo_pago, cuentaId, parseInt(id)]
               )
 
         if (!resultado.rows.length) {
@@ -536,7 +546,7 @@ router.patch('/:id/metodo-pago', autenticar, verificarPermiso('ventas', 'editar'
             entidad: 'venta',
             entidad_id: parseInt(id),
             descripcion: `Método de pago${numero_factura ? ` de factura ${numero_factura}` : ''} cambiado a ${metodo_pago} (${resultado.rows.length} linea/s)`,
-            dato_nuevo: { metodo_pago },
+            dato_nuevo: { metodo_pago, cuenta_transferencia_id: cuentaId },
             ip: req.ip
         }).catch(() => {})
 
@@ -640,6 +650,7 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             precio,           // total de la venta (sin delivery)
             metodo_pago,
             subtipo_pago,
+            cuenta_transferencia_id,
             quiere_factura,
             ruc_factura,
             razon_social,
@@ -806,12 +817,14 @@ router.post('/presencial', autenticar, verificarPermiso('ventas', 'crear'), asyn
             }
         }
 
+        const cuentaTransferenciaFinal = metodo_pago === 'transferencia' && cuenta_transferencia_id ? parseInt(cuenta_transferencia_id) : null
+
         const venta = await client.query(
-            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery, numero_factura)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            `INSERT INTO ventas (cliente_id, presentacion_id, cantidad, precio, canal, estado, metodo_pago, subtipo_pago, cuenta_transferencia_id, quiere_factura, ruc_factura, razon_social, agente_id, tipo_venta, plazo_dias, fecha_vencimiento_credito, tipo_iva, costo_delivery, zona_delivery, numero_factura)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
             RETURNING *`,
             [clienteIdFinal, ventaPresentacionId, ventaCantidad, totalPrecio, canalFinal, estadoVenta,
-            metodo_pago, subtipo_pago || null, quiere_factura || false, ruc_factura || null,
+            metodo_pago, subtipo_pago || null, cuentaTransferenciaFinal, quiere_factura || false, ruc_factura || null,
             razon_social || null, agente_id || null,
             tipo_venta || 'contado', plazo_dias || null, fecha_vencimiento_credito, ventaTipoIva,
             costo_delivery || 0, zona_delivery || null, numeroFacturaFinal]

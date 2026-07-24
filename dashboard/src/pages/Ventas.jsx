@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getHistorial, actualizarEstadoVenta, anularVenta, actualizarMetodoPago } from '../services/ventas'
+import { getCuentasTransferencia } from '../services/cuentasTransferencia'
 import ModalConfirmar from '../components/ModalConfirmar'
 import * as XLSX from 'xlsx'
 import { getLibroVentas } from '../services/ventas'
@@ -47,10 +48,15 @@ function Ventas() {
     const [canal, setCanal] = useState('')
     const [pagina, setPagina] = useState(1)
     const [estadoFiltro, setEstadoFiltro] = useState('')
+    const [cuentasTransferencia, setCuentasTransferencia] = useState([])
 
    useEffect(() => {
         cargarHistorial()
     }, [periodo, metodoPago, canal, pagina, estadoFiltro])
+
+    useEffect(() => {
+        getCuentasTransferencia().then(setCuentasTransferencia).catch(() => {})
+    }, [])
 
     useEffect(() => {
         const timeout = setTimeout(() => cargarHistorial(), 400)
@@ -194,11 +200,19 @@ function Ventas() {
         }
     }
 
-    async function cambiarMetodoPago(id, nuevoMetodo) {
+    async function cambiarMetodoPago(id, nuevoMetodo, cuentaTransferenciaId = null) {
         try {
-            await actualizarMetodoPago(id, nuevoMetodo)
+            await actualizarMetodoPago(id, nuevoMetodo, cuentaTransferenciaId)
             await cargarHistorial()
-            setVentaDetalle(prev => prev?.id === id ? { ...prev, metodo_pago: nuevoMetodo } : prev)
+            const cuenta = cuentasTransferencia.find(c => c.id === parseInt(cuentaTransferenciaId))
+            setVentaDetalle(prev => prev?.id === id ? {
+                ...prev,
+                metodo_pago: nuevoMetodo,
+                cuenta_transferencia_id: cuentaTransferenciaId ? parseInt(cuentaTransferenciaId) : null,
+                cuenta_transferencia_banco: cuenta?.banco || null,
+                cuenta_transferencia_titular: cuenta?.titular || null,
+                cuenta_transferencia_alias: cuenta?.alias || null,
+            } : prev)
         } catch (err) {
             setModalConfirmar({
                 titulo: 'Error',
@@ -396,6 +410,9 @@ function Ventas() {
                                                     {venta.metodo_pago || '—'}
                                                 </span>
                                                 <p className="mt-1 text-[9px] text-slate-400 dark:text-slate-500">{labelCanal(venta.canal)}</p>
+                                                {venta.metodo_pago === 'transferencia' && venta.cuenta_transferencia_banco && (
+                                                    <p className="mt-0.5 text-[9px] font-semibold text-indigo-500 dark:text-indigo-400">{venta.cuenta_transferencia_banco}</p>
+                                                )}
                                                 {venta.tipo_venta === 'credito' && (
                                                     <span className="mt-1 block rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
                                                         Crédito
@@ -552,7 +569,7 @@ function Ventas() {
                             ) : (
                                 <select
                                     value={ventaDetalle.metodo_pago || ''}
-                                    onChange={e => cambiarMetodoPago(ventaDetalle.id, e.target.value)}
+                                    onChange={e => cambiarMetodoPago(ventaDetalle.id, e.target.value, e.target.value === 'transferencia' ? ventaDetalle.cuenta_transferencia_id : null)}
                                     className="cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1 text-[13px] font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                                 >
                                     <option value="">— Sin definir —</option>
@@ -566,6 +583,27 @@ function Ventas() {
                             <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Canal</p>
                             <p className="m-0 text-[13px] font-semibold text-slate-900 dark:text-slate-100">{labelCanal(ventaDetalle.canal)}</p>
                         </div>
+                        {ventaDetalle.metodo_pago === 'transferencia' && (
+                            <div className="col-span-2">
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Cuenta receptora</p>
+                                {ventaDetalle.estado === 'cancelado' ? (
+                                    <p className="m-0 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                        {ventaDetalle.cuenta_transferencia_banco ? `${ventaDetalle.cuenta_transferencia_banco} — ${ventaDetalle.cuenta_transferencia_titular}` : '— Sin definir —'}
+                                    </p>
+                                ) : (
+                                    <select
+                                        value={ventaDetalle.cuenta_transferencia_id || ''}
+                                        onChange={e => cambiarMetodoPago(ventaDetalle.id, 'transferencia', e.target.value || null)}
+                                        className="w-full cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[13px] font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                                    >
+                                        <option value="">¿A qué cuenta se transfirió?</option>
+                                        {cuentasTransferencia.map(c => (
+                                            <option key={c.id} value={c.id}>{c.banco} — {c.titular}{c.alias ? ` (${c.alias})` : ''}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                        )}
                         {ventaDetalle.tipo_venta === 'credito' && ventaDetalle.fecha_vencimiento_credito && (
                             <div>
                                 <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Vencimiento</p>

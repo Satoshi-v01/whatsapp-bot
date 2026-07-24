@@ -15,8 +15,8 @@ export async function actualizarEstadoVenta(id, estado) {
     return res.data
 }
 
-export async function actualizarMetodoPago(id, metodo_pago) {
-    const res = await api.patch(`/ventas/${id}/metodo-pago`, { metodo_pago })
+export async function actualizarMetodoPago(id, metodo_pago, cuenta_transferencia_id = null) {
+    const res = await api.patch(`/ventas/${id}/metodo-pago`, { metodo_pago, cuenta_transferencia_id })
     return res.data
 }
 

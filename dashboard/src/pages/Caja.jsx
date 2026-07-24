@@ -5,6 +5,7 @@ import { buscarClientes, crearCliente, getCliente } from '../services/clientes'
 import { registrarVentaPresencial } from '../services/ventas'
 import { confirmarOrden, reclamarOrden, liberarOrden } from '../services/ordenes'
 import { getZonas } from '../services/zonas'
+import { getCuentasTransferencia } from '../services/cuentasTransferencia'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { imprimirFactura, imprimirCierre } from '../utils/factura'
 import { useApp } from '../App'
@@ -67,6 +68,8 @@ function Caja() {
     const [canal, setCanal] = useState('presencial')
     const [metodoPago, setMetodoPago] = useState('efectivo')
     const [subtipoPago, setSubtipoPago] = useState('')
+    const [cuentaTransferenciaId, setCuentaTransferenciaId] = useState('')
+    const [cuentasTransferencia, setCuentasTransferencia] = useState([])
     const [opOrigen, setOpOrigen] = useState(null)
     const [formDelivery, setFormDelivery] = useState({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
     const [facturarDelivery, setFacturarDelivery] = useState(true)
@@ -144,10 +147,11 @@ function Caja() {
 
     async function cargarDatos() {
         try {
-            const [prods, zns, resFactura] = await Promise.all([getProductos(), getZonas(), api.get('/configuracion/factura')])
+            const [prods, zns, resFactura, cuentas] = await Promise.all([getProductos(), getZonas(), api.get('/configuracion/factura'), getCuentasTransferencia()])
             setProductos(prods)
             setZonas(zns)
             setConfigFactura(resFactura.data)
+            setCuentasTransferencia(cuentas)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -413,7 +417,7 @@ function Caja() {
         setPrecioEspecialActivo(false)
         setClienteSeleccionado(null); setBusquedaCliente(''); setRucFactura(''); setRazonSocial(''); setFacturaManual(false); setNumeroFacturaManual('')
         setTipoComprobante('ticket')
-        setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setOpOrigen(null)
+        setCanal('presencial'); setMetodoPago('efectivo'); setSubtipoPago(''); setCuentaTransferenciaId(''); setOpOrigen(null)
         setFormDelivery({ ubicacion: '', referencia: '', horario: '', contacto_entrega: '', zona_id: '', zona_nombre: '', costo_delivery: 0 })
         setFacturarDelivery(true)
         setTipoVenta('contado')
@@ -502,6 +506,7 @@ function Caja() {
                             precio: precio * linea.cantidad,
                             metodo_pago: metodoPago,
                             subtipo_pago: subtipoPago || null,
+                            cuenta_transferencia_id: cuentaTransferenciaId || null,
                             tipo_iva: '10',
                             quiere_factura: esFactura,
                             ruc_factura: esFactura ? (rucFactura || null) : null,
@@ -1052,9 +1057,9 @@ function Caja() {
                         {/* Metodo de pago */}
                         <div>
                             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Metodo de pago</p>
-                            <div className={`flex gap-1.5 ${metodoPago === 'tarjeta' ? 'mb-2' : ''}`}>
+                            <div className={`flex gap-1.5 ${metodoPago === 'tarjeta' || metodoPago === 'transferencia' ? 'mb-2' : ''}`}>
                                 {[{ val: 'efectivo', label: 'Efectivo' }, { val: 'transferencia', label: 'Transferencia' }, { val: 'tarjeta', label: 'Tarjeta' }].map(m => (
-                                    <button key={m.val} onClick={() => { setMetodoPago(m.val); setSubtipoPago('') }} className={segCls(metodoPago === m.val)}>{m.label}</button>
+                                    <button key={m.val} onClick={() => { setMetodoPago(m.val); setSubtipoPago(''); setCuentaTransferenciaId('') }} className={segCls(metodoPago === m.val)}>{m.label}</button>
                                 ))}
                             </div>
                             {metodoPago === 'tarjeta' && (
@@ -1063,6 +1068,18 @@ function Caja() {
                                         <button key={t.val} onClick={() => setSubtipoPago(t.val)} className={segCls(subtipoPago === t.val, 'blue')}>{t.label}</button>
                                     ))}
                                 </div>
+                            )}
+                            {metodoPago === 'transferencia' && (
+                                cuentasTransferencia.length === 0 ? (
+                                    <p className="text-[11px] text-slate-400">Sin cuentas configuradas — Configuración → Tienda</p>
+                                ) : (
+                                    <select value={cuentaTransferenciaId} onChange={e => setCuentaTransferenciaId(e.target.value)} className={inputCls}>
+                                        <option value="">¿A qué cuenta se transfirió?</option>
+                                        {cuentasTransferencia.map(c => (
+                                            <option key={c.id} value={c.id}>{c.banco} — {c.titular}{c.alias ? ` (${c.alias})` : ''}</option>
+                                        ))}
+                                    </select>
+                                )
                             )}
                         </div>
 

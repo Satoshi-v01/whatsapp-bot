@@ -73,3 +73,9 @@ export async function getRentabilidad(params = {}) {
     const res = await api.get(`/estadisticas/rentabilidad?${q}`)
     return res.data
 }
+
+export async function getTransferenciasPorCuenta(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const res = await api.get(`/estadisticas/transferencias-por-cuenta?${query}`)
+    return res.data
+}

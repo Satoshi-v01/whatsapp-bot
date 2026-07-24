@@ -4,7 +4,7 @@ import { getMarcas, getCategorias } from '../services/productos'
 import { getReporte } from '../services/ventas'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
-import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas, getClientesRetencion, getRentabilidad } from '../services/estadisticas'
+import { getMetricas, getVentasPorDia, getVentasPorCanal, getRankingProductos, getTopClientes, getDeliveryZonas, getComparativas, getClientesRetencion, getRentabilidad, getTransferenciasPorCuenta } from '../services/estadisticas'
 import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
@@ -45,6 +45,7 @@ function Reportes() {
     const [metricas, setMetricas] = useState(null)
     const [ventasPorDia, setVentasPorDia] = useState([])
     const [ventasPorCanal, setVentasPorCanal] = useState([])
+    const [transferenciasPorCuenta, setTransferenciasPorCuenta] = useState([])
     const [rankingProductos, setRankingProductos] = useState({ top: [], bottom: [] })
     const [topClientes, setTopClientes] = useState([])
     const [statsDesde, setStatsDesde] = useState('')
@@ -74,16 +75,18 @@ function Reportes() {
             if (canal) params.canal = canal
             if (marcaId) params.marca_id = marcaId
             if (categoriaId) params.categoria_id = categoriaId
-            const [met, dias, canales, ranking, clientes, delZonas, comp, ret, rent] = await Promise.all([
+            const [met, dias, canales, ranking, clientes, delZonas, comp, ret, rent, transfCuentas] = await Promise.all([
                 getMetricas(params), getVentasPorDia({ periodo, canal }),
                 getVentasPorCanal({ periodo }), getRankingProductos({ periodo }),
                 getTopClientes({ periodo }), getDeliveryZonas({ periodo }),
                 getComparativas({ periodo }), getClientesRetencion({ periodo }),
-                getRentabilidad({ periodo, agrupar: agruparRentabilidad })
+                getRentabilidad({ periodo, agrupar: agruparRentabilidad }),
+                getTransferenciasPorCuenta({ periodo })
             ])
             setMetricas(met); setVentasPorDia(dias); setVentasPorCanal(canales)
             setRankingProductos(ranking); setTopClientes(clientes); setDeliveryZonas(delZonas)
             setComparativas(comp); setRetencion(ret); setRentabilidad(rent)
+            setTransferenciasPorCuenta(transfCuentas)
         } catch (err) {
             setModalConfirmar({ titulo: 'Error', mensaje: 'No se pudieron cargar los datos.', textoBoton: 'Cerrar', colorBoton: '#888', onConfirmar: () => setModalConfirmar(null) })
         } finally { setCargando(false) }
@@ -518,6 +521,24 @@ function Reportes() {
                         )}
                     </CardContent>
                 </Card>
+
+                {transferenciasPorCuenta.length > 0 && (
+                    <Card className="lg:col-span-3">
+                        <CardContent>
+                            <h3 className="mb-5 text-[15px] font-bold text-slate-900 dark:text-slate-100">Transferencias por cuenta</h3>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {transferenciasPorCuenta.map((c, i) => (
+                                    <div key={c.cuenta_id || i} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{c.banco || 'Sin cuenta asignada'}</p>
+                                        {c.titular && <p className="text-[11px] text-slate-500 dark:text-slate-400">{c.titular}{c.alias ? ` · ${c.alias}` : ''}</p>}
+                                        <p className="mt-1.5 text-sm font-extrabold text-slate-900 dark:text-slate-100">{formatearGs(c.total)}</p>
+                                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{c.cantidad} transferencia{parseInt(c.cantidad) === 1 ? '' : 's'}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             {/* Rankings */}
