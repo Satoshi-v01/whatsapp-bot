@@ -229,7 +229,7 @@ router.get('/top-productos', async (req, res) => {
 // Notificaciones activas
 router.get('/notificaciones', async (req, res) => {
     try {
-        const [chats, mensajesCliente, stockBajo, busquedasFallidas] = await Promise.all([
+        const [chats, mensajesCliente, stockBajo, busquedasFallidas, ordenesPendientes] = await Promise.all([
             db.query(
                 `SELECT cliente_numero, ultimo_mensaje FROM sesiones WHERE modo = 'esperando_agente' ORDER BY ultimo_mensaje ASC`
             ),
@@ -240,11 +240,16 @@ router.get('/notificaciones', async (req, res) => {
                  ORDER BY created_at DESC
                  LIMIT 100`
             ),
+            // Ignora productos sin stock que llevan mas de 60 dias sin ningun movimiento
+            // (ni venta, ni reposicion) -- eso es lo que satura la campanita al iniciar
+            // sesion con items que nadie va a reponer pronto. En cuanto se carga stock
+            // de nuevo, updated_at se actualiza y la alerta puede volver a aparecer.
             db.query(
-                `SELECT p.nombre as producto, pr.nombre as presentacion, pr.stock
+                `SELECT pr.id, p.nombre as producto, pr.nombre as presentacion, pr.stock
                  FROM presentaciones pr
                  JOIN productos p ON pr.producto_id = p.id
                  WHERE pr.stock <= 3 AND pr.disponible = true
+                 AND pr.updated_at > NOW() - INTERVAL '60 days'
                  ORDER BY pr.stock ASC`
             ),
             db.query(
@@ -255,6 +260,14 @@ router.get('/notificaciones', async (req, res) => {
                  WHERE datos->>'alerta_busqueda_fallida' IS NOT NULL
                  AND (datos->>'alerta_busqueda_at')::timestamptz > NOW() - INTERVAL '4 hours'
                  ORDER BY (datos->>'alerta_busqueda_at')::timestamptz DESC`
+            ),
+            db.query(
+                `SELECT op.id, op.numero_pedido, op.created_at AT TIME ZONE 'UTC' AS created_at,
+                        COALESCE(c.nombre, 'Cliente') as cliente_nombre
+                 FROM ordenes_pedido op
+                 LEFT JOIN clientes c ON op.cliente_id = c.id
+                 WHERE op.estado = 'pendiente'
+                 ORDER BY op.created_at ASC`
             )
         ])
 
@@ -283,15 +296,24 @@ router.get('/notificaciones', async (req, res) => {
             })),
             ...stockBajo.rows.map(s => ({
                 tipo: 'stock',
+                id: s.id,
                 mensaje: `${s.producto} ${s.presentacion} — solo ${s.stock} unidades`,
                 tiempo: new Date(),
                 urgente: s.stock === 0
+            })),
+            ...ordenesPendientes.rows.map(o => ({
+                tipo: 'orden',
+                id: o.id,
+                mensaje: `Orden ${o.numero_pedido || `#${o.id}`} de ${o.cliente_nombre} — pendiente de confirmar`,
+                tiempo: o.created_at,
+                urgente: false
             }))
         ]
 
         res.json({
             notificaciones,
-            chats_esperando: chats.rows.length
+            chats_esperando: chats.rows.length,
+            ordenes_pendientes: ordenesPendientes.rows.length
         })
     } catch (error) {
         manejarError(res, error)

@@ -676,18 +676,28 @@ h1, h2, h3, h4, h5, h6 {
 }
 .tb-logout-btn:hover { background: var(--surface-hover); }
 
-/* Agent alert popup */
-.agent-popup {
+/* Contenedor de popups: apila con flexbox (column-reverse) en vez de calcular
+   un offset "bottom" fijo por indice -- ese calculo asumia una altura fija por
+   popup y los solapaba apenas un mensaje ocupaba mas de una linea. */
+.popup-stack {
   position: fixed;
   bottom: 24px;
   right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 14px;
+  max-height: calc(100vh - 48px);
+}
+
+/* Agent alert popup */
+.agent-popup {
   background: #0f172a;
   color: white;
   border-radius: var(--r-lg);
   padding: 18px 20px;
   box-shadow: var(--shadow-xl), 0 0 0 1px rgba(239,68,68,0.3);
-  z-index: 9999;
-  max-width: 320px;
+  width: 320px;
   border: 1px solid rgba(239,68,68,0.35);
   animation: slideInUp 0.28s ease;
 }

@@ -52,8 +52,6 @@ function IcoLogout() {
     )
 }
 
-const POPUP_STACK_HEIGHT = 196
-
 function TopBar({ usuario, onLogout }) {
     const [menuPerfil, setMenuPerfil]       = useState(false)
     const [menuNotif, setMenuNotif]         = useState(false)
@@ -270,9 +268,10 @@ function TopBar({ usuario, onLogout }) {
                 @keyframes pulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 6px rgba(245,158,11,0)}}
             `}</style>
 
+            <div className="popup-stack">
             {/* Popups urgentes de agente — uno por cada chat nuevo */}
-            {popupsAgente.map((popup, idx) => (
-                <div key={popup.id} className="agent-popup" style={{ bottom: `${24 + idx * POPUP_STACK_HEIGHT}px` }}>
+            {popupsAgente.map((popup) => (
+                <div key={popup.id} className="agent-popup">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulseRed 1.2s infinite' }} />
                         <p style={{ fontSize: '12px', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -298,8 +297,8 @@ function TopBar({ usuario, onLogout }) {
             ))}
 
             {/* Popups de mensaje nuevo — uno por cada mensaje entrante de cliente */}
-            {popupsMensaje.map((popup, idx) => (
-                <div key={popup.id} className="agent-popup" style={{ borderLeftColor: '#3b82f6', bottom: `${24 + (popupsAgente.length + idx) * POPUP_STACK_HEIGHT}px` }}>
+            {popupsMensaje.map((popup) => (
+                <div key={popup.id} className="agent-popup" style={{ borderLeftColor: '#3b82f6' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }} />
                         <p style={{ fontSize: '12px', fontWeight: '800', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -326,7 +325,7 @@ function TopBar({ usuario, onLogout }) {
 
             {/* Popup nueva orden */}
             {popupOrden && (
-                <div className="agent-popup" style={{ borderLeftColor: '#f59e0b', bottom: `${24 + (popupsAgente.length + popupsMensaje.length) * POPUP_STACK_HEIGHT}px` }}>
+                <div className="agent-popup" style={{ borderLeftColor: '#f59e0b' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', animation: 'pulseAmber 1.2s infinite' }} />
@@ -350,6 +349,7 @@ function TopBar({ usuario, onLogout }) {
                     </button>
                 </div>
             )}
+            </div>
 
             <header className="topbar">
 
@@ -412,9 +412,9 @@ function TopBar({ usuario, onLogout }) {
                                                     className={`notif-item${!esLeida ? (esAgente ? ' urgent' : ' unread') : ''}`}
                                                     onClick={() => handleClickNotif(notif)}
                                                 >
-                                                    <span style={{ flexShrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center' }}>{iconoTipo(notif.tipo)}</span>
+                                                    <span style={{ flexShrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center', opacity: esLeida ? 0.5 : 1 }}>{iconoTipo(notif.tipo)}</span>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <p style={{ fontSize: '12.5px', color: 'var(--text)', lineHeight: '1.5', fontWeight: esAgente ? '600' : '400' }}>
+                                                        <p style={{ fontSize: '12.5px', color: esLeida ? 'var(--text-muted)' : 'var(--text)', lineHeight: '1.5', fontWeight: esLeida ? '400' : (esAgente ? '700' : '600') }}>
                                                             {notif.mensaje}
                                                         </p>
                                                         <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '3px' }}>
