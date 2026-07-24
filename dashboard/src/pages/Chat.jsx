@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import { getSesiones, tomarSesion, responderSesion, devolverBot, cerrarConversacion } from '../services/sesiones'
 import ModalConfirmar from '../components/ModalConfirmar'
-import { formatearFecha, formatearHora } from '../utils/fecha'
+import { formatearFecha, formatearHora, formatearSeparadorFecha } from '../utils/fecha'
 import { Button } from '@/components/ui/button'
 
 const modoConfig = {
@@ -309,12 +309,21 @@ function Chat() {
                             {mensajes.length === 0 ? (
                                 <p className="mt-10 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay mensajes aún.</p>
                             ) : (
-                                mensajes.map((msg) => {
+                                mensajes.map((msg, idx) => {
                                     const esCliente = msg.origen === 'cliente'
                                     const esBot = msg.origen === 'bot'
                                     const esAgente = msg.origen === 'agente'
+                                    const mostrarSeparador = idx === 0 || formatearSeparadorFecha(msg.created_at) !== formatearSeparadorFecha(mensajes[idx - 1].created_at)
                                     return (
-                                        <div key={msg.id} className={`flex max-w-[80%] flex-col ${esCliente ? 'items-start self-start' : 'items-end self-end'}`}>
+                                        <div key={msg.id} className="flex flex-col gap-3">
+                                        {mostrarSeparador && (
+                                            <div className="flex justify-center">
+                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                    {formatearSeparadorFecha(msg.created_at)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className={`flex max-w-[80%] flex-col ${esCliente ? 'items-start self-start' : 'items-end self-end'}`}>
                                             <div className={`px-3.5 py-2.5 text-[13px] leading-relaxed shadow-sm ${
                                                 esCliente ? 'rounded-2xl rounded-bl-[4px] border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
                                                 : esBot ? 'rounded-2xl rounded-br-[4px] border border-indigo-200 bg-indigo-100 text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/25 dark:text-indigo-300'
@@ -394,6 +403,7 @@ function Chat() {
                                             <span className="mt-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                                                 {msg.origen}
                                             </span>
+                                        </div>
                                         </div>
                                     )
                                 })

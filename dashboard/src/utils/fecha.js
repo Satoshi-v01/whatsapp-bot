@@ -49,3 +49,17 @@ export function fechaInicioMesPY() {
     const d = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' }))
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
+
+function soloFechaPY(fecha) {
+    return new Date(fecha).toLocaleDateString('en-CA', { timeZone: TZ })
+}
+
+export function formatearSeparadorFecha(fecha) {
+    if (!fecha) return ''
+    const dia = soloFechaPY(fecha)
+    const hoy = fechaHoyPY()
+    if (dia === hoy) return 'Hoy'
+    const ayer = new Date(new Date(`${hoy}T12:00:00`).getTime() - 86400000).toLocaleDateString('en-CA')
+    if (dia === ayer) return 'Ayer'
+    return formatearSoloFecha(fecha)
+}
