@@ -13,11 +13,16 @@ router.get('/', autenticar, verificarPermiso('chat', 'ver'), async (req, res) =>
         const resultado = await db.query(
             `SELECT s.id, s.cliente_numero, s.paso, s.modo, s.datos, s.agente_id,
                     s.carrito, s.carrito_expires_at, s.nombre_whatsapp,
-                    s.ultimo_mensaje AT TIME ZONE 'UTC' AS ultimo_mensaje,
+                    COALESCE(m.ultimo_mensaje, s.ultimo_mensaje) AT TIME ZONE 'UTC' AS ultimo_mensaje,
                     u.nombre as agente_nombre
              FROM sesiones s
              LEFT JOIN usuarios u ON s.agente_id = u.id
-             ORDER BY s.ultimo_mensaje DESC`
+             LEFT JOIN LATERAL (
+                 SELECT MAX(created_at) AS ultimo_mensaje
+                 FROM mensajes
+                 WHERE mensajes.cliente_numero = s.cliente_numero
+             ) m ON true
+             ORDER BY COALESCE(m.ultimo_mensaje, s.ultimo_mensaje) DESC`
         )
         res.json(resultado.rows)
     } catch (error) {
