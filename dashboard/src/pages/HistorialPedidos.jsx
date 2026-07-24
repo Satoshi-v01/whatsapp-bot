@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useApp } from '../App'
 import api from '../services/api'
 import { formatearFecha, fechaHoyPY } from '../utils/fecha'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function gs(n) {
@@ -25,48 +27,48 @@ function toFechaDesde(periodo) {
 
 // ─── Configuración de canales ────────────────────────────────────
 const CANAL_CONFIG = {
-    pagina_web:        { label: 'Web',            color: '#2563eb', bg: '#dbeafe' },
-    whatsapp_bot:      { label: 'Bot',            color: '#16a34a', bg: '#dcfce7' },
-    whatsapp:          { label: 'WhatsApp',       color: '#059669', bg: '#d1fae5' },
-    whatsapp_delivery: { label: 'WA Delivery',    color: '#0891b2', bg: '#cffafe' },
-    en_tienda:         { label: 'Tienda',         color: '#7c3aed', bg: '#ede9fe' },
-    presencial:        { label: 'Presencial',     color: '#7c3aed', bg: '#ede9fe' },
-    agente_presencial: { label: 'Agente',         color: '#b45309', bg: '#fef3c7' },
-    agente_delivery:   { label: 'Ag. Delivery',   color: '#0e7490', bg: '#e0f2fe' },
+    pagina_web:        { label: 'Web',            cls: 'text-blue-600 bg-blue-100 dark:bg-blue-500/15' },
+    whatsapp_bot:      { label: 'Bot',            cls: 'text-green-600 bg-green-100 dark:bg-green-500/15' },
+    whatsapp:          { label: 'WhatsApp',       cls: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-500/15' },
+    whatsapp_delivery: { label: 'WA Delivery',    cls: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-500/15' },
+    en_tienda:         { label: 'Tienda',         cls: 'text-violet-600 bg-violet-100 dark:bg-violet-500/15' },
+    presencial:        { label: 'Presencial',     cls: 'text-violet-600 bg-violet-100 dark:bg-violet-500/15' },
+    agente_presencial: { label: 'Agente',         cls: 'text-amber-700 bg-amber-100 dark:bg-amber-500/15' },
+    agente_delivery:   { label: 'Ag. Delivery',   cls: 'text-sky-700 bg-sky-100 dark:bg-sky-500/15' },
 }
 
 const ESTADO_CONFIG = {
-    pendiente:   { label: 'Pendiente',   color: '#b45309', bg: '#fef3c7' },
-    pendiente_pago: { label: 'Pend. pago', color: '#b45309', bg: '#fef3c7' },
-    confirmado:  { label: 'Confirmado',  color: '#1d4ed8', bg: '#dbeafe' },
-    confirmada:  { label: 'Confirmada',  color: '#1d4ed8', bg: '#dbeafe' },
-    en_camino:   { label: 'En camino',   color: '#7c3aed', bg: '#ede9fe' },
-    entregado:   { label: 'Entregado',   color: '#15803d', bg: '#dcfce7' },
-    cancelado:   { label: 'Cancelado',   color: '#dc2626', bg: '#fee2e2' },
-    cancelada:   { label: 'Cancelada',   color: '#dc2626', bg: '#fee2e2' },
-    expirada:    { label: 'Expirada',    color: '#64748b', bg: '#f1f5f9' },
+    pendiente:      { label: 'Pendiente',    cls: 'text-amber-700 bg-amber-100 dark:bg-amber-500/15' },
+    pendiente_pago: { label: 'Pend. pago',   cls: 'text-amber-700 bg-amber-100 dark:bg-amber-500/15' },
+    confirmado:     { label: 'Confirmado',   cls: 'text-blue-700 bg-blue-100 dark:bg-blue-500/15' },
+    confirmada:     { label: 'Confirmada',   cls: 'text-blue-700 bg-blue-100 dark:bg-blue-500/15' },
+    en_camino:      { label: 'En camino',    cls: 'text-violet-700 bg-violet-100 dark:bg-violet-500/15' },
+    entregado:      { label: 'Entregado',    cls: 'text-green-700 bg-green-100 dark:bg-green-500/15' },
+    cancelado:      { label: 'Cancelado',    cls: 'text-red-600 bg-red-100 dark:bg-red-500/15' },
+    cancelada:      { label: 'Cancelada',    cls: 'text-red-600 bg-red-100 dark:bg-red-500/15' },
+    expirada:       { label: 'Expirada',     cls: 'text-slate-500 bg-slate-100 dark:bg-slate-700' },
 }
 
 function CanalBadge({ canal }) {
-    const cfg = CANAL_CONFIG[canal] || { label: canal, color: '#64748b', bg: '#f1f5f9' }
+    const cfg = CANAL_CONFIG[canal] || { label: canal, cls: 'text-slate-500 bg-slate-100 dark:bg-slate-700' }
     return (
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 12, color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap' }}>
+        <span className={`whitespace-nowrap rounded-xl px-2 py-0.5 text-[11px] font-bold ${cfg.cls}`}>
             {cfg.label}
         </span>
     )
 }
 
 function EstadoBadge({ estado }) {
-    const cfg = ESTADO_CONFIG[estado] || { label: estado, color: '#64748b', bg: '#f1f5f9' }
+    const cfg = ESTADO_CONFIG[estado] || { label: estado, cls: 'text-slate-500 bg-slate-100 dark:bg-slate-700' }
     return (
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 12, color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap' }}>
+        <span className={`whitespace-nowrap rounded-xl px-2 py-0.5 text-[11px] font-bold ${cfg.cls}`}>
             {cfg.label}
         </span>
     )
 }
 
 // ─── Fila expandible ────────────────────────────────────────────
-function FilaOrden({ orden, s, darkMode }) {
+function FilaOrden({ orden }) {
     const [abierta, setAbierta] = useState(false)
     const total = calcTotal(orden)
     const items = (orden.items || []).filter(it => it.id)
@@ -77,36 +79,32 @@ function FilaOrden({ orden, s, darkMode }) {
             {/* Fila principal */}
             <tr
                 onClick={() => setAbierta(v => !v)}
-                style={{
-                    cursor: 'pointer',
-                    background: abierta ? (darkMode ? '#1a2e4a' : '#eff6ff') : 'transparent',
-                    transition: 'background 0.15s',
-                }}
+                className={`cursor-pointer transition-colors ${abierta ? 'bg-blue-50 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
             >
-                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: s.primary, whiteSpace: 'nowrap' }}>
+                <td className="whitespace-nowrap px-4 py-3 text-[13px] font-bold text-blue-500">
                     {orden.numero_pedido || `#${orden.id}`}
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 12, color: s.textMuted, whiteSpace: 'nowrap' }}>
+                <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
                     {formatearFecha(orden.created_at)}
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: s.text, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <td className="max-w-[160px] truncate px-4 py-3 text-[13px] text-slate-900 dark:text-slate-100">
                     {orden.cliente_nombre || '—'}
                 </td>
-                <td style={{ padding: '12px 16px' }}>
+                <td className="px-4 py-3">
                     <CanalBadge canal={orden.canal} />
                 </td>
-                <td style={{ padding: '12px 16px' }}>
+                <td className="px-4 py-3">
                     <EstadoBadge estado={orden.estado} />
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 12, color: s.textMuted, whiteSpace: 'nowrap' }}>
+                <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
                     {esDelivery ? 'Delivery' : 'Retiro'}
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: s.text, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-[13px] font-bold text-slate-900 dark:text-slate-100">
                     {gs(total)}
                 </td>
-                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={s.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ transform: abierta ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>
+                <td className="px-4 py-3 text-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        className={`inline-block text-slate-400 transition-transform dark:text-slate-500 ${abierta ? 'rotate-90' : ''}`}>
                         <polyline points="9 18 15 12 9 6" />
                     </svg>
                 </td>
@@ -115,46 +113,38 @@ function FilaOrden({ orden, s, darkMode }) {
             {/* Fila expandida */}
             {abierta && (
                 <tr>
-                    <td colSpan={8} style={{ padding: 0 }}>
-                        <div style={{
-                            background: darkMode ? '#0f1e30' : '#f8fafc',
-                            borderTop: `1px solid ${s.border}`,
-                            borderBottom: `2px solid ${s.primary + '40'}`,
-                            padding: '16px 20px',
-                            display: 'grid',
-                            gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)',
-                            gap: 20,
-                        }}>
+                    <td colSpan={8} className="p-0">
+                        <div className="grid grid-cols-1 gap-5 border-t border-slate-200 border-b-2 border-b-blue-500/25 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900 md:grid-cols-[1.4fr_1fr]">
                             {/* Columna izquierda — items */}
                             <div>
-                                <p style={{ fontSize: 11, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                     Productos
                                 </p>
                                 {items.length === 0
-                                    ? <p style={{ fontSize: 13, color: s.textFaint }}>Sin items</p>
+                                    ? <p className="text-[13px] text-slate-400 dark:text-slate-500">Sin items</p>
                                     : items.map((it, idx) => (
-                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '5px 0', borderBottom: idx < items.length - 1 ? `1px solid ${s.borderLight}` : 'none' }}>
-                                            <span style={{ fontSize: 13, color: s.text, flex: 1 }}>
-                                                {it.producto_nombre || it.presentacion_nombre || 'Producto'}{it.presentacion_nombre && it.producto_nombre ? ` — ${it.presentacion_nombre}` : ''} <span style={{ color: s.textMuted }}>x{it.cantidad}</span>
+                                        <div key={idx} className={`flex items-baseline justify-between gap-3 py-1.5 ${idx < items.length - 1 ? 'border-b border-slate-100 dark:border-slate-700' : ''}`}>
+                                            <span className="flex-1 text-[13px] text-slate-900 dark:text-slate-100">
+                                                {it.producto_nombre || it.presentacion_nombre || 'Producto'}{it.presentacion_nombre && it.producto_nombre ? ` — ${it.presentacion_nombre}` : ''} <span className="text-slate-500 dark:text-slate-400">x{it.cantidad}</span>
                                             </span>
-                                            <span style={{ fontSize: 13, fontWeight: 600, color: s.text, whiteSpace: 'nowrap' }}>{gs(it.precio_total)}</span>
+                                            <span className="whitespace-nowrap text-[13px] font-semibold text-slate-900 dark:text-slate-100">{gs(it.precio_total)}</span>
                                         </div>
                                     ))
                                 }
-                                <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${s.border}`, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                <div className="mt-2.5 flex flex-col gap-1 border-t border-slate-200 pt-2 dark:border-slate-700">
                                     {Number(orden.costo_delivery) > 0 && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: s.textMuted }}>
+                                        <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                                             <span>Delivery{orden.zona_delivery ? ` — ${orden.zona_delivery}` : ''}</span>
                                             <span>{gs(orden.costo_delivery)}</span>
                                         </div>
                                     )}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, color: s.text }}>
+                                    <div className="flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
                                         <span>Total</span>
-                                        <span style={{ color: s.primary }}>{gs(total)}</span>
+                                        <span className="text-blue-500">{gs(total)}</span>
                                     </div>
                                 </div>
                                 {orden.notas && (
-                                    <p style={{ marginTop: 10, fontSize: 12, color: s.textMuted, background: darkMode ? '#1e293b' : '#f1f5f9', borderRadius: 6, padding: '6px 10px' }}>
+                                    <p className="mt-2.5 rounded-md bg-slate-100 px-2.5 py-1.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                                         Notas: {orden.notas}
                                     </p>
                                 )}
@@ -162,10 +152,10 @@ function FilaOrden({ orden, s, darkMode }) {
 
                             {/* Columna derecha — entrega + pago */}
                             <div>
-                                <p style={{ fontSize: 11, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                     Entrega y pago
                                 </p>
-                                <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '5px 12px', fontSize: 12 }}>
+                                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
                                     {[
                                         ['Tipo',      esDelivery ? 'Delivery' : 'Retiro en local'],
                                         ['Cliente',   orden.cliente_nombre],
@@ -183,11 +173,11 @@ function FilaOrden({ orden, s, darkMode }) {
                                             ? `${orden.razon_social || ''}${orden.ruc_factura ? ' / RUC ' + orden.ruc_factura : ''}`
                                             : null],
                                     ].filter(([, v]) => v).map(([k, v]) => (
-                                        <div key={k} style={{ display: 'contents' }}>
-                                            <dt style={{ color: s.textMuted, fontWeight: 600, whiteSpace: 'nowrap' }}>{k}:</dt>
-                                            <dd style={{ color: s.text, margin: 0, wordBreak: 'break-word' }}>
+                                        <div key={k} className="contents">
+                                            <dt className="whitespace-nowrap font-semibold text-slate-500 dark:text-slate-400">{k}:</dt>
+                                            <dd className="m-0 break-words text-slate-900 dark:text-slate-100">
                                                 {typeof v === 'object' && v?.link
-                                                    ? <a href={v.link} target="_blank" rel="noopener noreferrer" style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}>Abrir Maps</a>
+                                                    ? <a href={v.link} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 no-underline">Abrir Maps</a>
                                                     : v
                                                 }
                                             </dd>
@@ -204,33 +194,22 @@ function FilaOrden({ orden, s, darkMode }) {
 }
 
 // ─── KPI Card ────────────────────────────────────────────────────
-function KpiCard({ label, valor, sub, color, s }) {
+function KpiCard({ label, valor, sub, color }) {
     return (
-        <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 12, padding: '16px 20px', minWidth: 0 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{label}</p>
-            <p style={{ fontSize: 22, fontWeight: 800, color: color || s.text, lineHeight: 1 }}>{valor}</p>
-            {sub && <p style={{ fontSize: 12, color: s.textMuted, marginTop: 4 }}>{sub}</p>}
-        </div>
+        <Card>
+            <CardContent className="min-w-0 px-5 py-4">
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+                <p className="text-xl font-extrabold leading-none" style={{ color }}>
+                    <span className={color ? '' : 'text-slate-900 dark:text-slate-100'}>{valor}</span>
+                </p>
+                {sub && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{sub}</p>}
+            </CardContent>
+        </Card>
     )
 }
 
 // ─── Página principal ────────────────────────────────────────────
 export default function HistorialPedidos() {
-    const { darkMode } = useApp()
-
-    const s = {
-        bg:          darkMode ? '#0f172a' : '#f6f6f8',
-        surface:     darkMode ? '#1e293b' : 'white',
-        surfaceLow:  darkMode ? '#1a2536' : '#f8fafc',
-        border:      darkMode ? '#334155' : '#e2e8f0',
-        borderLight: darkMode ? '#2d3f55' : '#f1f5f9',
-        text:        darkMode ? '#f1f5f9' : '#0f172a',
-        textMuted:   darkMode ? '#94a3b8' : '#64748b',
-        textFaint:   darkMode ? '#64748b' : '#94a3b8',
-        inputBg:     darkMode ? '#0f172a' : 'white',
-        primary:     '#3b82f6',
-    }
-
     const [ordenes, setOrdenes]       = useState([])
     const [cargando, setCargando]     = useState(true)
     const [tabCanal, setTabCanal]     = useState('todos')
@@ -296,111 +275,93 @@ export default function HistorialPedidos() {
         { v: 'expirada',   l: 'Expirada' },
     ]
 
-    const inputStyle = {
-        background: s.inputBg, border: `1px solid ${s.border}`, borderRadius: 8,
-        color: s.text, padding: '8px 12px', fontSize: 13, outline: 'none',
-    }
+    const inputCls = 'rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-[13px] text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
 
     return (
-        <div style={{ background: s.bg, minHeight: '100vh', padding: '24px 20px 48px' }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div className="min-h-screen bg-slate-50 px-5 pb-12 pt-6 dark:bg-slate-900">
+            <div className="mx-auto max-w-[1200px]">
 
                 {/* Encabezado */}
-                <div style={{ marginBottom: 24 }}>
-                    <h1 style={{ fontSize: 22, fontWeight: 800, color: s.text, marginBottom: 4 }}>Historial de Pedidos</h1>
-                    <p style={{ fontSize: 13, color: s.textMuted }}>Pedidos recibidos por pagina web y WhatsApp bot</p>
+                <div className="mb-6">
+                    <h1 className="mb-1 text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Historial de Pedidos</h1>
+                    <p className="text-[13px] text-slate-500 dark:text-slate-400">Pedidos recibidos por pagina web y WhatsApp bot</p>
                 </div>
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-                    <KpiCard label="Total pedidos"   valor={ordenes.length}   sub={`en el periodo`}     s={s} />
-                    <KpiCard label="Ingresos"        valor={gs(totalIngresos)} sub={`ticket prom. ${gs(ticketPromedio)}`} color={s.primary} s={s} />
-                    <KpiCard label="Pedidos web"     valor={countWeb}          sub="canal pagina_web"    color="#2563eb" s={s} />
-                    <KpiCard label="Pedidos bot"     valor={countBot}          sub="canal whatsapp"      color="#16a34a" s={s} />
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <KpiCard label="Total pedidos"   valor={ordenes.length}   sub="en el periodo" />
+                    <KpiCard label="Ingresos"        valor={gs(totalIngresos)} sub={`ticket prom. ${gs(ticketPromedio)}`} color="#3b82f6" />
+                    <KpiCard label="Pedidos web"     valor={countWeb}          sub="canal pagina_web" color="#2563eb" />
+                    <KpiCard label="Pedidos bot"     valor={countBot}          sub="canal whatsapp" color="#16a34a" />
                 </div>
 
                 {/* Tabs canal */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+                <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
                     {TABS_CANAL.map(t => (
                         <button key={t.id} onClick={() => setTabCanal(t.id)}
-                            style={{
-                                padding: '8px 18px', borderRadius: 20, border: tabCanal === t.id ? 'none' : `1.5px solid ${s.border}`,
-                                background: tabCanal === t.id ? s.primary : s.surface,
-                                color: tabCanal === t.id ? 'white' : s.textMuted,
-                                fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                            }}
+                            className={`whitespace-nowrap rounded-full px-4.5 py-2 text-[13px] font-semibold transition-colors ${tabCanal === t.id ? 'bg-blue-500 text-white' : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}
                         >{t.label}</button>
                     ))}
                 </div>
 
                 {/* Filtros */}
-                <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {/* Buscar */}
-                    <input
-                        type="text"
-                        placeholder="Buscar cliente o #pedido..."
-                        value={buscar}
-                        onChange={e => setBuscar(e.target.value)}
-                        style={{ ...inputStyle, flex: '1 1 180px', minWidth: 140 }}
-                    />
-
-                    {/* Periodo */}
-                    <select value={periodo} onChange={e => setPeriodo(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                        {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                    </select>
-
-                    {/* Estado */}
-                    <select value={estado} onChange={e => setEstado(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                        {ESTADOS.map(e => <option key={e.v} value={e.v}>{e.l}</option>)}
-                    </select>
-
-                    {/* Refrescar */}
-                    <button onClick={cargar} style={{ ...inputStyle, cursor: 'pointer', color: s.primary, fontWeight: 600, padding: '8px 14px', flexShrink: 0 }}>
-                        Actualizar
-                    </button>
-                </div>
+                <Card className="mb-5">
+                    <CardContent className="flex flex-wrap items-center gap-2.5 px-4 py-3.5">
+                        <input
+                            type="text"
+                            placeholder="Buscar cliente o #pedido..."
+                            value={buscar}
+                            onChange={e => setBuscar(e.target.value)}
+                            className={`${inputCls} min-w-[140px] flex-1 basis-[180px]`}
+                        />
+                        <select value={periodo} onChange={e => setPeriodo(e.target.value)} className={`${inputCls} cursor-pointer`}>
+                            {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                        </select>
+                        <select value={estado} onChange={e => setEstado(e.target.value)} className={`${inputCls} cursor-pointer`}>
+                            {ESTADOS.map(e => <option key={e.v} value={e.v}>{e.l}</option>)}
+                        </select>
+                        <Button variant="outline" onClick={cargar} className="shrink-0">
+                            Actualizar
+                        </Button>
+                    </CardContent>
+                </Card>
 
                 {/* Tabla */}
-                <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                <Card className="py-0 gap-0">
                     {cargando ? (
-                        <div style={{ padding: '48px 0', textAlign: 'center', color: s.textMuted, fontSize: 14 }}>
+                        <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
                             Cargando pedidos...
                         </div>
                     ) : ordenes.length === 0 ? (
-                        <div style={{ padding: '48px 0', textAlign: 'center', color: s.textMuted, fontSize: 14 }}>
+                        <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
                             No hay pedidos en este periodo
                         </div>
                     ) : (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
                                 <thead>
-                                    <tr style={{ borderBottom: `1px solid ${s.border}`, background: darkMode ? '#131f35' : '#f8fafc' }}>
+                                    <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
                                         {['#Pedido', 'Fecha', 'Cliente', 'Canal', 'Estado', 'Tipo', 'Total', ''].map(h => (
-                                            <th key={h} style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: h === 'Total' ? 'right' : 'left', whiteSpace: 'nowrap' }}>
+                                            <th key={h} className={`whitespace-nowrap px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${h === 'Total' ? 'text-right' : 'text-left'}`}>
                                                 {h}
                                             </th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {ordenes.map((o, i) => (
-                                        <FilaOrden
-                                            key={o.id}
-                                            orden={o}
-                                            s={s}
-                                            darkMode={darkMode}
-                                        />
+                                    {ordenes.map(o => (
+                                        <FilaOrden key={o.id} orden={o} />
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                     )}
                     {!cargando && ordenes.length > 0 && (
-                        <div style={{ padding: '10px 16px', borderTop: `1px solid ${s.border}`, fontSize: 12, color: s.textFaint, textAlign: 'right' }}>
+                        <div className="border-t border-slate-200 px-4 py-2.5 text-right text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
                             {ordenes.length} pedido{ordenes.length !== 1 ? 's' : ''}
                         </div>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     )
