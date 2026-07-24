@@ -724,14 +724,11 @@ function colorVencimiento(diasParaVencer) {
             {/* Buscador */}
             <div className="flex items-center gap-3 rounded-b-none rounded-t-none border border-b-0 border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
                 <div className="relative flex-1">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
-                        <IconBuscar />
-                    </span>
                     <input
                         placeholder="Buscar por nombre, marca, categoría o SKU..."
                         value={buscar}
                         onChange={e => setBuscar(e.target.value)}
-                        className={`${inputCls} mb-0 pl-[38px]`}
+                        className={`${inputCls} mb-0`}
                     />
                 </div>
                 <button onClick={cargarDatos} className={`${btnSecundarioCls} px-3.5 py-2.5 text-xs`}><IconRefrescar /> Actualizar</button>

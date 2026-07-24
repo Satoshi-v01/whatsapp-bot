@@ -894,18 +894,13 @@ function Caja() {
                                         <>
                                             <div className="flex items-center gap-2">
                                                 <div className="relative flex-1">
-                                                    <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-slate-400">
-                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                                        </svg>
-                                                    </span>
                                                     <input
                                                         ref={idx === 0 ? busquedaProductoRef : null}
                                                         placeholder="Buscar producto por nombre o marca..."
                                                         value={linea.busqueda}
                                                         onChange={e => handleBuscarProducto(linea.id, e.target.value)}
                                                         autoComplete="off"
-                                                        className="w-full rounded-lg border-none bg-transparent pl-[23px] text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+                                                        className="w-full rounded-lg border-none bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
                                                         autoFocus={idx === 0 && lineasValidas.length === 0}
                                                     />
                                                 </div>

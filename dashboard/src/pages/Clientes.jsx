@@ -11,7 +11,6 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 const inputCls = 'mb-2.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 outline-none transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
-const IconBuscar = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
 const IconLapiz = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
 const IconEstrella = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.9 6.6L22 9.3l-5 4.9 1.2 7-6.2-3.4L5.8 21.2 7 14.2 2 9.3l7.1-.7L12 2z" /></svg>
 const IconAdvertencia = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
@@ -353,9 +352,8 @@ function Clientes() {
                     <div className="split-list has-detail flex w-[320px] shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
                         <div className="border-b border-slate-200 p-3 dark:border-slate-700">
                             <div className="relative">
-                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"><IconBuscar /></span>
                                 <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)} autoComplete="off"
-                                    className={`${inputCls} mb-0 pl-[34px]`} />
+                                    className={`${inputCls} mb-0`} />
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -673,9 +671,8 @@ function Clientes() {
                         {/* Buscador + filtros */}
                         <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
                             <div className="relative min-w-[200px] flex-1">
-                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"><IconBuscar /></span>
                                 <input placeholder="Buscar por nombre, RUC o teléfono..." value={buscar} onChange={e => setBuscar(e.target.value)} autoComplete="off"
-                                    className={`${inputCls} mb-0 bg-slate-50 pl-[34px] dark:bg-slate-900`} />
+                                    className={`${inputCls} mb-0 bg-slate-50 dark:bg-slate-900`} />
                             </div>
 
                             {/* Filtro activo/inactivo */}

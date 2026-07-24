@@ -220,12 +220,11 @@ function Chat() {
                 {/* Buscador */}
                 <div className="border-b border-slate-200 p-3.5 dark:border-slate-700">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 flex -translate-y-1/2 text-slate-400 dark:text-slate-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                         <input
                             placeholder="Buscar conversaciones..."
                             value={buscar}
                             onChange={e => setBuscar(e.target.value)}
-                            className="w-full rounded-xl border-none bg-slate-100 py-2.5 pl-9 pr-3 text-[13px] text-slate-900 outline-none dark:bg-slate-900 dark:text-slate-100"
+                            className="w-full rounded-xl border-none bg-slate-100 py-2.5 px-3 text-[13px] text-slate-900 outline-none dark:bg-slate-900 dark:text-slate-100"
                         />
                     </div>
                 </div>
