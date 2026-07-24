@@ -4,9 +4,10 @@ import { formatMiles } from '../utils/formato'
 import { formatearSoloFecha } from '../utils/fecha'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 
-const inputCls = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none box-border focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none box-border transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 const IconMas = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -120,18 +121,19 @@ function SubcatSelect({ categoriaSlug, value, onChange }) {
     }, [categoriaSlug])
 
     return (
-        <select
-            value={value ?? ''}
-            onChange={e => onChange(e.target.value)}
+        <Select
+            value={String(value ?? '')}
+            onValueChange={onChange}
             disabled={!categoriaSlug || cargando}
-            className={inputCls}
-            style={{ opacity: (!categoriaSlug || cargando) ? 0.5 : 1 }}
         >
-            <option value="">{cargando ? 'Cargando...' : '-- Todas --'}</option>
-            {opciones.map(sc => (
-                <option key={sc.id} value={sc.id}>{sc.nombre}</option>
-            ))}
-        </select>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+                <SelectItem value="">{cargando ? 'Cargando...' : '-- Todas --'}</SelectItem>
+                {opciones.map(sc => (
+                    <SelectItem key={sc.id} value={String(sc.id)}>{sc.nombre}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
     )
 }
 
@@ -292,20 +294,19 @@ function TabProductos() {
                     onChange={e => setBuscar(e.target.value)}
                     className={`${inputCls} flex-[1_1_200px]`}
                 />
-                <select
-                    value={filtrocat}
-                    onChange={e => setFiltrocat(e.target.value)}
-                    className={`${inputCls} flex-[0_0_180px]`}
-                >
-                    <option value="">Todas las categorias</option>
-                    <option value="sin">Sin categoria web</option>
-                    <option value="perros">Perros</option>
-                    <option value="gatos">Gatos</option>
-                    <option value="medicamentos">Medicamentos</option>
-                    <option value="accesorios">Accesorios</option>
-                    <option value="cuidado">Cuidado</option>
-                    <option value="ofertas">Ofertas (descuento activo)</option>
-                </select>
+                <Select value={filtrocat} onValueChange={setFiltrocat}>
+                    <SelectTrigger className="flex-[0_0_180px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="">Todas las categorias</SelectItem>
+                        <SelectItem value="sin">Sin categoria web</SelectItem>
+                        <SelectItem value="perros">Perros</SelectItem>
+                        <SelectItem value="gatos">Gatos</SelectItem>
+                        <SelectItem value="medicamentos">Medicamentos</SelectItem>
+                        <SelectItem value="accesorios">Accesorios</SelectItem>
+                        <SelectItem value="cuidado">Cuidado</SelectItem>
+                        <SelectItem value="ofertas">Ofertas (descuento activo)</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             {error && <p className="mb-3 text-[13px] text-red-500">{error}</p>}
@@ -502,25 +503,23 @@ function TabProductos() {
 
                         <div>
                             <label className={labelCls}>Especie</label>
-                            <select
-                                value={editForm.especie}
-                                onChange={e => setEditForm(f => ({ ...f, especie: e.target.value }))}
-                                className={inputCls}
-                            >
-                                <option value="">Sin especificar</option>
-                                <option value="perro">Perro</option>
-                                <option value="gato">Gato</option>
-                                <option value="ambos">Ambos</option>
-                            </select>
+                            <Select value={editForm.especie} onValueChange={v => setEditForm(f => ({ ...f, especie: v }))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Sin especificar</SelectItem>
+                                    <SelectItem value="perro">Perro</SelectItem>
+                                    <SelectItem value="gato">Gato</SelectItem>
+                                    <SelectItem value="ambos">Ambos</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className={labelCls}>Categoria web</label>
-                                <select
+                                <Select
                                     value={editForm.ecommerce_categoria}
-                                    onChange={e => {
-                                        const cat = e.target.value
+                                    onValueChange={cat => {
                                         setEditForm(f => ({ ...f, ecommerce_categoria: cat, ecommerce_subcategoria_id: '', atributos: {} }))
                                         if (cat) {
                                             api.get('/ecommerce/admin/filtros-config')
@@ -528,15 +527,17 @@ function TabProductos() {
                                                 .catch(() => setFiltrosConfig([]))
                                         } else { setFiltrosConfig([]) }
                                     }}
-                                    className={inputCls}
                                 >
-                                    <option value="">-- Sin categoria --</option>
-                                    <option value="perros">Perros</option>
-                                    <option value="gatos">Gatos</option>
-                                    <option value="medicamentos">Medicamentos</option>
-                                    <option value="accesorios">Accesorios</option>
-                                    <option value="cuidado">Cuidado</option>
-                                </select>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">-- Sin categoria --</SelectItem>
+                                        <SelectItem value="perros">Perros</SelectItem>
+                                        <SelectItem value="gatos">Gatos</SelectItem>
+                                        <SelectItem value="medicamentos">Medicamentos</SelectItem>
+                                        <SelectItem value="accesorios">Accesorios</SelectItem>
+                                        <SelectItem value="cuidado">Cuidado</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <p className="mt-1 mb-0 text-[11px] text-slate-400 dark:text-slate-500">
                                     "Ofertas" no se asigna acá: aparece solo cuando activás el descuento en Inventario.
                                 </p>
@@ -569,19 +570,21 @@ function TabProductos() {
                                     {campos.map(([campo, { label, valores }]) => (
                                         <div key={campo}>
                                             <label className={labelCls}>{label}</label>
-                                            <select
+                                            <Select
                                                 value={editForm.atributos?.[campo] ?? ''}
-                                                onChange={e => setEditForm(f => ({
+                                                onValueChange={v => setEditForm(f => ({
                                                     ...f,
-                                                    atributos: { ...f.atributos, [campo]: e.target.value || undefined }
+                                                    atributos: { ...f.atributos, [campo]: v || undefined }
                                                 }))}
-                                                className={inputCls}
                                             >
-                                                <option value="">-- Sin especificar --</option>
-                                                {valores.map(({ valor, label_valor }) => (
-                                                    <option key={valor} value={valor}>{label_valor}</option>
-                                                ))}
-                                            </select>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="">-- Sin especificar --</SelectItem>
+                                                    {valores.map(({ valor, label_valor }) => (
+                                                        <SelectItem key={valor} value={valor}>{label_valor}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     ))}
                                 </div>
@@ -749,15 +752,21 @@ function TabSubcategorias() {
                         {error && <p className="m-0 text-[13px] text-red-500">{error}</p>}
                         <div>
                             <label className={labelCls}>Categoría</label>
-                            <select value={form.categoria_slug} onChange={e => setForm(f => ({ ...f, categoria_slug: e.target.value }))} className={inputCls}>
-                                {CAT_SLUGS_LABELS.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
-                            </select>
+                            <Select value={form.categoria_slug} onValueChange={v => setForm(f => ({ ...f, categoria_slug: v }))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {CAT_SLUGS_LABELS.map(c => <SelectItem key={c.slug} value={c.slug}>{c.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Especie</label>
-                            <select value={form.especie} onChange={e => setForm(f => ({ ...f, especie: e.target.value }))} className={inputCls}>
-                                {ESPECIE_LABELS.map(e => <option key={e.valor} value={e.valor}>{e.label}</option>)}
-                            </select>
+                            <Select value={form.especie} onValueChange={v => setForm(f => ({ ...f, especie: v }))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {ESPECIE_LABELS.map(e => <SelectItem key={e.valor} value={e.valor}>{e.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Nombre</label>
@@ -958,10 +967,13 @@ function TabFiltros() {
                         <div className="grid grid-cols-3 gap-3">
                             <div>
                                 <label className={labelCls}>Mostrar como</label>
-                                <select value={form.display_as} onChange={e => setForm(f => ({ ...f, display_as: e.target.value }))} className={inputCls}>
-                                    <option value="chip">Chip (arriba del grid)</option>
-                                    <option value="sidebar">Sidebar (panel lateral)</option>
-                                </select>
+                                <Select value={form.display_as} onValueChange={v => setForm(f => ({ ...f, display_as: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="chip">Chip (arriba del grid)</SelectItem>
+                                        <SelectItem value="sidebar">Sidebar (panel lateral)</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div>
                                 <label className={labelCls}>Orden</label>
@@ -1709,13 +1721,16 @@ function TabPedidos() {
             <div className="mb-4 flex items-center justify-between">
                 <h3 className="m-0 text-[15px] font-bold text-slate-900 dark:text-slate-100">Pedidos de la tienda web</h3>
                 <div className="flex items-center gap-2">
-                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={`${inputCls} py-2 px-3`}>
-                        <option value="">Todos los estados</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="confirmado">Confirmado</option>
-                        <option value="entregado">Entregado</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
+                    <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">Todos los estados</SelectItem>
+                            <SelectItem value="pendiente">Pendiente</SelectItem>
+                            <SelectItem value="confirmado">Confirmado</SelectItem>
+                            <SelectItem value="entregado">Entregado</SelectItem>
+                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Button variant="outline" size="sm" onClick={cargar}>↻</Button>
                 </div>
             </div>
