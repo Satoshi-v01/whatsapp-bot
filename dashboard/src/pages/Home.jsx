@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import ModalConfirmar from '../components/ModalConfirmar'
 import { useApp } from '../App'
 import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
+import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
 
 function Home() {
     const [resumen, setResumen] = useState(null)
@@ -30,7 +31,6 @@ function Home() {
         textMuted: darkMode ? '#94a3b8' : '#64748b',
         textFaint: darkMode ? '#64748b' : '#94a3b8',
         barColor: darkMode ? '#4f46e5' : '#1a1a2e',
-        barHover: darkMode ? '#6366f1' : '#2a2a4e',
     }
 
     useEffect(() => {
@@ -61,8 +61,6 @@ function Home() {
     }
 
     function formatearGs(numero) { return `Gs. ${parseInt(numero || 0).toLocaleString('es-PY')}` }
-    function alturaBar(valor, max) { return max === 0 ? 0 : Math.max((valor / max) * 100, 2) }
-    const maxVenta = Math.max(...ventasSemana.map(v => parseInt(v.total)), 1)
 
     const proximasVencer = reportesProveedores?.proximas_vencer || []
     const facturasVencidas = reportesProveedores?.vencidas || []
@@ -235,33 +233,7 @@ function Home() {
                     {ventasSemana.length === 0 ? (
                         <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.textMuted, fontSize: '13px' }}>Sin datos</div>
                     ) : (
-                        <>
-                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '180px' }}>
-                                {ventasSemana.map((dia, i) => {
-                                    const esHoy = i === ventasSemana.length - 1
-                                    return (
-                                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', height: '100%', justifyContent: 'flex-end' }}>
-                                            <p style={{ fontSize: '9px', color: s.textFaint, textAlign: 'center' }}>
-                                                {formatearGs(dia.total).replace('Gs. ', '')}
-                                            </p>
-                                            <div
-                                                style={{ width: '100%', height: `${alturaBar(parseInt(dia.total), maxVenta)}%`, background: esHoy ? s.barColor : `${s.barColor}40`, borderRadius: '4px 4px 0 0', minHeight: '4px', transition: 'height 0.3s ease' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = s.barColor}
-                                                onMouseLeave={e => e.currentTarget.style.background = esHoy ? s.barColor : `${s.barColor}40`}
-                                                title={`${formatearGs(dia.total)} — ${dia.cantidad} ventas`}
-                                            />
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                                {ventasSemana.map((dia, i) => (
-                                    <span key={i} style={{ flex: 1, fontSize: '10px', color: i === ventasSemana.length - 1 ? s.text : s.textFaint, textAlign: 'center', fontWeight: i === ventasSemana.length - 1 ? '700' : '400' }}>
-                                        {formatearFecha(dia.fecha).split(',')[0].toUpperCase()}
-                                    </span>
-                                ))}
-                            </div>
-                        </>
+                        <GraficoTendenciaVentas datos={ventasSemana} colorLinea={s.barColor} colorTexto={s.text} colorTextoMuted={s.textMuted} colorGrid={s.border} colorFondo={s.surface} maxEtiquetas={ventasSemana.length} resaltarHoy />
                     )}
                 </div>
 
