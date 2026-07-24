@@ -90,7 +90,7 @@ router.get('/estado/:estado', autenticar, verificarPermiso('ventas', 'ver'), asy
 router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (req, res) => {
     try {
        const {
-            periodo = 'recientes',
+            periodo = 'hoy',
             buscar,
             metodo_pago,
             canal,
@@ -112,8 +112,8 @@ router.get('/historial', autenticar, verificarPermiso('ventas', 'ver'), async (r
             condiciones.push(`v.estado != 'cancelado'`)
         }
 
-        if (periodo === 'recientes') {
-            condiciones.push(`v.created_at >= NOW() - INTERVAL '24 hours'`)
+        if (periodo === 'hoy') {
+            condiciones.push(`v.created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`)
         } else if (periodo === 'semanal') {
             condiciones.push(`v.created_at >= DATE_TRUNC('week', NOW() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion'`)
         } else if (periodo === 'mensual') {

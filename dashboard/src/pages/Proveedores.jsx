@@ -44,6 +44,7 @@ function Proveedores() {
     const [sumaIva, setSumaIva] = useState(true)
     const [filtroEstado, setFiltroEstado] = useState('')
     const [filtroTipo, setFiltroTipo] = useState('')
+    const [filtroProveedor, setFiltroProveedor] = useState(null) // null | { id, nombre }
     const [filtroPeriodo, setFiltroPeriodo] = useState('mes')
     const [fechaDesde, setFechaDesde] = useState('')
     const [fechaHasta, setFechaHasta] = useState('')
@@ -57,7 +58,7 @@ function Proveedores() {
     const [formPago, setFormPago] = useState({ numero_recibo: '', monto: '', metodo_pago: 'efectivo', fecha_pago: fechaHoyPY(), tipo_pago: 'parcial', notas: '' })
 
     useEffect(() => { cargarDatos() }, [])
-    useEffect(() => { if (pestana === 'facturas') cargarFacturas() }, [pestana, filtroEstado, filtroTipo])
+    useEffect(() => { if (pestana === 'facturas') cargarFacturas() }, [pestana, filtroEstado, filtroTipo, filtroProveedor])
     useEffect(() => { if (pestana === 'reportes') cargarReportes() }, [pestana, filtroPeriodo, fechaDesde, fechaHasta])
 
     async function cargarDatos() {
@@ -75,6 +76,7 @@ function Proveedores() {
             const params = {}
             if (filtroEstado) params.estado = filtroEstado
             if (filtroTipo) params.tipo = filtroTipo
+            if (filtroProveedor) params.proveedor_id = filtroProveedor.id
             const datos = await getFacturas(params)
             setFacturas(datos)
         } catch (err) {}
@@ -301,7 +303,7 @@ function Proveedores() {
                                             </div>
                                         )}
                                         <div className="flex gap-1.5">
-                                            <Button variant="outline" size="sm" onClick={() => { setPestana('facturas'); setFiltroTipo(''); setFiltroEstado('') }}>
+                                            <Button variant="outline" size="sm" onClick={() => { setPestana('facturas'); setFiltroTipo(''); setFiltroEstado(''); setFiltroProveedor({ id: p.id, nombre: p.nombre }) }}>
                                                 Facturas
                                             </Button>
                                             <Button variant="outline" size="sm" className="gap-1" onClick={() => abrirModalEditar(p)}>
@@ -340,7 +342,15 @@ function Proveedores() {
             {pestana === 'facturas' && (
                 <div className="page-scroll flex-1 overflow-y-auto p-8">
                     <div className="mb-5 flex items-center justify-between">
-                        <h1 className="text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Facturas de Compra</h1>
+                        <div>
+                            <h1 className="text-[22px] font-extrabold text-slate-900 dark:text-slate-100">Facturas de Compra</h1>
+                            {filtroProveedor && (
+                                <button onClick={() => setFiltroProveedor(null)}
+                                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400">
+                                    Proveedor: {filtroProveedor.nombre} <span className="text-sm leading-none">✕</span>
+                                </button>
+                            )}
+                        </div>
                         <Button variant="outline" onClick={() => setModalLibroCompras(true)}>
                             Libro de Compras
                         </Button>

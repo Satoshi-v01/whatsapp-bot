@@ -41,7 +41,7 @@ function Ventas() {
     const [libroFechaHasta, setLibroFechaHasta] = useState(fechaHoyPY())
     const [exportandoLibro, setExportandoLibro] = useState(false)
 
-    const [periodo, setPeriodo] = useState('recientes')
+    const [periodo, setPeriodo] = useState('hoy')
     const [buscar, setBuscar] = useState('')
     const [metodoPago, setMetodoPago] = useState('')
     const [canal, setCanal] = useState('')
@@ -254,7 +254,7 @@ function Ventas() {
     }
 
     const tabs = [
-        { valor: 'recientes', label: 'Recientes' },
+        { valor: 'hoy', label: 'Hoy' },
         { valor: 'semanal', label: 'Semanal' },
         { valor: 'mensual', label: 'Mensual' },
         { valor: 'anual', label: 'Anual' },
@@ -355,77 +355,77 @@ function Ventas() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                                {['ID', 'Cliente', 'Producto', 'Fecha y hora', 'Método', 'Canal', 'Estado', 'Total', 'Acción'].map((h, i) => (
-                                    <TableHead key={i} className={`text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-3 px-4 ${i >= 4 && i <= 6 ? 'text-center' : i === 7 ? 'text-right' : ''}`}>{h}</TableHead>
+                                {['ID', 'Cliente', 'Producto', 'Fecha', 'Método / Canal', 'Estado', 'Total', ''].map((h, i) => (
+                                    <TableHead key={i} className={`text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 py-2.5 px-3 ${i === 4 || i === 5 ? 'text-center' : i === 6 ? 'text-right' : ''}`}>{h}</TableHead>
                                 ))}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {datos?.ventas?.length === 0 ? (
-                                <TableRow><TableCell colSpan={9} className="p-10 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay ventas en este período.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={8} className="p-10 text-center text-[13px] text-slate-500 dark:text-slate-400">No hay ventas en este período.</TableCell></TableRow>
                             ) : (
                                 datos?.ventas?.map(venta => {
                                     const nombreCliente = venta.cliente_nombre || venta.razon_social || venta.cliente_numero || 'Consumidor final'
                                     return (
                                         <TableRow key={venta.id} className="border-slate-100 dark:border-slate-700">
-                                            <TableCell className="px-6 py-4">
-                                                <span className="font-mono text-[13px] font-semibold text-slate-900 dark:text-slate-100">#{String(venta.id).padStart(4, '0')}</span>
+                                            <TableCell className="px-3 py-3">
+                                                <span className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">#{String(venta.id).padStart(4, '0')}</span>
                                                 {venta.numero_factura && (
-                                                    <p className="mt-0.5 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                                                    <p className="mt-0.5 font-mono text-[9px] text-slate-500 dark:text-slate-400">
                                                         {venta.numero_factura.startsWith('TICKET-') ? 'Ticket' : venta.numero_factura}
                                                     </p>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="px-4 py-4 text-[13px]">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">
+                                            <TableCell className="max-w-[130px] whitespace-normal px-3 py-3 text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">
                                                         {iniciales(nombreCliente)}
                                                     </div>
-                                                    <span className="font-medium text-slate-900 dark:text-slate-100">{nombreCliente}</span>
+                                                    <span className="truncate font-medium text-slate-900 dark:text-slate-100">{nombreCliente}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="px-4 py-4 text-xs text-slate-500 dark:text-slate-400">
+                                            <TableCell className="max-w-[220px] whitespace-normal px-3 py-3 text-xs leading-snug text-slate-500 dark:text-slate-400">
                                                 {Array.isArray(venta.items) && venta.items.length > 1
                                                     ? <span className="font-semibold text-slate-900 dark:text-slate-100">{venta.items.length} productos</span>
                                                     : <>{venta.marca_nombre && `${venta.marca_nombre} — `}{venta.producto_nombre} {venta.presentacion_nombre}</>
                                                 }
                                             </TableCell>
-                                            <TableCell className="px-4 py-4 text-[13px] text-slate-500 dark:text-slate-400">{formatearFecha(venta.created_at)}</TableCell>
-                                            <TableCell className="px-4 py-4 text-center">
-                                                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${colorMetodoPago(venta.metodo_pago)}`}>
+                                            <TableCell className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{formatearFecha(venta.created_at)}</TableCell>
+                                            <TableCell className="px-3 py-3 text-center">
+                                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${colorMetodoPago(venta.metodo_pago)}`}>
                                                     {venta.metodo_pago || '—'}
                                                 </span>
+                                                <p className="mt-1 text-[9px] text-slate-400 dark:text-slate-500">{labelCanal(venta.canal)}</p>
                                                 {venta.tipo_venta === 'credito' && (
-                                                    <span className="mt-1 block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
+                                                    <span className="mt-1 block rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
                                                         Crédito
                                                     </span>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="px-4 py-4 text-center text-xs text-slate-500 dark:text-slate-400">{labelCanal(venta.canal)}</TableCell>
-                                            <TableCell className="px-4 py-4 text-center">
+                                            <TableCell className="px-3 py-3 text-center">
                                                 {venta.estado === 'cancelado' ? (
-                                                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${colorEstado(venta.estado)}`}>ANULADA</span>
+                                                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${colorEstado(venta.estado)}`}>ANULADA</span>
                                                 ) : (
                                                     <select value={venta.estado} onChange={e => cambiarEstado(venta.id, e.target.value)}
-                                                        className={`cursor-pointer rounded-full border-none px-2 py-1 text-[10px] font-bold uppercase outline-none ${colorEstado(venta.estado)}`}>
+                                                        className={`cursor-pointer rounded-full border-none px-1.5 py-1 text-[9px] font-bold uppercase outline-none ${colorEstado(venta.estado)}`}>
                                                         <option value="pendiente_pago">PENDIENTE</option>
                                                         <option value="pagado">PAGADO</option>
                                                         <option value="entregado">ENTREGADO</option>
                                                     </select>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="px-4 py-4 text-right text-sm font-bold text-slate-900 dark:text-slate-100">{formatearGs(venta.precio)}</TableCell>
-                                            <TableCell className="px-6 py-4">
-                                                <div className="flex items-center justify-center gap-1.5">
+                                            <TableCell className="px-3 py-3 text-right text-[13px] font-bold text-slate-900 dark:text-slate-100">{formatearGs(venta.precio)}</TableCell>
+                                            <TableCell className="px-2 py-3">
+                                                <div className="flex items-center justify-center gap-1">
                                                     <button onClick={() => setVentaDetalle(venta)}
                                                         className="flex items-center rounded-md p-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                                     </button>
                                                     {venta.estado !== 'cancelado' && (
                                                         <button onClick={() => confirmarAnular(venta)}
                                                             title="Anular venta"
                                                             className="flex items-center rounded-md p-1 text-red-500 opacity-70 hover:opacity-100">
-                                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                                         </button>
                                                     )}
                                                 </div>
