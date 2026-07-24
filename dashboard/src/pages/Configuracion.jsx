@@ -11,6 +11,7 @@ import { formatearFecha, formatearSoloFecha } from '../utils/fecha'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 const MODULOS = [
     { key: 'inicio', label: 'Inicio' },
@@ -63,7 +64,7 @@ const LABEL_ACCIONES = {
 }
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-const inputCls = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none box-border focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none box-border transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 const cardCls = 'rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:border dark:border-slate-700 dark:bg-slate-800 dark:shadow-none'
 
@@ -439,10 +440,13 @@ function Configuracion() {
                                 </div>
                                 <div className="flex-1 p-6">
                                     <label className={labelCls}>Rol seleccionado</label>
-                                    <select value={rolSeleccionado?.id || ''} onChange={e => { const rol = roles.find(r => r.id === parseInt(e.target.value)); setRolSeleccionado(rol || null) }} className={`${inputCls} mb-5`}>
-                                        <option value="">Seleccionar rol...</option>
-                                        {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                                    </select>
+                                    <Select value={String(rolSeleccionado?.id || '')} onValueChange={v => { const rol = roles.find(r => r.id === parseInt(v)); setRolSeleccionado(rol || null) }}>
+                                        <SelectTrigger className="mb-5"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Seleccionar rol...</SelectItem>
+                                            {roles.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.nombre}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                     <p className="mb-3 border-b border-slate-100 pb-2 text-xs font-bold text-slate-900 dark:border-slate-700 dark:text-slate-100">Permisos por módulo</p>
                                     <div className="flex max-h-[420px] flex-col gap-1.5 overflow-y-auto">
                                         {MODULOS.map(mod => {
@@ -885,11 +889,14 @@ function Configuracion() {
                                 <div className={cardCls}>
                                     <h3 className="mb-5 flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100"><IconEngranaje /> Opciones de impresión</h3>
                                     <label className={labelCls}>Ancho de papel</label>
-                                    <select value={configFactura.ancho_papel || '80'} onChange={e => setConfigFactura({ ...configFactura, ancho_papel: e.target.value })} className={`${inputCls} mb-3`}>
-                                        <option value="58">58mm (pequeño)</option>
-                                        <option value="76">76mm (Epson TM-U220D)</option>
-                                        <option value="80">80mm (estándar)</option>
-                                    </select>
+                                    <Select value={configFactura.ancho_papel || '80'} onValueChange={v => setConfigFactura({ ...configFactura, ancho_papel: v })}>
+                                        <SelectTrigger className="mb-3"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="58">58mm (pequeño)</SelectItem>
+                                            <SelectItem value="76">76mm (Epson TM-U220D)</SelectItem>
+                                            <SelectItem value="80">80mm (estándar)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <label className={labelCls}>Cliente ocasional (sin datos)</label>
                                     <input value={configFactura.cliente_ocasional || 'CONSUMIDOR FINAL'} onChange={e => setConfigFactura({ ...configFactura, cliente_ocasional: e.target.value })} className={`${inputCls} mb-3`} placeholder="CONSUMIDOR FINAL" />
                                     <label className={labelCls}>Mensaje de pie de factura</label>
@@ -995,10 +1002,13 @@ function Configuracion() {
                         <label className={labelCls}>Contraseña</label>
                         <input value={formUsuario.password} onChange={e => setFormUsuario({ ...formUsuario, password: e.target.value })} className={`${inputCls} mb-3`} placeholder="Mínimo 8 caracteres" type="password" />
                         <label className={labelCls}>Rol</label>
-                        <select value={formUsuario.rol_id} onChange={e => setFormUsuario({ ...formUsuario, rol_id: e.target.value })} className={inputCls}>
-                            <option value="">Sin rol asignado</option>
-                            {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                        </select>
+                        <Select value={formUsuario.rol_id} onValueChange={v => setFormUsuario({ ...formUsuario, rol_id: v })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Sin rol asignado</SelectItem>
+                                {roles.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.nombre}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         <div className="mt-2 flex justify-end gap-2">
                             <Button variant="outline" onClick={() => setModalUsuario(false)}>Cancelar</Button>
                             <Button onClick={handleCrearUsuario}>Crear usuario</Button>

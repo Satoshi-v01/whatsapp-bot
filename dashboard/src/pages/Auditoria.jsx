@@ -5,8 +5,9 @@ import ModalConfirmar from '../components/ModalConfirmar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-shadow focus:border-slate-300 dark:focus:border-slate-600 focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 function Auditoria() {
@@ -138,39 +139,51 @@ function Auditoria() {
                     <div className="mb-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         <div>
                             <label className={labelCls}>Período</label>
-                            <select value={filtros.periodo} onChange={e => setFiltro('periodo', e.target.value)} className={inputCls}>
-                                <option value="hoy">Hoy</option>
-                                <option value="semana">Esta semana</option>
-                                <option value="mes">Este mes</option>
-                                <option value="personalizado">Personalizado</option>
-                            </select>
+                            <Select value={filtros.periodo} onValueChange={v => setFiltro('periodo', v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="hoy">Hoy</SelectItem>
+                                    <SelectItem value="semana">Esta semana</SelectItem>
+                                    <SelectItem value="mes">Este mes</SelectItem>
+                                    <SelectItem value="personalizado">Personalizado</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Usuario</label>
-                            <select value={filtros.usuario_id} onChange={e => setFiltro('usuario_id', e.target.value)} className={inputCls}>
-                                <option value="">Todos</option>
-                                {filtrosDisponibles.usuarios.map(u => (
-                                    <option key={u.usuario_id} value={u.usuario_id}>{u.usuario_nombre}</option>
-                                ))}
-                            </select>
+                            <Select value={filtros.usuario_id} onValueChange={v => setFiltro('usuario_id', v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todos</SelectItem>
+                                    {filtrosDisponibles.usuarios.map(u => (
+                                        <SelectItem key={u.usuario_id} value={String(u.usuario_id)}>{u.usuario_nombre}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Módulo</label>
-                            <select value={filtros.modulo} onChange={e => setFiltro('modulo', e.target.value)} className={inputCls}>
-                                <option value="">Todos</option>
-                                {filtrosDisponibles.modulos.map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
+                            <Select value={filtros.modulo} onValueChange={v => setFiltro('modulo', v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todos</SelectItem>
+                                    {filtrosDisponibles.modulos.map(m => (
+                                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Acción</label>
-                            <select value={filtros.accion} onChange={e => setFiltro('accion', e.target.value)} className={inputCls}>
-                                <option value="">Todas</option>
-                                {filtrosDisponibles.acciones.map(a => (
-                                    <option key={a} value={a}>{a}</option>
-                                ))}
-                            </select>
+                            <Select value={filtros.accion} onValueChange={v => setFiltro('accion', v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todas</SelectItem>
+                                    {filtrosDisponibles.acciones.map(a => (
+                                        <SelectItem key={a} value={a}>{a}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex items-end">
                             <Button variant="outline" onClick={() => setFiltros({ periodo: 'hoy', usuario_id: '', modulo: '', accion: '', fecha_desde: '', fecha_hasta: '', pagina: 1 })} className="w-full">

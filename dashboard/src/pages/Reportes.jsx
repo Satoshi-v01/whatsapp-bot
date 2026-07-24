@@ -9,8 +9,9 @@ import GraficoTendenciaVentas from '../components/GraficoTendenciaVentas'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10'
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition-shadow focus:border-slate-300 dark:focus:border-slate-600 focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 function Reportes() {
@@ -340,42 +341,57 @@ function Reportes() {
                             </div>
                             {periodo === 'mes' && (
                                 <div className="mt-2 flex gap-1.5">
-                                    <select value={mesSel} onChange={e => setMesSel(parseInt(e.target.value))} className={`${inputCls} py-1.5`}>
-                                        {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
-                                            <option key={i} value={i + 1}>{m}</option>
-                                        ))}
-                                    </select>
-                                    <select value={anioSel} onChange={e => setAnioSel(parseInt(e.target.value))} className={`${inputCls} py-1.5`}>
-                                        {Array.from({ length: 5 }, (_, i) => ahora.getFullYear() - i).map(a => (
-                                            <option key={a} value={a}>{a}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={String(mesSel)} onValueChange={v => setMesSel(parseInt(v))}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+                                                <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={String(anioSel)} onValueChange={v => setAnioSel(parseInt(v))}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {Array.from({ length: 5 }, (_, i) => ahora.getFullYear() - i).map(a => (
+                                                <SelectItem key={a} value={String(a)}>{a}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
                         </div>
                         <div>
                             <label className={labelCls}>Canal</label>
-                            <select value={canal} onChange={e => setCanal(e.target.value)} className={inputCls}>
-                                <option value="">Todos los canales</option>
-                                <option value="bot">WhatsApp Bot</option>
-                                <option value="tienda">Tienda / Presencial</option>
-                                <option value="delivery">Delivery</option>
-                                <option value="web">Pagina Web</option>
-                            </select>
+                            <Select value={canal} onValueChange={setCanal}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todos los canales</SelectItem>
+                                    <SelectItem value="bot">WhatsApp Bot</SelectItem>
+                                    <SelectItem value="tienda">Tienda / Presencial</SelectItem>
+                                    <SelectItem value="delivery">Delivery</SelectItem>
+                                    <SelectItem value="web">Pagina Web</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Marca</label>
-                            <select value={marcaId} onChange={e => setMarcaId(e.target.value)} className={inputCls}>
-                                <option value="">Todas las marcas</option>
-                                {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                            </select>
+                            <Select value={marcaId} onValueChange={setMarcaId}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todas las marcas</SelectItem>
+                                    {marcas.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <label className={labelCls}>Categoría</label>
-                            <select value={categoriaId} onChange={e => setCategoriaId(e.target.value)} className={inputCls}>
-                                <option value="">Todas las categorías</option>
-                                {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                            </select>
+                            <Select value={categoriaId} onValueChange={setCategoriaId}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todas las categorías</SelectItem>
+                                    {categorias.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </CardContent>
@@ -879,12 +895,14 @@ function Reportes() {
                                 <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100">Stock muerto</h3>
                                 <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">Con stock disponible pero sin ventas recientes</p>
                             </div>
-                            <select value={diasStockMuerto} onChange={e => setDiasStockMuerto(parseInt(e.target.value))}
-                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                                <option value={30}>30+ días</option>
-                                <option value={60}>60+ días</option>
-                                <option value={90}>90+ días</option>
-                            </select>
+                            <Select value={String(diasStockMuerto)} onValueChange={v => setDiasStockMuerto(parseInt(v))}>
+                                <SelectTrigger className="w-auto py-1.5 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="30">30+ días</SelectItem>
+                                    <SelectItem value="60">60+ días</SelectItem>
+                                    <SelectItem value="90">90+ días</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardContent>
                     <CardContent className="p-0 max-h-[320px] overflow-y-auto">
@@ -1069,13 +1087,16 @@ function Reportes() {
                             <div><label className={labelCls}>Hasta</label><input type="date" value={exportHasta} onChange={e => setExportHasta(e.target.value)} className={inputCls} /></div>
                             <div className="sm:col-span-2">
                                 <label className={labelCls}>Canal (opcional)</label>
-                                <select value={exportCanal} onChange={e => setExportCanal(e.target.value)} className={inputCls}>
-                                    <option value="">Todos los canales</option>
-                                    <option value="bot">WhatsApp Bot</option>
-                                    <option value="tienda">Tienda / Presencial</option>
-                                    <option value="delivery">Delivery</option>
-                                    <option value="web">Pagina Web</option>
-                                </select>
+                                <Select value={exportCanal} onValueChange={setExportCanal}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Todos los canales</SelectItem>
+                                        <SelectItem value="bot">WhatsApp Bot</SelectItem>
+                                        <SelectItem value="tienda">Tienda / Presencial</SelectItem>
+                                        <SelectItem value="delivery">Delivery</SelectItem>
+                                        <SelectItem value="web">Pagina Web</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                         <Button onClick={handleExportarExcel} disabled={exportando}

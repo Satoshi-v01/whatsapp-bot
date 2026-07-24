@@ -6,8 +6,9 @@ import { formatearFecha } from '../utils/fecha'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
-const inputCls = 'mb-2.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-slate-100/10'
+const inputCls = 'mb-2.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 outline-none transition-shadow focus:border-slate-300 focus:ring-4 focus:ring-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-600 dark:focus:ring-slate-100/5'
 const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
 const IconBuscar = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -39,10 +40,13 @@ function FormModal({ titulo, onClose, onSubmit, submitLabel, form, setForm, guar
                     <button onClick={onClose} className="text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                 </div>
                 <label className={labelCls}>Tipo</label>
-                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className={inputCls}>
-                    <option value="persona">Persona física</option>
-                    <option value="empresa">Empresa</option>
-                </select>
+                <Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v })}>
+                    <SelectTrigger className="mb-2.5"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="persona">Persona física</SelectItem>
+                        <SelectItem value="empresa">Empresa</SelectItem>
+                    </SelectContent>
+                </Select>
                 <label className={labelCls}>Nombre / Razón social *</label>
                 <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} className={inputCls} />
                 <label className={labelCls}>RUC</label>
@@ -771,17 +775,23 @@ function Clientes() {
                         <div className="mb-3 grid grid-cols-2 gap-3">
                             <div>
                                 <label className={labelCls}>Método de pago</label>
-                                <select value={formPago.metodo_pago} onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })} className={`${inputCls} mb-0`}>
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="transferencia">Transferencia</option>
-                                </select>
+                                <Select value={formPago.metodo_pago} onValueChange={v => setFormPago({ ...formPago, metodo_pago: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="efectivo">Efectivo</SelectItem>
+                                        <SelectItem value="transferencia">Transferencia</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div>
                                 <label className={labelCls}>Tipo de pago</label>
-                                <select value={formPago.tipo_pago} onChange={e => setFormPago({ ...formPago, tipo_pago: e.target.value })} className={`${inputCls} mb-0`}>
-                                    <option value="parcial">Parcial</option>
-                                    <option value="total">Total</option>
-                                </select>
+                                <Select value={formPago.tipo_pago} onValueChange={v => setFormPago({ ...formPago, tipo_pago: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="parcial">Parcial</SelectItem>
+                                        <SelectItem value="total">Total</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                         <label className={labelCls}>Notas</label>
